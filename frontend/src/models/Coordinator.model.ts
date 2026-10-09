@@ -203,7 +203,14 @@ export class Coordinator {
       this.url = `${hostUrl}/${settings.network}/${this.shortAlias}`;
     } else {
       const network = settings.network ?? 'mainnet';
-      this.url = String(this[network]?.[origin]);
+      const own = this[network]?.[origin];
+      // Roblosats: on the clearnet web, a coordinator with only an onion is reached through
+      // the web server's bridge to it (roblosats.kilombino.com/<network>/<alias>, over Tor).
+      if (!own && origin === 'clearnet' && window.location.host === 'roblosats.kilombino.com') {
+        this.url = `${window.location.origin}/${network}/${this.shortAlias}`;
+      } else {
+        this.url = String(own);
+      }
     }
   };
 
