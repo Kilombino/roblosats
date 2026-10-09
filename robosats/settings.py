@@ -33,6 +33,8 @@ DEBUG = False
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 STATIC_URL = "static/"
+# Roblosats: where collectstatic puts them (the deploy mounts nginx's static dir there).
+STATIC_ROOT = config("STATIC_ROOT", cast=str, default="/usr/src/static")
 
 # RoboSats version
 with open("version.json") as f:

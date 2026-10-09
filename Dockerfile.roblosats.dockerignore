@@ -1,0 +1,13 @@
+.git
+**/node_modules
+frontend/static/frontend
+android
+desktopApp
+docs
+fastlane
+tests
+development
+db
+docker
+web
+nodeapp

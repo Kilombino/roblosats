@@ -1,0 +1,40 @@
+# Roblosats coordinator image: the upstream backend image plus the Roblosats web client,
+# built from this tree (so the federation, brand and patches all come from the repo).
+FROM node:22-slim AS frontend
+WORKDIR /usr/src/robosats
+COPY . .
+WORKDIR /usr/src/robosats/frontend
+RUN npm ci --no-audit --no-fund && npm run build
+
+FROM python:3.13.14-slim-bookworm
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN mkdir -p /usr/src/robosats
+WORKDIR /usr/src/robosats
+
+RUN apt-get update -qq && \
+    apt-get install -qq -y --no-install-recommends \
+        git \
+        libpq-dev \
+        curl \
+        build-essential \
+        gnupg2 \
+        pkg-config \
+        libsecp256k1-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN python -m pip install --upgrade pip
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+COPY --from=frontend /usr/src/robosats/frontend/static /usr/src/robosats/frontend/static
+COPY --from=frontend /usr/src/robosats/frontend/templates /usr/src/robosats/frontend/templates
+COPY --from=frontend /usr/src/robosats/api/federation.json /usr/src/robosats/api/federation.json
+
+RUN sh scripts/generate_grpc.sh
+RUN chmod +x scripts/entrypoint.sh
+
+EXPOSE 8000
+ENTRYPOINT [ "/usr/src/robosats/scripts/entrypoint.sh" ]
+CMD ["python3", "manage.py", "runserver", "0.0.0.0:8000"]
