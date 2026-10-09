@@ -41,5 +41,44 @@
     ],
     "testnetNodesPubkeys": [],
     "federated": true
+  },
+  "marcanotrades": {
+    "longAlias": "marcanoTrades",
+    "shortAlias": "marcanotrades",
+    "identifier": "marcanotrades",
+    "description": "marcanoTrades is a Roblosats coordinator running its own BLAKE2b Lightning node, for private peer-to-peer trades with no KYC.",
+    "motto": "Trade robot to robot, privately.",
+    "color": "#2e7dff",
+    "established": "2026-10-09",
+    "nostrHexPubkey": "799c1ec0872c5a1b05d4aff31b517572d393eec1923d3c41e55f2a59e3edf322",
+    "contact": {
+      "telegram": "marcanotrades",
+      "nostr": "npub10xwpasy893dpkpw54le3k5t4wtfe8mkpjg7ncs09tu49ncld7v3q9k6hhw"
+    },
+    "badges": {
+      "isFounder": false,
+      "donatesToDevFund": 0,
+      "hasGoodOpSec": true,
+      "hasLargeLimits": false
+    },
+    "policies": {
+      "Privacy Policy": "marcanoTrades only keeps the minimum data needed to run active trades and resolve disputes.",
+      "Rule 1:": "Do not share personal information in the chat unless it is strictly needed to complete the trade."
+    },
+    "mainnet": {
+      "onion": "http://olwrnvnukon2lkgqmbdtjfm3vqzadhbtbjmi4abillzjmhwfhhp3mryd.onion",
+      "clearnet": null,
+      "i2p": null
+    },
+    "testnet": {
+      "onion": null,
+      "clearnet": null,
+      "i2p": null
+    },
+    "mainnetNodesPubkeys": [
+      "02351cc69868ee4e67488b4ba23ff844a53f7c7c971399aa894d42e43bf1cc7eff"
+    ],
+    "testnetNodesPubkeys": [],
+    "federated": true
   }
 }
