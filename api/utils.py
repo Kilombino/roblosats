@@ -179,9 +179,17 @@ def neoxa_rates(session, api_url, currencies):
     reachable over Tor, where Neoxa's own site is not); the BTC pair is the same URL with
     BTCB2_BTC, or /neoxa-ticker-btc.
     """
-    usd = float(session.get(api_url).json()["ticker"]["lastPrice"])
-    if not usd > 0:
-        raise Exception("no BTCB2 price from Neoxa")
+    try:
+        usd = float(session.get(api_url).json()["ticker"]["lastPrice"])
+        if not usd > 0:
+            raise Exception("no BTCB2 price from Neoxa")
+    except Exception as e:
+        # If Neoxa is gone, the coordinator's own price (BTCB2_FALLBACK_USD) keeps the book
+        # priced; users can always set explicit sats amounts too.
+        usd = config("BTCB2_FALLBACK_USD", cast=float, default=0.0)
+        if not usd > 0:
+            raise e
+        print(f"Neoxa price unavailable ({str(e)}); using BTCB2_FALLBACK_USD={usd}")
     fx = {}
     try:
         fx = session.get(
