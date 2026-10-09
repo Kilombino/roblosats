@@ -66,11 +66,10 @@ class BaseSettings {
     });
   }
 
+  // Roblosats: dark unless the user chose light in Settings.
   getMode = (): 'light' | 'dark' => {
-    return (systemClient.getSyncItem?.('settings_mode') as 'light' | 'dark') ||
-      window?.matchMedia('(prefers-color-scheme: dark)')?.matches
-      ? 'dark'
-      : 'light';
+    const saved = systemClient.getSyncItem?.('settings_mode');
+    return saved === 'light' ? 'light' : 'dark';
   };
 
   public frontend: 'basic' | 'pro' = 'basic';
