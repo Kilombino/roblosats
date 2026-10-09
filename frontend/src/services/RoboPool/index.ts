@@ -39,7 +39,10 @@ class RoboPool {
     const hostRelay = federationRelays.find((relay) => relay.includes(hostUrl));
     if (hostRelay) this.relays.push(hostRelay);
 
-    while (this.relays.length < 3) {
+    // Up to 3 distinct relays; with fewer coordinators than that (Roblosats starts with one),
+    // waiting for a third distinct relay would loop forever and freeze the page.
+    const wanted = Math.min(3, new Set(federationRelays).size);
+    while (this.relays.length < wanted) {
       const randomRelay =
         federationRelays[Math.floor(Math.random() * Object.keys(federationRelays).length)];
       if (!this.relays.includes(randomRelay)) {
