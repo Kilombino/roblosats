@@ -99,6 +99,9 @@ export const fiatMethods: PaymentMethod[] = [
   { name: 'Wise', icon: 'wise', reversible: false },
   { name: 'Zeam', icon: 'zeam', reversible: false },
   { name: 'Zelle', icon: 'zelle', reversible: false },
+  // Roblosats: paying with the SHA-256 chain's coin, on-chain or over its Lightning.
+  { name: 'Spamcoin On-Chain', icon: 'spamcoin', reversible: false },
+  { name: 'Spamcoin Lightning', icon: 'spamcoin', reversible: false },
 ];
 
 export const swapMethods: PaymentMethod[] = [
