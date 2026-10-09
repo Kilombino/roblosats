@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { IconButton, Tooltip, Card, CardHeader, useTheme } from '@mui/material';
+import { Box, IconButton, Tooltip, Card, CardHeader, useTheme } from '@mui/material';
 import RobotAvatar from '../../../RobotAvatar';
 import { systemClient } from '../../../../services/System';
 import { useTranslation } from 'react-i18next';
@@ -244,7 +244,24 @@ const MessageCard: React.FC<Props> = ({
             </div>
           </Tooltip>
         }
-        subheader={renderMessageContent()}
+        // Roblosats: the wrapping rules live on this box (subheaderTypographyProps is not applied
+        // by this MUI version), so long unbroken strings (invoices, addresses) wrap instead of
+        // stretching the chat past the screen.
+        subheader={
+          <Box
+            component='span'
+            sx={{
+              display: 'block',
+              overflowWrap: 'anywhere',
+              wordBreak: 'break-word',
+              width: '13em',
+              maxWidth: '100%',
+              textAlign: 'left',
+            }}
+          >
+            {renderMessageContent()}
+          </Box>
+        }
         subheaderTypographyProps={{
           sx: {
             wordWrap: 'break-word',
