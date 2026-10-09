@@ -787,5 +787,6 @@
   "You must have a robot avatar to see the order details": "Du musst einen Roboter-Avatar haben, um die Bestelldetails zu sehen",
   "This order has been cancelled collaborativelly": "Diese Bestellung wurde gemeinsam storniert",
   "This order is not available": "Diese Bestellung ist nicht verfügbar",
-  "The Robotic Satoshis working in the warehouse did not understand you. Please, fill a Bug Issue in Github https://github.com/RoboSats/robosats/issues": "The Robotic Satoshis working in the warehouse did not understand you. Please, fill a Bug Issue in Github https://github.com/Roblosats/robosats/issues"
+  "The Robotic Satoshis working in the warehouse did not understand you. Please, fill a Bug Issue in Github https://github.com/RoboSats/robosats/issues": "The Robotic Satoshis working in the warehouse did not understand you. Please, fill a Bug Issue in Github https://github.com/Roblosats/robosats/issues",
+  "Spamcoin sats": "Spamcoin-Sats"
 }

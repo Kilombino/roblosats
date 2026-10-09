@@ -787,5 +787,6 @@
   "You must have a robot avatar to see the order details": "Eskaera xehetasunak ikusteko robot avatarra eduki behar duzu",
   "This order has been cancelled collaborativelly": "Eskaera hau lankidetzaz ezeztatu da",
   "This order is not available": "Eskaera hau ez dago erabilgarri",
-  "The Robotic Satoshis working in the warehouse did not understand you. Please, fill a Bug Issue in Github https://github.com/RoboSats/robosats/issues": "Biltokian lanean dauden Robotic Satoshis ez zaituzte ulertu. Mesedez, bete akats bat GitHub-en https://github.com/Roblosats/robosats/issues"
+  "The Robotic Satoshis working in the warehouse did not understand you. Please, fill a Bug Issue in Github https://github.com/RoboSats/robosats/issues": "Biltokian lanean dauden Robotic Satoshis ez zaituzte ulertu. Mesedez, bete akats bat GitHub-en https://github.com/Roblosats/robosats/issues",
+  "Spamcoin sats": "Spamcoin sats"
 }

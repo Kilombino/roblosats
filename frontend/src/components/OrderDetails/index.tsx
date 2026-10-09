@@ -264,8 +264,23 @@ const OrderDetails = ({
       });
     }
 
+    // Roblosats: paid in Spamcoin (the SHA-256 chain's coin), show how many of its sats the fiat
+    // amount is worth now, so nobody has to negotiate the amount in the chat. Uses the
+    // coordinator's BTCB2→BTC price (the "BTC" currency, id 1000).
+    const btcRatio = Number(coordinator?.limits?.[1000]?.price ?? 0);
+    if (order.payment_method.toLowerCase().includes('spamcoin') && btcRatio > 0 && rate > 0) {
+      const spamSats = (fiat: number): string => pn(Math.round((fiat / rate) * btcRatio * 1e8));
+      const fiatAmounts =
+        order.amount && order.amount > 0
+          ? spamSats(Number(order.amount))
+          : `${spamSats(Number(order.min_amount))}-${spamSats(Number(order.max_amount))}`;
+      const note = ` ≈ ${fiatAmounts} ${t('Spamcoin sats')}`;
+      if (isBuyer) send += note;
+      else receive += note;
+    }
+
     return { send, receive };
-  }, [currentOrder, amountString]);
+  }, [currentOrder, amountString, coordinator?.limits]);
 
   const revesiblePaymentMethods = useMemo(() => {
     return swapMethods
