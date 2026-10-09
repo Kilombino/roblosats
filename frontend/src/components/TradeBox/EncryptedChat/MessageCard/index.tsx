@@ -248,7 +248,12 @@ const MessageCard: React.FC<Props> = ({
         subheaderTypographyProps={{
           sx: {
             wordWrap: 'break-word',
+            // Roblosats: long unbroken strings (Lightning invoices, addresses) wrap instead of
+            // stretching the chat past the screen and pushing its buttons out of reach.
+            overflowWrap: 'anywhere',
+            wordBreak: 'break-word',
             width: '13em',
+            maxWidth: '100%',
             textAlign: 'left',
           },
         }}

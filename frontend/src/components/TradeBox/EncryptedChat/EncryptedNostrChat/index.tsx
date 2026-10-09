@@ -320,7 +320,7 @@ const EncryptedNostrChat: React.FC<Props> = ({
               variant='standard'
               size='small'
               multiline
-              maxRows={3}
+              maxRows={8}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   onButtonClicked(e as unknown as React.FormEvent<HTMLFormElement>);
