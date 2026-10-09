@@ -51,9 +51,15 @@ const eventToPublicOrder = (
   const network = event.tags.find((t) => t[0] === 'network') ?? [];
   const platform = event.tags.find((t) => t[0] === 'y') ?? [];
   // Use the live coordinator list so voted-in coordinators' orders are not dropped.
-  const coordinator = [...liveCoordinators, ...Object.values(thirdParties)].find(
-    (coord) => coord.nostrHexPubkey === event.pubkey,
-  );
+  const coordinator = [
+    ...liveCoordinators,
+    // Roblosats: the third-party list may be empty, which types as {}.
+    ...(Object.values(thirdParties) as Array<{
+      nostrHexPubkey: string;
+      shortAlias: string;
+      federated?: boolean;
+    }>),
+  ].find((coord) => coord.nostrHexPubkey === event.pubkey);
   if (!coordinator || statusTag[1] !== 'pending')
     return { dTag: dTag[1], publicOrder: null, network: network[1] };
 

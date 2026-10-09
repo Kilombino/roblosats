@@ -61,7 +61,7 @@ const UpdateDialog = ({ coordinatorVersion, clientVersion }: Props): React.JSX.E
           <ListItemButton
             component='a'
             target='_blank'
-            href={`https://github.com/RoboSats/robosats/releases/tag/${coordinatorString}-alpha`}
+            href={`https://github.com/Kilombino/roblosats/releases`}
             rel='noreferrer'
           >
             <ListItemIcon sx={{ minWidth: 56 }}>
@@ -81,7 +81,7 @@ const UpdateDialog = ({ coordinatorVersion, clientVersion }: Props): React.JSX.E
           <ListItemButton
             component='a'
             target='_blank'
-            href={`https://hub.docker.com/r/recksato/robosats-client`}
+            href={`https://github.com/Kilombino/roblosats/releases`}
             rel='noreferrer'
           >
             <ListItemIcon sx={{ minWidth: 56 }}>

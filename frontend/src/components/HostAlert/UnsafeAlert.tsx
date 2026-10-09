@@ -37,7 +37,7 @@ const UnsafeAlert = (): React.JSX.Element => {
       return urls;
     });
     // web hosted frontend without coordinator
-    safeUrls.push('robosatsy56bwqn56qyadmcxkx767hnabg4mihxlmgyt6if5gnuxvzad.onion');
+    safeUrls.push('roblowuc54m3gjphogvbpcqrbwffedaayji2x243w5ei2h4wwsj2rbid.onion');
     setUnsafeClient(!safeUrls.includes(getHost()));
   }, [coordinators]);
 
@@ -65,19 +65,19 @@ const UnsafeAlert = (): React.JSX.Element => {
         >
           <AlertTitle>{t('You are not using RoboSats privately')}</AlertTitle>
           <Trans i18nKey='unsafe_alert'>
-            <a>To fully enable RoboSats and protect your data and privacy, use </a>
+            <a>To fully enable Roblosats and protect your data and privacy, use </a>
             <Link href='https://www.torproject.org/download/' target='_blank'>
               Tor Browser
             </Link>
             <a> and visit the federation hosted </a>
             <Link
-              href='http://robosatsy56bwqn56qyadmcxkx767hnabg4mihxlmgyt6if5gnuxvzad.onion'
+              href='http://roblowuc54m3gjphogvbpcqrbwffedaayji2x243w5ei2h4wwsj2rbid.onion'
               target='_blank'
             >
               <b>Onion</b>
             </Link>
             <a> site or </a>
-            <Link href='https://apps.umbrel.com/app/robosats' target='_blank'>
+            <Link href='https://github.com/Kilombino/roblosats' target='_blank'>
               host your own app.
             </Link>
           </Trans>

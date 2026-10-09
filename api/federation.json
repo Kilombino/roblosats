@@ -9,14 +9,10 @@
     "established": "2026-10-09",
     "nostrHexPubkey": "67c0fa4b4ec75abc5139fe6362cdc88f29e8e565d5212284612f0fbcc0cd7f1b",
     "contact": {
-      "email": null,
-      "telegram": null,
-      "simplex": null,
-      "pgp": null,
+      "email": "kilombino@proton.me",
+      "telegram": "Kilombino",
       "nostr": "npub1vlq05j6wcadtc5fele3k9nwg3u573et965sj9prp9u8mesxd0udsyqqnqw",
-      "website": "https://github.com/Kilombino/roblosats",
-      "matrix": null,
-      "fingerprint": null
+      "website": "https://github.com/Kilombino/roblosats"
     },
     "badges": {
       "isFounder": true,

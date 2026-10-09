@@ -11,7 +11,8 @@ import {
   Typography,
 } from '@mui/material';
 import GitHubIcon from '@mui/icons-material/GitHub';
-import { NostrIcon, SimplexIcon } from '../Icons';
+import { Telegram } from '@mui/icons-material';
+import { NostrIcon } from '../Icons';
 
 interface Props {
   open: boolean;
@@ -47,11 +48,11 @@ const CommunityDialog = ({ open = false, onClose }: Props): React.JSX.Element =>
           <ListItemButton
             component='a'
             target='_blank'
-            href='https://simplex.chat/contact#/?v=1-2&smp=smp%3A%2F%2F0YuTwO05YJWS8rkjn9eLJDjQhFKvIYd8d4xG8X1blIU%3D%40smp8.simplex.im%2FyEX_vdhWew_FkovCQC3mRYRWZB1j_cBq%23%2F%3Fv%3D1-2%26dh%3DMCowBQYDK2VuAyEAnrf9Jw3Ajdp4EQw71kqA64VgsIIzw8YNn68WjF09jFY%253D%26srv%3Dbeccx4yfxxbvyhqypaavemqurytl6hozr47wfc7uuecacjqdvwpw2xid.onion&data=%7B%22type%22%3A%22group%22%2C%22groupLinkId%22%3A%22hWnMVPnJl-KT3-virDk0JA%3D%3D%22%7D'
+            href='https://t.me/roblosats'
             rel='noreferrer'
           >
             <ListItemIcon sx={{ minWidth: 56 }}>
-              <SimplexIcon color='primary' sx={{ height: 32, width: 32 }} />
+              <Telegram color='primary' sx={{ height: 32, width: 32 }} />
             </ListItemIcon>
 
             <ListItemText
@@ -66,7 +67,7 @@ const CommunityDialog = ({ open = false, onClose }: Props): React.JSX.Element =>
             component='a'
             onClick={() => {
               window.open(
-                'https://njump.me/nprofile1qqsyx53h3h7ec4fwlspjq0kqec5gv54t7rc48xdtq6q4y94wsw4fnjqsg3jtv',
+                'https://njump.me/npub1vlq05j6wcadtc5fele3k9nwg3u573et965sj9prp9u8mesxd0udsyqqnqw',
                 '_blank',
                 'noopener,noreferrer',
               );
@@ -87,7 +88,7 @@ const CommunityDialog = ({ open = false, onClose }: Props): React.JSX.Element =>
           <ListItemButton
             component='a'
             target='_blank'
-            href='https://github.com/RoboSats/robosats/issues'
+            href='https://github.com/Kilombino/roblosats/issues'
             rel='noreferrer'
           >
             <ListItemIcon sx={{ minWidth: 56 }}>

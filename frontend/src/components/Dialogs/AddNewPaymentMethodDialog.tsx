@@ -93,7 +93,7 @@ const AddNewPaymentMethodDialog = ({
             {t('If you want to see it available, consider submitting a request on our ')}
             <Link
               target='_blank'
-              href='https://github.com/RoboSats/robosats/issues/new?template=payment_method.md'
+              href='https://github.com/Kilombino/roblosats/issues/new'
               rel='noreferrer'
             >
               {t('GitHub')}

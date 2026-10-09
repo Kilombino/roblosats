@@ -6,7 +6,7 @@ import UnsafeAlert from './UnsafeAlert';
 const HostAlert = (): React.JSX.Element => {
   const { client, hostUrl } = useContext<UseAppStoreType>(AppContext);
   const component =
-    !hostUrl.includes('robosats') && (client === 'selfhosted' || client === 'desktop')
+    !hostUrl.includes('roblosats') && (client === 'selfhosted' || client === 'desktop')
       ? SelfhostedAlert
       : UnsafeAlert;
   return component();

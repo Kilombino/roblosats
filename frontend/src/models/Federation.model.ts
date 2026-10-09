@@ -48,7 +48,8 @@ const withTimeout = <T>(promise: Promise<T>): Promise<T | undefined> =>
 
 export class Federation {
   constructor(origin: Origin, settings: Settings, hostUrl: string) {
-    const federationEntries = Object.entries(defaultFederation) as Array<
+    // Roblosats: with a single coordinator its optional fields type as null, so cast via unknown.
+    const federationEntries = Object.entries(defaultFederation) as unknown as Array<
       [string, CoordinatorConfig]
     >;
     const coordinators = federationEntries.reduce(

@@ -56,7 +56,6 @@ import { pn } from '../../utils';
 import { type Contact } from '../../models';
 import RobotAvatar from '../RobotAvatar';
 import {
-  AmbossIcon,
   BitcoinSignIcon,
   RoboSatsNoTextIcon,
   BadgeFounder,
@@ -814,15 +813,15 @@ const CoordinatorDialog = ({ open = false, onClose, shortAlias }: Props): React.
                   ) : (
                     <ListItem {...listItemProps}>
                       <ListItemIcon sx={{ minWidth: 56 }}>
-                        <AmbossIcon />
+                        <Dns />
                       </ListItemIcon>
                       <ListItemText secondary={coordinator?.info?.node_alias}>
                         <Link
                           target='_blank'
-                          href={`https://amboss.space/node/${coordinator?.info?.node_id}`}
+                          href={`https://lightning.paperclippool.xyz/network#node=${coordinator?.info?.node_id}`}
                           rel='noreferrer'
                         >
-                          {`${coordinator?.info?.node_id.slice(0, 12)}... (AMBOSS)`}
+                          {`${coordinator?.info?.node_id.slice(0, 12)}... (BLAKE2b LN explorer)`}
                         </Link>
                       </ListItemText>
                     </ListItem>
