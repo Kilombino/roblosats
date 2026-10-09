@@ -98,7 +98,11 @@ def get_minning_fee(priority: str, preliminary_amount: int) -> int:
     from api.lightning.node import LNNode
 
     session = get_session()
-    mempool_url = "https://mempool.space"
+    # Roblosats: the fee rates of the chain this coordinator runs on (a mempool instance of
+    # that chain), never mempool.space's, which are for another chain.
+    mempool_url = config(
+        "MEMPOOL_FEES_URL", cast=str, default="https://mempool.kilombino.com"
+    ).rstrip("/")
     api_path = "/api/v1/fees/recommended"
 
     try:
@@ -165,6 +169,55 @@ def get_devfund_pubkey(network: str) -> str:
 market_cache = {}
 
 
+def neoxa_rates(session, api_url, currencies):
+    """
+    Roblosats: the price of BTC on the BLAKE2b chain (BTCB2). Neoxa is where it trades, and
+    only against USDC (taken as USD) and BTC. Every other fiat currency is that USD price
+    times yadio's USD exchange rate for it.
+    [api_url] is Neoxa's BTCB2_USDC ticker, straight (neoxa.exchange/api/exchange/ticker/
+    BTCB2_USDC) or through a proxy ending in /neoxa-ticker (mempool.kilombino.com has one,
+    reachable over Tor, where Neoxa's own site is not); the BTC pair is the same URL with
+    BTCB2_BTC, or /neoxa-ticker-btc.
+    """
+    usd = float(session.get(api_url).json()["ticker"]["lastPrice"])
+    if not usd > 0:
+        raise Exception("no BTCB2 price from Neoxa")
+    fx = {}
+    try:
+        fx = session.get(
+            config("FX_RATES_API", cast=str, default="https://api.yadio.io/exrates/USD")
+        ).json()["USD"]
+    except Exception as e:
+        print(f"Could not fetch USD exchange rates: {str(e)}")
+    btc = np.nan
+    if "BTC" in currencies:
+        try:
+            btc = float(
+                session.get(
+                    api_url.replace("BTCB2_USDC", "BTCB2_BTC")
+                    if "BTCB2_USDC" in api_url
+                    else api_url + "-btc"
+                ).json()[
+                    "ticker"
+                ]["lastPrice"]
+            )
+        except Exception:
+            pass
+    rates = []
+    for currency in currencies:
+        if currency == "USD":
+            rates.append(usd)
+        elif currency == "BTC":
+            rates.append(btc)
+        else:
+            try:
+                rates.append(usd * float(fx[currency]))
+            except Exception:
+                rates.append(np.nan)
+    return rates
+
+
+
 @ring.dict(market_cache, expire=30)  # keeps in cache for 30 seconds
 def get_exchange_rates(currencies):
     """
@@ -180,7 +233,10 @@ def get_exchange_rates(currencies):
     api_rates = []
     for api_url in APIS:
         try:  # If one API is unavailable pass
-            if "blockchain.info" in api_url:
+            if "neoxa" in api_url:
+                api_rates.append(neoxa_rates(session, api_url, currencies))
+
+            elif "blockchain.info" in api_url:
                 blockchain_prices = session.get(api_url).json()
                 blockchain_rates = []
                 for currency in currencies:

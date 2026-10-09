@@ -128,11 +128,14 @@ def send_devfund_donation(order_id, proceeds, reason):
     from api.models import LNPayment, Order
     from api.utils import get_devfund_pubkey
 
-    target_pubkey = get_devfund_pubkey(config("NETWORK", cast=str))
-
     order = Order.objects.get(id=order_id)
     coordinator_alias = config("COORDINATOR_ALIAS", cast=str, default="NoAlias")
     donation_fraction = min(1.0, max(0.00, config("DEVFUND", cast=float, default=0.2)))
+    # Roblosats: with no devfund there is nothing to send (RoboSats' devfund node is not on
+    # this chain's Lightning network anyway).
+    if donation_fraction <= 0:
+        return False
+    target_pubkey = get_devfund_pubkey(config("NETWORK", cast=str))
     message = f"Devfund donation; {coordinator_alias}; {order}; {donation_fraction}; {reason};"
     num_satoshis = int(proceeds * donation_fraction)
     routing_budget_sats = int(max(5, num_satoshis * 0.000_1))
