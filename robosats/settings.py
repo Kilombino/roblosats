@@ -289,8 +289,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # there is possibly a better way to do it! E.g. the .env file
 
 # Trade limits in satoshis to be applied as DB validator/constrain
-MIN_TRADE = 20_000
-MAX_TRADE = 5_000_000
+# Roblosats: a sat of the BLAKE2b chain is worth about 1/100 of one on the SHA-256 chain, so
+# the same fiat amounts need far more sats; the ceiling can be set per coordinator.
+MIN_TRADE = config("MIN_TRADE", cast=int, default=20_000)
+MAX_TRADE = config("MAX_TRADE", cast=int, default=500_000_000)
 
 # Time a order is public in the book HOURS
 DEFAULT_PUBLIC_ORDER_DURATION = 24
