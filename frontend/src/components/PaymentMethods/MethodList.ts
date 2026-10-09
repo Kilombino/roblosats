@@ -103,7 +103,7 @@ export const fiatMethods: PaymentMethod[] = [
 
 export const swapMethods: PaymentMethod[] = [
   { name: 'On-Chain BTC', icon: 'onchain', reversible: false },
-  { name: 'Spamcoin (SHA-256)', icon: 'spamcoin', reversible: false },
+  { name: 'Spamcoin On-Chain', icon: 'spamcoin', reversible: false },
   { name: 'Spamcoin Lightning', icon: 'spamcoin', reversible: false },
   { name: 'On-Chain w/ Stowaway', icon: 'stowaway', reversible: false },
   { name: 'RBTC', icon: 'rbtc', reversible: false },
