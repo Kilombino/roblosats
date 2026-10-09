@@ -1,3 +1,5 @@
+> **This is Roblosats**: RoboSats for Bitcoin on the BLAKE2b chain. See [ROBLOSATS.md](ROBLOSATS.md) for what changes and how it follows upstream. Web: https://roblosats.kilombino.com · Community: https://t.me/roblosats
+
 ## RoboSats - Buy and sell Satoshis Privately
 [![GitHub downloads](https://img.shields.io/github/downloads/RoboSats/robosats/total?label=Downloads&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/RoboSats/robosats/releases)
 [![release](https://img.shields.io/github/v/release/RoboSats/robosats)](https://github.com/RoboSats/robosats/releases)

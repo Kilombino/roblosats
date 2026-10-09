@@ -1,33 +1,19 @@
-# Migrated from zapstore-cli format
+repository: https://github.com/Kilombino/roblosats
+match: "roblosats-v\\d+\\.\\d+\\.\\d+.*-arm64-v8a\\.apk"
 
-repository: https://github.com/RoboSats/robosats
-match: "robosats-v\\d+\\.\\d+\\.\\d+.\\w+-arm64-v8a\\.\\w+.apk"
-
-name: Robosats
-summary: A simple and private bitcoin exchange
+name: Roblosats
+summary: A simple and private bitcoin exchange, on the BLAKE2b chain
 description: |
-  RoboSats is a simple and private app to exchange bitcoin for national currencies. Robosats simplifies the P2P user experience and uses lightning hold invoices to minimize custody and trust requirements. The deterministically generated robot avatars help users stick to best privacy practices.
+  Roblosats is a simple and private app to exchange bitcoin on the BLAKE2b chain (BTC/XBT) for national currencies, peer to peer, over its Lightning network. It is a fork of RoboSats: same robots, same hold-invoice escrow, same privacy, on the BLAKE2b chain.
   Features:
-  - Decentralized: Scrow services are individually provided by members of the Robosats federation.
-  - Privacy focused: your robot avatar is deterministically generated, no need for registration.
-  - More than 10 languages available and over 60 fiat currencies
-  - Safe: simply lock a lightning hodl invoice and show you are real and committed.
-  - No data collection. Your communication with your peer is PGP encrypted, only you can read it.
-  - Lightning fast: the average sovereign trade finishes in ~ 8 minutes. Faster than a single block confirmation!
-  - Fully collateralized escrow: your peer is always committed and cannot run away with the funds.
-  - Strong incentives system: attempts of cheating are penalized with the slashing of the Sats in the fidelity bond.
-  - Guides and video tutorials available at https://learn.robosats.com/watch/en
-  You can join other cool Robots and get community support at https://learn.robosats.org.
-tags: [privacy, lightning, bitcoin, p2p, tor, exchange, foss]
+  - Privacy focused: your robot avatar is generated from a token, no registration, no KYC.
+  - Built-in Tor: the app reaches the coordinators through their onion addresses.
+  - Lightning hold invoices: both sides lock a fidelity bond; cheating is penalized.
+  - The buyer can take the sats on-chain.
+  - More than 15 languages and over 60 fiat currencies, priced from the BLAKE2b chain's own market.
+  - PGP-encrypted chat with your peer.
+  First coordinator: Kilobot. Community: https://t.me/roblosats
+tags: [privacy, lightning, bitcoin, p2p, tor, exchange, foss, blake2b]
 license: AGPL-3.0
 
 icon: ../fastlane/metadata/en-US/images/icon.png
-images:
-  - ../fastlane/metadata/en-US/images/phoneScreenshots/01.png
-  - ../fastlane/metadata/en-US/images/phoneScreenshots/02.png
-  - ../fastlane/metadata/en-US/images/phoneScreenshots/03.png
-  - ../fastlane/metadata/en-US/images/phoneScreenshots/04.png
-  - ../fastlane/metadata/en-US/images/phoneScreenshots/05.png
-  - ../fastlane/metadata/en-US/images/phoneScreenshots/06.png
-
-metadata_sources: [github]

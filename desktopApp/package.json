@@ -7,9 +7,9 @@
     "start": "electron .",
     "compile": "./node_modules/.bin/tsc",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "package-linux": "npx @electron/packager . Robosats  --platform=linux --arch=x64 --icon=./assets/icon/Robosats.svg --overwrite  --out=release-builds --asar.unpackDir=tor",
-    "package-win": "npx @electron/packager . Robosats  --platform=win32 --arch=ia32 --icon=./assets/icon/Robosats.ico --overwrite   --out=release-builds --asar.unpackDir=tor",
-    "package-mac": "npx @electron/packager . Robosats  --platform=darwin --arch=x64 --icon=./assets/icon/Robosats.icns --overwrite    --out=release-builds --asar.unpackDir=tor"
+    "package-linux": "npx @electron/packager . Roblosats  --platform=linux --arch=x64 --icon=./assets/icon/Robosats.svg --overwrite  --out=release-builds --asar.unpackDir=tor",
+    "package-win": "npx @electron/packager . Roblosats  --platform=win32 --arch=ia32 --icon=./assets/icon/Robosats.ico --overwrite   --out=release-builds --asar.unpackDir=tor",
+    "package-mac": "npx @electron/packager . Roblosats  --platform=darwin --arch=x64 --icon=./assets/icon/Robosats.icns --overwrite    --out=release-builds --asar.unpackDir=tor"
   },
   "author": "",
   "license": "ISC",
@@ -28,8 +28,8 @@
     "typescript": "^7.0.2"
   },
   "build": {
-    "appId": "com.electron.robosats",
-    "productName": "RobosatsApp",
+    "appId": "com.electron.roblosats",
+    "productName": "RoblosatsApp",
     "directories": {
       "output": "dist"
     },

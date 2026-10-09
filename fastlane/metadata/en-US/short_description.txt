@@ -1,1 +1,1 @@
-Simple and private app to exchange bitcoin for national currencies.
+Simple and private bitcoin exchange on the BLAKE2b chain

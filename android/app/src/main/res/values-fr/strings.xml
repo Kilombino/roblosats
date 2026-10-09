@@ -1,9 +1,9 @@
 <resources>
-    <string name="app_name">Robosats</string>
+    <string name="app_name">Roblosats</string>
     <string name="service">Service en arrière-plan</string>
     <string name="connection">Connexion</string>
     <string name="configuration">Configuration</string>
-    <string name="robosats_is_running_in_background">Robosats fonctionne en arrière-plan et recherche des notifications</string>
+    <string name="robosats_is_running_in_background">Roblosats fonctionne en arrière-plan et recherche des notifications</string>
     <string name="notifications">Notifications</string>
     <string name="useOrbotButton">Utiliser Orbot</string>
     <string name="init_tor">Initialisation de la connexion Tor...</string>

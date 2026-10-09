@@ -17,5 +17,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Robosats"
+rootProject.name = "Roblosats"
 include(":app")

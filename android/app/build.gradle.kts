@@ -12,7 +12,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.robosats"
+        applicationId = "com.roblosats"
         minSdk = 26
         targetSdk = 36
         versionCode = baseVersionCode

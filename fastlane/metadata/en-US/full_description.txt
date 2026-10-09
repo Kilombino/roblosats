@@ -1,13 +1,10 @@
-<p>RoboSats is a simple and private app to exchange bitcoin for national currencies. Robosats simplifies the P2P user experience and uses lightning hold invoices to minimize custody and trust requirements. The deterministically generated robot avatars help users stick to best privacy practices.</p>
+<p>Roblosats is a simple and private app to exchange bitcoin on the BLAKE2b chain for national currencies, peer to peer, over its Lightning network. It is a fork of RoboSats and works the same way: deterministic robot avatars, Lightning hold invoices as escrow and fidelity bonds, PGP-encrypted chat, built-in Tor.</p>
 <p><br><b>Features:</b></p><ul>
-<li>Decentralized: Scrow services are individually provided by members of the Robosats federation.</li>
-<li>Privacy focused: your robot avatar is deterministically generated, no need for registration.</li>
-<li>More than 10 languages available and over 60 fiat currencies</li>
-<li>Safe: simply lock a lightning hodl invoice and show you are real and committed.</li>
-<li>No data collection. Your communication with your peer is PGP encrypted, only you can read it.</li>
-<li>Lightning fast: the average sovereign trade finishes in ~ 8 minutes. Faster than a single block confirmation!</li>
-<li>Fully collateralized escrow: your peer is always committed and cannot run away with the funds.</li>
-<li>Strong incentives system: attempts of cheating are penalized with the slashing of the Sats in the fidelity bond.</li>
-<li>Guides and video tutorials available at https://learn.robosats.org/watch/en</li>
+<li>No registration and no KYC: your robot is generated from a token only you keep.</li>
+<li>Escrow with Lightning hold invoices: your peer is committed and cannot run away with the funds.</li>
+<li>Fidelity bonds: attempts to cheat are penalized.</li>
+<li>The buyer can choose to receive on-chain.</li>
+<li>Prices from the BLAKE2b chain's own market, in more than 60 fiat currencies.</li>
+<li>More than 15 languages.</li>
 </ul>
-<p>You can join other cool Robots and get community support at <a href="https://learn.robosats.org">https://learn.robosats.org</a>.</p>
+<p>First coordinator: Kilobot. Community: https://t.me/roblosats. Source: https://github.com/Kilombino/roblosats</p>

@@ -1,9 +1,9 @@
 <resources>
-    <string name="app_name">Robosats</string>
+    <string name="app_name">Roblosats</string>
     <string name="service">Usługa w tle</string>
     <string name="connection">Połączenie</string>
     <string name="configuration">Konfiguracja</string>
-    <string name="robosats_is_running_in_background">Robosats działa w tle, pobierając powiadomienia</string>
+    <string name="robosats_is_running_in_background">Roblosats działa w tle, pobierając powiadomienia</string>
     <string name="notifications">Powiadomienia</string>
     <string name="useOrbotButton">Użyj Orbot</string>
     <string name="init_tor">Inicjalizacja połączenia Tor...</string>
