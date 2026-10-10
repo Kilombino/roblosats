@@ -17,6 +17,7 @@ import currencyDict from '../../utils/currencies';
 import { pn } from '../../utils';
 import { GarageContext, UseGarageStoreType } from '../../contexts/GarageContext';
 import { UseAppStoreType, AppContext } from '../../contexts/AppContext';
+import { currencyOptions, currencyLabel } from '../../utils/currencies';
 
 const RangeThumbComponent: React.FC<React.PropsWithChildren> = (props) => {
   const { children, ...other } = props;
@@ -214,11 +215,11 @@ const AmountRange: React.FC<AmountRangeProps> = ({
                 handleCurrencyChange(Number(e.target.value));
               }}
             >
-              {Object.entries(currencyDict).map(([key, value]) => (
+              {currencyOptions(currencyDict).map(([key, value]) => (
                 <MenuItem key={key} value={parseInt(key)}>
                   <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
                     <FlagWithProps code={value} />
-                    {' ' + value}
+                    {' ' + currencyLabel(value)}
                   </div>
                 </MenuItem>
               ))}

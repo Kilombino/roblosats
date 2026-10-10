@@ -13,6 +13,7 @@ import SwapCalls from '@mui/icons-material/SwapCalls';
 import { FederationContext, type UseFederationStoreType } from '../../contexts/FederationContext';
 import RobotAvatar from '../RobotAvatar';
 import RoboSatsNoText from '../Icons/RoboSatsNoText';
+import { currencyOptions, currencyLabel } from '../../utils/currencies';
 
 interface BookControlProps {
   width: number;
@@ -244,12 +245,12 @@ const BookControl = ({
                 </Typography>
               </div>
             </MenuItem>
-            {Object.entries(currencyDict).map(([key, value]) => (
+            {currencyOptions(currencyDict).map(([key, value]) => (
               <MenuItem key={key} value={parseInt(key)} color='text.secondary'>
                 <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
                   <FlagWithProps code={value} />
-                  <Typography sx={{ width: '2em' }} align='right' color='text.secondary'>
-                    {' ' + value}
+                  <Typography sx={{ minWidth: '2em' }} align='right' color='text.secondary'>
+                    {' ' + currencyLabel(value)}
                   </Typography>
                 </div>
               </MenuItem>

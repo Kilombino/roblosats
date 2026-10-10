@@ -23,6 +23,7 @@ import currencyDict from '../../utils/currencies';
 import { FlagWithProps, SendReceiveIcon } from '../Icons';
 import { UseAppStoreType, AppContext, initialAppContext } from '../../contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
+import { currencyOptions, currencyLabel } from '../../utils/currencies';
 
 interface Props {
   open: boolean;
@@ -196,12 +197,12 @@ const SearchDialog = ({ open = false, onClose }: Props): React.JSX.Element => {
                         </Typography>
                       </div>
                     </MenuItem>
-                    {Object.entries(currencyDict).map(([key, value]) => (
+                    {currencyOptions(currencyDict).map(([key, value]) => (
                       <MenuItem key={key} value={parseInt(key)} color='text.secondary'>
                         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
                           <FlagWithProps code={value} />
-                          <Typography sx={{ width: '2em' }} align='right' color='text.secondary'>
-                            {' ' + value}
+                          <Typography sx={{ minWidth: '2em' }} align='right' color='text.secondary'>
+                            {' ' + currencyLabel(value)}
                           </Typography>
                         </div>
                       </MenuItem>

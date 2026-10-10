@@ -47,6 +47,7 @@ import { GarageContext, type UseGarageStoreType } from '../../contexts/GarageCon
 import { useNavigate } from 'react-router-dom';
 import { sha256 } from 'js-sha256';
 import AddNewPaymentMethodDialog from '../Dialogs/AddNewPaymentMethodDialog';
+import { currencyOptions, currencyLabel } from '../../utils/currencies';
 
 interface MakerFormProps {
   disableRequest?: boolean;
@@ -859,11 +860,11 @@ const MakerForm = ({
                         handleCurrencyChange(Number(e.target.value));
                       }}
                     >
-                      {Object.entries(currencyDict).map(([key, value]) => (
+                      {currencyOptions(currencyDict).map(([key, value]) => (
                         <MenuItem key={key} value={parseInt(key)}>
                           <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
                             <FlagWithProps code={value} />
-                            {' ' + value}
+                            {' ' + currencyLabel(value)}
                           </div>
                         </MenuItem>
                       ))}

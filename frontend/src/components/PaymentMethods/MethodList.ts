@@ -5,6 +5,9 @@ export interface PaymentMethod {
 }
 
 export const fiatMethods: PaymentMethod[] = [
+  // Roblosats, first: paying with the SHA-256 chain's coin, on-chain or over its Lightning.
+  { name: 'Spamcoin On-Chain', icon: 'spamcoin', reversible: false },
+  { name: 'Spamcoin Lightning', icon: 'spamcoin', reversible: false },
   { name: 'Advcash', icon: 'advcash', reversible: false },
   { name: 'Airtel Money', icon: 'airtel', reversible: false },
   { name: 'AliPay', icon: 'alipay', reversible: false },
@@ -99,15 +102,12 @@ export const fiatMethods: PaymentMethod[] = [
   { name: 'Wise', icon: 'wise', reversible: false },
   { name: 'Zeam', icon: 'zeam', reversible: false },
   { name: 'Zelle', icon: 'zelle', reversible: false },
-  // Roblosats: paying with the SHA-256 chain's coin, on-chain or over its Lightning.
-  { name: 'Spamcoin On-Chain', icon: 'spamcoin', reversible: false },
-  { name: 'Spamcoin Lightning', icon: 'spamcoin', reversible: false },
 ];
 
 export const swapMethods: PaymentMethod[] = [
-  { name: 'On-Chain BTC', icon: 'onchain', reversible: false },
   { name: 'Spamcoin On-Chain', icon: 'spamcoin', reversible: false },
   { name: 'Spamcoin Lightning', icon: 'spamcoin', reversible: false },
+  { name: 'On-Chain BTC', icon: 'onchain', reversible: false },
   { name: 'On-Chain w/ Stowaway', icon: 'stowaway', reversible: false },
   { name: 'RBTC', icon: 'rbtc', reversible: false },
   { name: 'LBTC', icon: 'lbtc', reversible: false },

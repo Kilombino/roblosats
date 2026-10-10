@@ -1,7 +1,7 @@
 import React from 'react';
 import Flags from 'country-flag-icons/react/3x2';
-import SwapCallsIcon from '@mui/icons-material/SwapCalls';
 import { GoldIcon, EarthIcon } from '.';
+import PaymentIcon from '../PaymentMethods/Icons';
 
 interface Props {
   code: string;
@@ -98,7 +98,8 @@ const FlagWithProps = ({
   if (code === 'UZS') flag = <Flags.UZ {...defaultProps} />;
   if (code === 'ANY') flag = <EarthIcon {...defaultProps} />;
   if (code === 'XAU') flag = <GoldIcon {...defaultProps} />;
-  if (code === 'BTC') flag = <SwapCallsIcon color='primary' />;
+  // Roblosats: code 1000 ("BTC") is Spamcoin, the SHA-256 chain's coin.
+  if (code === 'BTC') flag = <PaymentIcon width={22} height={22} icon='spamcoin' />;
 
   return <div style={{ width: '2em', height: '1.428em', maxHeight: '1.428em' }}>{flag}</div>;
 };
