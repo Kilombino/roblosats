@@ -669,3 +669,6 @@ api/lightning/*.proto
 # Local config
 
 *.local.json
+
+# Roblosats: the coordinator admin panel templates
+!roblosats_templates/**/*.html
