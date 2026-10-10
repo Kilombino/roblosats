@@ -9,6 +9,8 @@
     "established": "2026-10-09",
     "nostrHexPubkey": "67c0fa4b4ec75abc5139fe6362cdc88f29e8e565d5212284612f0fbcc0cd7f1b",
     "contact": {
+      "pgp": "/static/federation/pgp/47DA0EAB6569034E5EE0E4228291AB9E393549E7.asc",
+      "fingerprint": "47DA0EAB6569034E5EE0E4228291AB9E393549E7",
       "email": "kilombino@proton.me",
       "telegram": "Kilombino",
       "nostr": "npub1vlq05j6wcadtc5fele3k9nwg3u573et965sj9prp9u8mesxd0udsyqqnqw",
