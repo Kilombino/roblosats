@@ -1,13 +1,13 @@
 > **This is Roblosats**: RoboSats for Bitcoin on the BLAKE2b chain. See [ROBLOSATS.md](ROBLOSATS.md) for what changes and how it follows upstream. Web: https://roblosats.kilombino.com · Community: https://t.me/roblosats
 
-## RoboSats - Buy and sell Satoshis Privately
+## Roblosats - Private peer-to-peer Bitcoin trading
 [![GitHub downloads](https://img.shields.io/github/downloads/RoboSats/robosats/total?label=Downloads&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/RoboSats/robosats/releases)
 [![release](https://img.shields.io/github/v/release/RoboSats/robosats)](https://github.com/RoboSats/robosats/releases)
 [![AGPL-3.0 license](https://img.shields.io/badge/license-AGPL--3.0-blue)](https://github.com/RoboSats/robosats/blob/main/LICENSE)
 [![SimpleX](https://img.shields.io/badge/chat-simplex-brightgreen)](https://simplex.chat/contact#/?v=1-2&smp=smp%3A%2F%2F0YuTwO05YJWS8rkjn9eLJDjQhFKvIYd8d4xG8X1blIU%3D%40smp8.simplex.im%2FyEX_vdhWew_FkovCQC3mRYRWZB1j_cBq%23%2F%3Fv%3D1-2%26dh%3DMCowBQYDK2VuAyEAnrf9Jw3Ajdp4EQw71kqA64VgsIIzw8YNn68WjF09jFY%253D%26srv%3Dbeccx4yfxxbvyhqypaavemqurytl6hozr47wfc7uuecacjqdvwpw2xid.onion&data=%7B%22type%22%3A%22group%22%2C%22groupLinkId%22%3A%22hWnMVPnJl-KT3-virDk0JA%3D%3D%22%7D)
 [![Nostr](https://img.shields.io/badge/chat-nostr-brightgreen)](https://chachi.chat/groups.0xchat.com/925b1aa20cd1b68dd9a0130e35808d66772fe082cf3f95294dd5755c7ea1ed59)
 
-RoboSats is a simple and private way to exchange bitcoin for national currencies. Robosats simplifies the peer-to-peer user experience and uses lightning hold invoices to minimize custody and trust requirements. The deterministically generated avatars help users stick to best privacy practices.
+Roblosats is a fork of RoboSats adapted for Bitcoin on the BLAKE2b chain. It builds on RoboSats' peer-to-peer trading model, including Lightning hold invoices and privacy-focused robot identities. See [ROBLOSATS.md](ROBLOSATS.md) for project-specific differences.
 
 
 <div align="center">
@@ -18,7 +18,13 @@ RoboSats is a simple and private way to exchange bitcoin for national currencies
 
 Check our tutorials and many more at https://learn.robosats.org
 
-## Try it out!
+## Try Roblosats
+
+Visit [Roblosats](https://roblosats.kilombino.com) for the project's website.
+
+### Original RoboSats resources
+
+The following links belong to the upstream RoboSats project and should not be mistaken for Roblosats services:
 - **MAIN TOR URL:** [**RoboSats**y56bwqn56qyadmcxkx767hnabg4mihxlmgyt6if5gnuxvzad.onion](http://RoboSatsy56bwqn56qyadmcxkx767hnabg4mihxlmgyt6if5gnuxvzad.onion) ( Open with [Tor Browser](https://www.torproject.org/download/))
 - Coordinators TOR URLs: [Clients hosted by coordinators](https://github.com/RoboSats/robosats/discussions/2216 )
 - Clearnet URL: [unsafe.robosats.org](https://unsafe.robosats.org) (not recommended!)
