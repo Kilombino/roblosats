@@ -1,4 +1,3 @@
-
 #####################################################################
 # === Roblosats: extensión del settings.py OFICIAL (append-only) =====
 # Este bloque se AÑADE al final del settings.py de upstream en el build.
@@ -7,19 +6,34 @@
 # CHANNEL_LAYERS ya los da upstream (por env) — no se tocan aquí.
 #####################################################################
 
-TIME_ZONE = config("ADMIN_TIME_ZONE", cast=str, default="UTC")  # the admin shows times in this zone
+TIME_ZONE = config(
+    "ADMIN_TIME_ZONE", cast=str, default="UTC"
+)  # the admin shows times in this zone
 
 # unfold DEBE ir antes de django.contrib.admin; roblosats_admin al final.
-_UNFOLD_APPS = ["unfold", "unfold.contrib.filters", "unfold.contrib.forms", "unfold.contrib.import_export"]
-INSTALLED_APPS = _UNFOLD_APPS + [a for a in INSTALLED_APPS if a not in _UNFOLD_APPS and a != "roblosats_admin"] + ["roblosats_admin"]
+_UNFOLD_APPS = [
+    "unfold",
+    "unfold.contrib.filters",
+    "unfold.contrib.forms",
+    "unfold.contrib.import_export",
+]
+INSTALLED_APPS = (
+    _UNFOLD_APPS
+    + [a for a in INSTALLED_APPS if a not in _UNFOLD_APPS and a != "roblosats_admin"]
+    + ["roblosats_admin"]
+)
 
 # carpeta de plantillas del panel Roblosats (montada en el contenedor)
-TEMPLATES[0]["DIRS"] = list(TEMPLATES[0]["DIRS"]) + ["/usr/src/robosats/roblosats_templates"]
+TEMPLATES[0]["DIRS"] = list(TEMPLATES[0]["DIRS"]) + [
+    "/usr/src/robosats/roblosats_templates"
+]
 
 # Django Unfold admin theme
 
+
 def _count_orders(*status_values):
     """Cuenta órdenes en esos estados. Se llama al pintar el menú, no al arrancar."""
+
     def _callback(request):
         from api.models import Order
 
@@ -30,16 +44,22 @@ def _count_orders(*status_values):
 
 
 # Estados que le importan a quien lleva el coordinador (api/models/order.py)
-EN_CURSO = [6, 7, 8, 9, 10]      # esperando colateral/factura, chat, fiat enviado
-EN_DISPUTA = [11, 16]            # en disputa y esperando resolución
+EN_CURSO = [6, 7, 8, 9, 10]  # esperando colateral/factura, chat, fiat enviado
+EN_DISPUTA = [11, 16]  # en disputa y esperando resolución
 ADMIN_ROOT = "/coordinator/"
+
 
 def roblosats_dashboard(request, context=None):
     """Datos de la pantalla de inicio del panel. Unfold pasa el contexto que ya trae
     y espera recibirlo de vuelta con lo nuestro añadido."""
     from django.urls import reverse
     from django.utils import timezone
+
     from api.models import Order
+    from roblosats_admin.language import get_language, translate, format_remaining, format_expired
+
+    language = get_language(request)
+    t = lambda text: translate(text, language)
 
     ahora = timezone.now()
 
@@ -57,7 +77,7 @@ def roblosats_dashboard(request, context=None):
             return "", False
         segundos = int((limite - ahora).total_seconds())
         if segundos <= 0:
-            return "vencido", True
+            return t("Expired"), True
         minutos, _ = divmod(segundos, 60)
         horas, minutos = divmod(minutos, 60)
         dias, horas = divmod(horas, 24)
@@ -67,8 +87,7 @@ def roblosats_dashboard(request, context=None):
             resto = f"{horas} h {minutos} min"
         else:
             resto = f"{minutos} min"
-        verbo = "queda" if resto.startswith("1 ") and " " not in resto[2:] else "quedan"
-        return f"{verbo} {resto}", segundos < 1800
+        return format_remaining(resto, language), segundos < 1800
 
     def url_orden(pk):
         return reverse("admin:api_order_change", args=[pk])
@@ -89,9 +108,9 @@ def roblosats_dashboard(request, context=None):
         ordenes_vivas.append(
             {
                 "id": o.id,
-                "tipo": o.get_type_display(),
+                "tipo": t(o.get_type_display()),
                 "importe": f"{o.amount or o.max_amount or '?'} {o.currency}",
-                "estado": o.get_status_display(),
+                "estado": t(o.get_status_display()),
                 "desde": hora(o.created_at),
                 "hasta": hora(o.expires_at),
                 "queda": queda,
@@ -125,27 +144,49 @@ def roblosats_dashboard(request, context=None):
         "disputas_abiertas": disputas + esperando,
         "enlaces": {"disputas": lista(status__exact=11)},
         "tarjetas": [
-            {"titulo": "En curso", "valor": en_curso, "link": lista(status__in="6%2C7%2C8%2C9%2C10"),
-             "pie": "colateral, chat o fiat enviado"},
-            {"titulo": "En el libro", "valor": publicas, "link": lista(status__exact=1),
-             "pie": "esperando quien las tome"},
-            {"titulo": "Disputas", "valor": disputas + esperando, "link": lista(status__exact=11),
-             "pie": "abiertas y por resolver"},
-            {"titulo": "Completadas", "valor": completadas, "link": lista(status__exact=14),
-             "pie": "histórico"},
-            {"titulo": "Canceladas", "valor": canceladas, "link": lista(status__in="4%2C12"),
-             "pie": f"anuladas y de mutuo acuerdo · {expiradas} expirada{'s' if expiradas != 1 else ''}"},
+            {
+                "titulo": t("Active"),
+                "valor": en_curso,
+                "link": lista(status__in="6%2C7%2C8%2C9%2C10"),
+                "pie": t("Collateral, chat, or fiat sent"),
+            },
+            {
+                "titulo": t("Order Book"),
+                "valor": publicas,
+                "link": lista(status__exact=1),
+                "pie": t("Waiting for takers"),
+            },
+            {
+                "titulo": t("Disputes"),
+                "valor": disputas + esperando,
+                "link": lista(status__exact=11),
+                "pie": t("Open and awaiting resolution"),
+            },
+            {
+                "titulo": t("Completed"),
+                "valor": completadas,
+                "link": lista(status__exact=14),
+                "pie": t("History"),
+            },
+            {
+                "titulo": t("Canceled"),
+                "valor": canceladas,
+                "link": lista(status__in="4%2C12"),
+                "pie": format_expired(expiradas, language),
+            },
         ],
         "ordenes_vivas": ordenes_vivas,
         "accesos": [
-            {"titulo": "Todas las órdenes", "link": f"{ADMIN_ROOT}api/order/"},
+            {"titulo": t("All Orders"), "link": f"{ADMIN_ROOT}api/order/"},
             {"titulo": "Robots", "link": f"{ADMIN_ROOT}api/robot/"},
-            {"titulo": "Pagos Lightning", "link": f"{ADMIN_ROOT}api/lnpayment/"},
-            {"titulo": "Pagos onchain", "link": f"{ADMIN_ROOT}api/onchainpayment/"},
+            {"titulo": t("Lightning Payments"), "link": f"{ADMIN_ROOT}api/lnpayment/"},
+            {"titulo": t("On-chain Payments"), "link": f"{ADMIN_ROOT}api/onchainpayment/"},
         ],
         "coordinador": {
             "alias": config("COORDINATOR_ALIAS", cast=str, default="Roblosats"),
-            "version": f"{VERSION['major']}.{VERSION['minor']}.{VERSION['patch']}" if "VERSION" in globals() else "",
+            "version": f"{VERSION['major']}.{VERSION['minor']}.{VERSION['patch']}"
+            if "VERSION" in globals()
+            else "",
             "lnd": config("LND_GRPC_HOST", cast=str, default=""),
             "saldo_local": saldo_local,
             "saldo_remoto": saldo_remoto,
@@ -156,14 +197,23 @@ def roblosats_dashboard(request, context=None):
     context.update(datos)
     return context
 
+
 UNFOLD = {
     "SITE_TITLE": f"{config('COORDINATOR_ALIAS', cast=str, default='Roblosats')} Admin",
     "SITE_HEADER": config("COORDINATOR_ALIAS", cast=str, default="Roblosats"),
-    "SITE_SUBHEADER": "Panel del coordinador",
+    "SITE_SUBHEADER": "roblosats_admin.language.coordinator_subheader",
     "SITE_SYMBOL": "local_fire_department",
     "DASHBOARD_CALLBACK": "robosats.settings.roblosats_dashboard",
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
+    "SHOW_LANGUAGES": True,
+    "LANGUAGES": {
+        "action": "/coordinator/set-language/",
+        "navigation": [
+            {"code": "es", "name_local": "Español"},
+            {"code": "en", "name_local": "English"},
+        ],
+    },
     "THEME": None,
     "COLORS": {
         "primary": {
@@ -183,87 +233,120 @@ UNFOLD = {
     "SIDEBAR": {
         "show_search": True,
         "show_all_applications": True,
-        "navigation": [
+        "navigation": "roblosats_admin.language.translate_navigation",
+    },
+}
+
+ROBLOSATS_ADMIN_NAVIGATION = [
             {
-                "title": "Coordinador",
+                "title": "Coordinator",
                 "separator": True,
                 "collapsible": False,
                 "items": [
-                    {"title": "Inicio", "icon": "home", "link": ADMIN_ROOT},
+                    {"title": "Home", "icon": "home", "link": ADMIN_ROOT},
                     {
-                        "title": "Órdenes en curso",
+                        "title": "Active Orders",
                         "icon": "pending_actions",
                         "link": ADMIN_ROOT + "api/order/?status__in=6%2C7%2C8%2C9%2C10",
                         "badge": _count_orders(*EN_CURSO),
                     },
                     {
-                        "title": "En el libro (públicas)",
+                        "title": "Public Orders",
                         "icon": "storefront",
                         "link": ADMIN_ROOT + "api/order/?status__exact=1",
                         "badge": _count_orders(1),
                     },
                     {
-                        "title": "Pagando al comprador",
+                        "title": "Paying the Buyer",
                         "icon": "bolt",
                         "link": ADMIN_ROOT + "api/order/?status__exact=13",
                         "badge": _count_orders(13),
                     },
                     {
-                        "title": "Completadas",
+                        "title": "Completed",
                         "icon": "task_alt",
                         "link": ADMIN_ROOT + "api/order/?status__exact=14",
                     },
                     {
-                        "title": "Todas las órdenes",
+                        "title": "All Orders",
                         "icon": "list_alt",
                         "link": ADMIN_ROOT + "api/order/",
                     },
                 ],
             },
             {
-                "title": "Disputas",
+                "title": "Disputes",
                 "separator": True,
                 "collapsible": False,
                 "items": [
                     {
-                        "title": "Abiertas",
+                        "title": "Open",
                         "icon": "gavel",
                         "link": ADMIN_ROOT + "api/order/?status__exact=11",
                         "badge": _count_orders(11),
                     },
                     {
-                        "title": "Esperando resolución",
+                        "title": "Awaiting Resolution",
                         "icon": "hourglass_top",
                         "link": ADMIN_ROOT + "api/order/?status__exact=16",
                         "badge": _count_orders(16),
                     },
                     {
-                        "title": "Historial completo",
+                        "title": "Full History",
                         "icon": "history",
                         "link": ADMIN_ROOT + "api/order/?is_disputed__exact=1",
                     },
                 ],
             },
             {
-                "title": "Dinero",
+                "title": "Payments",
                 "separator": True,
                 "collapsible": True,
                 "items": [
-                    {"title": "Pagos Lightning", "icon": "flash_on", "link": ADMIN_ROOT + "api/lnpayment/"},
-                    {"title": "Pagos onchain", "icon": "link", "link": ADMIN_ROOT + "api/onchainpayment/"},
+                    {
+                        "title": "Lightning Payments",
+                        "icon": "flash_on",
+                        "link": ADMIN_ROOT + "api/lnpayment/",
+                    },
+                    {
+                        "title": "On-chain Payments",
+                        "icon": "link",
+                        "link": ADMIN_ROOT + "api/onchainpayment/",
+                    },
                 ],
             },
             {
-                "title": "Gente y mercado",
+                "title": "People and Market",
                 "separator": True,
                 "collapsible": True,
                 "items": [
-                    {"title": "Robots", "icon": "smart_toy", "link": ADMIN_ROOT + "api/robot/"},
-                    {"title": "Usuarios", "icon": "person", "link": ADMIN_ROOT + "auth/user/"},
-                    {"title": "Divisas", "icon": "payments", "link": ADMIN_ROOT + "api/currency/"},
-                    {"title": "Precios de mercado", "icon": "trending_up", "link": ADMIN_ROOT + "api/markettick/"},
+                    {
+                        "title": "Robots",
+                        "icon": "smart_toy",
+                        "link": ADMIN_ROOT + "api/robot/",
+                    },
+                    {
+                        "title": "Users",
+                        "icon": "person",
+                        "link": ADMIN_ROOT + "auth/user/",
+                    },
+                    {
+                        "title": "Currencies",
+                        "icon": "payments",
+                        "link": ADMIN_ROOT + "api/currency/",
+                    },
+                    {
+                        "title": "Market Prices",
+                        "icon": "trending_up",
+                        "link": ADMIN_ROOT + "api/markettick/",
+                    },
                 ],
             },
-        ],
-    },
-}
+        ]
+
+# Apply language preferences only to the coordinator administration.
+MIDDLEWARE = list(MIDDLEWARE)
+MIDDLEWARE.insert(
+    MIDDLEWARE.index("django.contrib.auth.middleware.AuthenticationMiddleware") + 1,
+    "roblosats_admin.middleware.CoordinatorLanguageMiddleware",
+)

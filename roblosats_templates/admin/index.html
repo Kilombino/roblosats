@@ -1,5 +1,5 @@
 {% extends "unfold/layouts/base_simple.html" %}
-{% load i18n %}
+{% load i18n roblosats_language %}
 
 {% comment %}
 Pantalla de inicio del panel de Roblosats.
@@ -15,9 +15,9 @@ juego. Los números los calcula roblosats_dashboard() en settings.py.
   {% if disputas_abiertas %}
   <a href="{{ enlaces.disputas }}"
      class="block rounded-lg border-l-4 border-red-500 bg-red-50 px-5 py-4 dark:bg-red-950/40">
-    <div class="text-sm uppercase tracking-wide text-red-600 dark:text-red-400">Requiere tu decisión</div>
+    <div class="text-sm uppercase tracking-wide text-red-600 dark:text-red-400">{% coordinator_text "Your Attention Required" %}</div>
     <div class="mt-1 text-2xl font-semibold text-red-700 dark:text-red-300">
-      {{ disputas_abiertas }} disputa{{ disputas_abiertas|pluralize:"s" }} esperando
+      {% coordinator_disputes disputas_abiertas %}
     </div>
   </a>
   {% endif %}
@@ -35,14 +35,14 @@ juego. Los números los calcula roblosats_dashboard() en settings.py.
 
   <div class="rounded-lg border border-base-200 bg-white dark:border-base-800 dark:bg-base-900">
     <div class="border-b border-base-200 px-5 py-3 text-sm font-medium dark:border-base-800">
-      Operaciones vivas
+      {% coordinator_text "Active Orders" %}
     </div>
     {% if ordenes_vivas %}
     <table class="w-full text-sm">
       <thead class="text-left text-xs uppercase tracking-wide text-base-500">
         <tr>
-          <th class="px-5 py-2">Nº</th><th class="px-5 py-2">Tipo</th><th class="px-5 py-2">Importe</th>
-          <th class="px-5 py-2">Estado</th><th class="px-5 py-2">Desde</th><th class="px-5 py-2">Hasta</th>
+          <th class="px-5 py-2">{% coordinator_text "No." %}</th><th class="px-5 py-2">{% coordinator_text "Type" %}</th><th class="px-5 py-2">{% coordinator_text "Amount" %}</th>
+          <th class="px-5 py-2">{% coordinator_text "Status" %}</th><th class="px-5 py-2">{% coordinator_text "Created" %}</th><th class="px-5 py-2">{% coordinator_text "Expires" %}</th>
         </tr>
       </thead>
       <tbody>
@@ -61,7 +61,7 @@ juego. Los números los calcula roblosats_dashboard() en settings.py.
       </tbody>
     </table>
     {% else %}
-    <div class="px-5 py-6 text-sm text-base-500">Ninguna operación en curso ahora mismo.</div>
+    <div class="px-5 py-6 text-sm text-base-500">{% coordinator_text "No active orders at the moment." %}</div>
     {% endif %}
   </div>
 
@@ -75,8 +75,8 @@ juego. Los números los calcula roblosats_dashboard() en settings.py.
   </div>
 
   <div class="text-xs text-base-500">
-    Coordinador {{ coordinador.alias }} · RoboSats {{ coordinador.version }} · nodo {{ coordinador.lnd }}
-    · canales: {{ coordinador.saldo_local }} sats locales / {{ coordinador.saldo_remoto }} remotos
+    {% coordinator_text "Coordinator" %} {{ coordinador.alias }} · Roblosats {{ coordinador.version }} · {% coordinator_text "node" %} {{ coordinador.lnd }}
+    · {% coordinator_text "channels" %}: {{ coordinador.saldo_local }} {% coordinator_text "local sats" %} / {{ coordinador.saldo_remoto }} {% coordinator_text "remote sats" %}
   </div>
 
 </div>

@@ -18,16 +18,22 @@ from decouple import config
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
+from roblosats_admin.views import set_admin_language
 
 VERSION = settings.VERSION
 
 urlpatterns = [
+    path(
+        "coordinator/set-language/",
+        set_admin_language,
+        name="roblosats_admin_set_language",
+    ),
     path("coordinator/", admin.site.urls),
     path("api/", include("api.urls")),
     # path('chat/', include('chat.urls')),
     path("", include("frontend.urls")),
 ]
 
-admin.site.site_header = f"RoboSats Coordinator: {config('COORDINATOR_ALIAS', cast=str, default='NoAlias')} {config('NETWORK', cast=str, default='')} (v{VERSION['major']}.{VERSION['minor']}.{VERSION['patch']})".title()
+admin.site.site_header = f"Roblosats Coordinator: {config('COORDINATOR_ALIAS', cast=str, default='NoAlias')} {config('NETWORK', cast=str, default='')} (v{VERSION['major']}.{VERSION['minor']}.{VERSION['patch']})".title()
 admin.site.index_title = "Coordinator administration"
-admin.site.site_title = "RoboSats Coordinator Admin"
+admin.site.site_title = "Roblosats Coordinator Admin"

@@ -18,7 +18,26 @@ class RoblosatsAdminConfig(AppConfig):
 
         from api.models import LNPayment, Order, Robot
 
+        from .filters import BilingualChoicesFieldListFilter
+
         registry = admin.site._registry
+
+        from .admin_i18n import CoordinatorAdminI18nMixin
+
+        for model, model_admin in registry.items():
+            current_class = model_admin.__class__
+
+            if issubclass(current_class, CoordinatorAdminI18nMixin):
+                continue
+
+            bilingual_class = type(
+                "Bilingual" + current_class.__name__,
+                (CoordinatorAdminI18nMixin, current_class),
+                {},
+            )
+
+            model_admin.__class__ = bilingual_class
+
 
         if Order in registry:
             oa = registry[Order]
@@ -39,7 +58,14 @@ class RoblosatsAdminConfig(AppConfig):
                 "created_at",
                 "expires_at",
             )
-            oa.list_filter = ("status", "is_disputed", "is_fiat_sent", "type", "currency", "is_swap")
+            oa.list_filter = (
+                ("status", BilingualChoicesFieldListFilter),
+                "is_disputed",
+                "is_fiat_sent",
+                ("type", BilingualChoicesFieldListFilter),
+                "currency",
+                "is_swap",
+            )
             oa.ordering = ("-created_at",)
             oa.list_per_page = 50
             oa.date_hierarchy = "created_at"
@@ -48,6 +74,21 @@ class RoblosatsAdminConfig(AppConfig):
             pa = registry[LNPayment]
             pa.ordering = ("-created_at",)
             pa.list_per_page = 50
+
+        from api.models import OnchainPayment
+
+        if LNPayment in registry:
+            registry[LNPayment].list_filter = (
+                ("type", BilingualChoicesFieldListFilter),
+                ("concept", BilingualChoicesFieldListFilter),
+                ("status", BilingualChoicesFieldListFilter),
+            )
+
+        if OnchainPayment in registry:
+            registry[OnchainPayment].list_filter = (
+                ("concept", BilingualChoicesFieldListFilter),
+                ("status", BilingualChoicesFieldListFilter),
+            )
 
         if Robot in registry:
             ra = registry[Robot]
