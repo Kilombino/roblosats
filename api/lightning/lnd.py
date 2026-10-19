@@ -67,7 +67,16 @@ class LNDNode:
     ssl_creds = grpc.ssl_channel_credentials(CERT)
     auth_creds = grpc.metadata_call_credentials(metadata_callback)
     combined_creds = grpc.composite_channel_credentials(ssl_creds, auth_creds)
-    channel = grpc.secure_channel(LND_GRPC_HOST, combined_creds)
+    # Optional TLS hostname for LND servers accessed by IP address.
+    # Example: LND_TLS_SERVER_NAME=umbrel.local
+    # Leave unset to use gRPC's default hostname verification.
+    tls_server_name = config("LND_TLS_SERVER_NAME", default="").strip()
+    channel_options = (
+        [("grpc.ssl_target_name_override", tls_server_name)] if tls_server_name else []
+    )
+    channel = grpc.secure_channel(
+        LND_GRPC_HOST, combined_creds, options=channel_options
+    )
 
     payment_failure_context = {
         0: "Payment isn't failed (yet)",
