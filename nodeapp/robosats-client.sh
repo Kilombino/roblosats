@@ -20,7 +20,7 @@ while read -r alias onion; do
     case "$alias" in *[!a-z0-9]*) echo "skipping coordinator with a bad alias: $alias"; continue ;; esac
     case "$onion" in *.onion) ;; *) echo "skipping $alias: not an onion"; continue ;; esac
     printf 'upstream mainnet_%s {\n    server 127.0.0.1:%s;\n}\n' "$alias" "$port" > "$CONF/$alias.upstream.conf"
-    sed -e "s/ALIAS/$alias/g" -e "s/PORT/$port/g" "$CONF/locations.template" > "$CONF/$alias.locations.conf"
+    sed -e "s/ALIAS/$alias/g" -e "s/PORT/$port/g" -e "s/ONION/$onion/g" "$CONF/locations.template" > "$CONF/$alias.locations.conf"
     echo "$alias $onion $port" >> /tmp/bridges
     port=$((port + 1))
 done

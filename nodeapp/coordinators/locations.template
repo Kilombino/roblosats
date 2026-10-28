@@ -1,6 +1,8 @@
-# ALIAS (mainnet), through its Tor bridge on 127.0.0.1:PORT
+# ALIAS (mainnet), through its Tor bridge on 127.0.0.1:PORT. Host is its onion: a coordinator only
+# answers to its own names (Django ALLOWED_HOSTS), not to whatever name this client is opened by.
 location /mainnet/ALIAS/static/assets/avatars/ {
     proxy_pass http://mainnet_ALIAS/static/assets/avatars/;
+    proxy_set_header Host ONION;
 }
 
 location /mainnet/ALIAS/api/ {
@@ -8,7 +10,9 @@ location /mainnet/ALIAS/api/ {
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "Upgrade";
-    proxy_set_header Host $host;
+    proxy_set_header Host ONION;
+    proxy_set_header Origin http://ONION;
+    proxy_set_header Referer "";
 }
 
 location /mainnet/ALIAS/ws/ {
@@ -16,7 +20,9 @@ location /mainnet/ALIAS/ws/ {
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "Upgrade";
-    proxy_set_header Host $host;
+    proxy_set_header Host ONION;
+    proxy_set_header Origin http://ONION;
+    proxy_set_header Referer "";
 }
 
 location /mainnet/ALIAS/relay/ {
@@ -25,7 +31,7 @@ location /mainnet/ALIAS/relay/ {
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "Upgrade";
     proxy_set_header Origin $http_origin;
-    proxy_set_header Host $host;
+    proxy_set_header Host ONION;
 
     add_header Access-Control-Allow-Origin *;
 }
@@ -33,7 +39,9 @@ location /mainnet/ALIAS/relay/ {
 location /mainnet/ALIAS/blossom/ {
     proxy_pass http://mainnet_ALIAS/blossom/;
     proxy_http_version 1.1;
-    proxy_set_header Host $host;
+    proxy_set_header Host ONION;
+    proxy_set_header Origin http://ONION;
+    proxy_set_header Referer "";
     client_max_body_size 12m;
 }
 
