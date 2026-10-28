@@ -82,5 +82,40 @@
     ],
     "testnetNodesPubkeys": [],
     "federated": true
+  },
+  "rosegarden": {
+    "longAlias": "Rose Garden",
+    "shortAlias": "rosegarden",
+    "identifier": "rosegarden",
+    "description": "Rose Garden is a Roblosats coordinator running its own BLAKE2b Lightning node.",
+    "motto": "",
+    "color": "#c2185b",
+    "established": "2026-10-28",
+    "nostrHexPubkey": "a9574b4229d30a8b067e38299341c652b3e3956169d278ee29e2e4087dba9da5",
+    "contact": {
+      "nostr": "npub149t5ks3f6v9gkpn78q5exswx22e789tpd8f83m3futjqsld6nkjspklsng"
+    },
+    "badges": {
+      "isFounder": false,
+      "donatesToDevFund": 21,
+      "hasGoodOpSec": false,
+      "hasLargeLimits": true
+    },
+    "policies": {},
+    "mainnet": {
+      "onion": "http://fvdl26sy3yquqp5ft5p6gkwf3utztghncqcz5vjg62cwsurr2yyjluid.onion",
+      "clearnet": null,
+      "i2p": null
+    },
+    "testnet": {
+      "onion": null,
+      "clearnet": null,
+      "i2p": null
+    },
+    "mainnetNodesPubkeys": [
+      "0349385a993ffa68f4a2fe628f48aaa41a72d40d7254cf5c499a5f507ea06ad697"
+    ],
+    "testnetNodesPubkeys": [],
+    "federated": true
   }
 }
