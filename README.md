@@ -11,7 +11,7 @@ RoboSats is a simple and private way to exchange bitcoin for national currencies
 
 
 <div align="center">
-  <img width="75%" src="https://raw.githubusercontent.com/RoboSats/robosats/main/frontend/static/assets/images/robosats-0.1.1-banner.png">
+  <img width="35%" alt="Roblosats" src="https://raw.githubusercontent.com/Kilombino/roblosats/roblosats/fastlane/metadata/en-US/images/icon.png">
 </div>
 
 ## Learn
