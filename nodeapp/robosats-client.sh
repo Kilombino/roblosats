@@ -25,6 +25,11 @@ while read -r alias onion; do
     port=$((port + 1))
 done
 
+# PLAIN_HTTP=1: the platform (StartOS, Umbrel) puts its own HTTPS in front; plain HTTP inside it.
+if [ "${PLAIN_HTTP:-0}" = 1 ]; then
+    sed -i -e 's/listen 12596 ssl;/listen 12596;/' -e '/ssl_certificate/d' -e '/ssl_protocols/d' -e '/error_page 497/d' /etc/nginx/nginx.conf
+fi
+
 mkdir -p /etc/nginx/ssl
 if [ ! -f /etc/nginx/ssl/server.crt ]; then
     openssl req -x509 -nodes -newkey rsa:2048 -days 3650 \
