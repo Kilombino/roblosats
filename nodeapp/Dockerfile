@@ -1,6 +1,6 @@
 FROM alpine:3.23
 
-LABEL maintainer="Reckless_Satoshi https://github.com/reckless-satoshi"
+LABEL maintainer="Kilombino https://github.com/Kilombino/roblosats"
 
 # Needs a copy or symlink of /frontend/static in /nodeapp/static
 # Github client release workflow copies /frontend/static here
@@ -18,6 +18,7 @@ COPY ./coordinators/ /etc/nginx/conf.d/
 
 RUN apk -U --no-cache upgrade \
     && apk --no-cache add socat \
+    && apk --no-cache add jq \
     && apk --no-cache add nginx \
     && apk --no-cache add openssl
 

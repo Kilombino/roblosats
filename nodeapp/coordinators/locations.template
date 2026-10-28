@@ -1,0 +1,43 @@
+# ALIAS (mainnet), through its Tor bridge on 127.0.0.1:PORT
+location /mainnet/ALIAS/static/assets/avatars/ {
+    proxy_pass http://mainnet_ALIAS/static/assets/avatars/;
+}
+
+location /mainnet/ALIAS/api/ {
+    proxy_pass http://mainnet_ALIAS/api/;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+    proxy_set_header Host $host;
+}
+
+location /mainnet/ALIAS/ws/ {
+    proxy_pass http://mainnet_ALIAS/ws/;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+    proxy_set_header Host $host;
+}
+
+location /mainnet/ALIAS/relay/ {
+    proxy_pass http://mainnet_ALIAS/relay/;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+    proxy_set_header Origin $http_origin;
+    proxy_set_header Host $host;
+
+    add_header Access-Control-Allow-Origin *;
+}
+
+location /mainnet/ALIAS/blossom/ {
+    proxy_pass http://mainnet_ALIAS/blossom/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    client_max_body_size 12m;
+}
+
+# Never the coordinator's admin panel.
+location ~ ^/mainnet/ALIAS/(coordinator|admin)(/|$) {
+    return 403;
+}
