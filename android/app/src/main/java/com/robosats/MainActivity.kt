@@ -180,7 +180,7 @@ class MainActivity : AppCompatActivity() {
             } catch (e: UninitializedPropertyAccessException) {
                 torKmp = TorKmp(application as Application)
                 TorKmpManager.updateTorKmpObject(torKmp)
-                torKmp.torOperationManager.startQuietly()
+                torKmp.startQuietly()
             }
 
             // Run Tor connection check on a background thread
@@ -219,7 +219,7 @@ class MainActivity : AppCompatActivity() {
             // Wait for Tor to connect with retry mechanism
             while (!torKmp.isConnected() && retries < maxRetries) {
                 if (!torKmp.isStarting()) {
-                    torKmp.torOperationManager.startQuietly()
+                    torKmp.startQuietly()
                 }
                 Thread.sleep(2000)
                 retries += 1
