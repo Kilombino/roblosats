@@ -15,7 +15,7 @@ Bitcoin P2P Lightning exchange. Users trade fiat for sats through a coordinator 
 | `/frontend` | React 19 + TypeScript SPA — web, desktop, Android WebView, self-hosted |
 | `/frontend/src/contexts` | Global React state: App, Garage, Federation contexts |
 | `/frontend/src/components` | UI components: TradeBox, BookTable, MakerForm, EncryptedChat |
-| `/frontend/src/models` | TypeScript models: Order, Robot, Slot, Garage, Federation, Coordinator |
+| `/frontend/src/models` | TypeScript models: Order, Robot, Slot, Garage, GarageKey, Federation, Coordinator |
 | `/frontend/src/services` | API client, WebSocket, Nostr relay, platform abstraction |
 | `/android` | Native Kotlin Android app (WebView bridge to frontend) |
 | `/desktopApp` | Electron wrapper around React frontend |
@@ -30,7 +30,7 @@ Bitcoin P2P Lightning exchange. Users trade fiat for sats through a coordinator 
 | `/.github` | CI/CD workflows, release orchestration, issue/PR templates, CODEOWNERS |
 
 ## Tech Stack
-- **Backend**: Python/Django 5.1, DRF, PostgreSQL, Redis, Celery, Django Channels (WebSocket)
+- **Backend**: Python/Django 5.2, DRF, PostgreSQL, Redis, Celery, Django Channels (WebSocket)
 - **Frontend**: React 19, TypeScript, Webpack 5, MUI, i18next, OpenPGP.js, nostr-tools
 - **Lightning**: LND or CLN via gRPC — selected by `LNVENDOR` env var
 - **Privacy**: Tor, PGP-encrypted chat, SHA256-hashed robot tokens
@@ -61,10 +61,35 @@ Bitcoin P2P Lightning exchange. Users trade fiat for sats through a coordinator 
 
 - When creating/editing AGENTS.md files, follow .claude/references/agents-md.md for good practices.
 - Check /development docs for unclear business rules or entities relationships.
+- Before upgrading any library or infrastructure component, consult
+  `development/blocked-upgrades.md` — it lists every pinned version with its blocker.
+  See `development/AGENTS.md` for an overview of all developer reference docs.
+- **No inline comments in source code.** Rationale, design decisions, field semantics,
+  security properties, and non-obvious behaviour belong in the nearest AGENTS.md —
+  never in JSDoc blocks, block comments, or inline `//` comments in source files.
+  The only acceptable comments are TODOs that reference a tracked issue and
+  pre-existing comments in code you did not author in the current task.
+
+## Testing
+
+Every branch that adds or changes behaviour **must ship tests covering that change in the same branch** — never deferred to a follow-up.
+
+- **Backend — unit (mocked):** `api/tests/` for logic, utils, serializers, tasks, notifications. See `api/tests/AGENTS.md` for the patch-at-source convention and existing file map.
+- **Backend — integration:** `/tests/` for any endpoint change, order state-machine path, or Lightning/escrow flow. `assertResponse` schema validation is mandatory for every new endpoint test. See `tests/AGENTS.md` for setup and utilities.
+- **Frontend — unit:** Jest tests colocated in `__tests__/` next to the module under test (`src/models/`, `src/utils/`, `src/services/`). Run with `npm test`. See `frontend/AGENTS.md` for the Jest environment constraints and mock conventions.
+- **Exemptions** (no tests required): pure documentation edits, comment-only changes, AGENTS.md updates, config-only changes with zero behaviour delta. State the exemption reason explicitly in the PR description.
+
+### Coverage
+
+Every branch that adds or changes behaviour is expected to maintain or improve coverage. Run `npm test` (frontend) and `coverage run manage.py test && coverage report` (backend) locally before opening a PR to confirm no regression.
 
 ## Gotchas
 
 - Modifications to api endpoint paths or coordinators requires updating /nodeapp
+- **Blocked / pinned upgrades**: several frontend (Babel, OpenPGP.js, ESLint, TypeScript)
+  and backend (Django, CLN) dependencies are pinned due to known breakage or missing
+  compatibility. Always read `development/blocked-upgrades.md` before bumping any
+  dependency version.
 - **CLN + holdinvoice version constraint**: `holdinvoice v4.0.0` (the committed binary in
   `docker/cln/plugins/holdinvoice`) only supports **CLN up to v25.09.x**. Upgrading CLN
   beyond v25.09.x will cause holdinvoice to fail silently — hold invoices never reach

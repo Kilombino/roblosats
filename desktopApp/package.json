@@ -8,7 +8,7 @@
     "compile": "./node_modules/.bin/tsc",
     "test": "echo \"Error: no test specified\" && exit 1",
     "package-linux": "npx @electron/packager . Roblosats  --platform=linux --arch=x64 --icon=./assets/icon/Robosats.svg --overwrite  --out=release-builds --asar.unpackDir=tor",
-    "package-win": "npx @electron/packager . Roblosats  --platform=win32 --arch=ia32 --icon=./assets/icon/Robosats.ico --overwrite   --out=release-builds --asar.unpackDir=tor",
+    "package-win": "npx @electron/packager . Roblosats  --platform=win32 --arch=x64 --icon=./assets/icon/Robosats.ico --overwrite   --out=release-builds --asar.unpackDir=tor",
     "package-mac": "npx @electron/packager . Roblosats  --platform=darwin --arch=x64 --icon=./assets/icon/Robosats.icns --overwrite    --out=release-builds --asar.unpackDir=tor"
   },
   "author": "",
@@ -16,7 +16,7 @@
   "overrides": {
     "@xmldom/xmldom": "^0.8.13",
     "minimatch": "^9.0.7",
-    "brace-expansion": "^1.1.18",
+    "brace-expansion": "^1.1.21",
     "@electron/universal": {
       "minimatch": "^9.0.7",
       "brace-expansion": "^1.1.18"
@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@electron/packager": "^20.3.0",
-    "electron": "^43.4.1",
+    "electron": "^44.9.1",
     "typescript": "^7.0.2"
   },
   "build": {

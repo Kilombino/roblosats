@@ -17,10 +17,10 @@ on:
         required: true
   push:
     branches: [ "main" ]
-    paths: [ "android", "frontend" ]
+    paths: [ "android/**", "frontend/**" ]
   pull_request:
     branches: [ "main" ]
-    paths: [ "android", "frontend" ]
+    paths: [ "android/**", "frontend/**" ]
 
 jobs:
   build-android:
@@ -34,7 +34,7 @@ jobs:
 
       - name: 'Download Android Web.bundle Artifact (built frontend)'
         if: inputs.semver == ''  # Only if workflow fired from frontend-build.yml
-        uses: dawidd6/action-download-artifact@v23
+        uses: dawidd6/action-download-artifact@v27
         with:
           workflow: frontend-build.yml
           workflow_conclusion: success
@@ -47,6 +47,12 @@ jobs:
         with:
           name: mobile-web.bundle
           path: android/app/src/main/assets
+
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
 
       - name: Cache gradle
         uses: actions/cache@v6
@@ -76,6 +82,7 @@ jobs:
           repo/bin/scanapk.php android/app/build/outputs/apk/release/app-universal-release-unsigned.apk
 
       - name: Sign APK
+        if: inputs.semver != ''
         uses: r0adkll/sign-android-release@v1
         with:
           releaseDirectory: android/app/build/outputs/apk/release
@@ -131,7 +138,7 @@ jobs:
 
       - name: Create Pre-Release
         id: create_release
-        if: inputs.semver == '' # only if this workflow is not called from a Release
+        if: inputs.semver == '' && github.event_name == 'push'
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -142,7 +149,7 @@ jobs:
 
       - name: Upload APK Universal Asset
         id: upload-release-asset-universal-apk
-        if: inputs.semver == '' # only if this workflow is not called from a Release
+        if: inputs.semver == '' && github.event_name == 'push'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -154,7 +161,7 @@ jobs:
 
       - name: Upload APK arm64-v8a Asset
         id: upload-release-asset-arm64-v8a
-        if: inputs.semver == '' # only if this workflow is not called from a Release
+        if: inputs.semver == '' && github.event_name == 'push'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -166,7 +173,7 @@ jobs:
 
       - name: Upload APK armeabi-v7a Asset
         id: upload-release-asset-armeabi-v7a
-        if: inputs.semver == '' # only if this workflow is not called from a Release
+        if: inputs.semver == '' && github.event_name == 'push'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

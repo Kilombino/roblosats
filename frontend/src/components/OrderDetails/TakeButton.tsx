@@ -7,7 +7,7 @@ import Countdown from 'react-countdown';
 import currencies from '../../utils/currencies';
 
 import { type Order, type Info } from '../../models';
-import { ConfirmationDialog, OrderDescriptionDialog } from '../Dialogs';
+import { ConfirmationDialog, OrderDescriptionDialog, UsedRobotDialog } from '../Dialogs';
 import { LoadingButton } from '@mui/lab';
 import { computeSats } from '../../utils';
 import { GarageContext, type UseGarageStoreType } from '../../contexts/GarageContext';
@@ -15,13 +15,14 @@ import { type UseFederationStoreType, FederationContext } from '../../contexts/F
 import { useNavigate } from 'react-router-dom';
 import { sha256 } from 'js-sha256';
 import { UseAppStoreType, AppContext } from '../../contexts/AppContext';
+import useLegacyMode from '../../hooks/useLegacyMode';
 
 interface TakeButtonProps {
   currentOrder: Order;
   password?: string;
   info?: Info;
   setCurrentOrder: (currentOrder: Order) => void;
-  onClickGenerateRobot?: () => void;
+  onClickGenerateRobot?: () => Promise<void>;
 }
 
 interface OpenDialogsProps {
@@ -35,7 +36,7 @@ const TakeButton = ({
   currentOrder,
   setCurrentOrder,
   info,
-  onClickGenerateRobot = () => null,
+  onClickGenerateRobot = async () => {},
 }: TakeButtonProps): React.JSX.Element => {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -44,12 +45,16 @@ const TakeButton = ({
   const { garage } = useContext<UseGarageStoreType>(GarageContext);
   const { federation } = useContext<UseFederationStoreType>(FederationContext);
   const { slotUpdatedAt } = useContext<UseAppStoreType>(AppContext);
+  const { isLegacyMode, legacyDisabledTooltip } = useLegacyMode();
 
   const [takeAmount, setTakeAmount] = useState<string>('');
   const [badRequest, setBadRequest] = useState<string>('');
   const [loadingTake, setLoadingTake] = useState<boolean>(false);
   const [open, setOpen] = useState<OpenDialogsProps>(closeAll);
   const [satoshis, setSatoshis] = useState<string>('');
+  const [openUsedRobotDialog, setOpenUsedRobotDialog] = useState<boolean>(false);
+  const [usedRobotHasActiveOrder, setUsedRobotHasActiveOrder] = useState<boolean>(false);
+  const [changingRobot, setChangingRobot] = useState<boolean>(false);
 
   const satoshisNow = (): string | undefined => {
     if (currentOrder === null) return;
@@ -129,12 +134,44 @@ const TakeButton = ({
     }
   }, [slotUpdatedAt, takeAmount]);
 
-  const onTakeOrderClicked = function (): void {
+  const proceedToTakeFlow = function (): void {
     if (currentOrder?.description && currentOrder?.description !== '') {
       setOpen({ description: true, confirmation: false });
     } else {
       setOpen({ description: false, confirmation: true });
     }
+  };
+
+  const onTakeOrderClicked = function (): void {
+    const slot = garage.getSlot();
+    if (slot && !slot.isReusable()) {
+      setUsedRobotHasActiveOrder(Boolean(slot.activeOrder));
+      setOpenUsedRobotDialog(true);
+      return;
+    }
+    proceedToTakeFlow();
+  };
+
+  const handleChangeRobotAndTake = (): void => {
+    setChangingRobot(true);
+    const currentIndex = garage.getCurrentAccountIndex();
+    void garage
+      .findNextUnusedAccount(federation, currentIndex + 1)
+      .then(async (nextIndex) => {
+        await garage.setAccountIndex(federation, nextIndex);
+        garage.publishAccountRecovery(federation, nextIndex);
+      })
+      .then(() => {
+        setOpenUsedRobotDialog(false);
+        takeOrder();
+      })
+      .catch(() => {
+        setBadRequest('Could not switch to a new robot. Please try again.');
+        setOpenUsedRobotDialog(false);
+      })
+      .finally(() => {
+        setChangingRobot(false);
+      });
   };
 
   const invalidTakeAmount = useMemo(() => {
@@ -232,15 +269,20 @@ const TakeButton = ({
                   flex: 1,
                 }}
               >
-                <LoadingButton
-                  loading={loadingTake}
-                  sx={{ height: '2.8em', width: '100%', whiteSpace: 'nowrap' }}
-                  variant='outlined'
-                  color='primary'
-                  onClick={onTakeOrderClicked}
-                >
-                  {t('Take Order')}
-                </LoadingButton>
+                <Tooltip title={isLegacyMode ? legacyDisabledTooltip : ''} placement='top'>
+                  <span>
+                    <LoadingButton
+                      loading={loadingTake}
+                      sx={{ height: '2.8em', width: '100%', whiteSpace: 'nowrap' }}
+                      variant='outlined'
+                      color='primary'
+                      disabled={isLegacyMode}
+                      onClick={onTakeOrderClicked}
+                    >
+                      {t('Take Order')}
+                    </LoadingButton>
+                  </span>
+                </Tooltip>
               </div>
             </Box>
             {satoshis !== '0' && satoshis !== '' && !invalidTakeAmount ? (
@@ -263,16 +305,21 @@ const TakeButton = ({
             bottom: '0.25em',
           }}
         >
-          <LoadingButton
-            loading={loadingTake}
-            sx={{ height: '2.71em' }}
-            variant='outlined'
-            color='primary'
-            size='large'
-            onClick={onTakeOrderClicked}
-          >
-            {t('Take Order')}
-          </LoadingButton>
+          <Tooltip title={isLegacyMode ? legacyDisabledTooltip : ''} placement='top'>
+            <span>
+              <LoadingButton
+                loading={loadingTake}
+                sx={{ height: '2.71em' }}
+                variant='outlined'
+                color='primary'
+                size='large'
+                disabled={isLegacyMode}
+                onClick={onTakeOrderClicked}
+              >
+                {t('Take Order')}
+              </LoadingButton>
+            </span>
+          </Tooltip>
         </Box>
       );
     }
@@ -340,6 +387,17 @@ const TakeButton = ({
         }}
         hasRobot={Boolean(garage.getSlot()?.hashId)}
         onClickGenerateRobot={onClickGenerateRobot}
+      />
+
+      <UsedRobotDialog
+        open={openUsedRobotDialog}
+        action='take'
+        hasActiveOrder={usedRobotHasActiveOrder}
+        isRangeOrder={Boolean(currentOrder?.has_range)}
+        isLegacyMode={isLegacyMode}
+        onClose={() => setOpenUsedRobotDialog(false)}
+        onChangeRobot={handleChangeRobotAndTake}
+        loading={changingRobot}
       />
     </Box>
   );

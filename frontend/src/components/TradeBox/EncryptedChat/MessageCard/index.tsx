@@ -244,34 +244,16 @@ const MessageCard: React.FC<Props> = ({
             </div>
           </Tooltip>
         }
-        // Roblosats: the wrapping rules live on this box (subheaderTypographyProps is not applied
-        // by this MUI version), so long unbroken strings (invoices, addresses) wrap instead of
-        // stretching the chat past the screen.
-        subheader={
-          <Box
-            component='span'
-            sx={{
-              display: 'block',
+        subheader={renderMessageContent()}
+        slotProps={{
+          subheader: {
+            sx: {
               overflowWrap: 'anywhere',
               wordBreak: 'break-word',
               width: '13em',
               maxWidth: '100%',
               textAlign: 'left',
-            }}
-          >
-            {renderMessageContent()}
-          </Box>
-        }
-        subheaderTypographyProps={{
-          sx: {
-            wordWrap: 'break-word',
-            // Roblosats: long unbroken strings (Lightning invoices, addresses) wrap instead of
-            // stretching the chat past the screen and pushing its buttons out of reach.
-            overflowWrap: 'anywhere',
-            wordBreak: 'break-word',
-            width: '13em',
-            maxWidth: '100%',
-            textAlign: 'left',
+            },
           },
         }}
       />

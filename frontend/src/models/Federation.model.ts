@@ -99,7 +99,9 @@ export class Federation {
     this.roboPool = new RoboPool(settings);
 
     if (settings.client === 'mobile') {
-      const federationUrls = Object.values(this.coordinators).map((c) => c.getRelayUrl());
+      const federationUrls = Object.values(this.coordinators)
+        .map((c) => c.getRelayUrl())
+        .filter(Boolean);
       const federationPubKeys = Object.values(this.coordinators).map((c) => c.nostrHexPubkey);
 
       systemClient.setItem('federation_relays', JSON.stringify(federationUrls));
@@ -437,7 +439,9 @@ export class Federation {
 
     // Update Android notification relay list
     if (this.settings.client === 'mobile') {
-      const federationUrls = Object.values(this.coordinators).map((c) => c.getRelayUrl());
+      const federationUrls = Object.values(this.coordinators)
+        .map((c) => c.getRelayUrl())
+        .filter(Boolean);
       const federationPubKeys = Object.values(this.coordinators).map((c) => c.nostrHexPubkey);
       systemClient.setItem('federation_relays', JSON.stringify(federationUrls));
       systemClient.setItem('federation_pubkeys', JSON.stringify(federationPubKeys));

@@ -126,12 +126,9 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
   const { garage } = useContext<UseGarageStoreType>(GarageContext);
   const { settings, navigateToPage, slotUpdatedAt } = useContext<UseAppStoreType>(AppContext);
   const { federation } = useContext<UseFederationStoreType>(FederationContext);
-  // How to reach the order's coordinator, for the dispute texts: its email, else another channel.
-  const coordinatorContact = (() => {
-    const c = federation.getCoordinator(currentOrder.shortAlias ?? '')?.contact;
-    return c?.email || c?.telegram || c?.simplex || c?.nostr || undefined;
-  })();
   const navigate = useNavigate();
+
+  const [badRequest, setBadRequest] = useState<string | null>(null);
 
   // Buttons and Dialogs
   const [loadingButtons, setLoadingButtons] = useState<loadingButtonsProps>(noLoadingButtons);
@@ -150,6 +147,18 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
     const slot = garage.getSlot();
     const newOrder = currentOrder;
     if (newOrder && slot) {
+      if (garage.garageKey && !slot.isReusable()) {
+        setBadRequest(
+          slot.activeOrder
+            ? 'This robot already has an active order. Navigate to a new account to create another order.'
+            : 'This robot was involved in a trade. Please navigate to a new account to create orders.',
+        );
+        setLoadingButtons(noLoadingButtons);
+        return;
+      }
+
+      setBadRequest(null);
+
       const orderAttributes = {
         type: newOrder.type,
         currency: newOrder.currency,
@@ -171,12 +180,14 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
         password: password && password !== '' ? password : undefined,
       };
 
-      void slot
-        .makeOrder(federation, orderAttributes)
+      void garage
+        .makeOrderWithRecovery(federation, orderAttributes)
         .then((order: Order) => {
           if (order?.id) {
+            setBadRequest(null);
             navigateToPage(`order/${String(order?.shortAlias)}/${String(order.id)}`, navigate);
           } else if (order?.bad_request) {
+            setBadRequest(order?.bad_request);
             currentOrder.bad_request = order.bad_request;
             slot.updateSlotFromOrder(currentOrder);
           }
@@ -433,9 +444,10 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
             <ExpiredPrompt
               loadingRenew={loadingButtons.renewOrder}
               order={order}
+              badRequest={badRequest}
               onClickRenew={(password?: string) => {
-                renewOrder(password);
                 setLoadingButtons({ ...noLoadingButtons, renewOrder: true });
+                renewOrder(password);
               }}
             />
           );
@@ -693,13 +705,13 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
         if ((status === 17 && isMaker) || (status === 18 && !isMaker)) {
           baseContract.title = 'You have lost the dispute';
           baseContract.prompt = function () {
-            return <DisputeLoserPrompt contact={coordinatorContact} />;
+            return <DisputeLoserPrompt order={order} />;
           };
           baseContract.bondStatus = 'settled';
         } else if ((status === 17 && !isMaker) || (status === 18 && isMaker)) {
           baseContract.title = 'You have won the dispute';
           baseContract.prompt = function () {
-            return <DisputeWinnerPrompt contact={coordinatorContact} />;
+            return <DisputeWinnerPrompt order={order} />;
           };
         }
         break;

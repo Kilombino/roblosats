@@ -209,7 +209,9 @@ export class Coordinator {
       if (!own && origin === 'clearnet' && window.location.host === 'roblosats.kilombino.com') {
         this.url = `${window.location.origin}/${network}/${this.shortAlias}`;
       } else {
-        this.url = String(own);
+        // An entry may not have an address for this network/origin (e.g. testnet.onion is
+        // null): keep the url empty instead of materializing 'null'/'undefined' strings.
+        this.url = own ? String(own) : '';
       }
     }
   };
@@ -222,7 +224,12 @@ export class Coordinator {
 
   loadBook = (onDataLoad: () => void = () => {}): Promise<void> => {
     if (!this.enabled) return Promise.resolve();
-    if (this.url === '') return Promise.resolve();
+    if (this.url === '') {
+      // No address for this network/origin — resolve as unreachable, never keep
+      // the loading state pending (it defaults to true).
+      this.loadingBook = false;
+      return Promise.resolve();
+    }
 
     if (this._bookPromise) {
       return this._bookPromise.then(() => {
@@ -267,7 +274,10 @@ export class Coordinator {
 
   loadLimits = (onDataLoad: () => void = () => {}): Promise<void> => {
     if (!this.enabled) return Promise.resolve();
-    if (this.url === '') return Promise.resolve();
+    if (this.url === '') {
+      this.loadingLimits = false;
+      return Promise.resolve();
+    }
 
     if (this._limitsPromise) {
       return this._limitsPromise.then(() => {
@@ -307,7 +317,10 @@ export class Coordinator {
 
   loadInfo = (onDataLoad: () => void = () => {}): Promise<void> => {
     if (!this.enabled) return Promise.resolve();
-    if (this.url === '') return Promise.resolve();
+    if (this.url === '') {
+      this.loadingInfo = false;
+      return Promise.resolve();
+    }
 
     if (this._infoPromise) {
       return this._infoPromise.then(() => {
@@ -322,7 +335,18 @@ export class Coordinator {
         .get(this.url, `/api/info/`, undefined, true)
         .then((data) => {
           if (data !== null) {
-            this.info = data as Info;
+            const raw = data as Info;
+            // Sanitize numeric fields that are used directly in arithmetic or
+            // method calls (.toFixed / .toPrecision) at render time.  A blind
+            // cast cannot catch a coordinator that replies with swap_enabled:true
+            // but omits / nulls current_swap_fee_rate — that would propagate a
+            // TypeError all the way up to the root ErrorBoundary and DoS the app.
+            this.info = {
+              ...raw,
+              maker_fee: Number(raw.maker_fee ?? 0),
+              taker_fee: Number(raw.taker_fee ?? 0),
+              current_swap_fee_rate: Number(raw.current_swap_fee_rate ?? 0),
+            };
             onDataLoad();
           }
         })
@@ -354,6 +378,7 @@ export class Coordinator {
   };
 
   getRelayUrl = (): string => {
+    if (!this.url) return '';
     const protocol = this.url.includes('https') ? 'wss://' : 'ws://';
     return this.url.replace(/^https?:\/\//, protocol) + '/relay/';
   };

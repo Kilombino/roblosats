@@ -10,6 +10,7 @@ from decouple import config
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
+from django.db import transaction
 from django.db.models import Q, Sum
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -23,7 +24,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from api.errors import new_error
-from api.logics import Logics, order_lock, withdrawable_rewards
+from api.logics import Logics, order_lock, rewards_wait, withdrawable_rewards
 from api.tasks import cache_market
 from api.models import (
     Currency,
@@ -32,6 +33,7 @@ from api.models import (
     OnchainPayment,
     Order,
     Notification,
+    Robot,
     TakeOrder,
 )
 from api.notifications import Notifications
@@ -92,15 +94,6 @@ class MakerView(CreateAPIView):
 
     @extend_schema(**MakerViewSchema.post)
     def post(self, request):
-        # One make at a time per robot: closes the check-then-create race between
-        # validate_already_maker_or_taker and order.save() (fixed upstream after 0.8.7).
-        robot = getattr(request.user, "robot", None)
-        if not request.user.is_authenticated or robot is None:
-            return Response(new_error(1036), status.HTTP_400_BAD_REQUEST)
-        with order_lock(robot.pk, space=7392):
-            return self._post(request)
-
-    def _post(self, request):
         serializer = self.serializer_class(data=request.data)
 
         if not request.user.is_authenticated:
@@ -125,11 +118,6 @@ class MakerView(CreateAPIView):
                 ),
                 status.HTTP_400_BAD_REQUEST,
             )
-        # Only allow users who are not already engaged in an order
-        valid, context, _ = Logics.validate_already_maker_or_taker(request.user)
-        if not valid:
-            return Response(context, status.HTTP_409_CONFLICT)
-
         type = serializer.data.get("type")
         currency = serializer.data.get("currency")
         amount = serializer.data.get("amount")
@@ -174,40 +162,54 @@ class MakerView(CreateAPIView):
         if len(Currency.objects.all()) == 0:
             cache_market()
 
-        # Creates a new order
-        order = Order(
-            type=type,
-            currency=Currency.objects.get(id=currency),
-            amount=amount,
-            has_range=has_range,
-            min_amount=min_amount,
-            max_amount=max_amount,
-            payment_method=payment_method,
-            premium=premium,
-            satoshis=satoshis,
-            is_explicit=is_explicit,
-            expires_at=timezone.now() + timedelta(seconds=EXP_MAKER_BOND_INVOICE),
-            maker=request.user,
-            public_duration=public_duration,
-            escrow_duration=escrow_duration,
-            bond_size=bond_size,
-            latitude=latitude,
-            longitude=longitude,
-            password=password,
-            description=description,
-        )
+        # Serialize concurrent make/take attempts from the same robot by locking
+        # its row for the duration of the check-then-create. This closes the TOCTOU
+        # window between validate_already_maker_or_taker (SELECT) and order.save()
+        # (INSERT) that would otherwise allow parallel requests to each observe "no
+        # active order" and both succeed.
+        with transaction.atomic():
+            Robot.objects.select_for_update().get(pk=request.user.robot.pk)
 
-        order.last_satoshis = order.t0_satoshis = Logics.satoshis_now(order)
+            # Only allow users who are not already engaged in an order
+            valid, context, _ = Logics.validate_already_maker_or_taker(request.user)
+            if not valid:
+                return Response(context, status.HTTP_409_CONFLICT)
 
-        valid, context = Logics.validate_order_size(order)
-        if not valid:
-            return Response(context, status.HTTP_400_BAD_REQUEST)
+            # Creates a new order
+            order = Order(
+                type=type,
+                currency=Currency.objects.get(id=currency),
+                amount=amount,
+                has_range=has_range,
+                min_amount=min_amount,
+                max_amount=max_amount,
+                payment_method=payment_method,
+                premium=premium,
+                satoshis=satoshis,
+                is_explicit=is_explicit,
+                expires_at=timezone.now() + timedelta(seconds=EXP_MAKER_BOND_INVOICE),
+                maker=request.user,
+                public_duration=public_duration,
+                escrow_duration=escrow_duration,
+                bond_size=bond_size,
+                latitude=latitude,
+                longitude=longitude,
+                password=password,
+                description=description,
+            )
 
-        valid, context = Logics.validate_location(order)
-        if not valid:
-            return Response(context, status.HTTP_400_BAD_REQUEST)
+            order.last_satoshis = order.t0_satoshis = Logics.satoshis_now(order)
 
-        order.save()
+            valid, context = Logics.validate_order_size(order)
+            if not valid:
+                return Response(context, status.HTTP_400_BAD_REQUEST)
+
+            valid, context = Logics.validate_location(order)
+            if not valid:
+                return Response(context, status.HTTP_400_BAD_REQUEST)
+
+            order.save()
+
         order.log(
             f"Order({order.id},{order}) created by Robot({request.user.robot.id},{request.user})"
         )
@@ -570,29 +572,34 @@ class OrderView(viewsets.ViewSet):
         # 1) If action is take, it is a taker request!
         if action == "take":
             if order.status == Order.Status.PUB:
-                # Lock the robot too, so the same robot can't take two orders at
-                # once (check-then-create race, fixed upstream with a robot row lock).
-                robot = getattr(request.user, "robot", None)
-                if robot is None:
-                    return Response(new_error(1036), status.HTTP_400_BAD_REQUEST)
-                with order_lock(robot.pk, space=7392):
-                    valid, context, _ = Logics.validate_already_maker_or_taker(request.user)
+                if order.password is not None:
+                    if password is None or not compare_digest(order.password, password):
+                        return Response(
+                            new_error(1045), status=status.HTTP_403_FORBIDDEN
+                        )
+
+                # For order with amount range, validate the amount before acquiring the lock.
+                if order.has_range:
+                    amount = float(serializer.data.get("amount"))
+                    valid, context = Logics.validate_amount_within_range(order, amount)
+                    if not valid:
+                        return Response(context, status=status.HTTP_400_BAD_REQUEST)
+
+                # Serialize concurrent take/make attempts from the same robot by locking
+                # its row for the duration of the check-then-create. This closes the TOCTOU
+                # window between validate_already_maker_or_taker (SELECT) and
+                # TakeOrder.objects.create() that would otherwise allow parallel requests to
+                # each observe "no active order" and both succeed in taking an order.
+                with transaction.atomic():
+                    Robot.objects.select_for_update().get(pk=request.user.robot.pk)
+
+                    valid, context, _ = Logics.validate_already_maker_or_taker(
+                        request.user
+                    )
                     if not valid:
                         return Response(context, status=status.HTTP_409_CONFLICT)
 
-                    if order.password is not None:
-                        if password is None or not compare_digest(order.password, password):
-                            return Response(
-                                new_error(1045), status=status.HTTP_403_FORBIDDEN
-                            )
-
-                    # For order with amount range, set the amount now.
                     if order.has_range:
-                        amount = float(serializer.data.get("amount"))
-                        valid, context = Logics.validate_amount_within_range(order, amount)
-                        if not valid:
-                            return Response(context, status=status.HTTP_400_BAD_REQUEST)
-
                         valid, context = Logics.take(order, request.user, amount)
                     else:
                         valid, context = Logics.take(order, request.user)
@@ -719,7 +726,11 @@ class RobotView(APIView):
         context["hash_id"] = user.robot.hash_id
         context["public_key"] = user.robot.public_key
         context["encrypted_private_key"] = user.robot.encrypted_private_key
-        context["earned_rewards"] = withdrawable_rewards(user.robot)
+        # What can be withdrawn now; while nothing can, the rewards still on their
+        # way, so the robot sees them and withdrawing says from when.
+        context["earned_rewards"] = withdrawable_rewards(user.robot) or rewards_wait(
+            user.robot
+        )[0]
         context["wants_stealth"] = user.robot.wants_stealth
         context["nostr_pubkey"] = user.robot.nostr_pubkey
 

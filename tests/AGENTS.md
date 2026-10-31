@@ -23,6 +23,8 @@ Tests require `docker-tests.yml` stack running:
 | `test_api_limits.py` | `/api/limits/` endpoint |
 | `test_api_robot_webhook.py` | Robot webhook notification delivery |
 | `test_frontend_fetch.py` | Frontend asset serving |
+| `test_grpc_stubs.py` | gRPC stub generation / import sanity |
+| `test_nostr_relay.py` | Nostr relay connectivity and event filtering |
 
 ## Key Utilities (`utils/`)
 
@@ -69,6 +71,7 @@ python manage.py test tests  # all tests
 ```
 
 ## Agent Guidelines
+- Integration tests here are **required** per the root `AGENTS.md` Testing policy for any change to an API endpoint, the order state machine, or Lightning/escrow flows.
 - Add new trade flow tests to `TradeTest` in `test_trade_pipeline.py`
 - Endpoint-specific tests belong in their own `test_api_*.py` file
 - Use `Trade` utility class for any test that needs a live order — do not reproduce the multi-step setup manually

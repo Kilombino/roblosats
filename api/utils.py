@@ -1,5 +1,8 @@
+import html as html_lib
+import functools
 import json
 import logging
+import os
 import re
 import time
 from datetime import datetime, timedelta
@@ -11,9 +14,11 @@ import requests
 import ring
 from base91 import decode, encode
 from decouple import config
+from django.conf import settings
 from django.utils import timezone
 
 from api.errors import new_error
+from api.mempool import _mempool_fees_with_hard_timeout
 from api.models import Robot
 
 logger = logging.getLogger("api.utils")
@@ -32,6 +37,49 @@ def get_session():
             "https": "socks5h://" + TOR_PROXY,
         }
     return session
+
+
+_FEDERATION_BUNDLED_PATH = os.path.join(os.path.dirname(__file__), "federation.json")
+
+
+def _federation_doc_paths() -> list[str]:
+    """Custom FEDERATION_JSON_PATH first, bundled copy as fallback — mirrors _load_federation_doc."""
+    paths = [config("FEDERATION_JSON_PATH", default="", cast=str).strip()]
+    paths.append(_FEDERATION_BUNDLED_PATH)
+    return [p for p in paths if p]
+
+
+@functools.lru_cache(maxsize=1)
+def get_federation_short_alias() -> str:
+    """
+    Resolves this coordinator's federation routing `shortAlias` from its
+    COORDINATOR_ALIAS env identity, which may differ from the `shortAlias`
+    used in /order/<shortAlias>/<orderId>/ URLs (e.g. 'LibreBazaar' → 'bazaar').
+    Matches (lowercased, space-stripped) against each entry's key,
+    `identifier` and `longAlias` in the federation document.
+    """
+    alias = config("COORDINATOR_ALIAS", cast=str, default="").lower().replace(" ", "")
+    if not alias:
+        return alias
+
+    for path in _federation_doc_paths():
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                doc = json.load(f)
+        except (OSError, json.JSONDecodeError) as e:
+            logger.warning(f"Could not load federation document '{path}': {e}")
+            continue
+
+        for key, entry in doc.items():
+            candidates = (
+                key,
+                str(entry.get("identifier", "")),
+                str(entry.get("longAlias", "")),
+            )
+            if alias in (c.lower().replace(" ", "") for c in candidates):
+                return key
+
+    return alias
 
 
 def bitcoind_rpc(method, params=None):
@@ -98,18 +146,8 @@ def get_minning_fee(priority: str, preliminary_amount: int) -> int:
 
     from api.lightning.node import LNNode
 
-    session = get_session()
-    # Roblosats: the fee rates of the chain this coordinator runs on (a mempool instance of
-    # that chain), never mempool.space's, which are for another chain.
-    mempool_url = config(
-        "MEMPOOL_FEES_URL", cast=str, default="https://mempool.kilombino.com"
-    ).rstrip("/")
-    api_path = "/api/v1/fees/recommended"
-
     try:
-        response = session.get(mempool_url + api_path)
-        response.raise_for_status()  # Raises stored HTTPError, if one occurred
-        data = response.json()
+        data = _mempool_fees_with_hard_timeout()
 
         if priority == "suggested":
             value = data.get("fastestFee")
@@ -123,7 +161,10 @@ def get_minning_fee(priority: str, preliminary_amount: int) -> int:
             )
 
     except Exception as e:
-        print(e)
+        logger.warning(
+            "Falling back to LN fee estimator after mempool fetch failed (%s)",
+            type(e).__name__,
+        )
         # Fetch mining fee from LND/CLN instance
         if priority == "suggested":
             target_conf = config("SUGGESTED_TARGET_CONF", cast=int, default=2)
@@ -138,34 +179,133 @@ def get_minning_fee(priority: str, preliminary_amount: int) -> int:
     return value
 
 
-devfund_pubkey = {}
+def get_devfund_pubkey() -> str:
+    """Returns the devfund Lightning node pubkey from the DEVFUND_PUBKEY env variable.
+    Roblosats: without it, the Roblosats maintainer's node on the BLAKE2b Lightning
+    network, from the devfund_pubkey.json shipped in the image (never fetched at run
+    time)."""
+    pubkey = config("DEVFUND_PUBKEY", cast=str, default="")
+    if pubkey:
+        return pubkey
+    try:
+        path = os.path.join(settings.BASE_DIR, "devfund_pubkey.json")
+        with open(path) as f:
+            return json.load(f).get(config("NETWORK", cast=str, default="mainnet"), "")
+    except Exception:
+        return ""
 
 
-@ring.dict(devfund_pubkey, expire=3600)  # keeps in cache for 3600 seconds
-def get_devfund_pubkey(network: str) -> str:
+lnurlp_metadata_cache = {}
+
+
+@ring.dict(lnurlp_metadata_cache, expire=43200)  # keeps in cache for 12 hours
+def _fetch_lnurlp_metadata(lnurlp_url: str) -> dict:
     """
-    network: (str) "mainnet" | "testnet";
-    Fetches devfund pubkey from the `roblosats` branch of Kilombino/roblosats
-    (the Roblosats maintainer's node on the BLAKE2b Lightning network),
-    fallback to hardcoded pubkey
+    GETs and returns the raw LNURL-pay metadata dict for *lnurlp_url*.
+    Cached per URL for 12 hours so repeated donations to the same Lightning
+    Address never hit the remote server more than once every 12 hours.
+    Raises ValueError on any network or HTTP error.
     """
+    session = get_session()
+    try:
+        resp = session.get(lnurlp_url, timeout=10)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as e:
+        raise ValueError(f"Failed to fetch LNURL-pay metadata from {lnurlp_url}: {e}")
+
+
+def resolve_lightning_address(
+    address: str, num_satoshis: int, comment: str = ""
+) -> str:
+    """
+    Resolves a Lightning Address (user@domain) via LNURL-pay and returns a
+    BOLT11 invoice for exactly *num_satoshis* sats.
+
+    Raises ValueError with a descriptive message on any validation failure so
+    the caller can log it and skip the payment without crashing.
+
+    Steps:
+      1. Validate address format  (user@domain)
+      2. GET https://{domain}/.well-known/lnurlp/{user}  →  LNURL-pay metadata
+         (cached per address for 12 hours via _fetch_lnurlp_metadata)
+      3. Validate tag, minSendable / maxSendable bounds
+      4. GET {callback}?amount={msat}[&comment=…]  →  bolt11 invoice
+      5. Decode & verify the invoice amount matches num_satoshis exactly
+    """
+    from api.lightning.node import LNNode
+
+    # --- 1. format check ---
+    if "@" not in address or address.count("@") != 1:
+        raise ValueError(f"Invalid Lightning Address format: {address!r}")
+    user, domain = address.split("@", 1)
+    if not user or not domain or "." not in domain:
+        raise ValueError(f"Invalid Lightning Address format: {address!r}")
+
+    # --- 2. fetch LNURL-pay metadata (cached 12 h) ---
+    lnurlp_url = f"https://{domain}/.well-known/lnurlp/{user}"
+    metadata = _fetch_lnurlp_metadata(lnurlp_url)
+
+    # --- 3. validate metadata ---
+    if metadata.get("tag") != "payRequest":
+        raise ValueError(
+            f"Unexpected LNURL-pay tag {metadata.get('tag')!r} for {address}"
+        )
+    callback = metadata.get("callback")
+    if not callback:
+        raise ValueError(f"No callback in LNURL-pay metadata for {address}")
+
+    min_sendable_msat = metadata.get("minSendable", 0)
+    max_sendable_msat = metadata.get("maxSendable", 0)
+    amount_msat = num_satoshis * 1000
+
+    if amount_msat < min_sendable_msat:
+        raise ValueError(
+            f"Amount {num_satoshis} sats ({amount_msat} msat) is below "
+            f"minSendable {min_sendable_msat} msat for {address}"
+        )
+    if max_sendable_msat > 0 and amount_msat > max_sendable_msat:
+        raise ValueError(
+            f"Amount {num_satoshis} sats ({amount_msat} msat) exceeds "
+            f"maxSendable {max_sendable_msat} msat for {address}"
+        )
+
+    # --- 4. request invoice ---
+    params: dict = {"amount": amount_msat}
+    comment_allowed = metadata.get("commentAllowed", 0)
+    if comment and comment_allowed and len(comment) <= int(comment_allowed):
+        params["comment"] = comment
 
     session = get_session()
-    url = "https://raw.githubusercontent.com/Kilombino/roblosats/roblosats/devfund_pubkey.json"
-
     try:
-        response = session.get(url)
-        response.raise_for_status()  # Raises stored HTTPError, if one occurred
-        value = response.json().get(network)
-        if len(value) != 66:
-            raise Exception()
+        inv_resp = session.get(callback, params=params, timeout=10)
+        inv_resp.raise_for_status()
+        inv_data = inv_resp.json()
     except Exception as e:
-        print(e)
-        with open("devfund_pubkey.json", "r") as f:
-            data = json.load(f)
-            value = data.get(network)
+        raise ValueError(
+            f"Failed to fetch invoice from LNURL-pay callback for {address}: {e}"
+        )
 
-    return value
+    invoice = inv_data.get("pr")
+    if not invoice:
+        raise ValueError(
+            f"No invoice (pr) in LNURL-pay callback response for {address}"
+        )
+
+    # --- 5. verify invoice amount ---
+    try:
+        decoded = LNNode.decode_payreq(invoice)
+        invoice_sats = int(decoded.num_satoshis)
+    except Exception as e:
+        raise ValueError(f"Failed to decode invoice from {address}: {e}")
+
+    if invoice_sats != num_satoshis:
+        raise ValueError(
+            f"Invoice amount mismatch for {address}: "
+            f"expected {num_satoshis} sats, got {invoice_sats} sats"
+        )
+
+    return invoice
 
 
 market_cache = {}
@@ -499,7 +639,7 @@ def get_exchange_rates(currencies):
                     if currency in criptoya_supported_currencies:
                         criptoya_exchanges = session.get(f"{api_url}/{currency}").json()
                         exchange_medians = [
-                            np.median([exchange["ask"], exchange["ask"]])
+                            np.median([exchange["ask"], exchange["bid"]])
                             for exchange in criptoya_exchanges.values()
                             if exchange["ask"] > 0 and exchange["bid"] > 0
                         ]
@@ -821,30 +961,50 @@ def location_country(lon: float, lat: float) -> str:
     return "unknown"
 
 
-def objects_to_hyperlinks(logs: str) -> str:
+def render_order_logs(raw):
     """
-    Parses strings that have Object(ID,NAME) that match API models.
-    For example Robot(ID,NAME) will be parsed into
-    <b><a href="/coordinator/api/robot/ID/change}">NAME</a></b>
+    Renders Order.logs (a JSON-encoded string) as a safe HTML table.
 
-    Used to format pretty logs for the Order admin panel.
+    Safety: every field is html.escape()'d before any formatting is applied.
+    The two formatting rules (**bold** and Object(ID,NAME)) operate on
+    already-escaped text, so user data can never inject HTML.
     """
-    objects = ["LNPayment", "Robot", "Order", "OnchainPayment", "MarketTick"]
+    # Decode JSON. Old rows contain HTML (not JSON), so this will fail
+    # gracefully and we show "No logs were recorded".
     try:
+        entries = json.loads(raw) if raw else []
+    except (json.JSONDecodeError, TypeError):
+        entries = []
+
+    if not entries:
+        return "<b>No logs were recorded</b>"
+
+    objects = ["LNPayment", "Robot", "Order", "OnchainPayment", "MarketTick"]
+    rows = []
+
+    for entry in entries:
+        timestamp = html_lib.escape(str(entry.get("timestamp", "")))
+        level = html_lib.escape(str(entry.get("level", "")))
+        event = html_lib.escape(str(entry.get("event", "")))
+
+        # **bold** -> <b>bold</b>
+        event = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", event, flags=re.DOTALL)
+
+        # *italic* -> <i>italic</i>
+        event = re.sub(r"\*(.+?)\*", r"<i>\1</i>", event, flags=re.DOTALL)
+
+        # Object(ID,NAME) -> hyperlink
         for obj in objects:
-            logs = re.sub(
-                rf"{obj}\(([0-9a-fA-F\-A-F]+),\s*([^)]+)\)",
-                lambda m: (
-                    f'<b><a href="/coordinator/api/{obj.lower()}/{m.group(1)}">{m.group(2)}</a></b>'
-                ),
-                logs,
+            event = re.sub(
+                rf"{obj}\(([0-9a-fA-F\-]+),\s*([^)]+)\)",
+                rf'<b><a href="/coordinator/api/{obj.lower()}/\1">\2</a></b>',
+                event,
                 flags=re.DOTALL,
             )
 
-    except re.error as e:
-        print("Error occurred:", e.msg)
-        print("Pattern:", e.pattern)
-        print("Position:", e.pos)
-        logs = f"An error occurred while parsing the logs. Exception {e}"
+        rows.append(f"<tr><td>{timestamp}</td><td>{level}</td><td>{event}</td></tr>")
 
-    return logs
+    header = (
+        "<thead><tr><b><th>Timestamp</th><th>Level</th><th>Event</th></b></tr></thead>"
+    )
+    return f'<table style="width:100%">{header}{"".join(rows)}</table>'

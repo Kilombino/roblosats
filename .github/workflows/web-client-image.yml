@@ -11,10 +11,10 @@ on:
         type: string
   push:
     branches: [ "main" ]
-    paths: ["frontend", "web"]
+    paths: ["frontend/**", "web/**"]
   pull_request:
     branches: [ "main" ]
-    paths: ["frontend", "web"]
+    paths: ["frontend/**", "web/**"]
 
 jobs:
   push_to_registry:
@@ -27,7 +27,7 @@ jobs:
 
     - name: 'Download Basic main.js Artifact'
       if: inputs.semver == ''  # Only if workflow fired from frontend-build.yml
-      uses: dawidd6/action-download-artifact@v23
+      uses: dawidd6/action-download-artifact@v27
       with:
         workflow: frontend-build.yml
         workflow_conclusion: success

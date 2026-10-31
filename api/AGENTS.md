@@ -15,7 +15,8 @@ Child docs (load on demand): `api/models/AGENTS.md`, `api/lightning/AGENTS.md`,
 | `notifications.py` | `Notifications` — multi-channel fan-out |
 | `nostr.py` | `Nostr` — order events (kind 38383) + encrypted DMs |
 | `admin.py` | Django admin, incl. fund-moving dispute-resolution actions |
-| `utils.py` | Price aggregation, base91, PGP clearsign validation |
+| `utils.py` | Price aggregation, base91, PGP clearsign validation, LNURL-pay / Lightning Address resolution (`resolve_lightning_address`) |
+| `mempool.py` | mempool.space fee fetch with hard subprocess deadline (Django-free module for `spawn`) |
 | `errors.py` | `new_error(code)` — decade-coded error responses |
 | `oas_schemas.py` | drf-spectacular overrides, reads live settings at import |
 
@@ -116,8 +117,18 @@ and `api/models/AGENTS.md`'s **Trade economics**).
 registered name. `users_cleansing` deletes robots +12h old, never traded, no rewards/TG/
 webhook (see Product intent — ephemeral robots). On-demand (no beat entry):
 `follow_send_payment` (dispatched by `follow_invoices.py`), `send_devfund_donation`,
-`nostr_send_order_event`/`nostr_send_notification_event` (both registered `name=""`),
-`send_notification` (message-name router only).
+`send_community_donation`, `nostr_send_order_event`/`nostr_send_notification_event`
+(both registered `name=""`), `send_notification` (message-name router only).
+
+`send_devfund_donation` computes the community split first: if both `DEVFUND_COMMUNITY`
+(fraction 0–1, default `0`) and `DEVFUND_COMMUNITY_ADDRESS` (Lightning Address
+`user@domain`) are set, `int(total_donation × DEVFUND_COMMUNITY)` sats are peeled off and
+`send_community_donation.delay(...)` is dispatched in parallel; the remainder goes to the
+devfund keysend as usual.  `send_community_donation` resolves the Lightning Address via
+LNURL-pay (`api.utils.resolve_lightning_address`) and pays the resulting BOLT11 invoice
+with `LNNode.pay_invoice`, recording an `LNPayment` with concept `COMDONAT` (6).  Any
+failure in the community task (bad address, LNURL error, routing failure) is logged to the
+order and the task returns `False` silently — it never affects the devfund payment.
 
 ## Notifications (`notifications.py`)
 `send_notification` (`tasks.py`) is a pure message-name → `Notifications` method router.
@@ -130,12 +141,23 @@ Traps for a dispatch bug). Message types: `welcome`, `order_published`,
 throttles on `CHAT_NOTIFICATION_TIMEGAP` min (env, default 5) since the prior chatroom
 message — except the first message, which always notifies. Webhooks restricted to
 `.onion` via `Robot.is_valid_onion_url` (`@staticmethod`, not a model constraint).
+Telegram descriptions embed `Notifications.order_url(order)` —
+`http://{HOST_NAME}/order/{shortAlias}/{order.id}` where `shortAlias` comes from
+`get_federation_short_alias()` (`api/utils.py`): `COORDINATOR_ALIAS` (normalized:
+lowercased, spaces stripped) matched against each federation entry's key, `identifier`
+and `longAlias` → entry `shortAlias`. Document loading mirrors `_load_federation_doc`
+(`views.py`): `FEDERATION_JSON_PATH` if set, bundled `api/federation.json` as fallback,
+raw-alias fallback if nothing resolves.
+Never emit `COORDINATOR_ALIAS` raw in order URLs/tags — it can diverge from the
+federation `shortAlias` (e.g. `templeofsats` vs `temple`) and the frontend cannot route it.
 
 ## Nostr (`nostr.py`)
 Order events (kind 38383), NIP-69 tags: `d, name, k, f, s, amt, fa, pm, premium, source,
 expiration, y, network, layer, bond, z` (+`g` only if lat/long set). `get_status_tag` is
 binary: `"pending"` only if `status==PUB`, else `"success"`. No order-id tag on the order
 event — `d` is `md5(COORDINATOR_ALIAS+order.id)` as UUID (DM event does carry `order_id`).
+The DM `order_id` tag and the `source` tag use `get_federation_short_alias()` (see
+Notifications above); `d` and `y` keep raw `COORDINATOR_ALIAS`.
 Password orders (`order.password is not None`) skipped before construction (see Product
 intent). DMs via `send_private_msg`; signs with `NOSTR_NSEC`; publishes to one self-hosted
 strfry relay (`STRFRY_HOST`/`STRFRY_PORT`) over plain `ws://`.
@@ -157,7 +179,12 @@ sight **auto-creates `User`+`Robot`**, nickname via `NickGenerator` (see
 ## Supporting modules
 `utils.py`: `get_exchange_rates` — median across `MARKET_PRICE_APIS` (env), skips
 `bitpay.com`/`criptoya.com` under `USE_TOR`, excludes `ARS` from blockchain.info; also
-`base91_to_hex`/`hex_to_base91`, `validate_pgp_keys`/`verify_signed_message`. `errors.py`:
+`base91_to_hex`/`hex_to_base91`, `validate_pgp_keys`/`verify_signed_message`,
+`get_minning_fee` (mempool.space → fallback `LNNode.estimate_fee`). `mempool.py`:
+`get_minning_fee`'s fetch runs in a spawned child with a hard `MEMPOOL_TIMEOUT` (default
+10s) deadline against `MEMPOOL_API_URL` (default `https://mempool.space`, `.onion` configurable) —
+kept Django-free so the spawned child never imports the model registry.
+`errors.py`:
 decade→field — 1000s→`bad_request` (default, incl. unlisted 6000s/7000s), 2000s→
 `bad_statement`, 3000s→`bad_invoice`, 4000s→`bad_address`, 5000s→`bad_summary`.
 `oas_schemas.py` reads bond/duration settings at **import time** — needs app reload on change.
@@ -209,6 +236,30 @@ anti-DDoS, not a reputation flag. Auto-opening a dispute on CHA/FSE timeout (ins
 auto-cancel) is a deliberate pro-safety default favoring human/coordinator review over
 automatic resolution once funds sit in escrow.
 
+**Dispute custody model** — opening a dispute is an immediate, irrevocable custody
+transfer: the trade escrow **and both bonds** are settled to the coordinator at dispute
+open (not at resolution). This happens at `open_dispute()` regardless of who triggered
+it (user action or CHA/FSE timeout). Rationale: disputes can take an unbounded amount of
+time, and unresolved HTLCs risk channel force-closures. Post-dispute, all user funds are a
+**pure coordinator IOU** — the winner is paid out only via `earned_rewards` →
+`withdraw_rewards` (winner submits a new invoice for escrow + bond value). The payout path
+is deliberately flat (no on-chain fallback, no alternative route for dispute winners): this
+prevents coordinator fund-drain exploits via forced routing failures. When routing fails
+on a large dispute payout, the user must contact the coordinator directly — the coordinator
+has full robot history and resolves it manually.
+
+**Dispute resolution has no time limit.** The 1-day `DIS` status expiry is an activity
+guard on the dispute itself, not an SLA for coordinator resolution. Federation trust rests
+on careful, unhurried dispute adjudication — disputes are never auto-rushed or auto-resolved
+against a user's favour once the coordinator has taken custody.
+
+**Both-silent auto-resolution** (`automatic_dispute_resolution`): if both parties wrote zero
+chat messages and fiat was never marked sent, the escrow is returned but both bonds are
+settled to the coordinator and **held indefinitely** — not split, not returned — until one
+of the peers appears and contacts the coordinator. This is consistent with the same trust
+stance: the coordinator cannot know who is at fault without evidence, so it holds the bonds
+as a neutral custodian rather than making an arbitrary automatic call.
+
 ## Traps
 Both nostr Celery tasks registered with empty `name=""`. `send_telegram_message` retries
 unbounded (`while True`/`except: pass`). `send_notification` routes
@@ -218,7 +269,7 @@ expects a `User` — likely dead/broken path. `dispute_statement` enforces **100
 chars** (errors 2001/2000) — narrower than `oas_schemas.py`'s "100–5000" and the
 serializer's `max_length=500_000`; `logics.py` is authoritative. `update_invoice`'s error
 3001 text claims "3 failed attempts" but code only checks `payout.status == EXPIRE`.
-`OnchainPayment.Status.CONFI` defined but never assigned. `successful_trade` **overwrites**
+`OnchainPayment.Status.CONFI` defined but never assigned (see on-chain swap gap below). `successful_trade` **overwrites**
 (not adds to) `earned_rewards` and also calls `Logics.pay_buyer` — unlike the other
 credit-only admin actions. Several `Logics` methods are plain functions with no `self`/
 `cls` (`is_buyer`, `is_seller`, `calc_sats`, `settle_bond`, `dispute_statement`) — adding
@@ -234,6 +285,12 @@ a robot whose latest-by-pk order is not `SUC/MLD/TLD` will be blocked even if an
 order was successful. `PriceView` returns an **object** keyed by currency code, but its
 generated OpenAPI schema (`serializer_class`) declares `type: array` — so `assertResponse`/
 schema validation on `/api/price/` always fails; don't add it back to tests.
+`rate_platform` (`Logics.rate_platform`) blindly overwrites `Robot.platform_rating` on every
+call — there is **no one-rating-per-order guard**. `Order` carries two dead boolean fields
+`maker_platform_rated`/`taker_platform_rated` that were designed to enforce this constraint
+but are **never read or written anywhere in the codebase** (only defined in the model and
+migrations). In practice the blast radius is small because robots are ephemeral (one per
+trade), but a robot can re-rate arbitrarily and the latest write wins.
 
 ## Constraints
 Never settle `trade_escrow` before `order.is_fiat_sent` is confirmed by the buyer. Never
@@ -248,4 +305,17 @@ exceptions could restore rewards they already received (exploit).
 
 ## Rules
 
-- Always update or create integration and/or unitary tests in ../tests
+- Always update or create tests covering any change in the same branch (see root `AGENTS.md` Testing section for the full policy and coverage-floor ratchet rule).
+
+### Testing — which suite to use
+
+| Change type | Suite | Location |
+|---|---|---|
+| `Logics` math, fees, bond/payout calculation | Unit (mocked) | `api/tests/` |
+| `utils.py` helpers, serializer validation, task logic, notifications, Nostr event construction | Unit (mocked) | `api/tests/` |
+| Endpoint behaviour, HTTP status codes, response schema | Integration | `/tests/` |
+| Order state-machine transitions, escrow/bond payment flows | Integration | `/tests/` |
+
+- Unit tests use `unittest.mock`; patch at the definition site — see `api/tests/AGENTS.md` for the canonical patch-target mapping.
+- Integration tests must call `assertResponse` (schema validation via drf-spectacular) on every new endpoint assertion.
+- Run `coverage run manage.py test && coverage report` locally before opening a PR to confirm no regression; see root `AGENTS.md` Testing section.

@@ -270,7 +270,7 @@ const AboutDialog = ({ open, onClose }: Props): React.JSX.Element => {
               <p>
                 {' '}
                 {t(
-                  'This lightning application is provided as is. It is in active development: trade with the utmost caution. There is no private support. Support is only offered via public channels ',
+                  'This lightning application is provided as is. It is in active development: trade with the utmost caution. There is no private support. Support is only offered via public channels: ',
                 )}
                 <Link href='https://t.me/roblosats'>
                   {t('(SimpleX)')}

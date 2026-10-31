@@ -3,8 +3,8 @@ from contextlib import contextmanager
 from datetime import timedelta
 
 from decouple import config, Csv
-from django.core.exceptions import ImproperlyConfigured
 from django.contrib.auth.models import User
+from django.core.exceptions import ImproperlyConfigured
 from django.db.models import F, Q, Sum
 from django.utils import timezone
 from django.utils.html import format_html
@@ -73,15 +73,18 @@ def order_lock(order_id, space=7391):
 # fingerprint, so the same bond can never be credited twice whatever the request
 # interleaving, and a withdrawal pays at most what the ledger backs.
 LEDGER_TABLE = "coord_reward_ledger"
-_ledger_ready = False
 
 
 def ensure_ledger():
     """Creates the ledger the first time. Balances that already exist then are
     recorded once as 'opening' rows; nothing else is ever backed implicitly."""
-    global _ledger_ready
-    if _ledger_ready:
-        return
+    # Checked on every call (one cheap query) rather than cached in the process: a
+    # cached flag outlives a rolled-back transaction that had created the table
+    # (every Django TestCase does that), and later calls then fail on a missing table.
+    with connection.cursor() as c:
+        c.execute("SELECT to_regclass(%s)", [LEDGER_TABLE])
+        if c.fetchone()[0] is not None:
+            return
     with transaction.atomic(), connection.cursor() as c:
         c.execute("SELECT pg_advisory_xact_lock(7393, 0)")
         c.execute("SELECT to_regclass(%s)", [LEDGER_TABLE])
@@ -115,7 +118,6 @@ def ensure_ledger():
                     FROM api_robot WHERE earned_rewards > 0;
                 """
             )
-    _ledger_ready = True
 
 
 def ledger_add(robot_id, amount, kind, fingerprint, order_id=None, note="", delay=0):
@@ -216,6 +218,62 @@ def withdrawable_rewards(robot):
     return max(int(sats), 0)
 
 
+def _freed_at(rows, excess):
+    """When enough of these (created_at, sats) withdrawals, oldest first, leave the
+    24-hour window to free [excess] Sats; None if they never do."""
+    freed = 0
+    for created_at, sats in rows:
+        freed += sats
+        if freed >= excess:
+            return created_at + timedelta(hours=24)
+    return None
+
+
+def rewards_wait(robot):
+    """(Sats waiting, when they can be withdrawn) for a robot that can't withdraw now,
+    so the app can say when to come back. The time is the latest of the limits that
+    hold it back; None when nothing is coming."""
+    backed, waiting = ledger_backed(robot.pk)
+    sats = min(robot.earned_rewards, backed + waiting)
+    if sats < 1:
+        return 0, None
+    times = []
+    if min(robot.earned_rewards, backed) < 1:
+        with connection.cursor() as c:
+            c.execute(
+                f"""SELECT MIN(available_at) FROM {LEDGER_TABLE}
+                    WHERE robot_id = %s AND amount > 0 AND available_at > now()""",
+                [robot.pk],
+            )
+            first = c.fetchone()[0]
+        if first is None:
+            return sats, None
+        times.append(first)
+    cooldown = config("REWARD_WITHDRAW_COOLDOWN", cast=int, default=0)
+    if cooldown:
+        last = ledger_last_withdrawal(robot.pk)
+        if last and timezone.now() - last < timedelta(seconds=cooldown):
+            times.append(last + timedelta(seconds=cooldown))
+    for robot_id, cap in (
+        (robot.pk, config("REWARD_WITHDRAW_DAILY_MAX", cast=int, default=0)),
+        (None, config("REWARD_WITHDRAW_GLOBAL_DAILY_MAX", cast=int, default=0)),
+    ):
+        if cap and cap - ledger_withdrawn_24h(robot_id) < 1:
+            with connection.cursor() as c:
+                c.execute(
+                    f"""SELECT created_at, -amount FROM {LEDGER_TABLE}
+                        WHERE (%s IS NULL OR robot_id = %s) AND kind = 'withdraw'
+                        AND created_at > now() - interval '24 hours'
+                        ORDER BY created_at""",
+                    [robot_id, robot_id],
+                )
+                at = _freed_at(c.fetchall(), ledger_withdrawn_24h(robot_id) - cap + 1)
+            if at is None:
+                return sats, None
+            times.append(at)
+    return sats, (max(times) if times else None)
+
+
 def payout_problem(lnpayment):
     """Why a buyer payout must not be sent now, or None. Checked right before every
     attempt, against LND and not only the database: the escrow that backs it must be
@@ -237,9 +295,9 @@ def payout_problem(lnpayment):
         return f"payout {lnpayment.num_satoshis} is over PAYOUT_MAX_SATS ({cap})"
     try:
         if not LNNode.double_check_htlc_is_settled(escrow.payment_hash):
-            return "LND does not show the trade escrow as settled"
+            return "the lightning node does not show the trade escrow as settled"
     except Exception as e:
-        return f"could not check the escrow in LND ({e})"
+        return f"could not check the escrow in the lightning node ({e})"
     return None
 
 
@@ -534,8 +592,10 @@ class Logics:
 
             send_notification.delay(order_id=order.id, message="order_expired_untaken")
 
+            nostr_send_order_event.delay(order_id=order.id)
+
             order.log("Order expired while public or paused")
-            order.log("Maker bond was <b>unlocked</b>")
+            order.log("Maker bond was **unlocked**")
 
             return True
 
@@ -555,8 +615,8 @@ class Logics:
             order.log(
                 "Order expired while waiting for both buyer invoice and seller escrow"
             )
-            order.log("Maker bond was <b>settled</b>")
-            order.log("Taker bond was <b>settled</b>")
+            order.log("Maker bond was **settled**")
+            order.log("Taker bond was **settled**")
 
             return True
 
@@ -578,8 +638,8 @@ class Logics:
                 cls.add_slashed_rewards(order, order.maker_bond, order.taker_bond)
 
                 order.log("Order expired while waiting for escrow of the maker/seller")
-                order.log("Maker bond was <b>settled</b>")
-                order.log("Taker bond was <b>unlocked</b>")
+                order.log("Maker bond was **settled**")
+                order.log("Taker bond was **unlocked**")
 
                 return True
 
@@ -598,7 +658,7 @@ class Logics:
                 cls.add_slashed_rewards(order, taker_bond, order.maker_bond)
 
                 order.log("Order expired while waiting for escrow of the taker/seller")
-                order.log("Taker bond was <b>settled</b>")
+                order.log("Taker bond was **settled**")
 
                 return True
 
@@ -619,8 +679,8 @@ class Logics:
                 cls.add_slashed_rewards(order, order.maker_bond, order.taker_bond)
 
                 order.log("Order expired while waiting for invoice of the maker/buyer")
-                order.log("Maker bond was <b>settled</b>")
-                order.log("Taker bond was <b>unlocked</b>")
+                order.log("Maker bond was **settled**")
+                order.log("Taker bond was **unlocked**")
 
                 return True
 
@@ -635,7 +695,7 @@ class Logics:
                 cls.add_slashed_rewards(order, taker_bond, order.maker_bond)
 
                 order.log("Order expired while waiting for invoice of the taker/buyer")
-                order.log("Taker bond was <b>settled</b>")
+                order.log("Taker bond was **settled**")
 
                 return True
 
@@ -698,8 +758,8 @@ class Logics:
             cls.settle_bond(order.taker_bond)
             order.update_status(Order.Status.DIS)
 
-            order.log("Maker bond was <b>settled</b>")
-            order.log("Taker bond was <b>settled</b>")
+            order.log("Maker bond was **settled**")
+            order.log("Taker bond was **settled**")
             order.log(
                 "No robot wrote in the chat, the dispute cannot be solved automatically"
             )
@@ -711,10 +771,10 @@ class Logics:
             order.update_status(Order.Status.MLD)
             cls.add_slashed_rewards(order, order.maker_bond, order.taker_bond)
 
-            order.log("Maker bond was <b>settled</b>")
-            order.log("Taker bond was <b>unlocked</b>")
+            order.log("Maker bond was **settled**")
+            order.log("Taker bond was **unlocked**")
             order.log(
-                "<b>The dispute was solved automatically:</b> 'Maker lost dispute', the maker did not write in the chat"
+                "**The dispute was solved automatically:** 'Maker lost dispute', the maker did not write in the chat"
             )
 
         elif num_messages_taker == 0:
@@ -724,10 +784,10 @@ class Logics:
             order.update_status(Order.Status.TLD)
             cls.add_slashed_rewards(order, order.taker_bond, order.maker_bond)
 
-            order.log("Maker bond was <b>unlocked</b>")
-            order.log("Taker bond was <b>settled</b>")
+            order.log("Maker bond was **unlocked**")
+            order.log("Taker bond was **settled**")
             order.log(
-                "<b>The dispute was solved automatically:</b> 'Taker lost dispute', the maker did not write in the chat"
+                "**The dispute was solved automatically:** 'Taker lost dispute', the maker did not write in the chat"
             )
         else:
             return False
@@ -780,20 +840,20 @@ class Logics:
         if user is not None:
             robot = user.robot
             robot.num_disputes = robot.num_disputes + 1
-            if robot.orders_disputes_started is None:
-                robot.orders_disputes_started = str(order.id)
+            if robot.orders_disputes_started:
+                robot.orders_disputes_started = (
+                    f"{robot.orders_disputes_started},{order.id}"
+                )
             else:
-                disputes = list(robot.orders_disputes_started)
-                disputes.append(str(order.id))
-                robot.orders_disputes_started = disputes
+                robot.orders_disputes_started = str(order.id)
             robot.save(update_fields=["num_disputes", "orders_disputes_started"])
 
         send_notification.delay(order_id=order.id, message="dispute_opened")
         order.log(
             f"Dispute was opened {f'by Robot({user.robot.id},{user.username})' if user else ''}"
         )
-        order.log("Maker bond was <b>settled</b>")
-        order.log("Taker bond was <b>settled</b>")
+        order.log("Maker bond was **settled**")
+        order.log("Taker bond was **settled**")
 
         return True, None
 
@@ -1222,6 +1282,51 @@ class Logics:
         return False, None
 
     @classmethod
+    def close_public_order(
+        cls, order, actor="maker", notification_message="public_order_cancelled"
+    ):
+        """Closes a Public/Paused order: unlocks the maker bond, expires
+        every pending pretaker bond, notifies and republishes the Nostr
+        event. Shared by the maker's own cancel flow and the coordinator's
+        admin action. Refuses orders that are not Public/Paused."""
+
+        if order.status not in [Order.Status.PUB, Order.Status.PAU]:
+            return False, None
+
+        # Return the maker bond. If this fails, the order is left untouched.
+        if not cls.return_bond(order.maker_bond):
+            return False, None
+
+        # Atomically flip PUB/PAU -> UCA. If the status is no longer
+        # PUB/PAU (e.g. a taker locked the bond concurrently and the
+        # contract was formalized), do not clobber the live contract.
+        if not order.transition_status(
+            Order.Status.UCA,
+            from_statuses=[Order.Status.PUB, Order.Status.PAU],
+        ):
+            return False, None
+
+        order.log(f"Order cancelled by {actor} while public or paused")
+        order.log("Maker bond was **unlocked**")
+
+        take_orders_queryset = TakeOrder.objects.filter(order=order)
+        for idx, take_order in enumerate(take_orders_queryset):
+            order.log("Pretaker bond was **unlocked**")
+            try:
+                cls.take_order_expires(take_order)
+            except Exception as e:
+                order.log(
+                    f"Failed to expire TakeOrder({take_order.id}): {e}",
+                    level="ERROR",
+                )
+
+        send_notification.delay(order_id=order.id, message=notification_message)
+
+        nostr_send_order_event.delay(order_id=order.id)
+
+        return True, None
+
+    @classmethod
     def cancel_order(cls, order, user, cancel_status=None):
         # If cancel status is specified, do no cancel the order
         # if it is not the correct one.
@@ -1272,23 +1377,11 @@ class Logics:
                 # to prevent DDOS on the LN node and order book. If not strict, maker is returned
                 # the bond (more user friendly).
                 # Return the maker bond (Maker gets returned the bond for cancelling public order)
-                if cls.return_bond(order.maker_bond):
-                    order.update_status(Order.Status.UCA)
-
-                    order.log("Order cancelled by maker while public or paused")
-                    order.log("Maker bond was <b>unlocked</b>")
-
-                    take_orders_queryset = TakeOrder.objects.filter(order=order)
-                    for idx, take_order in enumerate(take_orders_queryset):
-                        order.log("Pretaker bond was <b>unlocked</b>")
-                        cls.take_order_expires(take_order)
-
-                    send_notification.delay(
-                        order_id=order.id, message="public_order_cancelled"
-                    )
-                    nostr_send_order_event.delay(order_id=order.id)
-
+                valid, _ = cls.close_public_order(order)
+                if valid:
                     return True, None
+                # Fall through to the generic error, as when the
+                # bond could not be unlocked before the refactor.
             else:
                 # 2.b) When pretaker cancels before bond
                 # LNPayment "take_order" is expired
@@ -1329,8 +1422,8 @@ class Logics:
                 cls.add_slashed_rewards(order, order.maker_bond, order.taker_bond)
 
                 order.log("Maker cancelled before escrow was locked")
-                order.log("Maker bond was <b>settled</b>")
-                order.log("Taker bond was <b>unlocked</b>")
+                order.log("Maker bond was **settled**")
+                order.log("Taker bond was **unlocked**")
 
                 nostr_send_order_event.delay(order_id=order.id)
 
@@ -1353,8 +1446,8 @@ class Logics:
                 cls.add_slashed_rewards(order, taker_bond, order.maker_bond)
 
                 order.log("Taker cancelled before escrow was locked")
-                order.log("Taker bond was <b>settled</b>")
-                order.log("Maker bond was <b>unlocked</b>")
+                order.log("Taker bond was **settled**")
+                order.log("Maker bond was **unlocked**")
 
                 nostr_send_order_event.delay(order_id=order.id)
 
@@ -1407,7 +1500,7 @@ class Logics:
                 return True, None
 
         order.log(
-            f"Cancel request was sent by Robot({user.robot.id},{user.username}) on an invalid status {order.status}: <i>{Order.Status(order.status).label}</i>"
+            f"Cancel request was sent by Robot({user.robot.id},{user.username}) on an invalid status {order.status}: *{Order.Status(order.status).label}*"
         )
         return False, new_error(1021)
 
@@ -1426,9 +1519,9 @@ class Logics:
         nostr_send_order_event.delay(order_id=order.id)
 
         order.log("Order was collaboratively cancelled")
-        order.log("Maker bond was <b>unlocked</b>")
-        order.log("Taker bond was <b>unlocked</b>")
-        order.log("Trade escrow was <b>unlocked</b>")
+        order.log("Maker bond was **unlocked**")
+        order.log("Taker bond was **unlocked**")
+        order.log("Trade escrow was **unlocked**")
 
         return
 
@@ -1606,7 +1699,7 @@ class Logics:
         nostr_send_order_event.delay(order_id=order.id)
 
         order.log(
-            f"<b>Contract formalized.</b> Maker: Robot({order.maker.robot.id},{order.maker}). Taker: Robot({order.taker.robot.id},{order.taker}). API median price {order.currency.exchange_rate} {dict(Currency.currency_choices)[order.currency.currency]}/BTC. Premium is {order.premium}%. Contract size {order.last_satoshis} Sats"
+            f"**Contract formalized.** Maker: Robot({order.maker.robot.id},{order.maker}). Taker: Robot({order.taker.robot.id},{order.taker}). API median price {order.currency.exchange_rate} {dict(Currency.currency_choices)[order.currency.currency]}/BTC. Premium is {order.premium}%. Contract size {order.last_satoshis} Sats"
         )
         return True
 
@@ -1790,7 +1883,7 @@ class Logics:
         if LNNode.settle_hold_invoice(order.trade_escrow.preimage):
             order.trade_escrow.status = LNPayment.Status.SETLED
             order.trade_escrow.save(update_fields=["status"])
-            order.log("Trade escrow was <b>settled</b>")
+            order.log("Trade escrow was **settled**")
             return True
 
     def settle_bond(bond):
@@ -1818,7 +1911,7 @@ class Logics:
         if LNNode.cancel_return_hold_invoice(order.trade_escrow.payment_hash):
             order.trade_escrow.status = LNPayment.Status.RETNED
             order.trade_escrow.save(update_fields=["status"])
-            order.log("Trade escrow was <b>unlocked</b>")
+            order.log("Trade escrow was **unlocked**")
             return True
 
     def cancel_escrow(order):
@@ -1829,7 +1922,7 @@ class Logics:
         if LNNode.cancel_return_hold_invoice(order.trade_escrow.payment_hash):
             order.trade_escrow.status = LNPayment.Status.CANCEL
             order.trade_escrow.save(update_fields=["status"])
-            order.log("Trade escrow was <b>cancelled</b>")
+            order.log("Trade escrow was **cancelled**")
             return True
 
     def return_bond(bond):
@@ -1857,7 +1950,7 @@ class Logics:
             order.payout_tx.save(update_fields=["status"])
 
             order.log(
-                f"Onchain payment OnchainPayment({order.payout_tx.id},{str(order.payout_tx)}) was <b>cancelled</b>"
+                f"Onchain payment OnchainPayment({order.payout_tx.id},{str(order.payout_tx)}) was **cancelled**"
             )
 
             return True
@@ -1897,7 +1990,7 @@ class Logics:
             order.save(update_fields=["contract_finalization_time"])
 
             send_notification.delay(order_id=order.id, message="trade_successful")
-            order.log("<b>Paying buyer invoice</b>")
+            order.log("**Paying buyer invoice**")
             return True
 
         # Pay onchain to address
@@ -1914,7 +2007,7 @@ class Logics:
                 order.save(update_fields=["contract_finalization_time"])
 
                 send_notification.delay(order_id=order.id, message="trade_successful")
-                order.log("<b>Paying buyer onchain address</b>")
+                order.log("**Paying buyer onchain address**")
                 return True
 
     @classmethod
@@ -1972,8 +2065,8 @@ class Logics:
                     # RETURN THE BONDS
                     cls.return_bond(order.taker_bond)
                     cls.return_bond(order.maker_bond)
-                    order.log("Taker bond was <b>unlocked</b>")
-                    order.log("Maker bond was <b>unlocked</b>")
+                    order.log("Taker bond was **unlocked**")
+                    order.log("Maker bond was **unlocked**")
                     # !!! KEY LINE - PAYS THE BUYER INVOICE !!!
                     cls.pay_buyer(order)
 
@@ -2070,9 +2163,9 @@ class Logics:
             return f"reward {reward} is larger than the smaller bond"
         try:
             if not LNNode.double_check_htlc_is_settled(slashed_bond.payment_hash):
-                return "LND does not show the slashed bond as settled"
+                return "the lightning node does not show the slashed bond as settled"
         except Exception as e:
-            return f"could not check the slashed bond in LND ({e})"
+            return f"could not check the slashed bond in the lightning node ({e})"
         return None
 
     @classmethod
@@ -2103,6 +2196,17 @@ class Logics:
         if problem:
             order.log(
                 f"Reward for slashed bond {slashed_bond.payment_hash} NOT CREDITED: {problem}",
+                level="WARN",
+            )
+            return
+        # Upstream's guard (v0.8.8, LNPayment.rewarded_at): only the call that marks the
+        # bond as rewarded goes on. Kept together with the ledger below.
+        claimed = LNPayment.objects.filter(
+            pk=slashed_bond.pk, rewarded_at__isnull=True
+        ).update(rewarded_at=timezone.now())
+        if not claimed:
+            order.log(
+                f"Reward for slashed bond {slashed_bond.payment_hash} NOT CREDITED: already rewarded",
                 level="WARN",
             )
             return
@@ -2167,10 +2271,66 @@ class Logics:
             # than its ledger (inflated by some bug) is never paid beyond the ledger.
             num_satoshis = withdrawable_rewards(user.robot)
             if num_satoshis < 1:
+                sats, at = rewards_wait(user.robot)
+                when = (
+                    f"You can withdraw {sats} Sats from {at:%Y-%m-%d %H:%M} UTC."
+                    if at
+                    else "Try again later."
+                )
                 return False, {
-                    "bad_invoice": "Your rewards are not available for withdrawal yet. Try again later."
+                    "bad_invoice": f"Your rewards are not available for withdrawal yet. {when}"
                 }
             withdrawn_balance = num_satoshis
+
+            # Optional limits on what leaves as rewards, whatever inflated a balance:
+            # one withdrawal per robot every REWARD_WITHDRAW_COOLDOWN seconds, and at
+            # most REWARD_WITHDRAW_GLOBAL_DAILY_MAX Sats for all robots in 24 hours.
+            withdrawals = LNPayment.objects.filter(
+                concept=LNPayment.Concepts.WITHREWA,
+                status__in=[
+                    LNPayment.Status.VALIDI,
+                    LNPayment.Status.FLIGHT,
+                    LNPayment.Status.SUCCED,
+                ],
+            )
+            # The refusals say when to come back, so nobody has to guess.
+            cooldown = config("REWARD_WITHDRAW_COOLDOWN", cast=int, default=0)
+            if cooldown:
+                last = withdrawals.filter(receiver=user).order_by("-created_at").first()
+                if last and last.created_at > timezone.now() - timedelta(
+                    seconds=cooldown
+                ):
+                    until = last.created_at + timedelta(seconds=cooldown)
+                    return False, {
+                        "bad_invoice": "You withdrew your rewards recently. You can "
+                        f"withdraw again from {until:%Y-%m-%d %H:%M} UTC."
+                    }
+            global_max = config("REWARD_WITHDRAW_GLOBAL_DAILY_MAX", cast=int, default=0)
+            if global_max:
+                recent = withdrawals.filter(
+                    created_at__gt=timezone.now() - timedelta(hours=24)
+                ).order_by("created_at")
+                withdrawn = recent.aggregate(sats=Sum("num_satoshis"))["sats"] or 0
+                if withdrawn + num_satoshis > global_max:
+                    # Room comes back as past withdrawals leave the 24-hour window.
+                    until, freed = None, 0
+                    excess = withdrawn + num_satoshis - global_max
+                    if num_satoshis <= global_max:
+                        for created_at, sats in recent.values_list(
+                            "created_at", "num_satoshis"
+                        ):
+                            freed += sats
+                            if freed >= excess:
+                                until = created_at + timedelta(hours=24)
+                                break
+                    when = (
+                        f"Try again from {until:%Y-%m-%d %H:%M} UTC."
+                        if until
+                        else "Try again later."
+                    )
+                    return False, {
+                        "bad_invoice": f"Reward withdrawals are paused for now. {when}"
+                    }
 
             if routing_budget_ppm is not None and routing_budget_ppm is not False:
                 routing_budget_sats = float(num_satoshis) * (
@@ -2209,20 +2369,20 @@ class Logics:
                     return False, {"bad_invoice": "Invalid invoice"}
 
             try:
-                lnpayment = LNPayment.objects.create(
-                    concept=LNPayment.Concepts.WITHREWA,
-                    type=LNPayment.Types.NORM,
-                    sender=User.objects.get(username=ESCROW_USERNAME),
-                    status=LNPayment.Status.VALIDI,
-                    receiver=user,
-                    invoice=invoice,
-                    num_satoshis=num_satoshis,
-                    description=reward_payout["description"],
-                    payment_hash=reward_payout["payment_hash"],
-                    created_at=reward_payout["created_at"],
-                    expires_at=reward_payout["expires_at"],
-                )
-            # Might fail if payment_hash already exists in DB
+                with transaction.atomic():
+                    lnpayment = LNPayment.objects.create(
+                        concept=LNPayment.Concepts.WITHREWA,
+                        type=LNPayment.Types.NORM,
+                        sender=User.objects.get(username=ESCROW_USERNAME),
+                        status=LNPayment.Status.VALIDI,
+                        receiver=user,
+                        invoice=invoice,
+                        num_satoshis=num_satoshis,
+                        description=reward_payout["description"],
+                        payment_hash=reward_payout["payment_hash"],
+                        created_at=reward_payout["created_at"],
+                        expires_at=reward_payout["expires_at"],
+                    )
             except Exception:
                 return False, new_error(3004)
 
