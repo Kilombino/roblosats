@@ -212,6 +212,10 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
     const slot = garage.getSlot();
 
     if (slot && currentOrder) {
+      // submitAction updates currentOrder in place, and currentOrder is usually
+      // the slot's activeOrder, so updateSlotFromOrder sees no status change and
+      // the trade box would keep showing the step the action just left.
+      const previousStatus = currentOrder.status;
       currentOrder
         .submitAction(federation, slot, {
           action,
@@ -234,6 +238,7 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
             setDispute({ ...dispute, badStatement: data.bad_statement });
           }
           slot.updateSlotFromOrder(data);
+          if (slot.activeOrder && data.status !== previousStatus) slot.onSlotUpdate();
         })
         .catch(() => {
           setOpen(closeAll);
