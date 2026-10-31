@@ -125,6 +125,7 @@ class LNDNode:
             expiry=response.expiry,
             description=response.description,
             route_hints=route_hints,
+            features=frozenset(response.features.keys()),
         )
 
     @classmethod

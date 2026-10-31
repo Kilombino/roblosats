@@ -15,6 +15,8 @@ expiry                  int   – validity window in seconds from created_at
 description             str   – invoice memo / description
 route_hints             list  – list of hinted routes; each route is a list of
                                 ``HopHint`` objects (may be empty)
+features                frozenset – feature bits set in the invoice (LND only;
+                                empty for CLN)
 """
 
 from dataclasses import dataclass, field
@@ -38,3 +40,4 @@ class DecodedPayReq:
     expiry: int
     description: str
     route_hints: list = field(default_factory=list)  # list[list[HopHint]]
+    features: frozenset = field(default_factory=frozenset)
