@@ -1,6 +1,6 @@
 import com.android.build.api.dsl.Packaging
 
-val baseVersionCode = 8717
+val baseVersionCode = 8718
 
 plugins {
     alias(libs.plugins.android.application)
@@ -16,7 +16,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = baseVersionCode
-        versionName = "0.8.7-rl17"
+        versionName = "0.8.8-rl18"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
