@@ -144,6 +144,30 @@ msgid "Trade completed (pay the buyer)"
 msgstr "交易完成（向买方付款）"
 
 msgctxt "roblosats-admin"
+msgid "Open"
+msgstr "进行中"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for your decision"
+msgstr "等待你的裁决"
+
+msgctxt "roblosats-admin"
+msgid "History"
+msgstr "历史"
+
+msgctxt "roblosats-admin"
+msgid "Disputes"
+msgstr "争议"
+
+msgctxt "roblosats-admin"
+msgid "Disputes waiting for your decision"
+msgstr "等待你裁决的争议"
+
+msgctxt "roblosats-admin"
+msgid "Dispute history"
+msgstr "争议历史"
+
+msgctxt "roblosats-admin"
 msgid "%(m)s min"
 msgstr "%(m)s 分钟"
 
@@ -190,10 +214,6 @@ msgstr "挂单方卖出聪"
 msgctxt "roblosats-admin"
 msgid "Unknown action."
 msgstr "未知操作。"
-
-msgctxt "roblosats-admin"
-msgid "Disputes"
-msgstr "争议"
 
 msgctxt "roblosats-admin"
 msgid "buyer"
@@ -346,10 +366,6 @@ msgstr "无人"
 msgctxt "roblosats-admin"
 msgid "Order %(id)s: message sent to %(names)s."
 msgstr "订单 %(id)s：消息已发送给 %(names)s。"
-
-msgctxt "roblosats-admin"
-msgid "Dispute panel"
-msgstr "争议面板"
 
 msgctxt "roblosats-admin"
 msgid "This order has or had a dispute."
@@ -648,6 +664,10 @@ msgid "Up to %(max)s characters. It arrives as an app notification, a Nostr DM a
 msgstr "最多 %(max)s 个字符。对方会收到应用内通知、Nostr 私信，以及 Telegram 消息（如有使用）。消息原样发送：请用对方的语言书写。"
 
 msgctxt "roblosats-admin"
+msgid "Waiting for your decision (both statements submitted)"
+msgstr "等待你的裁决（双方陈述均已提交）"
+
+msgctxt "roblosats-admin"
 msgid "Open disputes"
 msgstr "进行中的争议"
 
@@ -658,6 +678,10 @@ msgstr "已提交陈述"
 msgctxt "roblosats-admin"
 msgid "no statement"
 msgstr "无陈述"
+
+msgctxt "roblosats-admin"
+msgid "No dispute has both statements yet."
+msgstr "目前没有双方陈述都已提交的争议。"
 
 msgctxt "roblosats-admin"
 msgid "There are no open disputes."

@@ -2,9 +2,12 @@
 {% block extrastyle %}{{ block.super }}{% include "roblosats_admin/_style.html" %}{% endblock %}
 {% block content %}
 <div class="rsd">
-{% include "roblosats_admin/_langs.html" %}
+<div class="rsd-top">
+  <nav class="rsd-langs" style="justify-content:flex-start;font-size:.9rem">{% for t in tabs %}<a href="{{ t.url }}"{% if t.current %} class="current" aria-current="page"{% endif %}>{{ t.label }}</a>{% endfor %}</nav>
+  {% include "roblosats_admin/_langs.html" %}
+</div>
 <section class="rsd-sec">
-  <h2>{% translate "Open disputes" context "roblosats-admin" %}</h2>
+  <h2>{% if view == "waiting" %}{% translate "Waiting for your decision (both statements submitted)" context "roblosats-admin" %}{% else %}{% translate "Open disputes" context "roblosats-admin" %}{% endif %}</h2>
   {% if open_disputes %}
   <div class="rsd-btns">
     {% for d in open_disputes %}
@@ -17,9 +20,9 @@
     </a>
     {% endfor %}
   </div>
-  {% else %}<p class="rsd-empty">{% translate "There are no open disputes." context "roblosats-admin" %}</p>{% endif %}
+  {% else %}<p class="rsd-empty">{% if view == "waiting" %}{% translate "No dispute has both statements yet." context "roblosats-admin" %}{% else %}{% translate "There are no open disputes." context "roblosats-admin" %}{% endif %}</p>{% endif %}
 </section>
-<section class="rsd-sec">
+{% if view != "waiting" %}<section class="rsd-sec">
   <h2>{% translate "Past disputes" context "roblosats-admin" %}</h2>
   {% if closed_disputes %}
   <div class="rsd-scroll"><table class="rsd-table">
@@ -30,6 +33,6 @@
     {% endfor %}
   </table></div>
   {% else %}<p class="rsd-empty">{% translate "None yet." context "roblosats-admin" %}</p>{% endif %}
-</section>
+</section>{% endif %}
 </div>
 {% endblock %}

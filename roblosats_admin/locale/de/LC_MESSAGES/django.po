@@ -144,6 +144,30 @@ msgid "Trade completed (pay the buyer)"
 msgstr "Handel abgeschlossen (Käufer auszahlen)"
 
 msgctxt "roblosats-admin"
+msgid "Open"
+msgstr "Offen"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for your decision"
+msgstr "Warten auf deine Entscheidung"
+
+msgctxt "roblosats-admin"
+msgid "History"
+msgstr "Verlauf"
+
+msgctxt "roblosats-admin"
+msgid "Disputes"
+msgstr "Streitfälle"
+
+msgctxt "roblosats-admin"
+msgid "Disputes waiting for your decision"
+msgstr "Streitfälle, die auf deine Entscheidung warten"
+
+msgctxt "roblosats-admin"
+msgid "Dispute history"
+msgstr "Verlauf der Streitfälle"
+
+msgctxt "roblosats-admin"
 msgid "%(m)s min"
 msgstr "%(m)s Min."
 
@@ -190,10 +214,6 @@ msgstr "der Maker verkauft Sats"
 msgctxt "roblosats-admin"
 msgid "Unknown action."
 msgstr "Unbekannte Aktion."
-
-msgctxt "roblosats-admin"
-msgid "Disputes"
-msgstr "Streitfälle"
 
 msgctxt "roblosats-admin"
 msgid "buyer"
@@ -346,10 +366,6 @@ msgstr "niemanden"
 msgctxt "roblosats-admin"
 msgid "Order %(id)s: message sent to %(names)s."
 msgstr "Order %(id)s: Nachricht an %(names)s gesendet."
-
-msgctxt "roblosats-admin"
-msgid "Dispute panel"
-msgstr "Streitfall-Übersicht"
 
 msgctxt "roblosats-admin"
 msgid "This order has or had a dispute."
@@ -648,6 +664,10 @@ msgid "Up to %(max)s characters. It arrives as an app notification, a Nostr DM a
 msgstr "Bis zu %(max)s Zeichen. Sie kommt als App-Benachrichtigung an, als Nostr-DM und als Telegram-Nachricht, falls genutzt. Sie wird so gesendet, wie sie ist: Schreib sie in der Sprache des Empfängers."
 
 msgctxt "roblosats-admin"
+msgid "Waiting for your decision (both statements submitted)"
+msgstr "Warten auf deine Entscheidung (beide Stellungnahmen liegen vor)"
+
+msgctxt "roblosats-admin"
 msgid "Open disputes"
 msgstr "Offene Streitfälle"
 
@@ -658,6 +678,10 @@ msgstr "Stellungnahme abgegeben"
 msgctxt "roblosats-admin"
 msgid "no statement"
 msgstr "keine Stellungnahme"
+
+msgctxt "roblosats-admin"
+msgid "No dispute has both statements yet."
+msgstr "Noch kein Streitfall hat beide Stellungnahmen."
 
 msgctxt "roblosats-admin"
 msgid "There are no open disputes."

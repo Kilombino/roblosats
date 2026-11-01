@@ -230,10 +230,44 @@ class DisputePageTest(TestCase):
         self.assertIn(self.page, response.content.decode())
 
         response = self.client.get(
-            reverse("admin:api_order_change", args=[self.order.pk])
+            reverse("admin:api_order_change", args=[self.order.pk]) + "?raw=1"
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn(self.page, response.content.decode())
+
+    def test_disputed_change_page_redirects_unless_raw(self):
+        change = reverse("admin:api_order_change", args=[self.order.pk])
+        response = self.client.get(change)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], self.page)
+        self.assertIn(change + "?raw=1", self.client.get(self.page).content.decode())
+        plain = make_disputed_order(Order.Types.BUY, self.maker, self.taker)
+        Order.objects.filter(pk=plain.pk).update(is_disputed=False)
+        response = self.client.get(reverse("admin:api_order_change", args=[plain.pk]))
+        self.assertEqual(response.status_code, 200)
+
+    def test_list_views(self):
+        waiting = make_disputed_order(
+            Order.Types.BUY, self.maker, self.taker, status=Order.Status.WFR
+        )
+        past = make_disputed_order(
+            Order.Types.BUY, self.maker, self.taker, status=Order.Status.MLD
+        )
+        base = reverse("admin:api_order_disputes")
+
+        def ids(view):
+            response = self.client.get(f"{base}?view={view}")
+            self.assertEqual(response.status_code, 200)
+            ctx = response.context
+            return (
+                {d["id"] for d in ctx["open_disputes"]},
+                {d["id"] for d in ctx["closed_disputes"]},
+            )
+
+        self.assertEqual(ids("open"), ({self.order.pk, waiting.pk}, {past.pk}))
+        self.assertEqual(ids("waiting"), ({waiting.pk}, set()))
+        self.assertEqual(ids("history"), ({self.order.pk, waiting.pk}, {past.pk}))
+        self.assertEqual(ids("bogus"), ids("open"))
 
     def test_confirmation_shows_exact_amounts(self):
         response = self.client.get(

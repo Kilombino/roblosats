@@ -144,6 +144,30 @@ msgid "Trade completed (pay the buyer)"
 msgstr ""
 
 msgctxt "roblosats-admin"
+msgid "Open"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Waiting for your decision"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "History"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Disputes"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Disputes waiting for your decision"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Dispute history"
+msgstr ""
+
+msgctxt "roblosats-admin"
 msgid "%(m)s min"
 msgstr ""
 
@@ -189,10 +213,6 @@ msgstr ""
 
 msgctxt "roblosats-admin"
 msgid "Unknown action."
-msgstr ""
-
-msgctxt "roblosats-admin"
-msgid "Disputes"
 msgstr ""
 
 msgctxt "roblosats-admin"
@@ -345,10 +365,6 @@ msgstr ""
 
 msgctxt "roblosats-admin"
 msgid "Order %(id)s: message sent to %(names)s."
-msgstr ""
-
-msgctxt "roblosats-admin"
-msgid "Dispute panel"
 msgstr ""
 
 msgctxt "roblosats-admin"
@@ -648,6 +664,10 @@ msgid "Up to %(max)s characters. It arrives as an app notification, a Nostr DM a
 msgstr ""
 
 msgctxt "roblosats-admin"
+msgid "Waiting for your decision (both statements submitted)"
+msgstr ""
+
+msgctxt "roblosats-admin"
 msgid "Open disputes"
 msgstr ""
 
@@ -657,6 +677,10 @@ msgstr ""
 
 msgctxt "roblosats-admin"
 msgid "no statement"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "No dispute has both statements yet."
 msgstr ""
 
 msgctxt "roblosats-admin"

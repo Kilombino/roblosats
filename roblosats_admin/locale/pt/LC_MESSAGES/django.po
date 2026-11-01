@@ -144,6 +144,30 @@ msgid "Trade completed (pay the buyer)"
 msgstr "Negociação concluída (pagar ao comprador)"
 
 msgctxt "roblosats-admin"
+msgid "Open"
+msgstr "Abertas"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for your decision"
+msgstr "À espera da sua decisão"
+
+msgctxt "roblosats-admin"
+msgid "History"
+msgstr "Histórico"
+
+msgctxt "roblosats-admin"
+msgid "Disputes"
+msgstr "Disputas"
+
+msgctxt "roblosats-admin"
+msgid "Disputes waiting for your decision"
+msgstr "Disputas à espera da sua decisão"
+
+msgctxt "roblosats-admin"
+msgid "Dispute history"
+msgstr "Histórico de disputas"
+
+msgctxt "roblosats-admin"
 msgid "%(m)s min"
 msgstr "%(m)s min"
 
@@ -190,10 +214,6 @@ msgstr "o criador vende sats"
 msgctxt "roblosats-admin"
 msgid "Unknown action."
 msgstr "Ação desconhecida."
-
-msgctxt "roblosats-admin"
-msgid "Disputes"
-msgstr "Disputas"
 
 msgctxt "roblosats-admin"
 msgid "buyer"
@@ -346,10 +366,6 @@ msgstr "ninguém"
 msgctxt "roblosats-admin"
 msgid "Order %(id)s: message sent to %(names)s."
 msgstr "Ordem %(id)s: mensagem enviada a %(names)s."
-
-msgctxt "roblosats-admin"
-msgid "Dispute panel"
-msgstr "Painel de disputas"
 
 msgctxt "roblosats-admin"
 msgid "This order has or had a dispute."
@@ -648,6 +664,10 @@ msgid "Up to %(max)s characters. It arrives as an app notification, a Nostr DM a
 msgstr "Até %(max)s caracteres. Chega como notificação na app, DM de Nostr e mensagem de Telegram se os usarem. É enviada tal como está: escreva-a no idioma de quem a vai ler."
 
 msgctxt "roblosats-admin"
+msgid "Waiting for your decision (both statements submitted)"
+msgstr "À espera da sua decisão (as duas declarações enviadas)"
+
+msgctxt "roblosats-admin"
 msgid "Open disputes"
 msgstr "Disputas abertas"
 
@@ -658,6 +678,10 @@ msgstr "declaração enviada"
 msgctxt "roblosats-admin"
 msgid "no statement"
 msgstr "sem declaração"
+
+msgctxt "roblosats-admin"
+msgid "No dispute has both statements yet."
+msgstr "Nenhuma disputa tem ainda as duas declarações."
 
 msgctxt "roblosats-admin"
 msgid "There are no open disputes."

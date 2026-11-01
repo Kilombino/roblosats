@@ -144,6 +144,30 @@ msgid "Trade completed (pay the buyer)"
 msgstr "Scambio completato (paga l'acquirente)"
 
 msgctxt "roblosats-admin"
+msgid "Open"
+msgstr "Aperte"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for your decision"
+msgstr "In attesa della tua decisione"
+
+msgctxt "roblosats-admin"
+msgid "History"
+msgstr "Storico"
+
+msgctxt "roblosats-admin"
+msgid "Disputes"
+msgstr "Dispute"
+
+msgctxt "roblosats-admin"
+msgid "Disputes waiting for your decision"
+msgstr "Dispute in attesa della tua decisione"
+
+msgctxt "roblosats-admin"
+msgid "Dispute history"
+msgstr "Storico delle dispute"
+
+msgctxt "roblosats-admin"
 msgid "%(m)s min"
 msgstr "%(m)s min"
 
@@ -190,10 +214,6 @@ msgstr "il maker vende sats"
 msgctxt "roblosats-admin"
 msgid "Unknown action."
 msgstr "Azione sconosciuta."
-
-msgctxt "roblosats-admin"
-msgid "Disputes"
-msgstr "Dispute"
 
 msgctxt "roblosats-admin"
 msgid "buyer"
@@ -346,10 +366,6 @@ msgstr "nessuno"
 msgctxt "roblosats-admin"
 msgid "Order %(id)s: message sent to %(names)s."
 msgstr "Ordine %(id)s: messaggio inviato a %(names)s."
-
-msgctxt "roblosats-admin"
-msgid "Dispute panel"
-msgstr "Pannello delle dispute"
 
 msgctxt "roblosats-admin"
 msgid "This order has or had a dispute."
@@ -648,6 +664,10 @@ msgid "Up to %(max)s characters. It arrives as an app notification, a Nostr DM a
 msgstr "Fino a %(max)s caratteri. Arriva come notifica nell'app, DM Nostr e messaggio Telegram se li usano. Viene inviato così com'è: scrivilo nella lingua di chi lo leggerà."
 
 msgctxt "roblosats-admin"
+msgid "Waiting for your decision (both statements submitted)"
+msgstr "In attesa della tua decisione (entrambe le dichiarazioni inviate)"
+
+msgctxt "roblosats-admin"
 msgid "Open disputes"
 msgstr "Dispute aperte"
 
@@ -658,6 +678,10 @@ msgstr "dichiarazione inviata"
 msgctxt "roblosats-admin"
 msgid "no statement"
 msgstr "nessuna dichiarazione"
+
+msgctxt "roblosats-admin"
+msgid "No dispute has both statements yet."
+msgstr "Nessuna disputa ha ancora entrambe le dichiarazioni."
 
 msgctxt "roblosats-admin"
 msgid "There are no open disputes."

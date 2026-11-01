@@ -144,6 +144,30 @@ msgid "Trade completed (pay the buyer)"
 msgstr "Operación completada (pagar al comprador)"
 
 msgctxt "roblosats-admin"
+msgid "Open"
+msgstr "Abiertas"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for your decision"
+msgstr "Esperando tu decisión"
+
+msgctxt "roblosats-admin"
+msgid "History"
+msgstr "Historial"
+
+msgctxt "roblosats-admin"
+msgid "Disputes"
+msgstr "Disputas"
+
+msgctxt "roblosats-admin"
+msgid "Disputes waiting for your decision"
+msgstr "Disputas esperando tu decisión"
+
+msgctxt "roblosats-admin"
+msgid "Dispute history"
+msgstr "Historial de disputas"
+
+msgctxt "roblosats-admin"
 msgid "%(m)s min"
 msgstr "%(m)s min"
 
@@ -190,10 +214,6 @@ msgstr "el creador vende sats"
 msgctxt "roblosats-admin"
 msgid "Unknown action."
 msgstr "Acción desconocida."
-
-msgctxt "roblosats-admin"
-msgid "Disputes"
-msgstr "Disputas"
 
 msgctxt "roblosats-admin"
 msgid "buyer"
@@ -346,10 +366,6 @@ msgstr "nadie"
 msgctxt "roblosats-admin"
 msgid "Order %(id)s: message sent to %(names)s."
 msgstr "Orden %(id)s: mensaje mandado a %(names)s."
-
-msgctxt "roblosats-admin"
-msgid "Dispute panel"
-msgstr "Panel de disputas"
 
 msgctxt "roblosats-admin"
 msgid "This order has or had a dispute."
@@ -648,6 +664,10 @@ msgid "Up to %(max)s characters. It arrives as an app notification, a Nostr DM a
 msgstr "Hasta %(max)s caracteres. Llega como notificación en la app, mensaje directo de Nostr y mensaje de Telegram si los usan. Se manda tal cual: escríbelo en el idioma de quien lo va a leer."
 
 msgctxt "roblosats-admin"
+msgid "Waiting for your decision (both statements submitted)"
+msgstr "Esperando tu decisión (las dos declaraciones enviadas)"
+
+msgctxt "roblosats-admin"
 msgid "Open disputes"
 msgstr "Disputas abiertas"
 
@@ -658,6 +678,10 @@ msgstr "declaración enviada"
 msgctxt "roblosats-admin"
 msgid "no statement"
 msgstr "sin declaración"
+
+msgctxt "roblosats-admin"
+msgid "No dispute has both statements yet."
+msgstr "Ninguna disputa tiene aún las dos declaraciones."
 
 msgctxt "roblosats-admin"
 msgid "There are no open disputes."

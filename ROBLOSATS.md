@@ -69,6 +69,7 @@ release tag, so each new RoboSats release can be taken by rebasing that branch.
   their statements, messages from the coordinator to the robots (app notification, Nostr DM,
   Telegram) and buttons that run the existing dispute actions after a confirmation showing who
   receives how many sats. Messages start with `<COORDINATOR_ALIAS> coordinator (order N): `.
+  A disputed order's admin page opens the dispute page (`?raw=1` for the Django form).
   The panel follows the browser language (en, es, de, fr, it, pt, ru, zh-Hans, ja) and has a
   language selector.
 - `Dockerfile.roblosats` builds the coordinator image with the web client inside.

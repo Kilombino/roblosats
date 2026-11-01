@@ -21,7 +21,6 @@ MIDDLEWARE = list(MIDDLEWARE) + ["roblosats_admin.middleware.AdminLocaleMiddlewa
 TEMPLATES[0]["DIRS"] = list(TEMPLATES[0]["DIRS"]) + ["/usr/src/robosats/roblosats_templates"]
 
 # Django Unfold admin theme
-from django.urls import reverse as _roblosats_reverse  # noqa: E402
 from django.utils.translation import pgettext_lazy as _roblosats_pgettext_lazy  # noqa: E402
 
 def _count_orders(*status_values):
@@ -129,13 +128,13 @@ def roblosats_dashboard(request, context=None):
 
     datos = {
         "disputas_abiertas": disputas + esperando,
-        "enlaces": {"disputas": lista(status__exact=11)},
+        "enlaces": {"disputas": f"{ADMIN_ROOT}api/order/disputes/?view=open"},
         "tarjetas": [
             {"titulo": "En curso", "valor": en_curso, "link": lista(status__in="6%2C7%2C8%2C9%2C10"),
              "pie": "colateral, chat o fiat enviado"},
             {"titulo": "En el libro", "valor": publicas, "link": lista(status__exact=1),
              "pie": "esperando quien las tome"},
-            {"titulo": "Disputas", "valor": disputas + esperando, "link": lista(status__exact=11),
+            {"titulo": "Disputas", "valor": disputas + esperando, "link": f"{ADMIN_ROOT}api/order/disputes/?view=open",
              "pie": "abiertas y por resolver"},
             {"titulo": "Completadas", "valor": completadas, "link": lista(status__exact=14),
              "pie": "histórico"},
@@ -227,32 +226,26 @@ UNFOLD = {
                 ],
             },
             {
-                "title": "Disputas",
+                "title": _roblosats_pgettext_lazy("roblosats-admin", "Disputes"),
                 "separator": True,
                 "collapsible": False,
                 "items": [
                     {
-                        "title": _roblosats_pgettext_lazy("roblosats-admin", "Dispute panel"),
-                        "icon": "balance",
-                        "link": lambda request: _roblosats_reverse("admin:api_order_disputes"),
-                        "badge": _count_orders(11, 16),
-                    },
-                    {
-                        "title": "Abiertas",
+                        "title": _roblosats_pgettext_lazy("roblosats-admin", "Open"),
                         "icon": "gavel",
-                        "link": ADMIN_ROOT + "api/order/?status__exact=11",
-                        "badge": _count_orders(11),
+                        "link": ADMIN_ROOT + "api/order/disputes/?view=open",
+                        "badge": _count_orders(*EN_DISPUTA),
                     },
                     {
-                        "title": "Esperando resolución",
+                        "title": _roblosats_pgettext_lazy("roblosats-admin", "Waiting for your decision"),
                         "icon": "hourglass_top",
-                        "link": ADMIN_ROOT + "api/order/?status__exact=16",
+                        "link": ADMIN_ROOT + "api/order/disputes/?view=waiting",
                         "badge": _count_orders(16),
                     },
                     {
-                        "title": "Historial completo",
+                        "title": _roblosats_pgettext_lazy("roblosats-admin", "History"),
                         "icon": "history",
-                        "link": ADMIN_ROOT + "api/order/?is_disputed__exact=1",
+                        "link": ADMIN_ROOT + "api/order/disputes/?view=history",
                     },
                 ],
             },

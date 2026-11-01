@@ -67,6 +67,19 @@ DECISIONS = {
 
 RECIPIENTS = ("buyer", "seller", "both")
 
+LIST_VIEWS = {
+    "open": _lazy("Open"),
+    "waiting": _lazy("Waiting for your decision"),
+    "history": _lazy("History"),
+}
+LIST_TITLES = {
+    "open": _lazy("Disputes"),
+    "waiting": _lazy("Disputes waiting for your decision"),
+    "history": _lazy("Dispute history"),
+}
+RECENT_LIMIT = 30
+HISTORY_LIMIT = 500
+
 _RE_EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 _RE_CONTACTS = [
     re.compile(r"(?:https?://)?t\.me/[A-Za-z0-9_+/-]+"),
@@ -521,7 +534,20 @@ def sent_messages(order, label_by_robot):
 
 def _languages(request):
     current = getattr(request, "LANGUAGE_CODE", "en")
-    return [{"code": c, "name": n, "current": c == current} for c, n in PANEL_LANGUAGES]
+    languages = []
+    for code, name in PANEL_LANGUAGES:
+        query = request.GET.copy()
+        query.pop("confirm", None)
+        query["lang"] = code
+        languages.append(
+            {
+                "code": code,
+                "name": name,
+                "current": code == current,
+                "url": "?" + query.urlencode(),
+            }
+        )
+    return languages
 
 
 def _context(order_admin, request, order, confirm=None):
@@ -603,7 +629,7 @@ def _context(order_admin, request, order, confirm=None):
         "opts": order_admin.model._meta,
         "order": order,
         "page_url": page,
-        "change_url": _url("admin:api_order_change", order.pk),
+        "change_url": _url("admin:api_order_change", order.pk) + "?raw=1",
         "list_url": reverse("admin:api_order_disputes"),
         "type_label": _("BUY") if order.type == Order.Types.BUY else _("SELL"),
         "type_explained": (
@@ -790,27 +816,39 @@ def disputes_view(order_admin, request):
             "created": fmt_time(o.created_at),
         }
 
+    view = request.GET.get("view", "open")
+    if view not in LIST_VIEWS:
+        view = "open"
     open_statuses = [Order.Status.DIS, Order.Status.WFR]
+    shown = [Order.Status.WFR] if view == "waiting" else open_statuses
     qs = Order.objects.select_related("maker", "taker", "currency")
     open_rows = [
         row(o)
-        for o in qs.filter(is_disputed=True, status__in=open_statuses).order_by(
-            "expires_at"
-        )
+        for o in qs.filter(is_disputed=True, status__in=shown).order_by("expires_at")
     ]
-    closed_rows = [
-        row(o)
-        for o in qs.filter(is_disputed=True)
-        .exclude(status__in=open_statuses)
-        .order_by("-created_at")[:30]
+    closed_rows = []
+    if view != "waiting":
+        limit = HISTORY_LIMIT if view == "history" else RECENT_LIMIT
+        closed_rows = [
+            row(o)
+            for o in qs.filter(is_disputed=True)
+            .exclude(status__in=open_statuses)
+            .order_by("-created_at")[:limit]
+        ]
+    list_url = reverse("admin:api_order_disputes")
+    tabs = [
+        {"label": label, "url": f"{list_url}?view={key}", "current": key == view}
+        for key, label in LIST_VIEWS.items()
     ]
     return TemplateResponse(
         request,
         "roblosats_admin/disputes.html",
         {
             **order_admin.admin_site.each_context(request),
-            "title": _("Disputes"),
+            "title": str(LIST_TITLES[view]),
             "opts": order_admin.model._meta,
+            "view": view,
+            "tabs": tabs,
             "open_disputes": open_rows,
             "closed_disputes": closed_rows,
             "tz": timezone.get_current_timezone_name(),

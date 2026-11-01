@@ -17,6 +17,12 @@ It patches the already-registered `api` admin classes in `ready()` instead of ed
   confirmation page was rendered with; otherwise nothing runs. The views go through
   `admin_site.admin_view`, so CSRF and staff login apply.
 
+- Opening a disputed order's change page (GET) redirects to its dispute page; `?raw=1` keeps
+  the Django form (the dispute page links to it with that parameter).
+- The list takes `?view=open` (default: open disputes + last 30 past), `waiting` (status 16
+  only) or `history` (open + up to 500 past). The sidebar's dispute entries and the dashboard
+  link to these views, not to changelist filters.
+
 ## Messages (`messaging.py`, `tasks.py`)
 - `send_coordinator_message` stores a `Notification` (title and description are 240 chars
   each, so the text is split across them), sends the full text as a Nostr DM through the

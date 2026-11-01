@@ -65,6 +65,7 @@ class RoblosatsAdminConfig(AppConfig):
 
 
 def _dispute_panel(oa):
+    from django.http import HttpResponseRedirect
     from django.urls import path, reverse
     from django.utils.html import format_html
 
@@ -116,3 +117,19 @@ def _dispute_panel(oa):
     oa.list_display = tuple(columns)
 
     oa.actions = [*oa.actions, message_parties]
+
+    original_change_view = oa.change_view
+
+    def change_view(request, object_id, form_url="", extra_context=None):
+        if request.method == "GET" and "raw" not in request.GET:
+            try:
+                order = oa.model.objects.only("is_disputed").get(pk=object_id)
+            except (oa.model.DoesNotExist, ValueError, TypeError):
+                order = None
+            if order is not None and order.is_disputed:
+                return HttpResponseRedirect(
+                    reverse("admin:api_order_dispute", args=[order.pk])
+                )
+        return original_change_view(request, object_id, form_url, extra_context)
+
+    oa.change_view = change_view

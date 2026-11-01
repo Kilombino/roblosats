@@ -144,6 +144,30 @@ msgid "Trade completed (pay the buyer)"
 msgstr "Сделка состоялась (выплатить покупателю)"
 
 msgctxt "roblosats-admin"
+msgid "Open"
+msgstr "Открытые"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for your decision"
+msgstr "Ждут вашего решения"
+
+msgctxt "roblosats-admin"
+msgid "History"
+msgstr "История"
+
+msgctxt "roblosats-admin"
+msgid "Disputes"
+msgstr "Споры"
+
+msgctxt "roblosats-admin"
+msgid "Disputes waiting for your decision"
+msgstr "Споры, ожидающие вашего решения"
+
+msgctxt "roblosats-admin"
+msgid "Dispute history"
+msgstr "История споров"
+
+msgctxt "roblosats-admin"
 msgid "%(m)s min"
 msgstr "%(m)s мин"
 
@@ -190,10 +214,6 @@ msgstr "мейкер продаёт сатоши"
 msgctxt "roblosats-admin"
 msgid "Unknown action."
 msgstr "Неизвестное действие."
-
-msgctxt "roblosats-admin"
-msgid "Disputes"
-msgstr "Споры"
 
 msgctxt "roblosats-admin"
 msgid "buyer"
@@ -346,10 +366,6 @@ msgstr "никому"
 msgctxt "roblosats-admin"
 msgid "Order %(id)s: message sent to %(names)s."
 msgstr "Ордер %(id)s: сообщение отправлено (%(names)s)."
-
-msgctxt "roblosats-admin"
-msgid "Dispute panel"
-msgstr "Панель споров"
 
 msgctxt "roblosats-admin"
 msgid "This order has or had a dispute."
@@ -648,6 +664,10 @@ msgid "Up to %(max)s characters. It arrives as an app notification, a Nostr DM a
 msgstr "До %(max)s символов. Приходит как уведомление в приложении, личное сообщение в Nostr и сообщение в Telegram, если они ими пользуются. Отправляется как есть: пишите на языке получателя."
 
 msgctxt "roblosats-admin"
+msgid "Waiting for your decision (both statements submitted)"
+msgstr "Ждут вашего решения (оба заявления отправлены)"
+
+msgctxt "roblosats-admin"
 msgid "Open disputes"
 msgstr "Открытые споры"
 
@@ -658,6 +678,10 @@ msgstr "заявление отправлено"
 msgctxt "roblosats-admin"
 msgid "no statement"
 msgstr "заявления нет"
+
+msgctxt "roblosats-admin"
+msgid "No dispute has both statements yet."
+msgstr "Пока ни в одном споре нет обоих заявлений."
 
 msgctxt "roblosats-admin"
 msgid "There are no open disputes."

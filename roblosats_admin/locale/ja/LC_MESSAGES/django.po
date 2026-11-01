@@ -144,6 +144,30 @@ msgid "Trade completed (pay the buyer)"
 msgstr "取引完了（買い手に支払う）"
 
 msgctxt "roblosats-admin"
+msgid "Open"
+msgstr "未解決"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for your decision"
+msgstr "あなたの判断待ち"
+
+msgctxt "roblosats-admin"
+msgid "History"
+msgstr "履歴"
+
+msgctxt "roblosats-admin"
+msgid "Disputes"
+msgstr "紛争"
+
+msgctxt "roblosats-admin"
+msgid "Disputes waiting for your decision"
+msgstr "判断待ちの紛争"
+
+msgctxt "roblosats-admin"
+msgid "Dispute history"
+msgstr "紛争の履歴"
+
+msgctxt "roblosats-admin"
 msgid "%(m)s min"
 msgstr "%(m)s 分"
 
@@ -190,10 +214,6 @@ msgstr "メイカーがsatsを売る"
 msgctxt "roblosats-admin"
 msgid "Unknown action."
 msgstr "不明な操作です。"
-
-msgctxt "roblosats-admin"
-msgid "Disputes"
-msgstr "紛争"
 
 msgctxt "roblosats-admin"
 msgid "buyer"
@@ -346,10 +366,6 @@ msgstr "なし"
 msgctxt "roblosats-admin"
 msgid "Order %(id)s: message sent to %(names)s."
 msgstr "注文 %(id)s：%(names)s にメッセージを送信しました。"
-
-msgctxt "roblosats-admin"
-msgid "Dispute panel"
-msgstr "紛争パネル"
 
 msgctxt "roblosats-admin"
 msgid "This order has or had a dispute."
@@ -648,6 +664,10 @@ msgid "Up to %(max)s characters. It arrives as an app notification, a Nostr DM a
 msgstr "最大 %(max)s 文字。アプリ内通知、NostrのDM、利用していればTelegramのメッセージとして届きます。そのまま送信されるので、読む人の言語で書いてください。"
 
 msgctxt "roblosats-admin"
+msgid "Waiting for your decision (both statements submitted)"
+msgstr "あなたの判断待ち（双方の陳述が提出済み）"
+
+msgctxt "roblosats-admin"
 msgid "Open disputes"
 msgstr "未解決の紛争"
 
@@ -658,6 +678,10 @@ msgstr "陳述提出済み"
 msgctxt "roblosats-admin"
 msgid "no statement"
 msgstr "陳述なし"
+
+msgctxt "roblosats-admin"
+msgid "No dispute has both statements yet."
+msgstr "双方の陳述が揃った紛争はまだありません。"
 
 msgctxt "roblosats-admin"
 msgid "There are no open disputes."
