@@ -328,13 +328,13 @@ const BadgesHall = ({ badges, size_limit }: BadgesProps): React.JSX.Element => {
         {...tooltipProps}
         title={
           <Typography align='center' variant='body2'>
-            {(size_limit ?? 0) > 3000000
+            {(size_limit ?? 0) > 300_000_000
               ? t('Large limits: the coordinator has large trade limits.')
               : t('Does not have large trade limits.')}
           </Typography>
         }
       >
-        <Grid sx={{ filter: (size_limit ?? 0) > 3000000 ? undefined : 'grayscale(100%)' }}>
+        <Grid sx={{ filter: (size_limit ?? 0) > 300_000_000 ? undefined : 'grayscale(100%)' }}>
           <BadgeLimits sx={sxProps} />
         </Grid>
       </Tooltip>

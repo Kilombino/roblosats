@@ -113,11 +113,13 @@ function calculateSizeLimit(inputDate: Date): number {
     (now.getTime() - inputDate.getTime()) / (1000 * 60 * 60 * 24 * 14),
   );
 
-  let value = 250000;
+  // Roblosats: BTC (BLAKE2b chain) trades far below Spamchain prices, so the
+  // upstream 250k sats start was under $1. Start at 25M sats instead.
+  let value = 25_000_000;
   for (let i = 1; i < numDifficultyAdjustments; i++) {
     value *= 1.3;
     if (i >= 12) {
-      // after 12 difficulty adjustments (6 weeks) limit becomes 21 BTC (mature coordinator)
+      // after 12 adjustments of 14 days (24 weeks) limit becomes 21 BTC (mature coordinator)
       return 21 * 100000000;
     }
   }
