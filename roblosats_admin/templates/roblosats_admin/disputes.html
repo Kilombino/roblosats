@@ -1,0 +1,35 @@
+{% extends "admin/base_site.html" %}{% load i18n %}
+{% block extrastyle %}{{ block.super }}{% include "roblosats_admin/_style.html" %}{% endblock %}
+{% block content %}
+<div class="rsd">
+{% include "roblosats_admin/_langs.html" %}
+<section class="rsd-sec">
+  <h2>{% translate "Open disputes" context "roblosats-admin" %}</h2>
+  {% if open_disputes %}
+  <div class="rsd-btns">
+    {% for d in open_disputes %}
+    <a class="rsd-btn" style="text-align:left" href="{{ d.url }}">
+      <span class="rsd-num">{% translate "Order" context "roblosats-admin" %} {{ d.id }}</span> · {{ d.type_label }} {{ d.amount }} {{ d.currency }} · {{ d.method }}<br>
+      <small>{{ d.status }}</small><br>
+      <small>{% translate "Buyer" context "roblosats-admin" %} {{ d.buyer }} ({% if d.buyer_statement %}{% translate "statement submitted" context "roblosats-admin" %}{% else %}{% translate "no statement" context "roblosats-admin" %}{% endif %}) ·
+             {% translate "Seller" context "roblosats-admin" %} {{ d.seller }} ({% if d.seller_statement %}{% translate "statement submitted" context "roblosats-admin" %}{% else %}{% translate "no statement" context "roblosats-admin" %}{% endif %})</small><br>
+      <small>{{ d.deadline }}</small>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}<p class="rsd-empty">{% translate "There are no open disputes." context "roblosats-admin" %}</p>{% endif %}
+</section>
+<section class="rsd-sec">
+  <h2>{% translate "Past disputes" context "roblosats-admin" %}</h2>
+  {% if closed_disputes %}
+  <div class="rsd-scroll"><table class="rsd-table">
+    <tr><th>{% translate "Order" context "roblosats-admin" %}</th><th>{% translate "Trade" context "roblosats-admin" %}</th><th>{% translate "Buyer / seller" context "roblosats-admin" %}</th><th>{% translate "Outcome" context "roblosats-admin" %}</th><th>{% translate "Created" context "roblosats-admin" %} ({{ tz }})</th></tr>
+    {% for d in closed_disputes %}
+    <tr><td><a href="{{ d.url }}">{{ d.id }}</a></td><td>{{ d.type_label }} {{ d.amount }} {{ d.currency }}</td>
+        <td>{{ d.buyer }} / {{ d.seller }}</td><td>{{ d.status }}</td><td class="time">{{ d.created }}</td></tr>
+    {% endfor %}
+  </table></div>
+  {% else %}<p class="rsd-empty">{% translate "None yet." context "roblosats-admin" %}</p>{% endif %}
+</section>
+</div>
+{% endblock %}

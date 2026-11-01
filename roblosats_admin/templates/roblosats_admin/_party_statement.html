@@ -1,0 +1,10 @@
+{% load i18n %}<div class="rsd-party {{ p.role }}">
+  <div class="rsd-who">{{ p.role_label }} · {{ p.nick }}</div>
+  {% if p.statement %}
+    {% if p.contacts %}<p style="margin:.4rem 0"><b>{% translate "Contact they left" context "roblosats-admin" %}:</b> {{ p.contacts|join:" · " }}</p>{% endif %}
+    {% if p.statement.text %}<div class="rsd-text">{{ p.statement.text }}</div>{% else %}<p class="rsd-empty">{% translate "Only the chat was attached, with no text of their own." context "roblosats-admin" %}</p>{% endif %}
+    <p class="rsd-note" style="margin-top:.4rem">{% if p.attached_chat %}{% translate "Chat attached" context "roblosats-admin" %}: {{ p.statement.messages|length }}{% else %}{% translate "No chat attached." context "roblosats-admin" %}{% endif %}</p>
+  {% else %}
+    <p class="rsd-empty">{% translate "No statement submitted yet." context "roblosats-admin" %}</p>
+  {% endif %}
+</div>

@@ -1,0 +1,1 @@
+<nav class="rsd-langs" aria-label="Language">{% for l in languages %}<a href="?lang={{ l.code }}" lang="{{ l.code }}"{% if l.current %} class="current" aria-current="true"{% endif %}>{{ l.name }}</a>{% endfor %}</nav>

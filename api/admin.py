@@ -2,7 +2,6 @@ from statistics import median
 
 from django.contrib import admin, messages
 from django.db import connection, transaction
-from django.db.models import F
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import Group, User
 from django.utils.html import mark_safe

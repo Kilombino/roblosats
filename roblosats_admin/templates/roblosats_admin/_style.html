@@ -1,0 +1,70 @@
+<style>
+/* Dispute panel styles (Unfold only ships the classes it uses itself).
+   Translucent colours so they work in light and dark mode. */
+.rsd { --rsd-border: rgba(127,127,127,.28); --rsd-soft: rgba(127,127,127,.08); --rsd-prim: rgb(234 88 12);
+       --rsd-buy: rgb(59 130 246); --rsd-sell: rgb(234 88 12); --rsd-bad: rgb(220 38 38); --rsd-good: rgb(22 163 74);
+       font-size: 15px; line-height: 1.5; max-width: 1100px; margin: 0 auto; }
+.rsd *, .rsd *::before, .rsd *::after { box-sizing: border-box; }
+.rsd h2 { font-size: 1.15rem; font-weight: 700; margin: 0 0 .75rem; }
+.rsd h3 { font-size: 1rem; font-weight: 700; margin: 0 0 .5rem; }
+.rsd a { color: var(--rsd-prim); }
+.rsd a:hover { text-decoration: underline; }
+.rsd-sec { border: 1px solid var(--rsd-border); border-radius: 12px; padding: 1rem; margin: 0 0 1rem; background: var(--rsd-soft); }
+.rsd-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem 1rem; margin-bottom: .75rem; }
+.rsd-head .rsd-num { font-size: 1.6rem; font-weight: 800; }
+.rsd-pill { display: inline-block; padding: .15rem .6rem; border-radius: 999px; font-size: .8rem; font-weight: 700;
+            border: 1px solid var(--rsd-border); white-space: nowrap; }
+.rsd-pill.alert { background: rgba(220,38,38,.15); border-color: rgba(220,38,38,.5); }
+.rsd-pill.ok { background: rgba(22,163,74,.15); border-color: rgba(22,163,74,.5); }
+.rsd-tag { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; opacity: .85; }
+.rsd-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .5rem; }
+.rsd-item { border: 1px solid var(--rsd-border); border-radius: 8px; padding: .5rem .7rem; }
+.rsd-item small { display: block; opacity: .7; font-size: .75rem; }
+.rsd-item b { font-size: 1.05rem; }
+.rsd-two { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+@media (max-width: 760px) { .rsd-two { grid-template-columns: 1fr; } }
+.rsd-party { border-radius: 10px; padding: .75rem; border: 1px solid var(--rsd-border); border-left-width: 5px; }
+.rsd-party.buyer { border-left-color: var(--rsd-buy); }
+.rsd-party.seller { border-left-color: var(--rsd-sell); }
+.rsd-who { font-weight: 800; text-transform: uppercase; font-size: .8rem; letter-spacing: .04em; }
+.rsd-party.buyer .rsd-who, .rsd-bubble.buyer .rsd-who { color: var(--rsd-buy); }
+.rsd-party.seller .rsd-who, .rsd-bubble.seller .rsd-who { color: var(--rsd-sell); }
+.rsd-text { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
+.rsd-empty { opacity: .7; font-style: italic; }
+.rsd-chat { display: flex; flex-direction: column; gap: .5rem; max-height: 70vh; overflow-y: auto; padding: .25rem; }
+.rsd-bubble { max-width: 80%; padding: .5rem .75rem; border-radius: 14px; border: 1px solid var(--rsd-border); }
+.rsd-bubble.buyer { align-self: flex-start; background: rgba(59,130,246,.12); border-bottom-left-radius: 4px; }
+.rsd-bubble.seller { align-self: flex-end; background: rgba(234,88,12,.12); border-bottom-right-radius: 4px; }
+.rsd-bubble.other { align-self: center; }
+.rsd-bubble .rsd-meta { font-size: .75rem; opacity: .75; display: flex; gap: .5rem; flex-wrap: wrap; justify-content: space-between; }
+@media (max-width: 760px) { .rsd-bubble { max-width: 92%; } }
+.rsd-bad { color: var(--rsd-bad); font-weight: 700; }
+.rsd-good { color: var(--rsd-good); font-weight: 700; }
+.rsd-btns { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: .6rem; margin-top: .6rem; }
+.rsd-btn { display: block; width: 100%; text-align: center; padding: .85rem 1rem; border-radius: 10px; font-weight: 700;
+           font-size: 1rem; border: 2px solid var(--rsd-border); background: transparent; color: inherit; cursor: pointer;
+           text-decoration: none !important; }
+.rsd-btn:hover { background: var(--rsd-soft); }
+.rsd-btn.prim { background: var(--rsd-prim); border-color: var(--rsd-prim); color: #fff; }
+.rsd-btn.prim:hover { filter: brightness(1.1); }
+.rsd-btn.buy { border-color: var(--rsd-buy); }
+.rsd-btn.sell { border-color: var(--rsd-sell); }
+.rsd-btn.danger { background: var(--rsd-bad); border-color: var(--rsd-bad); color: #fff; }
+.rsd-btn[disabled], .rsd-btn.off { opacity: .45; cursor: not-allowed; pointer-events: none; }
+.rsd textarea { width: 100%; min-height: 7rem; padding: .6rem; border-radius: 8px; border: 1px solid var(--rsd-border);
+                background: transparent; color: inherit; font: inherit; }
+.rsd-confirm { border: 2px solid var(--rsd-bad); border-radius: 12px; padding: 1rem; margin: .75rem 0; background: rgba(220,38,38,.07); }
+.rsd-confirm ul, .rsd-sec ul { margin: .4rem 0 .4rem 1.2rem; list-style: disc; }
+.rsd-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.rsd-table th, .rsd-table td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--rsd-border); vertical-align: top; }
+.rsd-table td.time { white-space: nowrap; opacity: .8; }
+.rsd-scroll { overflow-x: auto; }
+.rsd details > summary { cursor: pointer; font-weight: 700; font-size: 1.05rem; }
+.rsd-note { font-size: .85rem; opacity: .8; }
+</style>
+<style>
+.rsd-langs { display: flex; flex-wrap: wrap; gap: .25rem .6rem; justify-content: flex-end; font-size: .8rem; margin: 0 0 .75rem; }
+.rsd-langs a { opacity: .75; }
+.rsd-langs a.current { opacity: 1; font-weight: 700; text-decoration: underline; }
+.rsd-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .5rem; }
+</style>

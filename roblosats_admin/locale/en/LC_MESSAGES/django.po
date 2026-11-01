@@ -1,0 +1,704 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: roblosats-admin\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgctxt "roblosats-admin"
+msgid "Dispute"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the maker's bond"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Public in the order book"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Paused"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the taker's bond"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Cancelled"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Expired"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the seller's escrow and the buyer's invoice"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the seller's escrow"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the buyer's invoice"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "In the chat: the buyer has to pay"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "In the chat: the buyer says they have paid"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "In dispute: collecting statements"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Collaboratively cancelled"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Paying the sats to the buyer"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Completed successfully"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Lightning payment to the buyer failed"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "In dispute: both statements are in, waiting for your decision"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Dispute resolved: the maker lost"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Dispute resolved: the taker lost"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "invoice generated, unpaid"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "locked (held)"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "settled by the coordinator"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "returned"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "cancelled"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "expired"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "valid invoice"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "payment in flight"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "paid"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "payment failed"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Buyer wins"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Seller wins"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Return everything"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Trade completed (pay the buyer)"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "%(m)s min"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "%(d)s d %(h)s h"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "%(h)s h %(m)s min"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "the order is no longer in dispute"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "the seller's escrow has not been settled by the coordinator"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "a bond is missing"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Dispute of order %(id)s"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "BUY"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "SELL"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "the maker buys sats"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "the maker sells sats"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Unknown action."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Disputes"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "buyer"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "seller"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "maker"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "taker"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid " and "
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "opened automatically (the chat deadline expired)"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "unknown"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "the buyer never submitted a payout invoice or address"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Unknown decision"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "(nobody)"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "no response"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s is credited %(total)s sats as a reward (their bond of %(buyer_bond)s + %(trade)s from the trade). They withdraw it from the app."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s gets nothing back: they lose their bond (%(seller_bond)s) and their escrow (%(escrow)s)."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s is credited %(total)s sats as a reward (their bond of %(seller_bond)s + their escrow of %(escrow)s). They withdraw it from the app."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets nothing and loses their bond (%(buyer_bond)s)."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "The order ends as collaboratively cancelled."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "%(t)s left"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "expired %(t)s ago"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "winner: %(role)s"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Choose who the message is for."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "The decision was not confirmed. Nothing was done."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "The order changed status while you were confirming. Nothing was done: review it again."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "deadline expired"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Each party gets back what they put in, credited as a reward to withdraw from the app: the buyer %(buyer)s their bond (%(buyer_bond)s); the seller %(seller)s their bond (%(seller_bond)s) and their escrow (%(escrow)s)."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "The message is empty: nothing was sent."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "It cannot be resolved this way right now: %(why)s. Nothing was done."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Done: “%(decision)s” on order %(id)s. (%(detail)s)"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s could not be resolved. Response: %(detail)s"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "The buyer's invoice has already expired: the payment will probably fail and you will have to ask them for a new one."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Both bonds are credited back as rewards: %(buyer_bond)s to the buyer and %(seller_bond)s to the seller %(seller)s."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "The message has %(n)s characters; the limit is %(max)s. Nothing was sent."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "There is nobody to send it to."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s is paid %(trade)s sats on-chain, to the address they gave."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s is paid %(trade)s sats right now over Lightning, to the invoice they gave."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Message sent to %(names)s (app, plus Nostr and Telegram if they use them)."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Send a message to maker / taker"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "nobody"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: message sent to %(names)s."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Dispute panel"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "This order has or had a dispute."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Open the dispute page"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "chat, statements, messages and resolution"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Contact they left"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Only the chat was attached, with no text of their own."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Chat attached"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "No chat attached."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "No statement submitted yet."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Trades"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Lost"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Your messages reach them via"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "app"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Statement"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "submitted"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "not submitted yet"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "none"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "All disputes"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Order"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Amount"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Payment method"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Trade sats"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Premium"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Did the buyer mark the fiat as sent?"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Yes"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "No"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Dispute opened by"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "not in the log"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Deadline for statements"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "When the deadline passes nothing is resolved automatically: the decision is always yours."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Conversation between them"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Neither party has attached the chat to their statement."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Chat attached to the statements. Buyer on the left, seller on the right."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Buyer"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "attached"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "not attached"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Seller"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Signature NOT valid: this message may not be authentic."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "The two copies do not match. The other one says:"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "provided by"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "What each party says"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Messages you have already sent them"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "To"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "You have not written to them from the coordinator yet."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Write to them"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Prefix added to every message"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Write to the buyer"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Write to the seller"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Write to both"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Resolve the dispute"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Are you sure?"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "This cannot be undone."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Yes, resolve it this way"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Cancel"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Not possible"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Back"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "This order is no longer in dispute; there is nothing to resolve."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Not available"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Nothing happens until you confirm, and the confirmation shows who receives how many sats. Rewards are credited to the robot, which withdraws them from the app."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Your user can see this dispute but has no permission to change orders."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Technical details"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Open the full order record (all fields)"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Locked funds"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Item"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Sats"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Status"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Expires"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Buyer's bond"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Seller's bond"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Seller's escrow"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Buyer's payout invoice"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Buyer's on-chain payout"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Order log"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "No log saved."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Up to %(max)s characters. It arrives as an app notification, a Nostr DM and a Telegram message if they use them. It is sent as written: write it in the reader's language."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Open disputes"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "statement submitted"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "no statement"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "There are no open disputes."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Past disputes"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Trade"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Buyer / seller"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Outcome"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Created"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "None yet."
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Orders"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Send to"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "both"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Send"
+msgstr ""

@@ -1,0 +1,25 @@
+{% extends "admin/base_site.html" %}{% load i18n %}
+{% block extrastyle %}{{ block.super }}{% include "roblosats_admin/_style.html" %}{% endblock %}
+{% block content %}
+<div class="rsd">
+<section class="rsd-sec">
+<form method="post">{% csrf_token %}
+<p>{% translate "Orders" context "roblosats-admin" %}:
+{% for o in orders %}<b>{{ o.id }}</b> ({% translate "maker" context "roblosats-admin" %} {{ o.maker.username|default:"-" }}, {% translate "taker" context "roblosats-admin" %} {{ o.taker.username|default:"-" }}){% if not forloop.last %}, {% endif %}{% endfor %}</p>
+<p style="margin:.6rem 0">{% translate "Send to" context "roblosats-admin" %}:
+<label><input type="radio" name="who" value="both" checked> {% translate "both" context "roblosats-admin" %}</label>
+<label style="margin-left:1rem"><input type="radio" name="who" value="maker"> {% translate "maker" context "roblosats-admin" %}</label>
+<label style="margin-left:1rem"><input type="radio" name="who" value="taker"> {% translate "taker" context "roblosats-admin" %}</label></p>
+<textarea name="text" rows="6" maxlength="{{ max_len }}" required></textarea>
+<p class="rsd-note">{% blocktranslate trimmed context "roblosats-admin" with max=max_len %}Up to {{ max }} characters. It arrives as an app notification, a Nostr DM and a Telegram message if they use them. It is sent as written: write it in the reader's language.{% endblocktranslate %}</p>
+<p class="rsd-note">{% translate "Prefix added to every message" context "roblosats-admin" %}: «{{ head_example }}»</p>
+{% for id in selected %}<input type="hidden" name="_selected_action" value="{{ id }}">{% endfor %}
+<input type="hidden" name="action" value="{{ action }}">
+<div class="rsd-btns">
+<button type="submit" name="send_message" value="1" class="rsd-btn prim">{% translate "Send" context "roblosats-admin" %}</button>
+<a href="" class="rsd-btn">{% translate "Cancel" context "roblosats-admin" %}</a>
+</div>
+</form>
+</section>
+</div>
+{% endblock %}

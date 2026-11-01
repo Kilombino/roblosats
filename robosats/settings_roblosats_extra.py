@@ -1,3 +1,4 @@
+# ruff: noqa: F821
 
 #####################################################################
 # === Roblosats: extensión del settings.py OFICIAL (append-only) =====
@@ -13,10 +14,15 @@ TIME_ZONE = config("ADMIN_TIME_ZONE", cast=str, default="UTC")  # the admin show
 _UNFOLD_APPS = ["unfold", "unfold.contrib.filters", "unfold.contrib.forms", "unfold.contrib.import_export"]
 INSTALLED_APPS = _UNFOLD_APPS + [a for a in INSTALLED_APPS if a not in _UNFOLD_APPS and a != "roblosats_admin"] + ["roblosats_admin"]
 
+# panel language (dispute panel and admin chrome): admin requests only
+MIDDLEWARE = list(MIDDLEWARE) + ["roblosats_admin.middleware.AdminLocaleMiddleware"]
+
 # carpeta de plantillas del panel Roblosats (montada en el contenedor)
 TEMPLATES[0]["DIRS"] = list(TEMPLATES[0]["DIRS"]) + ["/usr/src/robosats/roblosats_templates"]
 
 # Django Unfold admin theme
+from django.urls import reverse as _roblosats_reverse  # noqa: E402
+from django.utils.translation import pgettext_lazy as _roblosats_pgettext_lazy  # noqa: E402
 
 def _count_orders(*status_values):
     """Cuenta órdenes en esos estados. Se llama al pintar el menú, no al arrancar."""
@@ -225,6 +231,12 @@ UNFOLD = {
                 "separator": True,
                 "collapsible": False,
                 "items": [
+                    {
+                        "title": _roblosats_pgettext_lazy("roblosats-admin", "Dispute panel"),
+                        "icon": "balance",
+                        "link": lambda request: _roblosats_reverse("admin:api_order_disputes"),
+                        "badge": _count_orders(11, 16),
+                    },
                     {
                         "title": "Abiertas",
                         "icon": "gavel",

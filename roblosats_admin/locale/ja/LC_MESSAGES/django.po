@@ -1,0 +1,704 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: roblosats-admin\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgctxt "roblosats-admin"
+msgid "Dispute"
+msgstr "紛争"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the maker's bond"
+msgstr "メイカーの保証金を待っています"
+
+msgctxt "roblosats-admin"
+msgid "Public in the order book"
+msgstr "オーダーブックに公開中"
+
+msgctxt "roblosats-admin"
+msgid "Paused"
+msgstr "一時停止中"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the taker's bond"
+msgstr "テイカーの保証金を待っています"
+
+msgctxt "roblosats-admin"
+msgid "Cancelled"
+msgstr "キャンセル済み"
+
+msgctxt "roblosats-admin"
+msgid "Expired"
+msgstr "期限切れ"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the seller's escrow and the buyer's invoice"
+msgstr "売り手のエスクローと買い手のインボイスを待っています"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the seller's escrow"
+msgstr "売り手のエスクローを待っています"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the buyer's invoice"
+msgstr "買い手のインボイスを待っています"
+
+msgctxt "roblosats-admin"
+msgid "In the chat: the buyer has to pay"
+msgstr "チャット中：買い手が支払う番です"
+
+msgctxt "roblosats-admin"
+msgid "In the chat: the buyer says they have paid"
+msgstr "チャット中：買い手は支払済みと言っています"
+
+msgctxt "roblosats-admin"
+msgid "In dispute: collecting statements"
+msgstr "紛争中：陳述を集めています"
+
+msgctxt "roblosats-admin"
+msgid "Collaboratively cancelled"
+msgstr "合意によりキャンセル"
+
+msgctxt "roblosats-admin"
+msgid "Paying the sats to the buyer"
+msgstr "買い手にsatsを支払い中"
+
+msgctxt "roblosats-admin"
+msgid "Completed successfully"
+msgstr "正常に完了"
+
+msgctxt "roblosats-admin"
+msgid "Lightning payment to the buyer failed"
+msgstr "買い手へのLightning支払いが失敗"
+
+msgctxt "roblosats-admin"
+msgid "In dispute: both statements are in, waiting for your decision"
+msgstr "紛争中：双方の陳述が揃い、あなたの判断待ちです"
+
+msgctxt "roblosats-admin"
+msgid "Dispute resolved: the maker lost"
+msgstr "紛争解決：メイカーの負け"
+
+msgctxt "roblosats-admin"
+msgid "Dispute resolved: the taker lost"
+msgstr "紛争解決：テイカーの負け"
+
+msgctxt "roblosats-admin"
+msgid "invoice generated, unpaid"
+msgstr "インボイス作成済み、未払い"
+
+msgctxt "roblosats-admin"
+msgid "locked (held)"
+msgstr "ロック中（保留）"
+
+msgctxt "roblosats-admin"
+msgid "settled by the coordinator"
+msgstr "コーディネーターが受領済み"
+
+msgctxt "roblosats-admin"
+msgid "returned"
+msgstr "返金済み"
+
+msgctxt "roblosats-admin"
+msgid "cancelled"
+msgstr "キャンセル済み"
+
+msgctxt "roblosats-admin"
+msgid "expired"
+msgstr "期限切れ"
+
+msgctxt "roblosats-admin"
+msgid "valid invoice"
+msgstr "有効なインボイス"
+
+msgctxt "roblosats-admin"
+msgid "payment in flight"
+msgstr "支払い処理中"
+
+msgctxt "roblosats-admin"
+msgid "paid"
+msgstr "支払済み"
+
+msgctxt "roblosats-admin"
+msgid "payment failed"
+msgstr "支払い失敗"
+
+msgctxt "roblosats-admin"
+msgid "Buyer wins"
+msgstr "買い手の勝ち"
+
+msgctxt "roblosats-admin"
+msgid "Seller wins"
+msgstr "売り手の勝ち"
+
+msgctxt "roblosats-admin"
+msgid "Return everything"
+msgstr "すべて返却"
+
+msgctxt "roblosats-admin"
+msgid "Trade completed (pay the buyer)"
+msgstr "取引完了（買い手に支払う）"
+
+msgctxt "roblosats-admin"
+msgid "%(m)s min"
+msgstr "%(m)s 分"
+
+msgctxt "roblosats-admin"
+msgid "%(d)s d %(h)s h"
+msgstr "%(d)s 日 %(h)s 時間"
+
+msgctxt "roblosats-admin"
+msgid "%(h)s h %(m)s min"
+msgstr "%(h)s 時間 %(m)s 分"
+
+msgctxt "roblosats-admin"
+msgid "the order is no longer in dispute"
+msgstr "この注文はもう紛争中ではありません"
+
+msgctxt "roblosats-admin"
+msgid "the seller's escrow has not been settled by the coordinator"
+msgstr "コーディネーターは売り手のエスクローを受領していません"
+
+msgctxt "roblosats-admin"
+msgid "a bond is missing"
+msgstr "保証金が足りません"
+
+msgctxt "roblosats-admin"
+msgid "Dispute of order %(id)s"
+msgstr "注文 %(id)s の紛争"
+
+msgctxt "roblosats-admin"
+msgid "BUY"
+msgstr "買い"
+
+msgctxt "roblosats-admin"
+msgid "SELL"
+msgstr "売り"
+
+msgctxt "roblosats-admin"
+msgid "the maker buys sats"
+msgstr "メイカーがsatsを買う"
+
+msgctxt "roblosats-admin"
+msgid "the maker sells sats"
+msgstr "メイカーがsatsを売る"
+
+msgctxt "roblosats-admin"
+msgid "Unknown action."
+msgstr "不明な操作です。"
+
+msgctxt "roblosats-admin"
+msgid "Disputes"
+msgstr "紛争"
+
+msgctxt "roblosats-admin"
+msgid "buyer"
+msgstr "買い手"
+
+msgctxt "roblosats-admin"
+msgid "seller"
+msgstr "売り手"
+
+msgctxt "roblosats-admin"
+msgid "maker"
+msgstr "メイカー"
+
+msgctxt "roblosats-admin"
+msgid "taker"
+msgstr "テイカー"
+
+msgctxt "roblosats-admin"
+msgid " and "
+msgstr "と"
+
+msgctxt "roblosats-admin"
+msgid "opened automatically (the chat deadline expired)"
+msgstr "自動で開始（チャットの期限切れ）"
+
+msgctxt "roblosats-admin"
+msgid "unknown"
+msgstr "不明"
+
+msgctxt "roblosats-admin"
+msgid "the buyer never submitted a payout invoice or address"
+msgstr "買い手は受取用のインボイスもアドレスも提出していません"
+
+msgctxt "roblosats-admin"
+msgid "Unknown decision"
+msgstr "不明な判断"
+
+msgctxt "roblosats-admin"
+msgid "(nobody)"
+msgstr "（なし）"
+
+msgctxt "roblosats-admin"
+msgid "no response"
+msgstr "応答なし"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s is credited %(total)s sats as a reward (their bond of %(buyer_bond)s + %(trade)s from the trade). They withdraw it from the app."
+msgstr "買い手 %(buyer)s に報酬として %(total)s sats が付与されます（買い手の保証金 %(buyer_bond)s + 取引分 %(trade)s）。買い手がアプリから引き出します。"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s gets nothing back: they lose their bond (%(seller_bond)s) and their escrow (%(escrow)s)."
+msgstr "売り手 %(seller)s には何も戻りません：保証金（%(seller_bond)s）とエスクロー（%(escrow)s）を失います。"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s is credited %(total)s sats as a reward (their bond of %(seller_bond)s + their escrow of %(escrow)s). They withdraw it from the app."
+msgstr "売り手 %(seller)s に報酬として %(total)s sats が付与されます（売り手の保証金 %(seller_bond)s + エスクロー %(escrow)s）。売り手がアプリから引き出します。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets nothing and loses their bond (%(buyer_bond)s)."
+msgstr "買い手 %(buyer)s は何も受け取らず、保証金（%(buyer_bond)s）を失います。"
+
+msgctxt "roblosats-admin"
+msgid "The order ends as collaboratively cancelled."
+msgstr "注文は合意によるキャンセルとして終了します。"
+
+msgctxt "roblosats-admin"
+msgid "%(t)s left"
+msgstr "残り %(t)s"
+
+msgctxt "roblosats-admin"
+msgid "expired %(t)s ago"
+msgstr "%(t)s 前に期限切れ"
+
+msgctxt "roblosats-admin"
+msgid "winner: %(role)s"
+msgstr "勝者：%(role)s"
+
+msgctxt "roblosats-admin"
+msgid "Choose who the message is for."
+msgstr "メッセージの宛先を選んでください。"
+
+msgctxt "roblosats-admin"
+msgid "The decision was not confirmed. Nothing was done."
+msgstr "判断が確認されていません。何も実行されていません。"
+
+msgctxt "roblosats-admin"
+msgid "The order changed status while you were confirming. Nothing was done: review it again."
+msgstr "確認中に注文のステータスが変わりました。何も実行されていません：もう一度確認してください。"
+
+msgctxt "roblosats-admin"
+msgid "deadline expired"
+msgstr "期限切れ"
+
+msgctxt "roblosats-admin"
+msgid "Each party gets back what they put in, credited as a reward to withdraw from the app: the buyer %(buyer)s their bond (%(buyer_bond)s); the seller %(seller)s their bond (%(seller_bond)s) and their escrow (%(escrow)s)."
+msgstr "各当事者は自分が預けた分を報酬として受け取り、アプリから引き出します：買い手 %(buyer)s は保証金（%(buyer_bond)s）、売り手 %(seller)s は保証金（%(seller_bond)s）とエスクロー（%(escrow)s）。"
+
+msgctxt "roblosats-admin"
+msgid "The message is empty: nothing was sent."
+msgstr "メッセージが空です：何も送信されていません。"
+
+msgctxt "roblosats-admin"
+msgid "It cannot be resolved this way right now: %(why)s. Nothing was done."
+msgstr "現在この方法では解決できません：%(why)s。何も実行されていません。"
+
+msgctxt "roblosats-admin"
+msgid "Done: “%(decision)s” on order %(id)s. (%(detail)s)"
+msgstr "完了：注文 %(id)s に「%(decision)s」。（%(detail)s）"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s could not be resolved. Response: %(detail)s"
+msgstr "注文 %(id)s を解決できませんでした。応答：%(detail)s"
+
+msgctxt "roblosats-admin"
+msgid "The buyer's invoice has already expired: the payment will probably fail and you will have to ask them for a new one."
+msgstr "買い手のインボイスは期限切れです：支払いは失敗する可能性が高く、新しいインボイスを依頼する必要があります。"
+
+msgctxt "roblosats-admin"
+msgid "Both bonds are credited back as rewards: %(buyer_bond)s to the buyer and %(seller_bond)s to the seller %(seller)s."
+msgstr "両方の保証金が報酬として戻ります：買い手に %(buyer_bond)s、売り手 %(seller)s に %(seller_bond)s。"
+
+msgctxt "roblosats-admin"
+msgid "The message has %(n)s characters; the limit is %(max)s. Nothing was sent."
+msgstr "メッセージは %(n)s 文字です。上限は %(max)s 文字です。何も送信されていません。"
+
+msgctxt "roblosats-admin"
+msgid "There is nobody to send it to."
+msgstr "送信先がいません。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s is paid %(trade)s sats on-chain, to the address they gave."
+msgstr "買い手 %(buyer)s に %(trade)s sats をオンチェーンで、指定されたアドレスへ支払います。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s is paid %(trade)s sats right now over Lightning, to the invoice they gave."
+msgstr "買い手 %(buyer)s に %(trade)s sats を今すぐLightningで、提出されたインボイスへ支払います。"
+
+msgctxt "roblosats-admin"
+msgid "Message sent to %(names)s (app, plus Nostr and Telegram if they use them)."
+msgstr "%(names)s にメッセージを送信しました（アプリ、利用していればNostrとTelegramにも）。"
+
+msgctxt "roblosats-admin"
+msgid "Send a message to maker / taker"
+msgstr "メイカー / テイカーにメッセージを送る"
+
+msgctxt "roblosats-admin"
+msgid "nobody"
+msgstr "なし"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: message sent to %(names)s."
+msgstr "注文 %(id)s：%(names)s にメッセージを送信しました。"
+
+msgctxt "roblosats-admin"
+msgid "Dispute panel"
+msgstr "紛争パネル"
+
+msgctxt "roblosats-admin"
+msgid "This order has or had a dispute."
+msgstr "この注文には紛争があります（またはありました）。"
+
+msgctxt "roblosats-admin"
+msgid "Open the dispute page"
+msgstr "紛争ページを開く"
+
+msgctxt "roblosats-admin"
+msgid "chat, statements, messages and resolution"
+msgstr "チャット、陳述、メッセージ、解決"
+
+msgctxt "roblosats-admin"
+msgid "Contact they left"
+msgstr "残された連絡先"
+
+msgctxt "roblosats-admin"
+msgid "Only the chat was attached, with no text of their own."
+msgstr "チャットのみ添付され、本人の文章はありません。"
+
+msgctxt "roblosats-admin"
+msgid "Chat attached"
+msgstr "チャット添付"
+
+msgctxt "roblosats-admin"
+msgid "No chat attached."
+msgstr "チャットは添付されていません。"
+
+msgctxt "roblosats-admin"
+msgid "No statement submitted yet."
+msgstr "まだ陳述が提出されていません。"
+
+msgctxt "roblosats-admin"
+msgid "Trades"
+msgstr "取引数"
+
+msgctxt "roblosats-admin"
+msgid "Lost"
+msgstr "敗訴"
+
+msgctxt "roblosats-admin"
+msgid "Your messages reach them via"
+msgstr "メッセージの届く経路"
+
+msgctxt "roblosats-admin"
+msgid "app"
+msgstr "アプリ"
+
+msgctxt "roblosats-admin"
+msgid "Statement"
+msgstr "陳述"
+
+msgctxt "roblosats-admin"
+msgid "submitted"
+msgstr "提出済み"
+
+msgctxt "roblosats-admin"
+msgid "not submitted yet"
+msgstr "未提出"
+
+msgctxt "roblosats-admin"
+msgid "none"
+msgstr "なし"
+
+msgctxt "roblosats-admin"
+msgid "All disputes"
+msgstr "すべての紛争"
+
+msgctxt "roblosats-admin"
+msgid "Order"
+msgstr "注文"
+
+msgctxt "roblosats-admin"
+msgid "Amount"
+msgstr "金額"
+
+msgctxt "roblosats-admin"
+msgid "Payment method"
+msgstr "支払い方法"
+
+msgctxt "roblosats-admin"
+msgid "Trade sats"
+msgstr "取引のsats"
+
+msgctxt "roblosats-admin"
+msgid "Premium"
+msgstr "プレミアム"
+
+msgctxt "roblosats-admin"
+msgid "Did the buyer mark the fiat as sent?"
+msgstr "買い手は法定通貨を送金済みにしましたか？"
+
+msgctxt "roblosats-admin"
+msgid "Yes"
+msgstr "はい"
+
+msgctxt "roblosats-admin"
+msgid "No"
+msgstr "いいえ"
+
+msgctxt "roblosats-admin"
+msgid "Dispute opened by"
+msgstr "紛争を開始した人"
+
+msgctxt "roblosats-admin"
+msgid "not in the log"
+msgstr "履歴に記録なし"
+
+msgctxt "roblosats-admin"
+msgid "Deadline for statements"
+msgstr "陳述の期限"
+
+msgctxt "roblosats-admin"
+msgid "When the deadline passes nothing is resolved automatically: the decision is always yours."
+msgstr "期限が過ぎても自動では解決されません：判断は常にあなたが行います。"
+
+msgctxt "roblosats-admin"
+msgid "Conversation between them"
+msgstr "当事者間の会話"
+
+msgctxt "roblosats-admin"
+msgid "Neither party has attached the chat to their statement."
+msgstr "どちらの当事者も陳述にチャットを添付していません。"
+
+msgctxt "roblosats-admin"
+msgid "Chat attached to the statements. Buyer on the left, seller on the right."
+msgstr "陳述に添付されたチャット。左が買い手、右が売り手です。"
+
+msgctxt "roblosats-admin"
+msgid "Buyer"
+msgstr "買い手"
+
+msgctxt "roblosats-admin"
+msgid "attached"
+msgstr "添付あり"
+
+msgctxt "roblosats-admin"
+msgid "not attached"
+msgstr "添付なし"
+
+msgctxt "roblosats-admin"
+msgid "Seller"
+msgstr "売り手"
+
+msgctxt "roblosats-admin"
+msgid "Signature NOT valid: this message may not be authentic."
+msgstr "署名が無効です：このメッセージは本物でない可能性があります。"
+
+msgctxt "roblosats-admin"
+msgid "The two copies do not match. The other one says:"
+msgstr "2つのコピーが一致しません。もう一方の内容："
+
+msgctxt "roblosats-admin"
+msgid "provided by"
+msgstr "提出者"
+
+msgctxt "roblosats-admin"
+msgid "What each party says"
+msgstr "各当事者の言い分"
+
+msgctxt "roblosats-admin"
+msgid "Messages you have already sent them"
+msgstr "すでに送ったメッセージ"
+
+msgctxt "roblosats-admin"
+msgid "To"
+msgstr "宛先"
+
+msgctxt "roblosats-admin"
+msgid "You have not written to them from the coordinator yet."
+msgstr "コーディネーターからまだメッセージを送っていません。"
+
+msgctxt "roblosats-admin"
+msgid "Write to them"
+msgstr "メッセージを書く"
+
+msgctxt "roblosats-admin"
+msgid "Prefix added to every message"
+msgstr "各メッセージに付く接頭辞"
+
+msgctxt "roblosats-admin"
+msgid "Write to the buyer"
+msgstr "買い手に書く"
+
+msgctxt "roblosats-admin"
+msgid "Write to the seller"
+msgstr "売り手に書く"
+
+msgctxt "roblosats-admin"
+msgid "Write to both"
+msgstr "両方に書く"
+
+msgctxt "roblosats-admin"
+msgid "Resolve the dispute"
+msgstr "紛争を解決する"
+
+msgctxt "roblosats-admin"
+msgid "Are you sure?"
+msgstr "本当によろしいですか？"
+
+msgctxt "roblosats-admin"
+msgid "This cannot be undone."
+msgstr "この操作は取り消せません。"
+
+msgctxt "roblosats-admin"
+msgid "Yes, resolve it this way"
+msgstr "はい、この内容で解決する"
+
+msgctxt "roblosats-admin"
+msgid "Cancel"
+msgstr "キャンセル"
+
+msgctxt "roblosats-admin"
+msgid "Not possible"
+msgstr "実行できません"
+
+msgctxt "roblosats-admin"
+msgid "Back"
+msgstr "戻る"
+
+msgctxt "roblosats-admin"
+msgid "This order is no longer in dispute; there is nothing to resolve."
+msgstr "この注文はもう紛争中ではありません。解決するものはありません。"
+
+msgctxt "roblosats-admin"
+msgid "Not available"
+msgstr "利用不可"
+
+msgctxt "roblosats-admin"
+msgid "Nothing happens until you confirm, and the confirmation shows who receives how many sats. Rewards are credited to the robot, which withdraws them from the app."
+msgstr "確認するまで何も実行されません。確認画面には誰が何sats受け取るかが表示されます。報酬はロボットに付与され、ロボットがアプリから引き出します。"
+
+msgctxt "roblosats-admin"
+msgid "Your user can see this dispute but has no permission to change orders."
+msgstr "あなたのユーザーはこの紛争を閲覧できますが、注文を変更する権限がありません。"
+
+msgctxt "roblosats-admin"
+msgid "Technical details"
+msgstr "技術的な詳細"
+
+msgctxt "roblosats-admin"
+msgid "Open the full order record (all fields)"
+msgstr "注文の全項目を開く"
+
+msgctxt "roblosats-admin"
+msgid "Locked funds"
+msgstr "ロックされた資金"
+
+msgctxt "roblosats-admin"
+msgid "Item"
+msgstr "項目"
+
+msgctxt "roblosats-admin"
+msgid "Sats"
+msgstr "sats"
+
+msgctxt "roblosats-admin"
+msgid "Status"
+msgstr "ステータス"
+
+msgctxt "roblosats-admin"
+msgid "Expires"
+msgstr "期限"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's bond"
+msgstr "買い手の保証金"
+
+msgctxt "roblosats-admin"
+msgid "Seller's bond"
+msgstr "売り手の保証金"
+
+msgctxt "roblosats-admin"
+msgid "Seller's escrow"
+msgstr "売り手のエスクロー"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's payout invoice"
+msgstr "買い手の受取用インボイス"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's on-chain payout"
+msgstr "買い手へのオンチェーン支払い"
+
+msgctxt "roblosats-admin"
+msgid "Order log"
+msgstr "注文の履歴"
+
+msgctxt "roblosats-admin"
+msgid "No log saved."
+msgstr "履歴は保存されていません。"
+
+msgctxt "roblosats-admin"
+msgid "Up to %(max)s characters. It arrives as an app notification, a Nostr DM and a Telegram message if they use them. It is sent as written: write it in the reader's language."
+msgstr "最大 %(max)s 文字。アプリ内通知、NostrのDM、利用していればTelegramのメッセージとして届きます。そのまま送信されるので、読む人の言語で書いてください。"
+
+msgctxt "roblosats-admin"
+msgid "Open disputes"
+msgstr "未解決の紛争"
+
+msgctxt "roblosats-admin"
+msgid "statement submitted"
+msgstr "陳述提出済み"
+
+msgctxt "roblosats-admin"
+msgid "no statement"
+msgstr "陳述なし"
+
+msgctxt "roblosats-admin"
+msgid "There are no open disputes."
+msgstr "未解決の紛争はありません。"
+
+msgctxt "roblosats-admin"
+msgid "Past disputes"
+msgstr "過去の紛争"
+
+msgctxt "roblosats-admin"
+msgid "Trade"
+msgstr "取引"
+
+msgctxt "roblosats-admin"
+msgid "Buyer / seller"
+msgstr "買い手 / 売り手"
+
+msgctxt "roblosats-admin"
+msgid "Outcome"
+msgstr "結果"
+
+msgctxt "roblosats-admin"
+msgid "Created"
+msgstr "作成日時"
+
+msgctxt "roblosats-admin"
+msgid "None yet."
+msgstr "まだありません。"
+
+msgctxt "roblosats-admin"
+msgid "Orders"
+msgstr "注文"
+
+msgctxt "roblosats-admin"
+msgid "Send to"
+msgstr "送信先"
+
+msgctxt "roblosats-admin"
+msgid "both"
+msgstr "両方"
+
+msgctxt "roblosats-admin"
+msgid "Send"
+msgstr "送信"

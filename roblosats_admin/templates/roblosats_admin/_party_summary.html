@@ -1,0 +1,7 @@
+{% load i18n %}<div class="rsd-party {{ p.role }}">
+  <div class="rsd-who">{{ p.role_label }} <span class="rsd-tag">({{ p.side_label }})</span></div>
+  <div><b>{% if p.robot_url %}<a href="{{ p.robot_url }}">{{ p.nick }}</a>{% else %}{{ p.nick }}{% endif %}</b></div>
+  <div class="rsd-note">{% translate "Trades" context "roblosats-admin" %}: {{ p.contracts }} · {% translate "Disputes" context "roblosats-admin" %}: {{ p.disputes }}{% if p.lost %} · <span class="rsd-bad">{% translate "Lost" context "roblosats-admin" %}: {{ p.lost }}</span>{% endif %}</div>
+  <div class="rsd-note">{% translate "Your messages reach them via" context "roblosats-admin" %}: {% translate "app" context "roblosats-admin" %}{% if p.nostr %}, Nostr{% endif %}{% if p.telegram %}, Telegram{% endif %}</div>
+  <div class="rsd-note">{% translate "Statement" context "roblosats-admin" %}: {% if p.statement %}<span class="rsd-good">{% translate "submitted" context "roblosats-admin" %}</span>{% else %}<span class="rsd-bad">{% translate "not submitted yet" context "roblosats-admin" %}</span>{% endif %}</div>
+</div>

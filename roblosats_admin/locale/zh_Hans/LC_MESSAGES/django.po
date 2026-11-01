@@ -1,0 +1,704 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: roblosats-admin\n"
+"Language: zh_Hans\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgctxt "roblosats-admin"
+msgid "Dispute"
+msgstr "争议"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the maker's bond"
+msgstr "等待挂单方的保证金"
+
+msgctxt "roblosats-admin"
+msgid "Public in the order book"
+msgstr "已在订单簿中公开"
+
+msgctxt "roblosats-admin"
+msgid "Paused"
+msgstr "已暂停"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the taker's bond"
+msgstr "等待吃单方的保证金"
+
+msgctxt "roblosats-admin"
+msgid "Cancelled"
+msgstr "已取消"
+
+msgctxt "roblosats-admin"
+msgid "Expired"
+msgstr "已过期"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the seller's escrow and the buyer's invoice"
+msgstr "等待卖方的托管资金和买方的发票"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the seller's escrow"
+msgstr "等待卖方的托管资金"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the buyer's invoice"
+msgstr "等待买方的发票"
+
+msgctxt "roblosats-admin"
+msgid "In the chat: the buyer has to pay"
+msgstr "聊天中：买方需要付款"
+
+msgctxt "roblosats-admin"
+msgid "In the chat: the buyer says they have paid"
+msgstr "聊天中：买方表示已付款"
+
+msgctxt "roblosats-admin"
+msgid "In dispute: collecting statements"
+msgstr "争议中：正在收集陈述"
+
+msgctxt "roblosats-admin"
+msgid "Collaboratively cancelled"
+msgstr "双方协商取消"
+
+msgctxt "roblosats-admin"
+msgid "Paying the sats to the buyer"
+msgstr "正在向买方支付聪"
+
+msgctxt "roblosats-admin"
+msgid "Completed successfully"
+msgstr "已成功完成"
+
+msgctxt "roblosats-admin"
+msgid "Lightning payment to the buyer failed"
+msgstr "向买方的闪电支付失败"
+
+msgctxt "roblosats-admin"
+msgid "In dispute: both statements are in, waiting for your decision"
+msgstr "争议中：双方陈述已齐，等待你的裁决"
+
+msgctxt "roblosats-admin"
+msgid "Dispute resolved: the maker lost"
+msgstr "争议已裁决：挂单方败诉"
+
+msgctxt "roblosats-admin"
+msgid "Dispute resolved: the taker lost"
+msgstr "争议已裁决：吃单方败诉"
+
+msgctxt "roblosats-admin"
+msgid "invoice generated, unpaid"
+msgstr "发票已生成，未支付"
+
+msgctxt "roblosats-admin"
+msgid "locked (held)"
+msgstr "已锁定（冻结中）"
+
+msgctxt "roblosats-admin"
+msgid "settled by the coordinator"
+msgstr "已由协调者收取"
+
+msgctxt "roblosats-admin"
+msgid "returned"
+msgstr "已退还"
+
+msgctxt "roblosats-admin"
+msgid "cancelled"
+msgstr "已取消"
+
+msgctxt "roblosats-admin"
+msgid "expired"
+msgstr "已过期"
+
+msgctxt "roblosats-admin"
+msgid "valid invoice"
+msgstr "有效发票"
+
+msgctxt "roblosats-admin"
+msgid "payment in flight"
+msgstr "支付进行中"
+
+msgctxt "roblosats-admin"
+msgid "paid"
+msgstr "已支付"
+
+msgctxt "roblosats-admin"
+msgid "payment failed"
+msgstr "支付失败"
+
+msgctxt "roblosats-admin"
+msgid "Buyer wins"
+msgstr "买方胜诉"
+
+msgctxt "roblosats-admin"
+msgid "Seller wins"
+msgstr "卖方胜诉"
+
+msgctxt "roblosats-admin"
+msgid "Return everything"
+msgstr "全部退还"
+
+msgctxt "roblosats-admin"
+msgid "Trade completed (pay the buyer)"
+msgstr "交易完成（向买方付款）"
+
+msgctxt "roblosats-admin"
+msgid "%(m)s min"
+msgstr "%(m)s 分钟"
+
+msgctxt "roblosats-admin"
+msgid "%(d)s d %(h)s h"
+msgstr "%(d)s 天 %(h)s 小时"
+
+msgctxt "roblosats-admin"
+msgid "%(h)s h %(m)s min"
+msgstr "%(h)s 小时 %(m)s 分钟"
+
+msgctxt "roblosats-admin"
+msgid "the order is no longer in dispute"
+msgstr "该订单已不在争议中"
+
+msgctxt "roblosats-admin"
+msgid "the seller's escrow has not been settled by the coordinator"
+msgstr "协调者尚未收取卖方的托管资金"
+
+msgctxt "roblosats-admin"
+msgid "a bond is missing"
+msgstr "缺少保证金"
+
+msgctxt "roblosats-admin"
+msgid "Dispute of order %(id)s"
+msgstr "订单 %(id)s 的争议"
+
+msgctxt "roblosats-admin"
+msgid "BUY"
+msgstr "买入"
+
+msgctxt "roblosats-admin"
+msgid "SELL"
+msgstr "卖出"
+
+msgctxt "roblosats-admin"
+msgid "the maker buys sats"
+msgstr "挂单方买入聪"
+
+msgctxt "roblosats-admin"
+msgid "the maker sells sats"
+msgstr "挂单方卖出聪"
+
+msgctxt "roblosats-admin"
+msgid "Unknown action."
+msgstr "未知操作。"
+
+msgctxt "roblosats-admin"
+msgid "Disputes"
+msgstr "争议"
+
+msgctxt "roblosats-admin"
+msgid "buyer"
+msgstr "买方"
+
+msgctxt "roblosats-admin"
+msgid "seller"
+msgstr "卖方"
+
+msgctxt "roblosats-admin"
+msgid "maker"
+msgstr "挂单方"
+
+msgctxt "roblosats-admin"
+msgid "taker"
+msgstr "吃单方"
+
+msgctxt "roblosats-admin"
+msgid " and "
+msgstr "和"
+
+msgctxt "roblosats-admin"
+msgid "opened automatically (the chat deadline expired)"
+msgstr "自动开启（聊天期限已过）"
+
+msgctxt "roblosats-admin"
+msgid "unknown"
+msgstr "未知"
+
+msgctxt "roblosats-admin"
+msgid "the buyer never submitted a payout invoice or address"
+msgstr "买方从未提交收款发票或地址"
+
+msgctxt "roblosats-admin"
+msgid "Unknown decision"
+msgstr "未知裁决"
+
+msgctxt "roblosats-admin"
+msgid "(nobody)"
+msgstr "（无人）"
+
+msgctxt "roblosats-admin"
+msgid "no response"
+msgstr "无响应"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s is credited %(total)s sats as a reward (their bond of %(buyer_bond)s + %(trade)s from the trade). They withdraw it from the app."
+msgstr "买方 %(buyer)s 获得 %(total)s 聪奖励（其保证金 %(buyer_bond)s + 交易金额 %(trade)s）。由买方在应用中提取。"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s gets nothing back: they lose their bond (%(seller_bond)s) and their escrow (%(escrow)s)."
+msgstr "卖方 %(seller)s 什么也拿不回：失去其保证金（%(seller_bond)s）和托管资金（%(escrow)s）。"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s is credited %(total)s sats as a reward (their bond of %(seller_bond)s + their escrow of %(escrow)s). They withdraw it from the app."
+msgstr "卖方 %(seller)s 获得 %(total)s 聪奖励（其保证金 %(seller_bond)s + 其托管资金 %(escrow)s）。由卖方在应用中提取。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets nothing and loses their bond (%(buyer_bond)s)."
+msgstr "买方 %(buyer)s 一无所得，并失去其保证金（%(buyer_bond)s）。"
+
+msgctxt "roblosats-admin"
+msgid "The order ends as collaboratively cancelled."
+msgstr "订单以双方协商取消结束。"
+
+msgctxt "roblosats-admin"
+msgid "%(t)s left"
+msgstr "剩余 %(t)s"
+
+msgctxt "roblosats-admin"
+msgid "expired %(t)s ago"
+msgstr "已过期 %(t)s"
+
+msgctxt "roblosats-admin"
+msgid "winner: %(role)s"
+msgstr "胜诉方：%(role)s"
+
+msgctxt "roblosats-admin"
+msgid "Choose who the message is for."
+msgstr "请选择消息的接收方。"
+
+msgctxt "roblosats-admin"
+msgid "The decision was not confirmed. Nothing was done."
+msgstr "裁决未确认。未执行任何操作。"
+
+msgctxt "roblosats-admin"
+msgid "The order changed status while you were confirming. Nothing was done: review it again."
+msgstr "在你确认期间订单状态已改变。未执行任何操作：请重新检查。"
+
+msgctxt "roblosats-admin"
+msgid "deadline expired"
+msgstr "期限已过"
+
+msgctxt "roblosats-admin"
+msgid "Each party gets back what they put in, credited as a reward to withdraw from the app: the buyer %(buyer)s their bond (%(buyer_bond)s); the seller %(seller)s their bond (%(seller_bond)s) and their escrow (%(escrow)s)."
+msgstr "各方取回各自投入的部分，以奖励形式记入，可在应用中提取：买方 %(buyer)s 取回其保证金（%(buyer_bond)s）；卖方 %(seller)s 取回其保证金（%(seller_bond)s）和托管资金（%(escrow)s）。"
+
+msgctxt "roblosats-admin"
+msgid "The message is empty: nothing was sent."
+msgstr "消息为空：未发送任何内容。"
+
+msgctxt "roblosats-admin"
+msgid "It cannot be resolved this way right now: %(why)s. Nothing was done."
+msgstr "目前无法这样裁决：%(why)s。未执行任何操作。"
+
+msgctxt "roblosats-admin"
+msgid "Done: “%(decision)s” on order %(id)s. (%(detail)s)"
+msgstr "已完成：订单 %(id)s「%(decision)s」。（%(detail)s）"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s could not be resolved. Response: %(detail)s"
+msgstr "无法裁决订单 %(id)s。响应：%(detail)s"
+
+msgctxt "roblosats-admin"
+msgid "The buyer's invoice has already expired: the payment will probably fail and you will have to ask them for a new one."
+msgstr "买方的发票已过期：支付很可能会失败，需要请买方提供新的发票。"
+
+msgctxt "roblosats-admin"
+msgid "Both bonds are credited back as rewards: %(buyer_bond)s to the buyer and %(seller_bond)s to the seller %(seller)s."
+msgstr "两份保证金都以奖励形式退回：%(buyer_bond)s 给买方，%(seller_bond)s 给卖方 %(seller)s。"
+
+msgctxt "roblosats-admin"
+msgid "The message has %(n)s characters; the limit is %(max)s. Nothing was sent."
+msgstr "消息有 %(n)s 个字符，上限为 %(max)s。未发送任何内容。"
+
+msgctxt "roblosats-admin"
+msgid "There is nobody to send it to."
+msgstr "没有可发送的对象。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s is paid %(trade)s sats on-chain, to the address they gave."
+msgstr "向买方 %(buyer)s 链上支付 %(trade)s 聪，至其提供的地址。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s is paid %(trade)s sats right now over Lightning, to the invoice they gave."
+msgstr "立即通过闪电网络向买方 %(buyer)s 支付 %(trade)s 聪，至其提供的发票。"
+
+msgctxt "roblosats-admin"
+msgid "Message sent to %(names)s (app, plus Nostr and Telegram if they use them)."
+msgstr "消息已发送给 %(names)s（应用内，以及对方使用的 Nostr 和 Telegram）。"
+
+msgctxt "roblosats-admin"
+msgid "Send a message to maker / taker"
+msgstr "给挂单方 / 吃单方发消息"
+
+msgctxt "roblosats-admin"
+msgid "nobody"
+msgstr "无人"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: message sent to %(names)s."
+msgstr "订单 %(id)s：消息已发送给 %(names)s。"
+
+msgctxt "roblosats-admin"
+msgid "Dispute panel"
+msgstr "争议面板"
+
+msgctxt "roblosats-admin"
+msgid "This order has or had a dispute."
+msgstr "此订单存在或曾有争议。"
+
+msgctxt "roblosats-admin"
+msgid "Open the dispute page"
+msgstr "打开争议页面"
+
+msgctxt "roblosats-admin"
+msgid "chat, statements, messages and resolution"
+msgstr "聊天、陈述、消息和裁决"
+
+msgctxt "roblosats-admin"
+msgid "Contact they left"
+msgstr "留下的联系方式"
+
+msgctxt "roblosats-admin"
+msgid "Only the chat was attached, with no text of their own."
+msgstr "仅附上了聊天记录，没有自己的陈述文字。"
+
+msgctxt "roblosats-admin"
+msgid "Chat attached"
+msgstr "已附聊天记录"
+
+msgctxt "roblosats-admin"
+msgid "No chat attached."
+msgstr "未附聊天记录。"
+
+msgctxt "roblosats-admin"
+msgid "No statement submitted yet."
+msgstr "尚未提交陈述。"
+
+msgctxt "roblosats-admin"
+msgid "Trades"
+msgstr "交易次数"
+
+msgctxt "roblosats-admin"
+msgid "Lost"
+msgstr "败诉"
+
+msgctxt "roblosats-admin"
+msgid "Your messages reach them via"
+msgstr "你的消息送达渠道"
+
+msgctxt "roblosats-admin"
+msgid "app"
+msgstr "应用"
+
+msgctxt "roblosats-admin"
+msgid "Statement"
+msgstr "陈述"
+
+msgctxt "roblosats-admin"
+msgid "submitted"
+msgstr "已提交"
+
+msgctxt "roblosats-admin"
+msgid "not submitted yet"
+msgstr "尚未提交"
+
+msgctxt "roblosats-admin"
+msgid "none"
+msgstr "无"
+
+msgctxt "roblosats-admin"
+msgid "All disputes"
+msgstr "全部争议"
+
+msgctxt "roblosats-admin"
+msgid "Order"
+msgstr "订单"
+
+msgctxt "roblosats-admin"
+msgid "Amount"
+msgstr "金额"
+
+msgctxt "roblosats-admin"
+msgid "Payment method"
+msgstr "支付方式"
+
+msgctxt "roblosats-admin"
+msgid "Trade sats"
+msgstr "交易聪数"
+
+msgctxt "roblosats-admin"
+msgid "Premium"
+msgstr "溢价"
+
+msgctxt "roblosats-admin"
+msgid "Did the buyer mark the fiat as sent?"
+msgstr "买方是否已标记法币已发送？"
+
+msgctxt "roblosats-admin"
+msgid "Yes"
+msgstr "是"
+
+msgctxt "roblosats-admin"
+msgid "No"
+msgstr "否"
+
+msgctxt "roblosats-admin"
+msgid "Dispute opened by"
+msgstr "争议发起方"
+
+msgctxt "roblosats-admin"
+msgid "not in the log"
+msgstr "日志中无记录"
+
+msgctxt "roblosats-admin"
+msgid "Deadline for statements"
+msgstr "提交陈述的期限"
+
+msgctxt "roblosats-admin"
+msgid "When the deadline passes nothing is resolved automatically: the decision is always yours."
+msgstr "期限过后不会自动裁决：决定权始终在你。"
+
+msgctxt "roblosats-admin"
+msgid "Conversation between them"
+msgstr "双方的对话"
+
+msgctxt "roblosats-admin"
+msgid "Neither party has attached the chat to their statement."
+msgstr "双方均未在陈述中附上聊天记录。"
+
+msgctxt "roblosats-admin"
+msgid "Chat attached to the statements. Buyer on the left, seller on the right."
+msgstr "附在陈述中的聊天记录。买方在左，卖方在右。"
+
+msgctxt "roblosats-admin"
+msgid "Buyer"
+msgstr "买方"
+
+msgctxt "roblosats-admin"
+msgid "attached"
+msgstr "已附"
+
+msgctxt "roblosats-admin"
+msgid "not attached"
+msgstr "未附"
+
+msgctxt "roblosats-admin"
+msgid "Seller"
+msgstr "卖方"
+
+msgctxt "roblosats-admin"
+msgid "Signature NOT valid: this message may not be authentic."
+msgstr "签名无效：此消息可能不是真实的。"
+
+msgctxt "roblosats-admin"
+msgid "The two copies do not match. The other one says:"
+msgstr "两份副本不一致。另一份内容为："
+
+msgctxt "roblosats-admin"
+msgid "provided by"
+msgstr "提供方"
+
+msgctxt "roblosats-admin"
+msgid "What each party says"
+msgstr "双方的说法"
+
+msgctxt "roblosats-admin"
+msgid "Messages you have already sent them"
+msgstr "你已发送给他们的消息"
+
+msgctxt "roblosats-admin"
+msgid "To"
+msgstr "发给"
+
+msgctxt "roblosats-admin"
+msgid "You have not written to them from the coordinator yet."
+msgstr "你还没有以协调者身份给他们发过消息。"
+
+msgctxt "roblosats-admin"
+msgid "Write to them"
+msgstr "给他们写消息"
+
+msgctxt "roblosats-admin"
+msgid "Prefix added to every message"
+msgstr "每条消息都会加上的前缀"
+
+msgctxt "roblosats-admin"
+msgid "Write to the buyer"
+msgstr "写给买方"
+
+msgctxt "roblosats-admin"
+msgid "Write to the seller"
+msgstr "写给卖方"
+
+msgctxt "roblosats-admin"
+msgid "Write to both"
+msgstr "写给双方"
+
+msgctxt "roblosats-admin"
+msgid "Resolve the dispute"
+msgstr "裁决争议"
+
+msgctxt "roblosats-admin"
+msgid "Are you sure?"
+msgstr "确定吗？"
+
+msgctxt "roblosats-admin"
+msgid "This cannot be undone."
+msgstr "此操作无法撤销。"
+
+msgctxt "roblosats-admin"
+msgid "Yes, resolve it this way"
+msgstr "是，按此裁决"
+
+msgctxt "roblosats-admin"
+msgid "Cancel"
+msgstr "取消"
+
+msgctxt "roblosats-admin"
+msgid "Not possible"
+msgstr "无法执行"
+
+msgctxt "roblosats-admin"
+msgid "Back"
+msgstr "返回"
+
+msgctxt "roblosats-admin"
+msgid "This order is no longer in dispute; there is nothing to resolve."
+msgstr "此订单已不在争议中，无需裁决。"
+
+msgctxt "roblosats-admin"
+msgid "Not available"
+msgstr "不可用"
+
+msgctxt "roblosats-admin"
+msgid "Nothing happens until you confirm, and the confirmation shows who receives how many sats. Rewards are credited to the robot, which withdraws them from the app."
+msgstr "在你确认之前不会执行任何操作，确认页会显示谁收到多少聪。奖励记入机器人账户，由其在应用中提取。"
+
+msgctxt "roblosats-admin"
+msgid "Your user can see this dispute but has no permission to change orders."
+msgstr "你的账户可以查看此争议，但没有修改订单的权限。"
+
+msgctxt "roblosats-admin"
+msgid "Technical details"
+msgstr "技术细节"
+
+msgctxt "roblosats-admin"
+msgid "Open the full order record (all fields)"
+msgstr "打开完整的订单记录（全部字段）"
+
+msgctxt "roblosats-admin"
+msgid "Locked funds"
+msgstr "锁定资金"
+
+msgctxt "roblosats-admin"
+msgid "Item"
+msgstr "项目"
+
+msgctxt "roblosats-admin"
+msgid "Sats"
+msgstr "聪"
+
+msgctxt "roblosats-admin"
+msgid "Status"
+msgstr "状态"
+
+msgctxt "roblosats-admin"
+msgid "Expires"
+msgstr "到期"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's bond"
+msgstr "买方保证金"
+
+msgctxt "roblosats-admin"
+msgid "Seller's bond"
+msgstr "卖方保证金"
+
+msgctxt "roblosats-admin"
+msgid "Seller's escrow"
+msgstr "卖方托管资金"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's payout invoice"
+msgstr "买方收款发票"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's on-chain payout"
+msgstr "买方链上收款"
+
+msgctxt "roblosats-admin"
+msgid "Order log"
+msgstr "订单日志"
+
+msgctxt "roblosats-admin"
+msgid "No log saved."
+msgstr "没有保存的日志。"
+
+msgctxt "roblosats-admin"
+msgid "Up to %(max)s characters. It arrives as an app notification, a Nostr DM and a Telegram message if they use them. It is sent as written: write it in the reader's language."
+msgstr "最多 %(max)s 个字符。对方会收到应用内通知、Nostr 私信，以及 Telegram 消息（如有使用）。消息原样发送：请用对方的语言书写。"
+
+msgctxt "roblosats-admin"
+msgid "Open disputes"
+msgstr "进行中的争议"
+
+msgctxt "roblosats-admin"
+msgid "statement submitted"
+msgstr "已提交陈述"
+
+msgctxt "roblosats-admin"
+msgid "no statement"
+msgstr "无陈述"
+
+msgctxt "roblosats-admin"
+msgid "There are no open disputes."
+msgstr "目前没有进行中的争议。"
+
+msgctxt "roblosats-admin"
+msgid "Past disputes"
+msgstr "历史争议"
+
+msgctxt "roblosats-admin"
+msgid "Trade"
+msgstr "交易"
+
+msgctxt "roblosats-admin"
+msgid "Buyer / seller"
+msgstr "买方 / 卖方"
+
+msgctxt "roblosats-admin"
+msgid "Outcome"
+msgstr "结果"
+
+msgctxt "roblosats-admin"
+msgid "Created"
+msgstr "创建时间"
+
+msgctxt "roblosats-admin"
+msgid "None yet."
+msgstr "暂无。"
+
+msgctxt "roblosats-admin"
+msgid "Orders"
+msgstr "订单"
+
+msgctxt "roblosats-admin"
+msgid "Send to"
+msgstr "发送给"
+
+msgctxt "roblosats-admin"
+msgid "both"
+msgstr "双方"
+
+msgctxt "roblosats-admin"
+msgid "Send"
+msgstr "发送"

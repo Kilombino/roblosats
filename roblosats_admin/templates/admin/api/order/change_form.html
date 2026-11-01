@@ -1,0 +1,10 @@
+{% extends "admin/change_form.html" %}{% load i18n %}
+{% block form_before %}{{ block.super }}
+{% if original.is_disputed %}
+<div style="margin:0 0 1rem;padding:.9rem 1rem;border-radius:12px;border:2px solid rgb(234 88 12);background:rgba(234,88,12,.1);font-weight:600">
+  ⚖️ {% translate "This order has or had a dispute." context "roblosats-admin" %}
+  <a href="{% url 'admin:api_order_dispute' original.pk %}" style="color:rgb(234 88 12);text-decoration:underline;margin-left:.5rem">{% translate "Open the dispute page" context "roblosats-admin" %}</a>
+  ({% translate "chat, statements, messages and resolution" context "roblosats-admin" %})
+</div>
+{% endif %}
+{% endblock %}

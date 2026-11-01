@@ -63,6 +63,14 @@ release tag, so each new RoboSats release can be taken by rebasing that branch.
 - **Android**: application id `com.roblosats`, so it installs next to RoboSats.
 - **Fix**: the web client froze with fewer than three coordinators (it waited forever for a
   third distinct relay).
+- **Coordinator admin** (`roblosats_admin`, in the image): django-unfold theme, a dashboard,
+  and a **dispute panel** at `/coordinator/api/order/disputes/` and
+  `/coordinator/api/order/<id>/dispute/`: who buys and who sells, the chat each party attached,
+  their statements, messages from the coordinator to the robots (app notification, Nostr DM,
+  Telegram) and buttons that run the existing dispute actions after a confirmation showing who
+  receives how many sats. Messages start with `<COORDINATOR_ALIAS> coordinator (order N): `.
+  The panel follows the browser language (en, es, de, fr, it, pt, ru, zh-Hans, ja) and has a
+  language selector.
 - `Dockerfile.roblosats` builds the coordinator image with the web client inside.
 
 ## Updating to a new RoboSats release

@@ -1,0 +1,1 @@
+{% load i18n %}{% if pg.exists %}<td>{{ pg.sats }}</td><td>{% if pg.url %}<a href="{{ pg.url }}">{{ pg.status }}</a>{% else %}{{ pg.status }}{% endif %}</td><td class="time">{{ pg.expires }}</td>{% else %}<td colspan="3" class="rsd-empty">{% translate "none" context "roblosats-admin" %}</td>{% endif %}
