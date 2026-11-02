@@ -15,8 +15,8 @@ class Currency(models.Model):
         choices=currency_choices, null=False, unique=True
     )
     exchange_rate = models.DecimalField(
-        max_digits=18,
-        decimal_places=4,
+        max_digits=22,
+        decimal_places=8,
         default=None,
         null=True,
         validators=[MinValueValidator(Decimal(0))],

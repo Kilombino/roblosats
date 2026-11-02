@@ -489,6 +489,22 @@ class Logics:
         premium_rate = exchange_rate * (1 + float(premium) / 100)
         return (float(amount) / premium_rate) * 100 * 1000 * 1000
 
+    SPAMCOIN_CURRENCY = 1000
+
+    @classmethod
+    def spamcoin_sats(cls, order):
+        if "spamcoin" not in (order.payment_method or "").lower():
+            return None
+        if order.currency.currency == cls.SPAMCOIN_CURRENCY:
+            return round(float(order.amount) * 100_000_000)
+        try:
+            ratio = Currency.objects.get(currency=cls.SPAMCOIN_CURRENCY).exchange_rate
+        except Currency.DoesNotExist:
+            return None
+        if not ratio or not order.last_satoshis:
+            return None
+        return round(order.last_satoshis * float(ratio))
+
     @classmethod
     def satoshis_now(cls, order, take_amount=None):
         """checks trade amount in sats"""
@@ -1657,6 +1673,7 @@ class Logics:
         # (This is the last update to "last_satoshis", it becomes the escrow amount next)
         order.last_satoshis = cls.satoshis_now(order)
         order.last_satoshis_time = timezone.now()
+        order.spamcoin_sats = cls.spamcoin_sats(order)
 
         # With the bond confirmation the order is extended 'public_order_duration' hours
         order.expires_at = timezone.now() + timedelta(
@@ -1671,6 +1688,7 @@ class Logics:
                 "amount",
                 "last_satoshis",
                 "last_satoshis_time",
+                "spamcoin_sats",
                 "expires_at",
             ]
         )

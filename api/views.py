@@ -322,6 +322,8 @@ class OrderView(viewsets.ViewSet):
         data["is_disputed"] = order.is_disputed
         data["ur_nick"] = request.user.username
         data["satoshis_now"] = order.last_satoshis
+        if order.spamcoin_sats is not None:
+            data["spamcoin_sats"] = order.spamcoin_sats
 
         # Add whether hold invoices are LOCKED (ACCEPTED)
         # Is there a maker bond? If so, True if locked, False otherwise

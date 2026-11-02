@@ -35,3 +35,8 @@ consistently with this app's.
 ## Constraints
 Never delete or regenerate either `0001` file. Never renumber existing migrations. New
 migrations always continue from the current highest number, never inserted mid-sequence.
+
+Roblosats: `0062_roblosats_spamcoin_sats_rate_precision.py` widens `Currency.exchange_rate`
+to 8 decimals (the BTCB2→BTC rate, currency 1000, is ~0.005 and moved in 2 % steps with 4)
+and adds `Order.spamcoin_sats`, the Spamcoin sats of an order paid in Spamcoin, fixed in
+`Logics.finalize_contract` from `last_satoshis` × that rate so both sides see one number.

@@ -315,6 +315,10 @@ class OrderDetailSerializer(serializers.ModelSerializer):
         required=False,
         help_text="Seller sees the amount of sats they need to send. Buyer sees the amount of sats they will receive ",
     )
+    spamcoin_sats = serializers.IntegerField(
+        required=False,
+        help_text="Orders paid in Spamcoin: the Spamcoin sats due, fixed when the taker bond locked",
+    )
     bond_invoice = serializers.CharField(
         required=False, help_text="When `status` = `0`, `3`. Bond invoice to be paid"
     )
@@ -482,6 +486,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             "taker_locked",
             "escrow_locked",
             "trade_satoshis",
+            "spamcoin_sats",
             "bond_invoice",
             "bond_satoshis",
             "escrow_invoice",

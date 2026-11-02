@@ -110,6 +110,7 @@ class Order {
   taker_locked: boolean = false;
   escrow_locked: boolean = false;
   trade_satoshis: number = 0;
+  spamcoin_sats: number | null = null;
   bond_invoice: string = '';
   bond_satoshis: number = 0;
   escrow_invoice: string = '';
