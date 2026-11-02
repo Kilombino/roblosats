@@ -38,7 +38,6 @@ interface Props {
   peerPubKey?: string;
   setPeerPubKey: (peerPubKey: string) => void;
   setError: Dispatch<SetStateAction<string>>;
-  setLastIndex: Dispatch<SetStateAction<number>>;
   blossomEnabled: boolean;
   coordinatorUrl?: string;
 }
@@ -64,7 +63,6 @@ const EncryptedNostrChat: React.FC<Props> = ({
   onSendMessage,
   onSendFile,
   setError,
-  setLastIndex,
   blossomEnabled,
   coordinatorUrl,
 }: Props): React.JSX.Element => {
@@ -154,9 +152,10 @@ const EncryptedNostrChat: React.FC<Props> = ({
           })
           .toArray();
 
-        const sortedMessages = chatMessages.sort((a, b) => a.index - b.index);
-        setLastIndex(sortedMessages[sortedMessages.length - 1]?.index ?? 0);
-        return sortedMessages;
+        // The index here is the Nostr timestamp, with decimals. It must not become
+        // lastIndex: that is the coordinator's integer message offset, and a
+        // timestamp there made /api/chat/ reject every copy after the first one.
+        return chatMessages.sort((a, b) => a.index - b.index);
       });
     }
   }, [notificationsUpdatedAt, slotUpdatedAt]);

@@ -369,7 +369,6 @@ const EncryptedChat: React.FC<Props> = ({
         error={error}
         setError={setError}
         lastIndex={lastIndex}
-        setLastIndex={setLastIndex}
         blossomEnabled={blossomEnabled}
         coordinatorUrl={coordinatorUrl}
       />
