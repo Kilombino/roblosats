@@ -1150,3 +1150,91 @@ msgstr "Preços de mercado"
 msgctxt "roblosats-admin"
 msgid "Cancelled orders"
 msgstr "Canceladas"
+
+msgctxt "roblosats-admin"
+msgid "created, no address yet"
+msgstr "criado, ainda sem endereço"
+
+msgctxt "roblosats-admin"
+msgid "address submitted"
+msgstr "endereço enviado"
+
+msgctxt "roblosats-admin"
+msgid "in the mempool"
+msgstr "na mempool"
+
+msgctxt "roblosats-admin"
+msgid "confirmed"
+msgstr "confirmado"
+
+msgctxt "roblosats-admin"
+msgid "queued to be sent"
+msgstr "na fila para envio"
+
+msgctxt "roblosats-admin"
+msgid "(unknown)"
+msgstr "(desconhecido)"
+
+msgctxt "roblosats-admin"
+msgid "the buyer won"
+msgstr "o comprador ganhou"
+
+msgctxt "roblosats-admin"
+msgid "the seller won"
+msgstr "o vendedor ganhou"
+
+msgctxt "roblosats-admin"
+msgid "Coordinator's earnings"
+msgstr "Ganho do coordenador"
+
+msgctxt "roblosats-admin"
+msgid "Routing fee of the payment to the buyer: %(fee)s sats."
+msgstr "Taxa de roteamento do pagamento ao comprador: %(fee)s sats."
+
+msgctxt "roblosats-admin"
+msgid "Transaction"
+msgstr "Transação"
+
+msgctxt "roblosats-admin"
+msgid "Mining fee"
+msgstr "Taxa de mineração"
+
+msgctxt "roblosats-admin"
+msgid "Chat between them"
+msgstr "Chat entre eles"
+
+msgctxt "roblosats-admin"
+msgid "The chat could not be read."
+msgstr "Não foi possível ler o chat."
+
+msgctxt "roblosats-admin"
+msgid "First message"
+msgstr "Primeira mensagem"
+
+msgctxt "roblosats-admin"
+msgid "Last message"
+msgstr "Última mensagem"
+
+msgctxt "roblosats-admin"
+msgid "When each one wrote"
+msgstr "Quando cada um escreveu"
+
+msgctxt "roblosats-admin"
+msgid "Who"
+msgstr "Quem"
+
+msgctxt "roblosats-admin"
+msgid "Time"
+msgstr "Hora"
+
+msgctxt "roblosats-admin"
+msgid "No chat messages are stored on the coordinator."
+msgstr "Não há mensagens de chat guardadas no coordenador."
+
+msgctxt "roblosats-admin"
+msgid "The messages are encrypted between them: here you only see how many, who wrote them and when. Since Roblosats 0.8.8-rl25 a copy of every message reaches the coordinator, also in the app's Nostr chat mode. In orders chatted before that, only the first Nostr message may have arrived, so a low count there does not mean they did not talk."
+msgstr "As mensagens são cifradas entre eles: aqui só se vê quantas são, quem as escreveu e quando. Desde o Roblosats 0.8.8-rl25 chega ao coordenador uma cópia de cada mensagem, também no modo de chat Nostr da app. Em ordens cujo chat foi anterior, pode ter chegado só a primeira mensagem por Nostr, por isso uma contagem baixa aí não quer dizer que não tenham falado."
+
+msgctxt "roblosats-admin"
+msgid "Payment"
+msgstr "Pagamento"

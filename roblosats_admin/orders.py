@@ -18,6 +18,15 @@ EXPIRY_REASONS = {
     4: _lazy("neither the escrow nor the invoice arrived"),
 }
 
+ONCHAIN_STATUS = {
+    0: _lazy("created, no address yet"),
+    1: _lazy("address submitted"),
+    2: _lazy("in the mempool"),
+    3: _lazy("confirmed"),
+    4: _lazy("cancelled"),
+    5: _lazy("queued to be sent"),
+}
+
 TONE = {11: "alert", 14: "ok", 15: "alert", 16: "alert"}
 
 LIVE = {0, 1, 2, 3, 6, 7, 8, 9, 10, 11, 13, 15, 16}
@@ -38,13 +47,75 @@ def public_url(order):
         return ""
 
 
-def chat_count(order):
+def chat_summary(order, label_by_user):
+    """Chat messages that went through the coordinator. Their contents are
+    PGP-encrypted between the parties, so only how many, who and when."""
     try:
         from chat.models import Message
 
-        return Message.objects.filter(order=order).count()
+        rows = []
+        counts = {}
+        for m in (
+            Message.objects.filter(order=order)
+            .order_by("created_at", "index")
+            .only("index", "sender_id", "created_at")
+        ):
+            who = label_by_user.get(m.sender_id, _("(unknown)"))
+            counts[who] = counts.get(who, 0) + 1
+            rows.append(
+                {"index": m.index, "who": who, "time": disputes.fmt_time(m.created_at)}
+            )
     except Exception:  # noqa: BLE001
         return None
+    return {
+        "total": len(rows),
+        "by_who": [{"who": w, "n": n} for w, n in counts.items()],
+        "first": rows[0]["time"] if rows else "",
+        "last": rows[-1]["time"] if rows else "",
+        "rows": rows,
+    }
+
+
+def onchain_payout(tx):
+    if tx is None:
+        return {"exists": False}
+    return {
+        "exists": True,
+        "sats": disputes.fmt_sats(tx.num_satoshis),
+        "status": ONCHAIN_STATUS.get(tx.status, tx.get_status_display()),
+        "url": disputes._url("admin:api_onchainpayment_change", tx.pk),
+        "address": tx.address or "",
+        "txid": tx.txid or "",
+        "mining_fee": disputes.fmt_sats(tx.mining_fee_sats)
+        if tx.mining_fee_sats
+        else "",
+    }
+
+
+def routing_fee(payout):
+    """Routing fee paid on the buyer's Lightning payout, once it was tried."""
+    from api.models import LNPayment
+
+    if payout is None or payout.fee is None:
+        return ""
+    if not payout.fee and payout.status != LNPayment.Status.SUCCED:
+        return ""
+    return f"{float(payout.fee):g}"
+
+
+def winner_text(order, r):
+    """Who won a resolved dispute: MLD = the maker lost, TLD = the taker lost."""
+    from api.models import Order
+
+    if order.status == Order.Status.MLD:
+        winner_side = "taker"
+    elif order.status == Order.Status.TLD:
+        winner_side = "maker"
+    else:
+        return ""
+    if r["buyer_side"] == winner_side:
+        return _("the buyer won")
+    return _("the seller won")
 
 
 def _party(user, role, side):
@@ -60,6 +131,7 @@ def _party(user, role, side):
         "lost": robot.lost_disputes if robot else 0,
         "telegram": bool(robot and robot.telegram_enabled),
         "nostr": bool(robot and robot.nostr_pubkey),
+        "nobody": user is None,
         "show_statement": False,
     }
 
@@ -71,12 +143,13 @@ def _context(order_admin, request, order):
     buyer, seller = r["buyer"], r["seller"]
     role_by_nick = {}
     label_by_robot = {}
+    label_by_user = {}
     for role, user in (("buyer", buyer), ("seller", seller)):
         if user:
+            label = f"{disputes.role_name(role)} ({user.username})"
             role_by_nick[user.username] = role
-            label_by_robot[user.robot.id] = (
-                f"{disputes.role_name(role)} ({user.username})"
-            )
+            label_by_robot[user.robot.id] = label
+            label_by_user[user.pk] = label
 
     deadline = None
     if order.expires_at and order.status in LIVE:
@@ -96,10 +169,14 @@ def _context(order_admin, request, order):
         reason = EXPIRY_REASONS.get(order.expiry_reason)
         if reason:
             status += f" ({reason})"
+    winner = winner_text(order, r)
+    if winner:
+        status += f" ({winner})"
 
     sats = order.last_satoshis or order.satoshis or order.t0_satoshis
     page = reverse("admin:api_order_summary", args=[order.pk])
     can_change = order_admin.has_change_permission(request, order)
+    chat = chat_summary(order, label_by_user)
     return {
         **order_admin.admin_site.each_context(request),
         "title": _("Order %(id)s") % {"id": order.pk},
@@ -143,10 +220,13 @@ def _context(order_admin, request, order):
         "seller_bond": disputes._payment(r["seller_bond"]),
         "escrow": disputes._payment(order.trade_escrow),
         "payout": disputes._payment(order.payout) if not order.is_swap else None,
-        "payout_tx": order.payout_tx if order.is_swap else None,
+        "payout_tx": onchain_payout(order.payout_tx) if order.is_swap else None,
+        "routing_fee": routing_fee(order.payout) if not order.is_swap else "",
+        "earnings": disputes.fmt_sats(order.proceeds or 0),
         "fiat_sent": order.is_fiat_sent,
         "is_swap": order.is_swap,
-        "chat_count": chat_count(order),
+        "chat": chat,
+        "chat_count": chat["total"] if chat is not None else None,
         "sent": disputes.sent_messages(order, label_by_robot),
         "log": disputes.render_log(order.logs, role_by_nick),
         "public_url": public_url(order),

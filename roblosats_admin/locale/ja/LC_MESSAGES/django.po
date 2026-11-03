@@ -1150,3 +1150,91 @@ msgstr "市場価格"
 msgctxt "roblosats-admin"
 msgid "Cancelled orders"
 msgstr "キャンセル"
+
+msgctxt "roblosats-admin"
+msgid "created, no address yet"
+msgstr "作成済み、アドレス未登録"
+
+msgctxt "roblosats-admin"
+msgid "address submitted"
+msgstr "アドレス提出済み"
+
+msgctxt "roblosats-admin"
+msgid "in the mempool"
+msgstr "メモリプール内"
+
+msgctxt "roblosats-admin"
+msgid "confirmed"
+msgstr "承認済み"
+
+msgctxt "roblosats-admin"
+msgid "queued to be sent"
+msgstr "送信待ち"
+
+msgctxt "roblosats-admin"
+msgid "(unknown)"
+msgstr "（不明）"
+
+msgctxt "roblosats-admin"
+msgid "the buyer won"
+msgstr "買い手の勝ち"
+
+msgctxt "roblosats-admin"
+msgid "the seller won"
+msgstr "売り手の勝ち"
+
+msgctxt "roblosats-admin"
+msgid "Coordinator's earnings"
+msgstr "コーディネーターの収益"
+
+msgctxt "roblosats-admin"
+msgid "Routing fee of the payment to the buyer: %(fee)s sats."
+msgstr "買い手への支払いのルーティング手数料: %(fee)s sats。"
+
+msgctxt "roblosats-admin"
+msgid "Transaction"
+msgstr "トランザクション"
+
+msgctxt "roblosats-admin"
+msgid "Mining fee"
+msgstr "マイニング手数料"
+
+msgctxt "roblosats-admin"
+msgid "Chat between them"
+msgstr "当事者間のチャット"
+
+msgctxt "roblosats-admin"
+msgid "The chat could not be read."
+msgstr "チャットを読み込めませんでした。"
+
+msgctxt "roblosats-admin"
+msgid "First message"
+msgstr "最初のメッセージ"
+
+msgctxt "roblosats-admin"
+msgid "Last message"
+msgstr "最後のメッセージ"
+
+msgctxt "roblosats-admin"
+msgid "When each one wrote"
+msgstr "それぞれの送信時刻"
+
+msgctxt "roblosats-admin"
+msgid "Who"
+msgstr "誰"
+
+msgctxt "roblosats-admin"
+msgid "Time"
+msgstr "時刻"
+
+msgctxt "roblosats-admin"
+msgid "No chat messages are stored on the coordinator."
+msgstr "コーディネーターに保存されたチャットメッセージはありません。"
+
+msgctxt "roblosats-admin"
+msgid "The messages are encrypted between them: here you only see how many, who wrote them and when. Since Roblosats 0.8.8-rl25 a copy of every message reaches the coordinator, also in the app's Nostr chat mode. In orders chatted before that, only the first Nostr message may have arrived, so a low count there does not mean they did not talk."
+msgstr "メッセージは当事者間で暗号化されています。ここで分かるのは件数、送信者、時刻だけです。Roblosats 0.8.8-rl25 以降は、アプリの Nostr チャットモードでも、すべてのメッセージのコピーがコーディネーターに届きます。それ以前にチャットした注文では最初の Nostr メッセージしか届いていない場合があるため、件数が少なくても会話がなかったとは限りません。"
+
+msgctxt "roblosats-admin"
+msgid "Payment"
+msgstr "支払い"
