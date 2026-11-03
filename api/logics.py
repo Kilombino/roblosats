@@ -1543,6 +1543,7 @@ class Logics:
 
     @classmethod
     def publish_order(cls, order):
+        old_status = order.status
         order.status = Order.Status.PUB
         order.expires_at = order.created_at + timedelta(
             seconds=order.t_to_expire(Order.Status.PUB)
@@ -1560,6 +1561,7 @@ class Logics:
         order.payout_tx = None
 
         order.save()  # update all fields
+        order.announce_status(old_status, Order.Status.PUB)
 
         nostr_send_order_event.delay(order_id=order.id)
 
@@ -1679,6 +1681,7 @@ class Logics:
         order.expires_at = timezone.now() + timedelta(
             seconds=order.t_to_expire(Order.Status.WF2)
         )
+        old_status = order.status
         order.status = Order.Status.WF2
         order.save(
             update_fields=[
@@ -1692,6 +1695,7 @@ class Logics:
                 "expires_at",
             ]
         )
+        order.announce_status(old_status, Order.Status.WF2)
 
         order.taker_bond.status = LNPayment.Status.LOCKED
         order.taker_bond.save(update_fields=["status"])

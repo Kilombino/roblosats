@@ -1,0 +1,83 @@
+{% extends "admin/base_site.html" %}{% load i18n %}
+{% block extrastyle %}{{ block.super }}{% include "roblosats_admin/_style.html" %}
+<style>
+.rsd-form label.rsd-field { display: block; font-weight: 700; margin: .75rem 0 .25rem; }
+.rsd-form input[type=text], .rsd-form input[type=password], .rsd-form select {
+  width: 100%; max-width: 32rem; padding: .5rem .6rem; border-radius: 8px; border: 1px solid var(--rsd-border);
+  background: transparent; color: inherit; font: inherit; }
+.rsd-form select option { color: initial; }
+.rsd-checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: .4rem .75rem; }
+.rsd-checks label { display: flex; gap: .5rem; align-items: flex-start; padding: .45rem .6rem; border: 1px solid var(--rsd-border); border-radius: 8px; cursor: pointer; }
+.rsd-checks input { margin-top: .3rem; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="rsd">
+
+<div class="rsd-top">
+  <p class="rsd-note"><a href="{% url 'admin:index' %}">← {% translate "Coordinator panel" context "roblosats-admin" %}</a></p>
+  {% include "roblosats_admin/_langs.html" %}
+</div>
+
+<section class="rsd-sec">
+  <div class="rsd-head">
+    <span class="rsd-num">🔔 {% translate "Telegram alerts" context "roblosats-admin" %}</span>
+    <span class="rsd-pill {% if ready %}ok{% endif %}">{% if ready %}{% translate "ready to send" context "roblosats-admin" %}{% else %}{% translate "not configured" context "roblosats-admin" %}{% endif %}</span>
+  </div>
+  <p class="rsd-note">{% translate "The coordinator's bot writes to your chat when something happens to an order. Changes apply right away: no restart needed. If Telegram fails, the orders carry on as usual." context "roblosats-admin" %}</p>
+</section>
+
+<form method="post" action="{{ page_url }}" class="rsd-form" autocomplete="off">{% csrf_token %}
+<input type="hidden" name="action" value="save">
+
+<section class="rsd-sec">
+  <h2>{% translate "Bot and chat" context "roblosats-admin" %}</h2>
+
+  <label class="rsd-field" for="rsd-token">{% translate "Bot token" context "roblosats-admin" %}</label>
+  <input type="password" id="rsd-token" name="bot_token" value="" autocomplete="new-password" spellcheck="false"
+         placeholder="{% if token_mask %}{% translate "saved" context "roblosats-admin" %} {{ token_mask }}{% else %}123456789:AA…{% endif %}">
+  <p class="rsd-note">
+    {% if token_mask %}{% translate "A token is saved" context "roblosats-admin" %} ({{ token_mask }}). {% translate "Leave the field empty to keep it." context "roblosats-admin" %}
+    <label style="margin-left:.5rem"><input type="checkbox" name="clear_token" value="1"> {% translate "Remove the saved token" context "roblosats-admin" %}</label>
+    {% elif env_token_mask %}{% translate "None saved here: the TELEGRAM_TOKEN of the environment is used" context "roblosats-admin" %} ({{ env_token_mask }}).
+    {% else %}{% translate "Create a bot with @BotFather and paste its token. It stays on the server and is never shown again in full." context "roblosats-admin" %}{% endif %}
+  </p>
+
+  <label class="rsd-field" for="rsd-chat">{% translate "Chat id" context "roblosats-admin" %}</label>
+  <input type="text" id="rsd-chat" name="chat_id" value="{{ cfg.chat_id }}" spellcheck="false" placeholder="{{ env_chat|default:'-1001234567890' }}">
+  <p class="rsd-note">
+    {% translate "Your user id, a group id (starts with -) or a @channel where the bot can write. Send a message to the bot first, or add it to the group." context "roblosats-admin" %}
+    {% if env_chat and not cfg.chat_id %}{% translate "Empty: the TELEGRAM_COORDINATOR_CHAT_ID of the environment is used" context "roblosats-admin" %} ({{ env_chat }}).{% endif %}
+  </p>
+
+  <label class="rsd-field" for="rsd-lang">{% translate "Language of the alerts" context "roblosats-admin" %}</label>
+  <select id="rsd-lang" name="language">{% for l in alert_languages %}<option value="{{ l.code }}"{% if l.current %} selected{% endif %}>{{ l.name }}</option>{% endfor %}</select>
+
+  <label class="rsd-field" for="rsd-url">{% translate "Panel address for the links" context "roblosats-admin" %}</label>
+  <input type="text" id="rsd-url" name="panel_url" value="{{ cfg.panel_url }}" spellcheck="false" placeholder="{{ default_url|default:'https://…' }}">
+  <p class="rsd-note">{% translate "Each alert links to the order's page in this panel. Empty: the coordinator's HOST_NAME is used" context "roblosats-admin" %}{% if default_url %} ({{ default_url }}){% endif %}.</p>
+</section>
+
+<section class="rsd-sec">
+  <h2>{% translate "What to be told about" context "roblosats-admin" %}</h2>
+  <div class="rsd-checks">
+    {% for e in events %}
+    <label><input type="checkbox" name="{{ e.field }}" value="1"{% if e.on %} checked{% endif %}> <span>{{ e.icon }} {{ e.label }}</span></label>
+    {% endfor %}
+  </div>
+  <p class="rsd-note" style="margin-top:.5rem">{% translate "Chat messages in a dispute are encrypted between the parties: the alert only says who wrote, at most once every few minutes per order. Cancellations do not include orders whose maker never locked the bond." context "roblosats-admin" %}</p>
+  <div class="rsd-btns"><button type="submit" class="rsd-btn prim">{% translate "Save" context "roblosats-admin" %}</button></div>
+</section>
+</form>
+
+<section class="rsd-sec">
+  <h2>{% translate "Try it" context "roblosats-admin" %}</h2>
+  <form method="post" action="{{ page_url }}">{% csrf_token %}
+    <input type="hidden" name="action" value="test">
+    <p class="rsd-note">{% translate "Sends a message with the saved settings. Save first if you changed something." context "roblosats-admin" %}</p>
+    <div class="rsd-btns"><button type="submit" class="rsd-btn"{% if not ready %} disabled{% endif %}>{% translate "Send test message" context "roblosats-admin" %}</button></div>
+  </form>
+</section>
+
+</div>
+{% endblock %}

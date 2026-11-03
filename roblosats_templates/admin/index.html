@@ -1,82 +1,73 @@
 {% extends "unfold/layouts/base_simple.html" %}
 {% load i18n %}
 
-{% comment %}
-Pantalla de inicio del panel de Roblosats.
-
-Sustituye al índice de Django, que lista tablas de base de datos, por el estado
-del coordinador: qué hay vivo ahora, qué espera decisión y cuánto dinero hay en
-juego. Los números los calcula roblosats_dashboard() en settings.py.
-{% endcomment %}
-
 {% block content %}
 <div class="flex flex-col gap-6">
 
-  {% if disputas_abiertas %}
-  <a href="{{ enlaces.disputas }}"
+  {% if open_disputes %}
+  <a href="{{ links.disputes }}"
      class="block rounded-lg border-l-4 border-red-500 bg-red-50 px-5 py-4 dark:bg-red-950/40">
-    <div class="text-sm uppercase tracking-wide text-red-600 dark:text-red-400">Requiere tu decisión</div>
+    <div class="text-sm uppercase tracking-wide text-red-600 dark:text-red-400">{% translate "Needs your decision" context "roblosats-admin" %}</div>
     <div class="mt-1 text-2xl font-semibold text-red-700 dark:text-red-300">
-      {{ disputas_abiertas }} disputa{{ disputas_abiertas|pluralize:"s" }} esperando
+      {% blocktranslate trimmed context "roblosats-admin" with n=open_disputes %}Disputes waiting: {{ n }}{% endblocktranslate %}
     </div>
   </a>
   {% endif %}
 
   <div class="grid grid-cols-2 gap-4 lg:grid-cols-5">
-    {% for tarjeta in tarjetas %}
-    <a href="{{ tarjeta.link }}"
+    {% for card in cards %}
+    <a href="{{ card.link }}"
        class="rounded-lg border border-base-200 bg-white px-5 py-4 hover:border-primary-500 dark:border-base-800 dark:bg-base-900">
-      <div class="text-xs uppercase tracking-wide text-base-500 dark:text-base-400">{{ tarjeta.titulo }}</div>
-      <div class="mt-1 text-3xl font-semibold text-base-900 dark:text-base-100">{{ tarjeta.valor }}</div>
-      {% if tarjeta.pie %}<div class="mt-1 text-xs text-base-500">{{ tarjeta.pie }}</div>{% endif %}
+      <div class="text-xs uppercase tracking-wide text-base-500 dark:text-base-400">{{ card.title }}</div>
+      <div class="mt-1 text-3xl font-semibold text-base-900 dark:text-base-100">{{ card.value }}</div>
+      {% if card.foot %}<div class="mt-1 text-xs text-base-500">{{ card.foot }}</div>{% endif %}
     </a>
     {% endfor %}
   </div>
 
   <div class="rounded-lg border border-base-200 bg-white dark:border-base-800 dark:bg-base-900">
     <div class="border-b border-base-200 px-5 py-3 text-sm font-medium dark:border-base-800">
-      Operaciones vivas
+      {% translate "Live trades" context "roblosats-admin" %}
     </div>
-    {% if ordenes_vivas %}
+    {% if live_orders %}
     <table class="w-full text-sm">
       <thead class="text-left text-xs uppercase tracking-wide text-base-500">
         <tr>
-          <th class="px-5 py-2">Nº</th><th class="px-5 py-2">Tipo</th><th class="px-5 py-2">Importe</th>
-          <th class="px-5 py-2">Estado</th><th class="px-5 py-2">Desde</th><th class="px-5 py-2">Hasta</th>
+          <th class="px-5 py-2">{% translate "Order" context "roblosats-admin" %}</th><th class="px-5 py-2">{% translate "Type" context "roblosats-admin" %}</th><th class="px-5 py-2">{% translate "Amount" context "roblosats-admin" %}</th>
+          <th class="px-5 py-2">{% translate "Status" context "roblosats-admin" %}</th><th class="px-5 py-2">{% translate "Since" context "roblosats-admin" %}</th><th class="px-5 py-2">{% translate "Until" context "roblosats-admin" %}</th>
         </tr>
       </thead>
       <tbody>
-        {% for o in ordenes_vivas %}
+        {% for o in live_orders %}
         <tr class="border-t border-base-100 dark:border-base-800">
           <td class="px-5 py-2"><a class="text-primary-600 hover:underline" href="{{ o.link }}">{{ o.id }}</a></td>
-          <td class="px-5 py-2">{{ o.tipo }}</td>
-          <td class="px-5 py-2">{{ o.importe }}</td>
-          <td class="px-5 py-2">{{ o.estado }}</td>
-          <td class="px-5 py-2 text-base-500">{{ o.desde }}</td>
-          <td class="px-5 py-2 {% if o.urgente %}text-red-600 dark:text-red-400{% else %}text-base-500{% endif %}">
-            {% if o.hasta %}{{ o.hasta }}{% if o.queda %} <span class="whitespace-nowrap">· {{ o.queda }}</span>{% endif %}{% else %}—{% endif %}
+          <td class="px-5 py-2">{{ o.type }}</td>
+          <td class="px-5 py-2">{{ o.amount }}</td>
+          <td class="px-5 py-2">{{ o.status }}</td>
+          <td class="px-5 py-2 text-base-500">{{ o.since }}</td>
+          <td class="px-5 py-2 {% if o.urgent %}text-red-600 dark:text-red-400{% else %}text-base-500{% endif %}">
+            {% if o.until %}{{ o.until }}{% if o.left %} <span class="whitespace-nowrap">· {{ o.left }}</span>{% endif %}{% else %}—{% endif %}
           </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
     {% else %}
-    <div class="px-5 py-6 text-sm text-base-500">Ninguna operación en curso ahora mismo.</div>
+    <div class="px-5 py-6 text-sm text-base-500">{% translate "No trade in progress right now." context "roblosats-admin" %}</div>
     {% endif %}
   </div>
 
   <div class="flex flex-wrap gap-3">
-    {% for a in accesos %}
+    {% for a in shortcuts %}
     <a href="{{ a.link }}"
        class="rounded-md border border-base-200 px-4 py-2 text-sm hover:border-primary-500 dark:border-base-800">
-      {{ a.titulo }}
+      {{ a.title }}
     </a>
     {% endfor %}
   </div>
 
   <div class="text-xs text-base-500">
-    Coordinador {{ coordinador.alias }} · RoboSats {{ coordinador.version }} · nodo {{ coordinador.lnd }}
-    · canales: {{ coordinador.saldo_local }} sats locales / {{ coordinador.saldo_remoto }} remotos
+    {% blocktranslate trimmed context "roblosats-admin" with alias=coordinator.alias version=coordinator.version node=coordinator.lnd local=coordinator.local remote=coordinator.remote %}Coordinator {{ alias }} · RoboSats {{ version }} · node {{ node }} · channels: {{ local }} sats local / {{ remote }} remote{% endblocktranslate %}
   </div>
 
 </div>

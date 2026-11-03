@@ -23,8 +23,12 @@ TEMPLATES[0]["DIRS"] = list(TEMPLATES[0]["DIRS"]) + ["/usr/src/robosats/roblosat
 # Django Unfold admin theme
 from django.utils.translation import pgettext_lazy as _roblosats_pgettext_lazy  # noqa: E402
 
+
+def _rl(message):
+    return _roblosats_pgettext_lazy("roblosats-admin", message)
+
+
 def _count_orders(*status_values):
-    """Cuenta órdenes en esos estados. Se llama al pintar el menú, no al arrancar."""
     def _callback(request):
         from api.models import Order
 
@@ -34,139 +38,16 @@ def _count_orders(*status_values):
     return _callback
 
 
-# Estados que le importan a quien lleva el coordinador (api/models/order.py)
-EN_CURSO = [6, 7, 8, 9, 10]      # esperando colateral/factura, chat, fiat enviado
-EN_DISPUTA = [11, 16]            # en disputa y esperando resolución
+EN_CURSO = [6, 7, 8, 9, 10]
+EN_DISPUTA = [11, 16]
 ADMIN_ROOT = "/coordinator/"
-
-def roblosats_dashboard(request, context=None):
-    """Datos de la pantalla de inicio del panel. Unfold pasa el contexto que ya trae
-    y espera recibirlo de vuelta con lo nuestro añadido."""
-    from django.urls import reverse
-    from django.utils import timezone
-    from api.models import Order
-
-    ahora = timezone.now()
-
-    def hora(momento):
-        """Los datetime llegan en UTC; el coordinador los lee en su zona (ADMIN_TIME_ZONE)."""
-        return timezone.localtime(momento).strftime("%d/%m %H:%M") if momento else ""
-
-    def cuenta_atras(limite):
-        """Lo que queda para que venza el plazo del estado actual de la orden.
-
-        `expires_at` se reescribe en cada cambio de estado (api/logics.py), asi que
-        siempre es la fecha limite de lo que la orden esta esperando ahora mismo.
-        """
-        if limite is None:
-            return "", False
-        segundos = int((limite - ahora).total_seconds())
-        if segundos <= 0:
-            return "vencido", True
-        minutos, _ = divmod(segundos, 60)
-        horas, minutos = divmod(minutos, 60)
-        dias, horas = divmod(horas, 24)
-        if dias:
-            resto = f"{dias} d {horas} h"
-        elif horas:
-            resto = f"{horas} h {minutos} min"
-        else:
-            resto = f"{minutos} min"
-        verbo = "queda" if resto.startswith("1 ") and " " not in resto[2:] else "quedan"
-        return f"{verbo} {resto}", segundos < 1800
-
-    def url_orden(pk):
-        return reverse("admin:api_order_change", args=[pk])
-
-    def lista(**filtros):
-        query = "&".join(f"{k}={v}" for k, v in filtros.items())
-        return f"{ADMIN_ROOT}api/order/?{query}"
-
-    vivas = (
-        Order.objects.filter(status__in=EN_CURSO)
-        .select_related("currency")
-        .order_by("-last_satoshis_time", "-created_at")[:10]
-    )
-
-    ordenes_vivas = []
-    for o in vivas:
-        queda, urgente = cuenta_atras(o.expires_at)
-        ordenes_vivas.append(
-            {
-                "id": o.id,
-                "tipo": o.get_type_display(),
-                "importe": f"{o.amount or o.max_amount or '?'} {o.currency}",
-                "estado": o.get_status_display(),
-                "desde": hora(o.created_at),
-                "hasta": hora(o.expires_at),
-                "queda": queda,
-                "urgente": urgente,
-                "link": url_orden(o.id),
-            }
-        )
-
-    saldo_local = saldo_remoto = "?"
-    try:
-        from api.lightning.lnd import LNDNode
-
-        balance = LNDNode.channel_balance()
-        saldo_local = f"{balance['local_balance']:,}".replace(",", ".")
-        saldo_remoto = f"{balance['remote_balance']:,}".replace(",", ".")
-    except Exception:
-        pass  # si el nodo no responde, el panel se pinta igual
-
-    en_curso = Order.objects.filter(status__in=EN_CURSO).count()
-    disputas = Order.objects.filter(status=11).count()
-    esperando = Order.objects.filter(status=16).count()
-    publicas = Order.objects.filter(status=1).count()
-    completadas = Order.objects.filter(status=14).count()
-    # 4 es la que anula quien la hizo y 12 la que se deshace de mutuo acuerdo.
-    # Las expiradas (5) no cuentan aqui: nadie las canceló, se les pasó el plazo
-    # en el libro. Van aparte en el pie de la tarjeta.
-    canceladas = Order.objects.filter(status__in=(4, 12)).count()
-    expiradas = Order.objects.filter(status=5).count()
-
-    datos = {
-        "disputas_abiertas": disputas + esperando,
-        "enlaces": {"disputas": f"{ADMIN_ROOT}api/order/disputes/?view=open"},
-        "tarjetas": [
-            {"titulo": "En curso", "valor": en_curso, "link": lista(status__in="6%2C7%2C8%2C9%2C10"),
-             "pie": "colateral, chat o fiat enviado"},
-            {"titulo": "En el libro", "valor": publicas, "link": lista(status__exact=1),
-             "pie": "esperando quien las tome"},
-            {"titulo": "Disputas", "valor": disputas + esperando, "link": f"{ADMIN_ROOT}api/order/disputes/?view=open",
-             "pie": "abiertas y por resolver"},
-            {"titulo": "Completadas", "valor": completadas, "link": lista(status__exact=14),
-             "pie": "histórico"},
-            {"titulo": "Canceladas", "valor": canceladas, "link": lista(status__in="4%2C12"),
-             "pie": f"anuladas y de mutuo acuerdo · {expiradas} expirada{'s' if expiradas != 1 else ''}"},
-        ],
-        "ordenes_vivas": ordenes_vivas,
-        "accesos": [
-            {"titulo": "Todas las órdenes", "link": f"{ADMIN_ROOT}api/order/"},
-            {"titulo": "Robots", "link": f"{ADMIN_ROOT}api/robot/"},
-            {"titulo": "Pagos Lightning", "link": f"{ADMIN_ROOT}api/lnpayment/"},
-            {"titulo": "Pagos onchain", "link": f"{ADMIN_ROOT}api/onchainpayment/"},
-        ],
-        "coordinador": {
-            "alias": config("COORDINATOR_ALIAS", cast=str, default="Roblosats"),
-            "version": f"{VERSION['major']}.{VERSION['minor']}.{VERSION['patch']}" if "VERSION" in globals() else "",
-            "lnd": config("LND_GRPC_HOST", cast=str, default=""),
-            "saldo_local": saldo_local,
-            "saldo_remoto": saldo_remoto,
-        },
-    }
-    if context is None:
-        return datos
-    context.update(datos)
-    return context
 
 UNFOLD = {
     "SITE_TITLE": f"{config('COORDINATOR_ALIAS', cast=str, default='Roblosats')} Admin",
     "SITE_HEADER": config("COORDINATOR_ALIAS", cast=str, default="Roblosats"),
-    "SITE_SUBHEADER": "Panel del coordinador",
+    "SITE_SUBHEADER": _rl("Coordinator panel"),
     "SITE_SYMBOL": "local_fire_department",
-    "DASHBOARD_CALLBACK": "robosats.settings.roblosats_dashboard",
+    "DASHBOARD_CALLBACK": "roblosats_admin.dashboard.dashboard",
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
     "THEME": None,
@@ -190,83 +71,89 @@ UNFOLD = {
         "show_all_applications": True,
         "navigation": [
             {
-                "title": "Coordinador",
+                "title": _rl("Coordinator"),
                 "separator": True,
                 "collapsible": False,
                 "items": [
-                    {"title": "Inicio", "icon": "home", "link": ADMIN_ROOT},
+                    {"title": _rl("Home"), "icon": "home", "link": ADMIN_ROOT},
                     {
-                        "title": "Órdenes en curso",
+                        "title": _rl("Orders in progress"),
                         "icon": "pending_actions",
                         "link": ADMIN_ROOT + "api/order/?status__in=6%2C7%2C8%2C9%2C10",
                         "badge": _count_orders(*EN_CURSO),
                     },
                     {
-                        "title": "En el libro (públicas)",
+                        "title": _rl("In the book (public)"),
                         "icon": "storefront",
                         "link": ADMIN_ROOT + "api/order/?status__exact=1",
                         "badge": _count_orders(1),
                     },
                     {
-                        "title": "Pagando al comprador",
+                        "title": _rl("Paying the buyer"),
                         "icon": "bolt",
                         "link": ADMIN_ROOT + "api/order/?status__exact=13",
                         "badge": _count_orders(13),
                     },
                     {
-                        "title": "Completadas",
+                        "title": _rl("Completed"),
                         "icon": "task_alt",
                         "link": ADMIN_ROOT + "api/order/?status__exact=14",
                     },
                     {
-                        "title": "Todas las órdenes",
+                        "title": _rl("All orders"),
                         "icon": "list_alt",
                         "link": ADMIN_ROOT + "api/order/",
+                    },
+                    {
+                        "title": _rl("Telegram alerts"),
+                        "icon": "notifications",
+                        "link": ADMIN_ROOT + "roblosats_admin/telegramalerts/",
+                        "permission": "roblosats_admin.dashboard.can_configure_alerts",
                     },
                 ],
             },
             {
-                "title": _roblosats_pgettext_lazy("roblosats-admin", "Disputes"),
+                "title": _rl("Disputes"),
                 "separator": True,
                 "collapsible": False,
                 "items": [
                     {
-                        "title": _roblosats_pgettext_lazy("roblosats-admin", "Open"),
+                        "title": _rl("Open"),
                         "icon": "gavel",
                         "link": ADMIN_ROOT + "api/order/disputes/?view=open",
                         "badge": _count_orders(*EN_DISPUTA),
                     },
                     {
-                        "title": _roblosats_pgettext_lazy("roblosats-admin", "Waiting for your decision"),
+                        "title": _rl("Waiting for your decision"),
                         "icon": "hourglass_top",
                         "link": ADMIN_ROOT + "api/order/disputes/?view=waiting",
                         "badge": _count_orders(16),
                     },
                     {
-                        "title": _roblosats_pgettext_lazy("roblosats-admin", "History"),
+                        "title": _rl("History"),
                         "icon": "history",
                         "link": ADMIN_ROOT + "api/order/disputes/?view=history",
                     },
                 ],
             },
             {
-                "title": "Dinero",
+                "title": _rl("Money"),
                 "separator": True,
                 "collapsible": True,
                 "items": [
-                    {"title": "Pagos Lightning", "icon": "flash_on", "link": ADMIN_ROOT + "api/lnpayment/"},
-                    {"title": "Pagos onchain", "icon": "link", "link": ADMIN_ROOT + "api/onchainpayment/"},
+                    {"title": _rl("Lightning payments"), "icon": "flash_on", "link": ADMIN_ROOT + "api/lnpayment/"},
+                    {"title": _rl("On-chain payments"), "icon": "link", "link": ADMIN_ROOT + "api/onchainpayment/"},
                 ],
             },
             {
-                "title": "Gente y mercado",
+                "title": _rl("People and market"),
                 "separator": True,
                 "collapsible": True,
                 "items": [
-                    {"title": "Robots", "icon": "smart_toy", "link": ADMIN_ROOT + "api/robot/"},
-                    {"title": "Usuarios", "icon": "person", "link": ADMIN_ROOT + "auth/user/"},
-                    {"title": "Divisas", "icon": "payments", "link": ADMIN_ROOT + "api/currency/"},
-                    {"title": "Precios de mercado", "icon": "trending_up", "link": ADMIN_ROOT + "api/markettick/"},
+                    {"title": _rl("Robots"), "icon": "smart_toy", "link": ADMIN_ROOT + "api/robot/"},
+                    {"title": _rl("Users"), "icon": "person", "link": ADMIN_ROOT + "auth/user/"},
+                    {"title": _rl("Currencies"), "icon": "payments", "link": ADMIN_ROOT + "api/currency/"},
+                    {"title": _rl("Market prices"), "icon": "trending_up", "link": ADMIN_ROOT + "api/markettick/"},
                 ],
             },
         ],

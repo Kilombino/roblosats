@@ -1,0 +1,117 @@
+{% extends "admin/base_site.html" %}{% load i18n %}
+{% block extrastyle %}{{ block.super }}{% include "roblosats_admin/_style.html" %}{% endblock %}
+{% block content %}
+<div class="rsd">
+
+<div class="rsd-top">
+  <p class="rsd-note"><a href="{{ list_url }}">← {% translate "All orders" context "roblosats-admin" %}</a></p>
+  {% include "roblosats_admin/_langs.html" %}
+</div>
+
+{% if dispute_url %}
+<section class="rsd-sec rsd-confirm" style="margin-top:0">
+  <b>⚖️ {% if dispute_open %}{% translate "This order is in dispute." context "roblosats-admin" %}{% else %}{% translate "This order went through a dispute." context "roblosats-admin" %}{% endif %}</b>
+  <a href="{{ dispute_url }}">{% translate "Open the dispute page" context "roblosats-admin" %} →</a>
+</section>
+{% endif %}
+
+<section class="rsd-sec" id="summary">
+  <div class="rsd-head">
+    <span class="rsd-num">{% translate "Order" context "roblosats-admin" %} {{ order.pk }}</span>
+    <span class="rsd-pill" title="{{ type_explained }}">{{ type_label }}</span>
+    <span class="rsd-pill {{ tone }}">{{ status }}</span>
+  </div>
+  <div class="rsd-grid">
+    <div class="rsd-item"><small>{% translate "Amount" context "roblosats-admin" %}</small><b>{{ amount }} {{ currency }}</b></div>
+    <div class="rsd-item"><small>{% translate "Payment method" context "roblosats-admin" %}</small><b>{{ method|default:"—" }}</b></div>
+    <div class="rsd-item"><small>{% translate "Trade sats" context "roblosats-admin" %}</small><b>{{ sats }}</b></div>
+    {% if spamcoin_sats %}<div class="rsd-item"><small>{% translate "Spamcoin sats" context "roblosats-admin" %}</small><b>{{ spamcoin_sats }}</b></div>{% endif %}
+    <div class="rsd-item"><small>{% translate "Premium" context "roblosats-admin" %}</small><b>{{ premium }} %</b></div>
+    <div class="rsd-item"><small>{% translate "Bond" context "roblosats-admin" %}</small><b>{{ bond_size }} %</b></div>
+    <div class="rsd-item"><small>{% translate "Buyer's payout" context "roblosats-admin" %}</small><b>{% if is_swap %}{% translate "on-chain" context "roblosats-admin" %}{% else %}Lightning{% endif %}</b></div>
+    <div class="rsd-item"><small>{% translate "Did the buyer mark the fiat as sent?" context "roblosats-admin" %}</small><b>{% if fiat_sent %}{% translate "Yes" context "roblosats-admin" %}{% else %}{% translate "No" context "roblosats-admin" %}{% endif %}</b></div>
+  </div>
+  <p class="rsd-note" style="margin-top:.4rem">{{ type_label }}: {{ type_explained }}.</p>
+  <div class="rsd-grid" style="margin-top:.75rem">
+    <div class="rsd-item"><small>{% translate "Created" context "roblosats-admin" %}</small><b>{{ created }}</b><small>{{ tz }}</small></div>
+    <div class="rsd-item"><small>{% translate "Contract formalized" context "roblosats-admin" %}</small><b>{{ contract_time|default:"—" }}</b></div>
+    <div class="rsd-item"><small>{% translate "Deadline of the current step" context "roblosats-admin" %}</small>
+      {% if deadline %}<b class="{% if deadline.expired %}rsd-bad{% endif %}">{{ deadline.text }}</b><small>{{ deadline.time }} ({{ tz }})</small>
+      {% else %}<b>—</b>{% endif %}</div>
+    <div class="rsd-item"><small>{% translate "Chat messages" context "roblosats-admin" %}</small><b>{% if chat_count is None %}?{% else %}{{ chat_count }}{% endif %}</b><small>{% translate "encrypted between them" context "roblosats-admin" %}</small></div>
+  </div>
+  <div class="rsd-two" style="margin-top:.75rem">
+    {% with p=buyer %}{% include "roblosats_admin/_party_summary.html" %}{% endwith %}
+    {% with p=seller %}{% include "roblosats_admin/_party_summary.html" %}{% endwith %}
+  </div>
+</section>
+
+<section class="rsd-sec" id="funds">
+  <h2>{% translate "Bonds, escrow and payout" context "roblosats-admin" %}</h2>
+  <div class="rsd-scroll"><table class="rsd-table">
+    <tr><th>{% translate "Item" context "roblosats-admin" %}</th><th>{% translate "Sats" context "roblosats-admin" %}</th><th>{% translate "Status" context "roblosats-admin" %}</th><th>{% translate "Expires" context "roblosats-admin" %} ({{ tz }})</th></tr>
+    {% with pg=buyer_bond %}<tr><td>{% translate "Buyer's bond" context "roblosats-admin" %}</td>{% include "roblosats_admin/_payment_row.html" %}</tr>{% endwith %}
+    {% with pg=seller_bond %}<tr><td>{% translate "Seller's bond" context "roblosats-admin" %}</td>{% include "roblosats_admin/_payment_row.html" %}</tr>{% endwith %}
+    {% with pg=escrow %}<tr><td>{% translate "Seller's escrow" context "roblosats-admin" %}</td>{% include "roblosats_admin/_payment_row.html" %}</tr>{% endwith %}
+    {% if payout %}{% with pg=payout %}<tr><td>{% translate "Buyer's payout invoice" context "roblosats-admin" %}</td>{% include "roblosats_admin/_payment_row.html" %}</tr>{% endwith %}{% endif %}
+    {% if is_swap %}<tr><td>{% translate "Buyer's on-chain payout" context "roblosats-admin" %}</td>{% if payout_tx %}<td>{{ payout_tx.num_satoshis }}</td><td>{{ payout_tx.get_status_display }}</td><td>{{ payout_tx.address }}</td>{% else %}<td colspan="3" class="rsd-empty">{% translate "none" context "roblosats-admin" %}</td>{% endif %}</tr>{% endif %}
+  </table></div>
+</section>
+
+<section class="rsd-sec" id="timeline">
+  <h2>{% translate "Timeline" context "roblosats-admin" %} <span class="rsd-note">({{ tz }})</span></h2>
+  {% if log %}
+  <div class="rsd-scroll"><table class="rsd-table">
+    {% for f in log %}<tr><td class="time">{{ f.time }}</td><td>{{ f.event }}</td></tr>{% endfor %}
+  </table></div>
+  {% else %}<p class="rsd-empty">{% translate "No log saved." context "roblosats-admin" %}</p>{% endif %}
+</section>
+
+<section class="rsd-sec" id="sent">
+  <h2>{% translate "Messages you have already sent them" context "roblosats-admin" %}</h2>
+  {% if sent %}
+    <div class="rsd-chat" style="max-height:none">
+    {% for e in sent %}
+      <div class="rsd-bubble other" style="max-width:100%;align-self:stretch">
+        <div class="rsd-meta"><span class="rsd-who">{% translate "To" context "roblosats-admin" %}: {{ e.to }}</span><span>{{ e.time }}</span></div>
+        <div class="rsd-text">{{ e.text }}</div>
+      </div>
+    {% endfor %}
+    </div>
+  {% else %}
+    <p class="rsd-empty">{% translate "You have not written to them from the coordinator yet." context "roblosats-admin" %}</p>
+  {% endif %}
+  {% if can_write %}
+  <form method="post" action="{{ page_url }}" id="write" style="margin-top:.75rem">{% csrf_token %}
+    <input type="hidden" name="action" value="message">
+    <textarea name="text" id="rsd-text" maxlength="{{ max_message }}" required></textarea>
+    <p class="rsd-note">{% blocktranslate trimmed context "roblosats-admin" with max=max_message %}Up to {{ max }} characters. It arrives as an app notification, a Nostr DM and a Telegram message if they use them. It is sent as written: write it in the reader's language.{% endblocktranslate %}</p>
+    <p class="rsd-note"><span id="rsd-count">0</span> / {{ max_message }}. {% translate "Prefix added to every message" context "roblosats-admin" %}: «{{ message_head }}»</p>
+    <div class="rsd-btns">
+      <button class="rsd-btn buy" name="recipient" value="buyer" type="submit">{% translate "Write to the buyer" context "roblosats-admin" %}<br><small>{{ buyer.nick }}</small></button>
+      <button class="rsd-btn sell" name="recipient" value="seller" type="submit">{% translate "Write to the seller" context "roblosats-admin" %}<br><small>{{ seller.nick }}</small></button>
+      <button class="rsd-btn prim" name="recipient" value="both" type="submit">{% translate "Write to both" context "roblosats-admin" %}</button>
+    </div>
+  </form>
+  {% endif %}
+</section>
+
+<section class="rsd-sec" id="links">
+  <h2>{% translate "Links" context "roblosats-admin" %}</h2>
+  <ul>
+    <li><a href="{{ change_url }}">{% translate "Open the full order record (all fields)" context "roblosats-admin" %}</a></li>
+    {% if dispute_url %}<li><a href="{{ dispute_url }}">{% translate "Open the dispute page" context "roblosats-admin" %}</a></li>{% endif %}
+    {% if buyer.robot_url %}<li><a href="{{ buyer.robot_url }}">{% translate "Buyer's robot" context "roblosats-admin" %} ({{ buyer.nick }})</a></li>{% endif %}
+    {% if seller.robot_url %}<li><a href="{{ seller.robot_url }}">{% translate "Seller's robot" context "roblosats-admin" %} ({{ seller.nick }})</a></li>{% endif %}
+    {% if public_url %}<li>{% translate "Order in the app" context "roblosats-admin" %}: <code>{{ public_url }}</code></li>{% endif %}
+  </ul>
+</section>
+
+</div>
+<script>
+(function () {
+  var t = document.getElementById("rsd-text"), c = document.getElementById("rsd-count");
+  if (t && c) { var f = function () { c.textContent = t.value.length; }; t.addEventListener("input", f); f(); }
+})();
+</script>
+{% endblock %}

@@ -244,6 +244,13 @@ class DisputePageTest(TestCase):
         plain = make_disputed_order(Order.Types.BUY, self.maker, self.taker)
         Order.objects.filter(pk=plain.pk).update(is_disputed=False)
         response = self.client.get(reverse("admin:api_order_change", args=[plain.pk]))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response["Location"], reverse("admin:api_order_summary", args=[plain.pk])
+        )
+        response = self.client.get(
+            reverse("admin:api_order_change", args=[plain.pk]) + "?raw=1"
+        )
         self.assertEqual(response.status_code, 200)
 
     def test_list_views(self):

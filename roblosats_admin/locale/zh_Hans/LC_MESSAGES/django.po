@@ -726,3 +726,427 @@ msgstr "双方"
 msgctxt "roblosats-admin"
 msgid "Send"
 msgstr "发送"
+
+msgctxt "roblosats-admin"
+msgid "In progress"
+msgstr "进行中"
+
+msgctxt "roblosats-admin"
+msgid "bonds, chat or fiat sent"
+msgstr "保证金、聊天或已发送法币"
+
+msgctxt "roblosats-admin"
+msgid "In the book"
+msgstr "在订单簿中"
+
+msgctxt "roblosats-admin"
+msgid "waiting for a taker"
+msgstr "等待接单者"
+
+msgctxt "roblosats-admin"
+msgid "open and to be resolved"
+msgstr "未结且待裁决"
+
+msgctxt "roblosats-admin"
+msgid "Completed"
+msgstr "已完成"
+
+msgctxt "roblosats-admin"
+msgid "all time"
+msgstr "历史累计"
+
+msgctxt "roblosats-admin"
+msgid "by the maker or by both · expired: %(n)s"
+msgstr "由挂单者或双方取消 · 已过期：%(n)s"
+
+msgctxt "roblosats-admin"
+msgid "All orders"
+msgstr "所有订单"
+
+msgctxt "roblosats-admin"
+msgid "Robots"
+msgstr "机器人"
+
+msgctxt "roblosats-admin"
+msgid "Lightning payments"
+msgstr "闪电支付"
+
+msgctxt "roblosats-admin"
+msgid "On-chain payments"
+msgstr "链上支付"
+
+msgctxt "roblosats-admin"
+msgid "Telegram alerts"
+msgstr "Telegram 提醒"
+
+msgctxt "roblosats-admin"
+msgid "View"
+msgstr "查看"
+
+msgctxt "roblosats-admin"
+msgid "Order page"
+msgstr "订单页面"
+
+msgctxt "roblosats-admin"
+msgid "Order published in the order book"
+msgstr "订单已发布到订单簿"
+
+msgctxt "roblosats-admin"
+msgid "Order taken (the taker's bond is locked)"
+msgstr "订单已被接（接单者保证金已锁定）"
+
+msgctxt "roblosats-admin"
+msgid "Escrow and buyer's invoice in: the fiat exchange starts"
+msgstr "托管和买家发票已到：法币交换开始"
+
+msgctxt "roblosats-admin"
+msgid "Order finished successfully"
+msgstr "订单成功完成"
+
+msgctxt "roblosats-admin"
+msgid "Order cancelled or expired"
+msgstr "订单已取消或过期"
+
+msgctxt "roblosats-admin"
+msgid "Dispute opened"
+msgstr "已发起争议"
+
+msgctxt "roblosats-admin"
+msgid "Chat message from a party in a disputed order"
+msgstr "争议订单中一方发来的聊天消息"
+
+msgctxt "roblosats-admin"
+msgid "Message sent from the coordinator"
+msgstr "协调者已发送消息"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s is public in the order book"
+msgstr "订单 %(id)s 已在订单簿中公开"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s is public in the order book again"
+msgstr "订单 %(id)s 重新在订单簿中公开"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s was taken: the taker's bond is locked"
+msgstr "订单 %(id)s 已被接：接单者保证金已锁定"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: escrow and buyer's invoice are in, the fiat exchange starts"
+msgstr "订单 %(id)s：托管和买家发票已到，法币交换开始"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s finished successfully"
+msgstr "订单 %(id)s 已成功完成"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: %(status)s"
+msgstr "订单 %(id)s：%(status)s"
+
+msgctxt "roblosats-admin"
+msgid "Dispute opened on order %(id)s"
+msgstr "订单 %(id)s 已发起争议"
+
+msgctxt "roblosats-admin"
+msgid "New chat message from %(who)s on disputed order %(id)s"
+msgstr "争议订单 %(id)s 中 %(who)s 发来新聊天消息"
+
+msgctxt "roblosats-admin"
+msgid "You wrote to %(names)s on order %(id)s"
+msgstr "你已就订单 %(id)s 给 %(names)s 发消息"
+
+msgctxt "roblosats-admin"
+msgid "Test message: the coordinator's alerts reach this chat."
+msgstr "测试消息：协调者的提醒会发送到此聊天。"
+
+msgctxt "roblosats-admin"
+msgid "The bot token does not look like a Telegram token."
+msgstr "该令牌看起来不像 Telegram 机器人令牌。"
+
+msgctxt "roblosats-admin"
+msgid "The chat id must be a number (groups start with -) or a @channel name."
+msgstr "聊天 ID 必须是数字（群组以 - 开头）或 @频道名。"
+
+msgctxt "roblosats-admin"
+msgid "The panel address must look like https://host or http://host:port, with nothing after it."
+msgstr "面板地址必须形如 https://host 或 http://host:port，后面不能有其他内容。"
+
+msgctxt "roblosats-admin"
+msgid "Telegram alerts saved."
+msgstr "Telegram 提醒已保存。"
+
+msgctxt "roblosats-admin"
+msgid "Save a bot token and a chat id first: there is nowhere to send it."
+msgstr "请先保存机器人令牌和聊天 ID：没有可发送的目标。"
+
+msgctxt "roblosats-admin"
+msgid "Test message sent. Check the Telegram chat."
+msgstr "测试消息已发送。请查看 Telegram 聊天。"
+
+msgctxt "roblosats-admin"
+msgid "Telegram did not accept the message: %(why)s"
+msgstr "Telegram 未接受该消息：%(why)s"
+
+msgctxt "roblosats-admin"
+msgid "nobody took it"
+msgstr "无人接单"
+
+msgctxt "roblosats-admin"
+msgid "the maker's bond was not locked"
+msgstr "挂单者保证金未锁定"
+
+msgctxt "roblosats-admin"
+msgid "the seller's escrow was not locked"
+msgstr "卖家托管未锁定"
+
+msgctxt "roblosats-admin"
+msgid "the buyer's invoice was not submitted"
+msgstr "买家未提交发票"
+
+msgctxt "roblosats-admin"
+msgid "neither the escrow nor the invoice arrived"
+msgstr "托管和发票都未到达"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s"
+msgstr "订单 %(id)s"
+
+msgctxt "roblosats-admin"
+msgid "Coordinator panel"
+msgstr "协调者面板"
+
+msgctxt "roblosats-admin"
+msgid "ready to send"
+msgstr "可以发送"
+
+msgctxt "roblosats-admin"
+msgid "not configured"
+msgstr "未配置"
+
+msgctxt "roblosats-admin"
+msgid "The coordinator's bot writes to your chat when something happens to an order. Changes apply right away: no restart needed. If Telegram fails, the orders carry on as usual."
+msgstr "订单有动态时，协调者的机器人会给你的聊天发消息。更改立即生效，无需重启。即使 Telegram 出错，订单也照常进行。"
+
+msgctxt "roblosats-admin"
+msgid "Bot and chat"
+msgstr "机器人和聊天"
+
+msgctxt "roblosats-admin"
+msgid "Bot token"
+msgstr "机器人令牌"
+
+msgctxt "roblosats-admin"
+msgid "saved"
+msgstr "已保存"
+
+msgctxt "roblosats-admin"
+msgid "A token is saved"
+msgstr "已保存令牌"
+
+msgctxt "roblosats-admin"
+msgid "Leave the field empty to keep it."
+msgstr "留空即保留原令牌。"
+
+msgctxt "roblosats-admin"
+msgid "Remove the saved token"
+msgstr "删除已保存的令牌"
+
+msgctxt "roblosats-admin"
+msgid "None saved here: the TELEGRAM_TOKEN of the environment is used"
+msgstr "此处未保存：使用环境变量 TELEGRAM_TOKEN"
+
+msgctxt "roblosats-admin"
+msgid "Create a bot with @BotFather and paste its token. It stays on the server and is never shown again in full."
+msgstr "用 @BotFather 创建机器人并粘贴其令牌。令牌保存在服务器上，之后不会再完整显示。"
+
+msgctxt "roblosats-admin"
+msgid "Chat id"
+msgstr "聊天 ID"
+
+msgctxt "roblosats-admin"
+msgid "Your user id, a group id (starts with -) or a @channel where the bot can write. Send a message to the bot first, or add it to the group."
+msgstr "你的用户 ID、群组 ID（以 - 开头）或机器人可发言的 @频道。请先给机器人发一条消息，或把它加入群组。"
+
+msgctxt "roblosats-admin"
+msgid "Empty: the TELEGRAM_COORDINATOR_CHAT_ID of the environment is used"
+msgstr "留空：使用环境变量 TELEGRAM_COORDINATOR_CHAT_ID"
+
+msgctxt "roblosats-admin"
+msgid "Language of the alerts"
+msgstr "提醒的语言"
+
+msgctxt "roblosats-admin"
+msgid "Panel address for the links"
+msgstr "链接所用的面板地址"
+
+msgctxt "roblosats-admin"
+msgid "Each alert links to the order's page in this panel. Empty: the coordinator's HOST_NAME is used"
+msgstr "每条提醒都会链接到本面板中的订单页面。留空：使用协调者的 HOST_NAME"
+
+msgctxt "roblosats-admin"
+msgid "What to be told about"
+msgstr "需要提醒的事件"
+
+msgctxt "roblosats-admin"
+msgid "Chat messages in a dispute are encrypted between the parties: the alert only says who wrote, at most once every few minutes per order. Cancellations do not include orders whose maker never locked the bond."
+msgstr "争议中的聊天消息在双方之间加密：提醒只说明是谁发的，每个订单每隔几分钟最多一次。取消不包括挂单者从未锁定保证金的订单。"
+
+msgctxt "roblosats-admin"
+msgid "Save"
+msgstr "保存"
+
+msgctxt "roblosats-admin"
+msgid "Try it"
+msgstr "试一下"
+
+msgctxt "roblosats-admin"
+msgid "Sends a message with the saved settings. Save first if you changed something."
+msgstr "使用已保存的设置发送一条消息。如有修改请先保存。"
+
+msgctxt "roblosats-admin"
+msgid "Send test message"
+msgstr "发送测试消息"
+
+msgctxt "roblosats-admin"
+msgid "This order is in dispute."
+msgstr "此订单正处于争议中。"
+
+msgctxt "roblosats-admin"
+msgid "This order went through a dispute."
+msgstr "此订单曾发生争议。"
+
+msgctxt "roblosats-admin"
+msgid "Spamcoin sats"
+msgstr "Spamcoin 聪"
+
+msgctxt "roblosats-admin"
+msgid "Bond"
+msgstr "保证金"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's payout"
+msgstr "买家收款方式"
+
+msgctxt "roblosats-admin"
+msgid "on-chain"
+msgstr "链上"
+
+msgctxt "roblosats-admin"
+msgid "Contract formalized"
+msgstr "合约成立"
+
+msgctxt "roblosats-admin"
+msgid "Deadline of the current step"
+msgstr "当前步骤的期限"
+
+msgctxt "roblosats-admin"
+msgid "Chat messages"
+msgstr "聊天消息"
+
+msgctxt "roblosats-admin"
+msgid "encrypted between them"
+msgstr "双方之间加密"
+
+msgctxt "roblosats-admin"
+msgid "Bonds, escrow and payout"
+msgstr "保证金、托管和付款"
+
+msgctxt "roblosats-admin"
+msgid "Timeline"
+msgstr "时间线"
+
+msgctxt "roblosats-admin"
+msgid "Links"
+msgstr "链接"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's robot"
+msgstr "买家的机器人"
+
+msgctxt "roblosats-admin"
+msgid "Seller's robot"
+msgstr "卖家的机器人"
+
+msgctxt "roblosats-admin"
+msgid "Order in the app"
+msgstr "应用中的订单"
+
+msgctxt "roblosats-admin"
+msgid "Needs your decision"
+msgstr "需要你的裁决"
+
+msgctxt "roblosats-admin"
+msgid "Live trades"
+msgstr "进行中的交易"
+
+msgctxt "roblosats-admin"
+msgid "Type"
+msgstr "类型"
+
+msgctxt "roblosats-admin"
+msgid "Since"
+msgstr "开始"
+
+msgctxt "roblosats-admin"
+msgid "Until"
+msgstr "截止"
+
+msgctxt "roblosats-admin"
+msgid "No trade in progress right now."
+msgstr "目前没有进行中的交易。"
+
+msgctxt "roblosats-admin"
+msgid "Disputes waiting: %(n)s"
+msgstr "待处理争议：%(n)s"
+
+msgctxt "roblosats-admin"
+msgid "Coordinator %(alias)s · RoboSats %(version)s · node %(node)s · channels: %(local)s sats local / %(remote)s remote"
+msgstr "协调者 %(alias)s · RoboSats %(version)s · 节点 %(node)s · 通道：本地 %(local)s 聪 / 远端 %(remote)s 聪"
+
+msgctxt "roblosats-admin"
+msgid "Back to the coordinator panel"
+msgstr "返回协调者面板"
+
+msgctxt "roblosats-admin"
+msgid "Coordinator"
+msgstr "协调者"
+
+msgctxt "roblosats-admin"
+msgid "Home"
+msgstr "首页"
+
+msgctxt "roblosats-admin"
+msgid "Orders in progress"
+msgstr "进行中的订单"
+
+msgctxt "roblosats-admin"
+msgid "In the book (public)"
+msgstr "订单簿中（公开）"
+
+msgctxt "roblosats-admin"
+msgid "Paying the buyer"
+msgstr "正在付款给买家"
+
+msgctxt "roblosats-admin"
+msgid "Money"
+msgstr "资金"
+
+msgctxt "roblosats-admin"
+msgid "People and market"
+msgstr "用户与市场"
+
+msgctxt "roblosats-admin"
+msgid "Users"
+msgstr "用户"
+
+msgctxt "roblosats-admin"
+msgid "Currencies"
+msgstr "货币"
+
+msgctxt "roblosats-admin"
+msgid "Market prices"
+msgstr "市场价格"
+
+msgctxt "roblosats-admin"
+msgid "Cancelled orders"
+msgstr "已取消"

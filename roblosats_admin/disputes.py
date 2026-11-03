@@ -22,6 +22,7 @@ from roblosats_admin.messaging import (
     send_coordinator_message,
 )
 from roblosats_admin.middleware import PANEL_LANGUAGES
+from roblosats_admin import alerts
 
 ORDER_STATUS = {
     0: _lazy("Waiting for the maker's bond"),
@@ -124,6 +125,14 @@ def fmt_duration(seconds):
 
 def fmt_sats(n):
     return f"{int(n):,}".replace(",", " ") if n is not None else "?"
+
+
+def amount_text(order):
+    if order.has_range and order.amount is None:
+        return f"{order.min_amount:g}–{order.max_amount:g}"
+    if order.amount is not None:
+        return f"{order.amount:f}".rstrip("0").rstrip(".")
+    return "?"
 
 
 def _truthy(value):
@@ -496,7 +505,40 @@ def write_to(order, recipient, text):
         users.append(r["seller"])
     for u in users:
         send_coordinator_message(order, u.robot, text)
-    return [u.username for u in users]
+    names = [u.username for u in users]
+    if names:
+        alerts.coordinator_message_sent(order, names, text)
+    return names
+
+
+def message_post(request, order, page):
+    text = request.POST.get("text", "").strip()
+    recipient = request.POST.get("recipient", "")
+    if recipient not in RECIPIENTS:
+        messages.error(request, _("Choose who the message is for."))
+    elif not text:
+        messages.error(request, _("The message is empty: nothing was sent."))
+    elif len(text) > MESSAGE_MAX:
+        messages.error(
+            request,
+            _(
+                "The message has %(n)s characters; the limit is %(max)s. Nothing was sent."
+            )
+            % {"n": len(text), "max": MESSAGE_MAX},
+        )
+    else:
+        nicks = write_to(order, recipient, text)
+        if nicks:
+            messages.success(
+                request,
+                _(
+                    "Message sent to %(names)s (app, plus Nostr and Telegram if they use them)."
+                )
+                % {"names": _(" and ").join(nicks)},
+            )
+        else:
+            messages.error(request, _("There is nobody to send it to."))
+    return HttpResponseRedirect(page + "#write")
 
 
 def sent_messages(order, label_by_robot):
@@ -581,6 +623,7 @@ def _context(order_admin, request, order, confirm=None):
             "telegram": bool(robot and robot.telegram_enabled),
             "nostr": bool(robot and robot.nostr_pubkey),
             "statement": statement,
+            "show_statement": True,
             "contacts": find_contacts(statement["text"]) if statement else [],
             "attached_chat": bool(statement and statement["messages"]),
             "bond": _payment(bond),
@@ -602,12 +645,7 @@ def _context(order_admin, request, order, confirm=None):
             ),
         }
 
-    if order.has_range and order.amount is None:
-        amount = f"{order.min_amount:g}–{order.max_amount:g}"
-    elif order.amount is not None:
-        amount = f"{order.amount:f}".rstrip("0").rstrip(".")
-    else:
-        amount = "?"
+    amount = amount_text(order)
 
     status = str(ORDER_STATUS.get(order.status, order.get_status_display()))
     winner = None
@@ -695,33 +733,7 @@ def dispute_view(order_admin, request, order_id):
             raise PermissionDenied
         action = request.POST.get("action")
         if action == "message":
-            text = request.POST.get("text", "").strip()
-            recipient = request.POST.get("recipient", "")
-            if recipient not in RECIPIENTS:
-                messages.error(request, _("Choose who the message is for."))
-            elif not text:
-                messages.error(request, _("The message is empty: nothing was sent."))
-            elif len(text) > MESSAGE_MAX:
-                messages.error(
-                    request,
-                    _(
-                        "The message has %(n)s characters; the limit is %(max)s. Nothing was sent."
-                    )
-                    % {"n": len(text), "max": MESSAGE_MAX},
-                )
-            else:
-                nicks = write_to(order, recipient, text)
-                if nicks:
-                    messages.success(
-                        request,
-                        _(
-                            "Message sent to %(names)s (app, plus Nostr and Telegram if they use them)."
-                        )
-                        % {"names": _(" and ").join(nicks)},
-                    )
-                else:
-                    messages.error(request, _("There is nobody to send it to."))
-            return HttpResponseRedirect(page + "#write")
+            return message_post(request, order, page)
         if action == "resolve":
             decision = request.POST.get("decision", "")
             if decision not in DECISIONS or request.POST.get("confirmed") != "yes":

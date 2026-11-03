@@ -726,3 +726,427 @@ msgstr "両方"
 msgctxt "roblosats-admin"
 msgid "Send"
 msgstr "送信"
+
+msgctxt "roblosats-admin"
+msgid "In progress"
+msgstr "進行中"
+
+msgctxt "roblosats-admin"
+msgid "bonds, chat or fiat sent"
+msgstr "保証金・チャット・法定通貨送金済み"
+
+msgctxt "roblosats-admin"
+msgid "In the book"
+msgstr "オーダーブック"
+
+msgctxt "roblosats-admin"
+msgid "waiting for a taker"
+msgstr "テイカー待ち"
+
+msgctxt "roblosats-admin"
+msgid "open and to be resolved"
+msgstr "未解決"
+
+msgctxt "roblosats-admin"
+msgid "Completed"
+msgstr "完了"
+
+msgctxt "roblosats-admin"
+msgid "all time"
+msgstr "累計"
+
+msgctxt "roblosats-admin"
+msgid "by the maker or by both · expired: %(n)s"
+msgstr "メイカーまたは双方による · 期限切れ: %(n)s"
+
+msgctxt "roblosats-admin"
+msgid "All orders"
+msgstr "全注文"
+
+msgctxt "roblosats-admin"
+msgid "Robots"
+msgstr "ロボット"
+
+msgctxt "roblosats-admin"
+msgid "Lightning payments"
+msgstr "Lightning 支払い"
+
+msgctxt "roblosats-admin"
+msgid "On-chain payments"
+msgstr "オンチェーン支払い"
+
+msgctxt "roblosats-admin"
+msgid "Telegram alerts"
+msgstr "Telegram 通知"
+
+msgctxt "roblosats-admin"
+msgid "View"
+msgstr "表示"
+
+msgctxt "roblosats-admin"
+msgid "Order page"
+msgstr "注文ページ"
+
+msgctxt "roblosats-admin"
+msgid "Order published in the order book"
+msgstr "注文がオーダーブックに公開された"
+
+msgctxt "roblosats-admin"
+msgid "Order taken (the taker's bond is locked)"
+msgstr "注文が成立（テイカーの保証金がロック済み）"
+
+msgctxt "roblosats-admin"
+msgid "Escrow and buyer's invoice in: the fiat exchange starts"
+msgstr "エスクローと買い手の請求書が揃い、法定通貨のやり取りが始まる"
+
+msgctxt "roblosats-admin"
+msgid "Order finished successfully"
+msgstr "注文が正常に完了"
+
+msgctxt "roblosats-admin"
+msgid "Order cancelled or expired"
+msgstr "注文のキャンセルまたは期限切れ"
+
+msgctxt "roblosats-admin"
+msgid "Dispute opened"
+msgstr "紛争の開始"
+
+msgctxt "roblosats-admin"
+msgid "Chat message from a party in a disputed order"
+msgstr "紛争中の注文での当事者からのチャットメッセージ"
+
+msgctxt "roblosats-admin"
+msgid "Message sent from the coordinator"
+msgstr "コーディネーターからのメッセージ送信"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s is public in the order book"
+msgstr "注文 %(id)s がオーダーブックに公開されました"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s is public in the order book again"
+msgstr "注文 %(id)s が再びオーダーブックに公開されました"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s was taken: the taker's bond is locked"
+msgstr "注文 %(id)s が成立しました：テイカーの保証金がロックされました"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: escrow and buyer's invoice are in, the fiat exchange starts"
+msgstr "注文 %(id)s：エスクローと買い手の請求書が揃い、法定通貨のやり取りが始まります"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s finished successfully"
+msgstr "注文 %(id)s が正常に完了しました"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: %(status)s"
+msgstr "注文 %(id)s：%(status)s"
+
+msgctxt "roblosats-admin"
+msgid "Dispute opened on order %(id)s"
+msgstr "注文 %(id)s で紛争が開始されました"
+
+msgctxt "roblosats-admin"
+msgid "New chat message from %(who)s on disputed order %(id)s"
+msgstr "紛争中の注文 %(id)s で %(who)s から新しいチャットメッセージ"
+
+msgctxt "roblosats-admin"
+msgid "You wrote to %(names)s on order %(id)s"
+msgstr "注文 %(id)s について %(names)s にメッセージを送りました"
+
+msgctxt "roblosats-admin"
+msgid "Test message: the coordinator's alerts reach this chat."
+msgstr "テストメッセージ：コーディネーターの通知はこのチャットに届きます。"
+
+msgctxt "roblosats-admin"
+msgid "The bot token does not look like a Telegram token."
+msgstr "Telegram ボットのトークンの形式ではありません。"
+
+msgctxt "roblosats-admin"
+msgid "The chat id must be a number (groups start with -) or a @channel name."
+msgstr "チャット ID は数字（グループは - で始まる）か @チャンネル名にしてください。"
+
+msgctxt "roblosats-admin"
+msgid "The panel address must look like https://host or http://host:port, with nothing after it."
+msgstr "パネルのアドレスは https://host または http://host:port の形式で、その後ろには何も付けないでください。"
+
+msgctxt "roblosats-admin"
+msgid "Telegram alerts saved."
+msgstr "Telegram 通知を保存しました。"
+
+msgctxt "roblosats-admin"
+msgid "Save a bot token and a chat id first: there is nowhere to send it."
+msgstr "先にボットのトークンとチャット ID を保存してください：送信先がありません。"
+
+msgctxt "roblosats-admin"
+msgid "Test message sent. Check the Telegram chat."
+msgstr "テストメッセージを送信しました。Telegram のチャットを確認してください。"
+
+msgctxt "roblosats-admin"
+msgid "Telegram did not accept the message: %(why)s"
+msgstr "Telegram がメッセージを受け付けませんでした：%(why)s"
+
+msgctxt "roblosats-admin"
+msgid "nobody took it"
+msgstr "誰も受けなかった"
+
+msgctxt "roblosats-admin"
+msgid "the maker's bond was not locked"
+msgstr "メイカーの保証金がロックされなかった"
+
+msgctxt "roblosats-admin"
+msgid "the seller's escrow was not locked"
+msgstr "売り手のエスクローがロックされなかった"
+
+msgctxt "roblosats-admin"
+msgid "the buyer's invoice was not submitted"
+msgstr "買い手が請求書を提出しなかった"
+
+msgctxt "roblosats-admin"
+msgid "neither the escrow nor the invoice arrived"
+msgstr "エスクローも請求書も届かなかった"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s"
+msgstr "注文 %(id)s"
+
+msgctxt "roblosats-admin"
+msgid "Coordinator panel"
+msgstr "コーディネーターパネル"
+
+msgctxt "roblosats-admin"
+msgid "ready to send"
+msgstr "送信可能"
+
+msgctxt "roblosats-admin"
+msgid "not configured"
+msgstr "未設定"
+
+msgctxt "roblosats-admin"
+msgid "The coordinator's bot writes to your chat when something happens to an order. Changes apply right away: no restart needed. If Telegram fails, the orders carry on as usual."
+msgstr "注文に動きがあると、コーディネーターのボットがチャットに知らせます。変更はすぐに反映され、再起動は不要です。Telegram が失敗しても注文は通常どおり進みます。"
+
+msgctxt "roblosats-admin"
+msgid "Bot and chat"
+msgstr "ボットとチャット"
+
+msgctxt "roblosats-admin"
+msgid "Bot token"
+msgstr "ボットのトークン"
+
+msgctxt "roblosats-admin"
+msgid "saved"
+msgstr "保存済み"
+
+msgctxt "roblosats-admin"
+msgid "A token is saved"
+msgstr "トークンが保存されています"
+
+msgctxt "roblosats-admin"
+msgid "Leave the field empty to keep it."
+msgstr "そのままにするには空欄のままにしてください。"
+
+msgctxt "roblosats-admin"
+msgid "Remove the saved token"
+msgstr "保存したトークンを削除"
+
+msgctxt "roblosats-admin"
+msgid "None saved here: the TELEGRAM_TOKEN of the environment is used"
+msgstr "ここには未保存：環境変数 TELEGRAM_TOKEN を使用します"
+
+msgctxt "roblosats-admin"
+msgid "Create a bot with @BotFather and paste its token. It stays on the server and is never shown again in full."
+msgstr "@BotFather でボットを作成し、そのトークンを貼り付けてください。トークンはサーバーに保存され、二度と全体は表示されません。"
+
+msgctxt "roblosats-admin"
+msgid "Chat id"
+msgstr "チャット ID"
+
+msgctxt "roblosats-admin"
+msgid "Your user id, a group id (starts with -) or a @channel where the bot can write. Send a message to the bot first, or add it to the group."
+msgstr "あなたのユーザー ID、グループ ID（- で始まる）、またはボットが書き込める @チャンネル。先にボットにメッセージを送るか、グループに追加してください。"
+
+msgctxt "roblosats-admin"
+msgid "Empty: the TELEGRAM_COORDINATOR_CHAT_ID of the environment is used"
+msgstr "空欄：環境変数 TELEGRAM_COORDINATOR_CHAT_ID を使用します"
+
+msgctxt "roblosats-admin"
+msgid "Language of the alerts"
+msgstr "通知の言語"
+
+msgctxt "roblosats-admin"
+msgid "Panel address for the links"
+msgstr "リンク用のパネルのアドレス"
+
+msgctxt "roblosats-admin"
+msgid "Each alert links to the order's page in this panel. Empty: the coordinator's HOST_NAME is used"
+msgstr "各通知はこのパネルの注文ページにリンクします。空欄：コーディネーターの HOST_NAME を使用します"
+
+msgctxt "roblosats-admin"
+msgid "What to be told about"
+msgstr "通知する内容"
+
+msgctxt "roblosats-admin"
+msgid "Chat messages in a dispute are encrypted between the parties: the alert only says who wrote, at most once every few minutes per order. Cancellations do not include orders whose maker never locked the bond."
+msgstr "紛争中のチャットは当事者間で暗号化されています：通知は誰が書いたかだけを、注文ごとに数分に一度まで知らせます。キャンセルには、メイカーが保証金をロックしなかった注文は含まれません。"
+
+msgctxt "roblosats-admin"
+msgid "Save"
+msgstr "保存"
+
+msgctxt "roblosats-admin"
+msgid "Try it"
+msgstr "試す"
+
+msgctxt "roblosats-admin"
+msgid "Sends a message with the saved settings. Save first if you changed something."
+msgstr "保存済みの設定でメッセージを送ります。変更した場合は先に保存してください。"
+
+msgctxt "roblosats-admin"
+msgid "Send test message"
+msgstr "テストメッセージを送信"
+
+msgctxt "roblosats-admin"
+msgid "This order is in dispute."
+msgstr "この注文は紛争中です。"
+
+msgctxt "roblosats-admin"
+msgid "This order went through a dispute."
+msgstr "この注文は紛争を経ています。"
+
+msgctxt "roblosats-admin"
+msgid "Spamcoin sats"
+msgstr "Spamcoin の sats"
+
+msgctxt "roblosats-admin"
+msgid "Bond"
+msgstr "保証金"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's payout"
+msgstr "買い手への支払い"
+
+msgctxt "roblosats-admin"
+msgid "on-chain"
+msgstr "オンチェーン"
+
+msgctxt "roblosats-admin"
+msgid "Contract formalized"
+msgstr "契約成立"
+
+msgctxt "roblosats-admin"
+msgid "Deadline of the current step"
+msgstr "現在のステップの期限"
+
+msgctxt "roblosats-admin"
+msgid "Chat messages"
+msgstr "チャットメッセージ"
+
+msgctxt "roblosats-admin"
+msgid "encrypted between them"
+msgstr "当事者間で暗号化"
+
+msgctxt "roblosats-admin"
+msgid "Bonds, escrow and payout"
+msgstr "保証金・エスクロー・支払い"
+
+msgctxt "roblosats-admin"
+msgid "Timeline"
+msgstr "経過"
+
+msgctxt "roblosats-admin"
+msgid "Links"
+msgstr "リンク"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's robot"
+msgstr "買い手のロボット"
+
+msgctxt "roblosats-admin"
+msgid "Seller's robot"
+msgstr "売り手のロボット"
+
+msgctxt "roblosats-admin"
+msgid "Order in the app"
+msgstr "アプリでの注文"
+
+msgctxt "roblosats-admin"
+msgid "Needs your decision"
+msgstr "あなたの判断が必要"
+
+msgctxt "roblosats-admin"
+msgid "Live trades"
+msgstr "進行中の取引"
+
+msgctxt "roblosats-admin"
+msgid "Type"
+msgstr "種類"
+
+msgctxt "roblosats-admin"
+msgid "Since"
+msgstr "開始"
+
+msgctxt "roblosats-admin"
+msgid "Until"
+msgstr "期限"
+
+msgctxt "roblosats-admin"
+msgid "No trade in progress right now."
+msgstr "現在進行中の取引はありません。"
+
+msgctxt "roblosats-admin"
+msgid "Disputes waiting: %(n)s"
+msgstr "対応待ちの紛争：%(n)s"
+
+msgctxt "roblosats-admin"
+msgid "Coordinator %(alias)s · RoboSats %(version)s · node %(node)s · channels: %(local)s sats local / %(remote)s remote"
+msgstr "コーディネーター %(alias)s · RoboSats %(version)s · ノード %(node)s · チャネル：ローカル %(local)s sats / リモート %(remote)s sats"
+
+msgctxt "roblosats-admin"
+msgid "Back to the coordinator panel"
+msgstr "コーディネーターパネルに戻る"
+
+msgctxt "roblosats-admin"
+msgid "Coordinator"
+msgstr "コーディネーター"
+
+msgctxt "roblosats-admin"
+msgid "Home"
+msgstr "ホーム"
+
+msgctxt "roblosats-admin"
+msgid "Orders in progress"
+msgstr "進行中の注文"
+
+msgctxt "roblosats-admin"
+msgid "In the book (public)"
+msgstr "オーダーブック（公開中）"
+
+msgctxt "roblosats-admin"
+msgid "Paying the buyer"
+msgstr "買い手へ支払い中"
+
+msgctxt "roblosats-admin"
+msgid "Money"
+msgstr "資金"
+
+msgctxt "roblosats-admin"
+msgid "People and market"
+msgstr "ユーザーと市場"
+
+msgctxt "roblosats-admin"
+msgid "Users"
+msgstr "ユーザー"
+
+msgctxt "roblosats-admin"
+msgid "Currencies"
+msgstr "通貨"
+
+msgctxt "roblosats-admin"
+msgid "Market prices"
+msgstr "市場価格"
+
+msgctxt "roblosats-admin"
+msgid "Cancelled orders"
+msgstr "キャンセル"

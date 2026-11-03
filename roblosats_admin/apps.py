@@ -8,11 +8,12 @@ no se rompe nada.
 """
 
 from django.apps import AppConfig
+from django.utils.translation import pgettext_lazy
 
 
 class RoblosatsAdminConfig(AppConfig):
     name = "roblosats_admin"
-    verbose_name = "Roblosats coordinator panel"
+    verbose_name = pgettext_lazy("roblosats-admin", "Coordinator panel")
 
     def ready(self):
         from django.contrib import admin
@@ -63,13 +64,30 @@ class RoblosatsAdminConfig(AppConfig):
             ra = registry[Robot]
             ra.list_per_page = 50
 
+        _alert_hooks()
+
+
+def _alert_hooks():
+    from django.db.models.signals import post_save
+
+    from api.models.order import order_status_changed
+    from chat.models import Message
+    from roblosats_admin import alerts
+
+    order_status_changed.connect(
+        alerts.on_status_changed, dispatch_uid="roblosats_alerts_status"
+    )
+    post_save.connect(
+        alerts.on_chat_message, sender=Message, dispatch_uid="roblosats_alerts_chat"
+    )
+
 
 def _dispute_panel(oa):
     from django.http import HttpResponseRedirect
     from django.urls import path, reverse
     from django.utils.html import format_html
 
-    from roblosats_admin import disputes
+    from roblosats_admin import disputes, orders
     from roblosats_admin.i18n import _lazy
     from roblosats_admin.messaging import message_parties
 
@@ -86,6 +104,13 @@ def _dispute_panel(oa):
                 "disputes/",
                 wrap(lambda request: disputes.disputes_view(oa, request)),
                 name="api_order_disputes",
+            ),
+            path(
+                "<int:order_id>/summary/",
+                wrap(
+                    lambda request, order_id: orders.order_view(oa, request, order_id)
+                ),
+                name="api_order_summary",
             ),
             path(
                 "<int:order_id>/dispute/",
@@ -111,9 +136,19 @@ def _dispute_panel(oa):
         )
 
     dispute_link.short_description = _lazy("Dispute")
+
+    def order_link(obj):
+        return format_html(
+            '<a href="{}" style="font-weight:600">📄 {}</a>',
+            reverse("admin:api_order_summary", args=[obj.pk]),
+            _lazy("View"),
+        )
+
+    order_link.short_description = _lazy("Order page")
     columns = list(oa.list_display)
     position = columns.index("is_disputed") + 1 if "is_disputed" in columns else 1
     columns.insert(position, dispute_link)
+    columns.insert(1 if columns and columns[0] == "id" else 0, order_link)
     oa.list_display = tuple(columns)
 
     oa.actions = [*oa.actions, message_parties]
@@ -126,10 +161,13 @@ def _dispute_panel(oa):
                 order = oa.model.objects.only("is_disputed").get(pk=object_id)
             except (oa.model.DoesNotExist, ValueError, TypeError):
                 order = None
-            if order is not None and order.is_disputed:
-                return HttpResponseRedirect(
-                    reverse("admin:api_order_dispute", args=[order.pk])
+            if order is not None:
+                name = (
+                    "admin:api_order_dispute"
+                    if order.is_disputed
+                    else "admin:api_order_summary"
                 )
+                return HttpResponseRedirect(reverse(name, args=[order.pk]))
         return original_change_view(request, object_id, form_url, extra_context)
 
     oa.change_view = change_view

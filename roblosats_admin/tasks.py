@@ -8,20 +8,42 @@ logger = logging.getLogger("roblosats_admin")
 TELEGRAM_ATTEMPTS = 3
 
 
-def send_telegram(session, chat_id, text):
-    token = config("TELEGRAM_TOKEN", cast=str, default="")
+def _redact(text, token):
+    text = str(text)
+    return text.replace(token, "***") if token else text
+
+
+def telegram_send_once(session, token, chat_id, text, timeout=60):
+    if not token or not chat_id:
+        return False, "missing token or chat id"
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    try:
+        response = session.post(
+            url,
+            data={"chat_id": chat_id, "text": text, "disable_web_page_preview": True},
+            timeout=timeout,
+        )
+    except Exception as e:  # noqa: BLE001
+        return False, _redact(e, token)
+    if response.ok:
+        return True, ""
+    try:
+        detail = response.json().get("description") or response.reason
+    except Exception:  # noqa: BLE001
+        detail = response.reason
+    return False, _redact(f"{response.status_code} {detail}", token)
+
+
+def send_telegram(session, chat_id, text, token=None):
+    if token is None:
+        token = config("TELEGRAM_TOKEN", cast=str, default="")
     if not token or not chat_id:
         return False
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
     for _attempt in range(TELEGRAM_ATTEMPTS):
-        try:
-            response = session.post(
-                url, data={"chat_id": chat_id, "text": text}, timeout=60
-            )
-            if response.ok:
-                return True
-        except Exception as e:
-            logger.warning(f"Telegram coordinator message failed: {e}")
+        ok, detail = telegram_send_once(session, token, chat_id, text)
+        if ok:
+            return True
+        logger.warning(f"Telegram message failed: {detail}")
     return False
 
 
@@ -39,3 +61,10 @@ def relay_coordinator_message(robot_id=None, order_id=None, text=""):
         notifications.send_webhook_message(
             order, robot, text[:240], text[240:480], "coordinator_message"
         )
+
+
+@shared_task(name="roblosats_telegram_alert", ignore_result=True, time_limit=300)
+def telegram_alert(event=None, order_id=None, extra=None):
+    from roblosats_admin import alerts
+
+    alerts.deliver(event, order_id, extra or {})

@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models.signals import pre_delete
-from django.dispatch import receiver
+from django.dispatch import Signal, receiver
 from django.utils import timezone
 from api.tasks import send_notification
 
@@ -25,6 +25,8 @@ if config("TESTING", cast=bool, default=False):
 
 else:
     custom_uuid = uuid.uuid4
+
+order_status_changed = Signal()
 
 
 class Order(models.Model):
@@ -396,6 +398,13 @@ class Order(models.Model):
         if old_status != new_status:
             self.log(
                 f"Order state went from {old_status}: *{Order.Status(old_status).label}* to {new_status}: *{Order.Status(new_status).label}*"
+            )
+            self.announce_status(old_status, new_status)
+
+    def announce_status(self, old_status, new_status):
+        if old_status != new_status:
+            order_status_changed.send_robust(
+                sender=Order, order=self, old_status=old_status, new_status=new_status
             )
 
 

@@ -726,3 +726,427 @@ msgstr "beide"
 msgctxt "roblosats-admin"
 msgid "Send"
 msgstr "Senden"
+
+msgctxt "roblosats-admin"
+msgid "In progress"
+msgstr "Laufend"
+
+msgctxt "roblosats-admin"
+msgid "bonds, chat or fiat sent"
+msgstr "Kautionen, Chat oder Fiat gesendet"
+
+msgctxt "roblosats-admin"
+msgid "In the book"
+msgstr "Im Orderbuch"
+
+msgctxt "roblosats-admin"
+msgid "waiting for a taker"
+msgstr "warten auf einen Taker"
+
+msgctxt "roblosats-admin"
+msgid "open and to be resolved"
+msgstr "offen und zu entscheiden"
+
+msgctxt "roblosats-admin"
+msgid "Completed"
+msgstr "Abgeschlossen"
+
+msgctxt "roblosats-admin"
+msgid "all time"
+msgstr "insgesamt"
+
+msgctxt "roblosats-admin"
+msgid "by the maker or by both · expired: %(n)s"
+msgstr "vom Maker oder von beiden · abgelaufen: %(n)s"
+
+msgctxt "roblosats-admin"
+msgid "All orders"
+msgstr "Alle Orders"
+
+msgctxt "roblosats-admin"
+msgid "Robots"
+msgstr "Roboter"
+
+msgctxt "roblosats-admin"
+msgid "Lightning payments"
+msgstr "Lightning-Zahlungen"
+
+msgctxt "roblosats-admin"
+msgid "On-chain payments"
+msgstr "On-Chain-Zahlungen"
+
+msgctxt "roblosats-admin"
+msgid "Telegram alerts"
+msgstr "Telegram-Benachrichtigungen"
+
+msgctxt "roblosats-admin"
+msgid "View"
+msgstr "Ansehen"
+
+msgctxt "roblosats-admin"
+msgid "Order page"
+msgstr "Orderseite"
+
+msgctxt "roblosats-admin"
+msgid "Order published in the order book"
+msgstr "Order im Orderbuch veröffentlicht"
+
+msgctxt "roblosats-admin"
+msgid "Order taken (the taker's bond is locked)"
+msgstr "Order angenommen (Kaution des Takers gesperrt)"
+
+msgctxt "roblosats-admin"
+msgid "Escrow and buyer's invoice in: the fiat exchange starts"
+msgstr "Treuhand und Rechnung des Käufers da: der Fiat-Tausch beginnt"
+
+msgctxt "roblosats-admin"
+msgid "Order finished successfully"
+msgstr "Order erfolgreich abgeschlossen"
+
+msgctxt "roblosats-admin"
+msgid "Order cancelled or expired"
+msgstr "Order storniert oder abgelaufen"
+
+msgctxt "roblosats-admin"
+msgid "Dispute opened"
+msgstr "Streitfall eröffnet"
+
+msgctxt "roblosats-admin"
+msgid "Chat message from a party in a disputed order"
+msgstr "Chatnachricht einer Partei in einer strittigen Order"
+
+msgctxt "roblosats-admin"
+msgid "Message sent from the coordinator"
+msgstr "Vom Koordinator gesendete Nachricht"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s is public in the order book"
+msgstr "Order %(id)s ist im Orderbuch öffentlich"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s is public in the order book again"
+msgstr "Order %(id)s ist wieder im Orderbuch öffentlich"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s was taken: the taker's bond is locked"
+msgstr "Order %(id)s wurde angenommen: die Kaution des Takers ist gesperrt"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: escrow and buyer's invoice are in, the fiat exchange starts"
+msgstr "Order %(id)s: Treuhand und Rechnung des Käufers sind da, der Fiat-Tausch beginnt"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s finished successfully"
+msgstr "Order %(id)s erfolgreich abgeschlossen"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: %(status)s"
+msgstr "Order %(id)s: %(status)s"
+
+msgctxt "roblosats-admin"
+msgid "Dispute opened on order %(id)s"
+msgstr "Streitfall in Order %(id)s eröffnet"
+
+msgctxt "roblosats-admin"
+msgid "New chat message from %(who)s on disputed order %(id)s"
+msgstr "Neue Chatnachricht von %(who)s in der strittigen Order %(id)s"
+
+msgctxt "roblosats-admin"
+msgid "You wrote to %(names)s on order %(id)s"
+msgstr "Du hast %(names)s zu Order %(id)s geschrieben"
+
+msgctxt "roblosats-admin"
+msgid "Test message: the coordinator's alerts reach this chat."
+msgstr "Testnachricht: Die Benachrichtigungen des Koordinators erreichen diesen Chat."
+
+msgctxt "roblosats-admin"
+msgid "The bot token does not look like a Telegram token."
+msgstr "Das Token sieht nicht wie ein Telegram-Bot-Token aus."
+
+msgctxt "roblosats-admin"
+msgid "The chat id must be a number (groups start with -) or a @channel name."
+msgstr "Die Chat-ID muss eine Zahl (Gruppen beginnen mit -) oder ein @Kanal sein."
+
+msgctxt "roblosats-admin"
+msgid "The panel address must look like https://host or http://host:port, with nothing after it."
+msgstr "Die Panel-Adresse muss wie https://host oder http://host:port aussehen, ohne etwas dahinter."
+
+msgctxt "roblosats-admin"
+msgid "Telegram alerts saved."
+msgstr "Telegram-Benachrichtigungen gespeichert."
+
+msgctxt "roblosats-admin"
+msgid "Save a bot token and a chat id first: there is nowhere to send it."
+msgstr "Speichere zuerst ein Bot-Token und eine Chat-ID: es gibt kein Ziel."
+
+msgctxt "roblosats-admin"
+msgid "Test message sent. Check the Telegram chat."
+msgstr "Testnachricht gesendet. Sieh im Telegram-Chat nach."
+
+msgctxt "roblosats-admin"
+msgid "Telegram did not accept the message: %(why)s"
+msgstr "Telegram hat die Nachricht nicht angenommen: %(why)s"
+
+msgctxt "roblosats-admin"
+msgid "nobody took it"
+msgstr "niemand hat sie angenommen"
+
+msgctxt "roblosats-admin"
+msgid "the maker's bond was not locked"
+msgstr "die Kaution des Makers wurde nicht gesperrt"
+
+msgctxt "roblosats-admin"
+msgid "the seller's escrow was not locked"
+msgstr "die Treuhand des Verkäufers wurde nicht gesperrt"
+
+msgctxt "roblosats-admin"
+msgid "the buyer's invoice was not submitted"
+msgstr "der Käufer hat keine Rechnung eingereicht"
+
+msgctxt "roblosats-admin"
+msgid "neither the escrow nor the invoice arrived"
+msgstr "weder Treuhand noch Rechnung kamen an"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s"
+msgstr "Order %(id)s"
+
+msgctxt "roblosats-admin"
+msgid "Coordinator panel"
+msgstr "Koordinator-Panel"
+
+msgctxt "roblosats-admin"
+msgid "ready to send"
+msgstr "bereit zum Senden"
+
+msgctxt "roblosats-admin"
+msgid "not configured"
+msgstr "nicht eingerichtet"
+
+msgctxt "roblosats-admin"
+msgid "The coordinator's bot writes to your chat when something happens to an order. Changes apply right away: no restart needed. If Telegram fails, the orders carry on as usual."
+msgstr "Der Bot des Koordinators schreibt in deinen Chat, wenn mit einer Order etwas passiert. Änderungen gelten sofort, ohne Neustart. Fällt Telegram aus, laufen die Orders normal weiter."
+
+msgctxt "roblosats-admin"
+msgid "Bot and chat"
+msgstr "Bot und Chat"
+
+msgctxt "roblosats-admin"
+msgid "Bot token"
+msgstr "Bot-Token"
+
+msgctxt "roblosats-admin"
+msgid "saved"
+msgstr "gespeichert"
+
+msgctxt "roblosats-admin"
+msgid "A token is saved"
+msgstr "Ein Token ist gespeichert"
+
+msgctxt "roblosats-admin"
+msgid "Leave the field empty to keep it."
+msgstr "Lass das Feld leer, um es zu behalten."
+
+msgctxt "roblosats-admin"
+msgid "Remove the saved token"
+msgstr "Gespeichertes Token löschen"
+
+msgctxt "roblosats-admin"
+msgid "None saved here: the TELEGRAM_TOKEN of the environment is used"
+msgstr "Hier keins gespeichert: das TELEGRAM_TOKEN der Umgebung wird verwendet"
+
+msgctxt "roblosats-admin"
+msgid "Create a bot with @BotFather and paste its token. It stays on the server and is never shown again in full."
+msgstr "Erstelle einen Bot mit @BotFather und füge sein Token ein. Es bleibt auf dem Server und wird nie wieder vollständig angezeigt."
+
+msgctxt "roblosats-admin"
+msgid "Chat id"
+msgstr "Chat-ID"
+
+msgctxt "roblosats-admin"
+msgid "Your user id, a group id (starts with -) or a @channel where the bot can write. Send a message to the bot first, or add it to the group."
+msgstr "Deine Benutzer-ID, eine Gruppen-ID (beginnt mit -) oder ein @Kanal, in dem der Bot schreiben darf. Schreib dem Bot zuerst oder füge ihn der Gruppe hinzu."
+
+msgctxt "roblosats-admin"
+msgid "Empty: the TELEGRAM_COORDINATOR_CHAT_ID of the environment is used"
+msgstr "Leer: die TELEGRAM_COORDINATOR_CHAT_ID der Umgebung wird verwendet"
+
+msgctxt "roblosats-admin"
+msgid "Language of the alerts"
+msgstr "Sprache der Benachrichtigungen"
+
+msgctxt "roblosats-admin"
+msgid "Panel address for the links"
+msgstr "Panel-Adresse für die Links"
+
+msgctxt "roblosats-admin"
+msgid "Each alert links to the order's page in this panel. Empty: the coordinator's HOST_NAME is used"
+msgstr "Jede Benachrichtigung verlinkt die Orderseite in diesem Panel. Leer: der HOST_NAME des Koordinators wird verwendet"
+
+msgctxt "roblosats-admin"
+msgid "What to be told about"
+msgstr "Worüber du informiert werden willst"
+
+msgctxt "roblosats-admin"
+msgid "Chat messages in a dispute are encrypted between the parties: the alert only says who wrote, at most once every few minutes per order. Cancellations do not include orders whose maker never locked the bond."
+msgstr "Chatnachrichten in einem Streitfall sind zwischen den Parteien verschlüsselt: die Benachrichtigung sagt nur, wer geschrieben hat, höchstens alle paar Minuten pro Order. Stornierungen umfassen keine Orders, deren Maker nie die Kaution gesperrt hat."
+
+msgctxt "roblosats-admin"
+msgid "Save"
+msgstr "Speichern"
+
+msgctxt "roblosats-admin"
+msgid "Try it"
+msgstr "Ausprobieren"
+
+msgctxt "roblosats-admin"
+msgid "Sends a message with the saved settings. Save first if you changed something."
+msgstr "Sendet eine Nachricht mit den gespeicherten Einstellungen. Speichere zuerst, wenn du etwas geändert hast."
+
+msgctxt "roblosats-admin"
+msgid "Send test message"
+msgstr "Testnachricht senden"
+
+msgctxt "roblosats-admin"
+msgid "This order is in dispute."
+msgstr "Diese Order ist im Streitfall."
+
+msgctxt "roblosats-admin"
+msgid "This order went through a dispute."
+msgstr "Diese Order hatte einen Streitfall."
+
+msgctxt "roblosats-admin"
+msgid "Spamcoin sats"
+msgstr "Spamcoin-Sats"
+
+msgctxt "roblosats-admin"
+msgid "Bond"
+msgstr "Kaution"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's payout"
+msgstr "Auszahlung an den Käufer"
+
+msgctxt "roblosats-admin"
+msgid "on-chain"
+msgstr "On-Chain"
+
+msgctxt "roblosats-admin"
+msgid "Contract formalized"
+msgstr "Vertrag geschlossen"
+
+msgctxt "roblosats-admin"
+msgid "Deadline of the current step"
+msgstr "Frist des aktuellen Schritts"
+
+msgctxt "roblosats-admin"
+msgid "Chat messages"
+msgstr "Chatnachrichten"
+
+msgctxt "roblosats-admin"
+msgid "encrypted between them"
+msgstr "zwischen ihnen verschlüsselt"
+
+msgctxt "roblosats-admin"
+msgid "Bonds, escrow and payout"
+msgstr "Kautionen, Treuhand und Auszahlung"
+
+msgctxt "roblosats-admin"
+msgid "Timeline"
+msgstr "Verlauf"
+
+msgctxt "roblosats-admin"
+msgid "Links"
+msgstr "Links"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's robot"
+msgstr "Roboter des Käufers"
+
+msgctxt "roblosats-admin"
+msgid "Seller's robot"
+msgstr "Roboter des Verkäufers"
+
+msgctxt "roblosats-admin"
+msgid "Order in the app"
+msgstr "Order in der App"
+
+msgctxt "roblosats-admin"
+msgid "Needs your decision"
+msgstr "Braucht deine Entscheidung"
+
+msgctxt "roblosats-admin"
+msgid "Live trades"
+msgstr "Laufende Trades"
+
+msgctxt "roblosats-admin"
+msgid "Type"
+msgstr "Typ"
+
+msgctxt "roblosats-admin"
+msgid "Since"
+msgstr "Seit"
+
+msgctxt "roblosats-admin"
+msgid "Until"
+msgstr "Bis"
+
+msgctxt "roblosats-admin"
+msgid "No trade in progress right now."
+msgstr "Gerade läuft kein Trade."
+
+msgctxt "roblosats-admin"
+msgid "Disputes waiting: %(n)s"
+msgstr "Wartende Streitfälle: %(n)s"
+
+msgctxt "roblosats-admin"
+msgid "Coordinator %(alias)s · RoboSats %(version)s · node %(node)s · channels: %(local)s sats local / %(remote)s remote"
+msgstr "Koordinator %(alias)s · RoboSats %(version)s · Node %(node)s · Kanäle: %(local)s Sats lokal / %(remote)s remote"
+
+msgctxt "roblosats-admin"
+msgid "Back to the coordinator panel"
+msgstr "Zurück zum Koordinator-Panel"
+
+msgctxt "roblosats-admin"
+msgid "Coordinator"
+msgstr "Koordinator"
+
+msgctxt "roblosats-admin"
+msgid "Home"
+msgstr "Start"
+
+msgctxt "roblosats-admin"
+msgid "Orders in progress"
+msgstr "Laufende Orders"
+
+msgctxt "roblosats-admin"
+msgid "In the book (public)"
+msgstr "Im Orderbuch (öffentlich)"
+
+msgctxt "roblosats-admin"
+msgid "Paying the buyer"
+msgstr "Zahlung an den Käufer"
+
+msgctxt "roblosats-admin"
+msgid "Money"
+msgstr "Geld"
+
+msgctxt "roblosats-admin"
+msgid "People and market"
+msgstr "Personen und Markt"
+
+msgctxt "roblosats-admin"
+msgid "Users"
+msgstr "Benutzer"
+
+msgctxt "roblosats-admin"
+msgid "Currencies"
+msgstr "Währungen"
+
+msgctxt "roblosats-admin"
+msgid "Market prices"
+msgstr "Marktpreise"
+
+msgctxt "roblosats-admin"
+msgid "Cancelled orders"
+msgstr "Storniert"

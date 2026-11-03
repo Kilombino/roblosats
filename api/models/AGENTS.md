@@ -61,6 +61,14 @@ i.e. off; `.env-sample` ships `False` i.e. on — they disagree). `update_status
 delete to `maker_bond`/`payout`/`taker_bond`/`trade_escrow` (not `payout_tx`) when an
 `Order` is deleted.
 
+Roblosats: every status change sends `order_status_changed` (module-level `Signal` in
+order.py, `send_robust`, args `order`, `old_status`, `new_status`) through
+`announce_status`, called by `log_status_transition` (so `update_status` and
+`transition_status`) and by the two places that assign `status` directly
+(`Logics.publish_order`, `Logics.finalize_contract`). It runs whether or not order logs are
+enabled; `roblosats_admin` uses it for the coordinator's Telegram alerts. A new direct
+`order.status = ...` assignment must call `announce_status` too.
+
 ## `Robot` (robot.py)
 OneToOne with Django `User`; two `post_save` receivers on `User` auto-create/save the
 `Robot` (`api/` never creates a Robot directly — see `api/AGENTS.md` cross-app boundaries).

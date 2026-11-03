@@ -76,6 +76,10 @@ def message_parties(modeladmin, request, queryset):
             robots = robots_for(order, who)
             for robot in robots:
                 send_coordinator_message(order, robot, text)
+            if robots:
+                from roblosats_admin.alerts import coordinator_message_sent
+
+                coordinator_message_sent(order, [r.user.username for r in robots], text)
             names = ", ".join(r.user.username for r in robots) or _("nobody")
             modeladmin.message_user(
                 request,
