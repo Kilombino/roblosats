@@ -87,6 +87,10 @@ def dashboard(request, context=None):
     cancelled = Order.objects.filter(status__in=(4, 12)).count()
     expired = Order.objects.filter(status=5).count()
     disputes_url = f"{ADMIN_ROOT}api/order/disputes/?view=open"
+    # With only one dispute waiting, the banner and the card open it directly.
+    waiting = list(Order.objects.filter(status__in=IN_DISPUTE, is_disputed=True)[:2])
+    if len(waiting) == 1:
+        disputes_url = _order_url(waiting[0])
     version = getattr(settings, "VERSION", None)
 
     data = {
