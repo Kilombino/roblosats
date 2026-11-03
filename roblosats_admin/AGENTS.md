@@ -26,9 +26,11 @@ It patches the already-registered `api` admin classes in `ready()` instead of ed
 ## Order page (`orders.py`)
 - `/coordinator/api/order/<id>/summary/` shows any order (live, finished, cancelled, expired)
   with the dispute page's partials: parties, amounts (`spamcoin_sats` when set), bonds,
-  escrow, payout, the JSON log as a timeline, chat message count (the chat is PGP-encrypted
-  between the parties, so only the count), coordinator messages and a write form while the
-  order is live. Read-only apart from that form (`disputes.message_post`).
+  escrow, payout (Lightning routing fee once paid; on-chain: status, address, txid, mining fee),
+  coordinator earnings (`proceeds`), the JSON log as a timeline, the chat (PGP-encrypted between
+  the parties, so only how many, from whom and when), coordinator messages, links to every
+  payment, and a write form while the order is live. The status adds the expiry reason or, for
+  MLD/TLD, who won (buyer/seller, mapped through the maker/taker side). Read-only apart from that form (`disputes.message_post`).
 - The order list has an "Order page" column; opening any order's change page (GET) redirects
   here, or to the dispute page when `is_disputed`. `?raw=1` keeps the Django form.
 - `_party_summary.html` prints the statement line only when `p.show_statement` (dispute page).
