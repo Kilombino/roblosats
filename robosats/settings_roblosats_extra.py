@@ -95,6 +95,12 @@ UNFOLD = {
                         "badge": _count_orders(13),
                     },
                     {
+                        "title": _rl("Failed payouts"),
+                        "icon": "flash_off",
+                        "link": ADMIN_ROOT + "api/order/failed-payouts/",
+                        "badge": _count_orders(15),
+                    },
+                    {
                         "title": _rl("Completed"),
                         "icon": "task_alt",
                         "link": ADMIN_ROOT + "api/order/?status__exact=14",

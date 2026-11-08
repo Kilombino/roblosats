@@ -86,6 +86,8 @@ def dashboard(request, context=None):
     completed = Order.objects.filter(status=14).count()
     cancelled = Order.objects.filter(status__in=(4, 12)).count()
     expired = Order.objects.filter(status=5).count()
+    failed = Order.objects.filter(status=15).count()
+    failed_url = reverse("admin:api_order_failed_payouts")
     disputes_url = f"{ADMIN_ROOT}api/order/disputes/?view=open"
     # With only one dispute waiting, the banner and the card open it directly.
     waiting = list(Order.objects.filter(status__in=IN_DISPUTE, is_disputed=True)[:2])
@@ -95,7 +97,8 @@ def dashboard(request, context=None):
 
     data = {
         "open_disputes": disputes,
-        "links": {"disputes": disputes_url},
+        "failed_payouts": failed,
+        "links": {"disputes": disputes_url, "failed_payouts": failed_url},
         "cards": [
             {
                 "title": _("In progress"),
@@ -116,6 +119,12 @@ def dashboard(request, context=None):
                 "foot": _("open and to be resolved"),
             },
             {
+                "title": _("Failed payouts"),
+                "value": failed,
+                "link": failed_url,
+                "foot": _("Lightning payment to the buyer not arriving"),
+            },
+            {
                 "title": _("Completed"),
                 "value": completed,
                 "link": _list(status__exact=14),
@@ -133,6 +142,7 @@ def dashboard(request, context=None):
             {"title": _("All orders"), "link": f"{ADMIN_ROOT}api/order/"},
             {"title": _("Robots"), "link": f"{ADMIN_ROOT}api/robot/"},
             {"title": _("Lightning payments"), "link": f"{ADMIN_ROOT}api/lnpayment/"},
+            {"title": _("Failed payouts"), "link": failed_url},
             {
                 "title": _("On-chain payments"),
                 "link": f"{ADMIN_ROOT}api/onchainpayment/",

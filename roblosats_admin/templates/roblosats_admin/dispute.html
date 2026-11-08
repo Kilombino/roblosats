@@ -37,6 +37,35 @@
   <p class="rsd-note" style="margin-top:.5rem">{% translate "When the deadline passes nothing is resolved automatically: the decision is always yours." context "roblosats-admin" %}</p>
 </section>
 
+{% if outcome %}
+<section class="rsd-sec" id="outcome">
+  <h2>{% translate "Outcome of the dispute" context "roblosats-admin" %}</h2>
+  <p class="rsd-note">{% translate "What each party was credited as a reward, withdrawn from the app with a Lightning invoice, and what they lost. “Pending” is everything the robot still has to withdraw." context "roblosats-admin" %}</p>
+  <div class="rsd-two">
+    {% for o in outcome %}
+    <div class="rsd-party {{ o.role }}">
+      <div class="rsd-who">{{ o.role_label }} <span class="rsd-tag">({{ o.side_label }})</span></div>
+      <div><b>{{ o.nick }}</b></div>
+      {% if o.received_n %}
+        <div class="rsd-item" style="margin-top:.4rem"><small>{% translate "Receives" context "roblosats-admin" %}</small><b class="rsd-good">+{{ o.received }} sats</b></div>
+        <div class="rsd-note">{{ o.reason }}</div>
+        <div class="rsd-note" style="margin-top:.3rem">
+          {% if o.all_claimed %}<span class="rsd-good">✓ {% translate "Already withdrawn: nothing pending" context "roblosats-admin" %}</span>
+          {% else %}<span class="rsd-bad">⏳ {% translate "Pending withdrawal" context "roblosats-admin" %}: {{ o.pending }} sats</span> <span class="rsd-tag">({% translate "withdrawn in total" context "roblosats-admin" %}: {{ o.claimed }})</span>{% endif %}
+        </div>
+        {% if o.available %}<div class="rsd-note">{% translate "Can be withdrawn from" context "roblosats-admin" %} {{ o.available }} ({{ tz }})</div>{% endif %}
+      {% endif %}
+      {% if o.losses %}
+        <div class="rsd-item" style="margin-top:.4rem"><small>{% translate "Loses" context "roblosats-admin" %}</small>
+          <b class="rsd-bad">{% for l in o.losses %}−{{ l.sats }} sats ({{ l.what }}){% if not forloop.last %} · {% endif %}{% endfor %}</b></div>
+      {% endif %}
+      {% if not o.received_n and not o.losses %}<div class="rsd-note" style="margin-top:.4rem">{% translate "No change" context "roblosats-admin" %}</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
 <section class="rsd-sec" id="chat">
   <h2>{% translate "Conversation between them" context "roblosats-admin" %}</h2>
   {% if nobody_attached %}

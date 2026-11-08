@@ -14,7 +14,17 @@
   </a>
   {% endif %}
 
-  <div class="grid grid-cols-2 gap-4 lg:grid-cols-5">
+  {% if failed_payouts %}
+  <a href="{{ links.failed_payouts }}"
+     class="block rounded-lg border-l-4 border-amber-500 bg-amber-50 px-5 py-4 dark:bg-amber-950/40">
+    <div class="text-sm uppercase tracking-wide text-amber-700 dark:text-amber-400">{% translate "The buyer is not getting paid" context "roblosats-admin" %}</div>
+    <div class="mt-1 text-2xl font-semibold text-amber-800 dark:text-amber-300">
+      {% blocktranslate trimmed context "roblosats-admin" with n=failed_payouts %}Failed payouts: {{ n }}{% endblocktranslate %}
+    </div>
+  </a>
+  {% endif %}
+
+  <div class="grid grid-cols-2 gap-4 lg:grid-cols-6">
     {% for card in cards %}
     <a href="{{ card.link }}"
        class="rounded-lg border border-base-200 bg-white px-5 py-4 hover:border-primary-500 dark:border-base-800 dark:bg-base-900">

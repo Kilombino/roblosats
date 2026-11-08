@@ -47,6 +47,41 @@
   </div>
 </section>
 
+{% if buyer_payout %}{% with pc=buyer_payout %}
+<section class="rsd-sec" id="buyer-payout">
+  <h2>{% if pc.live %}⚡❌ {% translate "The payment to the buyer is failing" context "roblosats-admin" %}{% else %}{% translate "The payment to the buyer failed before succeeding" context "roblosats-admin" %}{% endif %}</h2>
+  <div class="rsd-grid">
+    <div class="rsd-item"><small>{% translate "Sats to pay (current invoice)" context "roblosats-admin" %}</small><b>{{ pc.sats }}</b></div>
+    <div class="rsd-item"><small>{% translate "Invoices submitted" context "roblosats-admin" %}</small><b>{{ pc.invoices }}</b></div>
+    <div class="rsd-item"><small>{% translate "Failed attempts" context "roblosats-admin" %}</small><b>{{ pc.attempts }}</b></div>
+    <div class="rsd-item"><small>{% translate "Last attempt" context "roblosats-admin" %}</small><b>{{ pc.last|default:"—" }}</b></div>
+  </div>
+  <div class="rsd-grid" style="margin-top:.5rem">
+    <div class="rsd-item"><small>{% translate "Last error" context "roblosats-admin" %}</small><b>{{ pc.reason|default:"—" }}</b></div>
+    <div class="rsd-item"><small>{% translate "Where the current invoice goes" context "roblosats-admin" %}</small>{% with d=pc.destination %}{% include "roblosats_admin/_destination.html" %}{% endwith %}</div>
+    {% if pc.budget %}<div class="rsd-item"><small>{% translate "Routing fee budget (last invoice)" context "roblosats-admin" %}</small><b>{{ pc.budget }}</b></div>{% endif %}
+  </div>
+  {% if pc.same_destination %}<p style="margin-top:.6rem"><b>{% translate "All their invoices go to the same node." context "roblosats-admin" %}</b></p>{% elif pc.distinct_destinations > 1 %}<p style="margin-top:.6rem">{% blocktranslate trimmed context "roblosats-admin" with n=pc.distinct_destinations %}Their invoices have gone to {{ n }} different nodes.{% endblocktranslate %}</p>{% endif %}
+  {% if pc.live %}
+  <p class="rsd-note" style="margin-top:.4rem">{% blocktranslate trimmed context "roblosats-admin" with s=pc.timeout %}What to do: the sats wait in the coordinator and the buyer can submit another invoice from the app at any time. If the invoices keep going to the same destination they will most likely fail the same way: ask for an invoice from another wallet or node (with more inbound liquidity), or to wait and retry later. Each attempt lasts at most {{ s }} s.{% endblocktranslate %}</p>
+  {% endif %}
+  {% if pc.rows %}
+  <details style="margin-top:.5rem"><summary>{% translate "See their invoices" context "roblosats-admin" %} ({{ pc.rows|length }})</summary>
+    <div class="rsd-scroll" style="margin-top:.5rem"><table class="rsd-table">
+      <tr><th>{% translate "Submitted" context "roblosats-admin" %}</th><th>Sats</th><th>{% translate "Routing budget" context "roblosats-admin" %}</th><th>{% translate "Failures" context "roblosats-admin" %}</th><th>{% translate "Last failure" context "roblosats-admin" %}</th><th>{% translate "Status" context "roblosats-admin" %}</th><th>{% translate "Destination" context "roblosats-admin" %}</th></tr>
+      {% for f in pc.rows %}
+      <tr><td class="time">{{ f.time }}{% if f.current %} <span class="rsd-tag">{% translate "current" context "roblosats-admin" %}</span>{% endif %}</td><td>{{ f.sats }}</td><td>{{ f.budget|default:"—" }}</td>
+          <td>{{ f.failures }}</td><td class="time">{{ f.last|default:"—" }}</td>
+          <td>{% if f.url %}<a href="{{ f.url }}">{{ f.status }}</a>{% else %}{{ f.status }}{% endif %}</td>
+          <td>{% with d=f.destination %}{% include "roblosats_admin/_destination.html" %}{% endwith %}</td></tr>
+      {% endfor %}
+    </table></div>
+  </details>
+  {% endif %}
+  <p class="rsd-note" style="margin-top:.5rem"><a href="{{ failed_payouts_url }}">{% translate "All failed payouts" context "roblosats-admin" %} →</a></p>
+</section>
+{% endwith %}{% endif %}
+
 <section class="rsd-sec" id="funds">
   <h2>{% translate "Bonds, escrow and payout" context "roblosats-admin" %}</h2>
   <div class="rsd-scroll"><table class="rsd-table">

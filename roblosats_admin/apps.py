@@ -87,7 +87,7 @@ def _dispute_panel(oa):
     from django.urls import path, reverse
     from django.utils.html import format_html
 
-    from roblosats_admin import disputes, orders
+    from roblosats_admin import disputes, orders, payouts
     from roblosats_admin.i18n import _lazy
     from roblosats_admin.messaging import message_parties
 
@@ -104,6 +104,11 @@ def _dispute_panel(oa):
                 "disputes/",
                 wrap(lambda request: disputes.disputes_view(oa, request)),
                 name="api_order_disputes",
+            ),
+            path(
+                "failed-payouts/",
+                wrap(lambda request: payouts.failed_payouts_view(oa, request)),
+                name="api_order_failed_payouts",
             ),
             path(
                 "<int:order_id>/summary/",

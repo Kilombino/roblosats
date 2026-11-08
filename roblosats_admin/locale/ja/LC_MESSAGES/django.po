@@ -1238,3 +1238,279 @@ msgstr "メッセージは当事者間で暗号化されています。ここで
 msgctxt "roblosats-admin"
 msgid "Payment"
 msgstr "支払い"
+
+msgctxt "roblosats-admin"
+msgid "Failed payouts"
+msgstr "失敗した支払い"
+
+msgctxt "roblosats-admin"
+msgid "Lightning payment to the buyer not arriving"
+msgstr "買い手へのLightning支払いが届かない"
+
+msgctxt "roblosats-admin"
+msgid "Penalize the seller (no trade)"
+msgstr "売り手にペナルティ（取引なし）"
+
+msgctxt "roblosats-admin"
+msgid "Penalize the buyer (no trade)"
+msgstr "買い手にペナルティ（取引なし）"
+
+msgctxt "roblosats-admin"
+msgid "won the dispute: their bond + the trade amount"
+msgstr "紛争に勝利：保証金 + 取引額"
+
+msgctxt "roblosats-admin"
+msgid "their bond is returned"
+msgstr "保証金が返却される"
+
+msgctxt "roblosats-admin"
+msgid "their escrow is returned"
+msgstr "エスクローが返却される"
+
+msgctxt "roblosats-admin"
+msgid "their bond"
+msgstr "保証金"
+
+msgctxt "roblosats-admin"
+msgid "their escrow"
+msgstr "エスクロー"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s gets their escrow (%(escrow)s) back as a reward, but LOSES their bond (%(seller_bond)s), which the coordinator keeps."
+msgstr "売り手 %(seller)s はエスクロー（%(escrow)s）を報酬として取り戻しますが、保証金（%(seller_bond)s）を失い、コーディネーターが保持します。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets their bond (%(buyer_bond)s) back as a reward. They do not receive the trade sats."
+msgstr "買い手 %(buyer)s は保証金（%(buyer_bond)s）を報酬として取り戻します。取引の sats は受け取りません。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s LOSES their bond (%(buyer_bond)s), which the coordinator keeps."
+msgstr "買い手 %(buyer)s は保証金（%(buyer_bond)s）を失い、コーディネーターが保持します。"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s gets their bond (%(seller_bond)s) and their escrow (%(escrow)s) back as a reward."
+msgstr "売り手 %(seller)s は保証金（%(seller_bond)s）とエスクロー（%(escrow)s）を報酬として取り戻します。"
+
+msgctxt "roblosats-admin"
+msgid "There is no trade: nobody takes what they did not pay for. Rewards are withdrawn from the app."
+msgstr "取引は成立しません：支払っていないものは誰も受け取りません。報酬はアプリから引き出します。"
+
+msgctxt "roblosats-admin"
+msgid "Failing now"
+msgstr "現在失敗中"
+
+msgctxt "roblosats-admin"
+msgid "Ran out of time (%(s)s s) looking for a route, with routes still left to try"
+msgstr "ルート探索がタイムアウト（%(s)s 秒）、まだ試せるルートが残っていました"
+
+msgctxt "roblosats-admin"
+msgid "No route reached their wallet (all failed, or there was none)"
+msgstr "ウォレットに届くルートがありません（すべて失敗、またはルートなし）"
+
+msgctxt "roblosats-admin"
+msgid "Non-recoverable error while paying"
+msgstr "支払い中に回復不能なエラー"
+
+msgctxt "roblosats-admin"
+msgid "The invoice does not work for this payment (unknown hash, wrong amount or CLTV)"
+msgstr "このインボイスはこの支払いに使えません（不明なハッシュ、金額またはCLTVの誤り）"
+
+msgctxt "roblosats-admin"
+msgid "The coordinator's node did not have enough balance in its channels"
+msgstr "コーディネーターのノードのチャネル残高が不足していました"
+
+msgctxt "roblosats-admin"
+msgid "unknown reason"
+msgstr "不明な理由"
+
+msgctxt "roblosats-admin"
+msgid "not in the database"
+msgstr "データベースにありません"
+
+msgctxt "roblosats-admin"
+msgid "Failed payouts: history"
+msgstr "失敗した支払い：履歴"
+
+msgctxt "roblosats-admin"
+msgid "Failed payouts to the buyer"
+msgstr "買い手への失敗した支払い"
+
+msgctxt "roblosats-admin"
+msgid "Outcome of the dispute"
+msgstr "紛争の結果"
+
+msgctxt "roblosats-admin"
+msgid "What each party was credited as a reward, withdrawn from the app with a Lightning invoice, and what they lost. “Pending” is everything the robot still has to withdraw."
+msgstr "各当事者に報酬として付与された額（アプリからLightningインボイスで引き出し）と失った額。「未引き出し」はそのロボットがまだ引き出していない総額です。"
+
+msgctxt "roblosats-admin"
+msgid "Receives"
+msgstr "受け取る"
+
+msgctxt "roblosats-admin"
+msgid "Already withdrawn: nothing pending"
+msgstr "引き出し済み：残りなし"
+
+msgctxt "roblosats-admin"
+msgid "Pending withdrawal"
+msgstr "未引き出し"
+
+msgctxt "roblosats-admin"
+msgid "withdrawn in total"
+msgstr "引き出し累計"
+
+msgctxt "roblosats-admin"
+msgid "Can be withdrawn from"
+msgstr "引き出し可能になる日時"
+
+msgctxt "roblosats-admin"
+msgid "Loses"
+msgstr "失う"
+
+msgctxt "roblosats-admin"
+msgid "No change"
+msgstr "変更なし"
+
+msgctxt "roblosats-admin"
+msgid "Orders that went through a failed payout"
+msgstr "支払い失敗を経たオーダー"
+
+msgctxt "roblosats-admin"
+msgid "Payments to the buyer that have failed"
+msgstr "失敗した買い手への支払い"
+
+msgctxt "roblosats-admin"
+msgid "Sats to pay"
+msgstr "支払うsats"
+
+msgctxt "roblosats-admin"
+msgid "Invoices / attempts"
+msgstr "インボイス / 試行"
+
+msgctxt "roblosats-admin"
+msgid "Last attempt"
+msgstr "最後の試行"
+
+msgctxt "roblosats-admin"
+msgid "Last error"
+msgstr "最後のエラー"
+
+msgctxt "roblosats-admin"
+msgid "Where the invoice goes"
+msgstr "インボイスの宛先"
+
+msgctxt "roblosats-admin"
+msgid "How it ended"
+msgstr "結末"
+
+msgctxt "roblosats-admin"
+msgid "invoices"
+msgstr "インボイス"
+
+msgctxt "roblosats-admin"
+msgid "failed attempts"
+msgstr "失敗した試行"
+
+msgctxt "roblosats-admin"
+msgid "“Route hint”: the public node through which the buyer’s wallet says it can be reached (private channel). Hover over the short key to see it in full."
+msgstr "「ルートヒント」：買い手のウォレットが到達経路として示す公開ノード（プライベートチャネル）。短いキーにマウスを合わせると全体が表示されます。"
+
+msgctxt "roblosats-admin"
+msgid "No order has gone through a failed payout."
+msgstr "支払い失敗を経たオーダーはありません。"
+
+msgctxt "roblosats-admin"
+msgid "No payment to the buyer is failing right now."
+msgstr "現在、失敗している買い手への支払いはありません。"
+
+msgctxt "roblosats-admin"
+msgid "Orders that were in “Lightning payment to the buyer failed” and have left it. Taken from each order’s log (the %(history_limit)s most recent)."
+msgstr "「買い手へのLightning支払いが失敗」の状態を経て、すでに抜け出したオーダー。各オーダーのログから（最新 %(history_limit)s 件）。"
+
+msgctxt "roblosats-admin"
+msgid "The seller already received the fiat and the escrow is settled: the sats belong to the buyer, but the Lightning payment to their invoice does not arrive. The order stays like this until the buyer submits an invoice that can be paid; each attempt lasts at most %(timeout)s s."
+msgstr "売り手はすでに法定通貨を受け取り、エスクローは決済済みです：sats は買い手のものですが、そのインボイスへのLightning支払いが届きません。買い手が支払い可能なインボイスを送るまでオーダーはこのままです。各試行は最大 %(timeout)s 秒です。"
+
+msgctxt "roblosats-admin"
+msgid "The payment to the buyer is failing"
+msgstr "買い手への支払いが失敗しています"
+
+msgctxt "roblosats-admin"
+msgid "The payment to the buyer failed before succeeding"
+msgstr "買い手への支払いは成功する前に失敗していました"
+
+msgctxt "roblosats-admin"
+msgid "Sats to pay (current invoice)"
+msgstr "支払うsats（現在のインボイス）"
+
+msgctxt "roblosats-admin"
+msgid "Invoices submitted"
+msgstr "送られたインボイス"
+
+msgctxt "roblosats-admin"
+msgid "Failed attempts"
+msgstr "失敗した試行"
+
+msgctxt "roblosats-admin"
+msgid "Where the current invoice goes"
+msgstr "現在のインボイスの宛先"
+
+msgctxt "roblosats-admin"
+msgid "Routing fee budget (last invoice)"
+msgstr "ルーティング手数料の予算（最後のインボイス）"
+
+msgctxt "roblosats-admin"
+msgid "All their invoices go to the same node."
+msgstr "すべてのインボイスが同じノード宛てです。"
+
+msgctxt "roblosats-admin"
+msgid "See their invoices"
+msgstr "インボイスを見る"
+
+msgctxt "roblosats-admin"
+msgid "Submitted"
+msgstr "送信日時"
+
+msgctxt "roblosats-admin"
+msgid "Routing budget"
+msgstr "ルーティング予算"
+
+msgctxt "roblosats-admin"
+msgid "Failures"
+msgstr "失敗回数"
+
+msgctxt "roblosats-admin"
+msgid "Last failure"
+msgstr "最後の失敗"
+
+msgctxt "roblosats-admin"
+msgid "Destination"
+msgstr "宛先"
+
+msgctxt "roblosats-admin"
+msgid "current"
+msgstr "現在"
+
+msgctxt "roblosats-admin"
+msgid "All failed payouts"
+msgstr "すべての失敗した支払い"
+
+msgctxt "roblosats-admin"
+msgid "Their invoices have gone to %(n)s different nodes."
+msgstr "インボイスは %(n)s 個の異なるノード宛てでした。"
+
+msgctxt "roblosats-admin"
+msgid "What to do: the sats wait in the coordinator and the buyer can submit another invoice from the app at any time. If the invoices keep going to the same destination they will most likely fail the same way: ask for an invoice from another wallet or node (with more inbound liquidity), or to wait and retry later. Each attempt lasts at most %(s)s s."
+msgstr "対処：sats はコーディネーターで待機しており、買い手はいつでもアプリから別のインボイスを送れます。インボイスが同じ宛先のままだと同じように失敗する可能性が高いです：別のウォレットやノード（受信流動性が多いもの）のインボイスを頼むか、時間をおいて再試行してもらってください。各試行は最大 %(s)s 秒です。"
+
+msgctxt "roblosats-admin"
+msgid "route hint via"
+msgstr "ルートヒント経由"
+
+msgctxt "roblosats-admin"
+msgid "The buyer is not getting paid"
+msgstr "買い手に支払いが届いていません"
+
+msgctxt "roblosats-admin"
+msgid "Failed payouts: %(n)s"
+msgstr "失敗した支払い：%(n)s"

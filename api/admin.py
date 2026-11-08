@@ -180,6 +180,8 @@ class OrderAdmin(AdminChangeLinksMixin, admin.ModelAdmin):
         "maker_wins",
         "taker_wins",
         "return_everything",
+        "penalize_maker",
+        "penalize_taker",
         "successful_trade",
         "compute_median_trade_time",
     ]
@@ -334,6 +336,48 @@ class OrderAdmin(AdminChangeLinksMixin, admin.ModelAdmin):
                     f"Order {order.id} is not in a disputed state, or its escrow is not settled",
                     messages.ERROR,
                 )
+
+    def _penalize(self, request, queryset, guilty):
+        """Cancels a disputed trade with no winner: the escrow goes back to whoever
+        sent it and the innocent side gets its bond back, but the guilty side's bond
+        stays with the coordinator. Unlike "maker/taker wins", nobody gets trade sats
+        they did not pay for (e.g. a seller who never answers the buyer)."""
+        for order in queryset:
+            locked = _lock_disputed(order)
+            if locked is None:
+                self.message_user(
+                    request,
+                    f"Order {order.id} is not in a disputed state, or its escrow is not settled",
+                    messages.ERROR,
+                )
+                continue
+            order = locked
+            innocent_bond = order.taker_bond if guilty == "maker" else order.maker_bond
+            _credit(innocent_bond.sender.robot, innocent_bond.num_satoshis, order, "bond_back")
+            _credit(
+                order.trade_escrow.sender.robot,
+                order.trade_escrow.num_satoshis,
+                order,
+                "escrow_back",
+            )
+            order.update_status(Order.Status.MLD if guilty == "maker" else Order.Status.TLD)
+            self.message_user(
+                request,
+                f"Order {order.id}: {guilty} penalized (bond kept), escrow returned to its "
+                f"sender and the other bond returned, as compensations",
+                messages.SUCCESS,
+            )
+            send_notification.delay(order_id=order.id, message="dispute_closed")
+
+    @admin.action(description="Solve dispute: penalize maker (no trade, maker loses bond)")
+    @transaction.atomic
+    def penalize_maker(self, request, queryset):
+        self._penalize(request, queryset, "maker")
+
+    @admin.action(description="Solve dispute: penalize taker (no trade, taker loses bond)")
+    @transaction.atomic
+    def penalize_taker(self, request, queryset):
+        self._penalize(request, queryset, "taker")
 
     @admin.action(description="Solve dispute: successful trade")
     @transaction.atomic

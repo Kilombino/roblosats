@@ -1238,3 +1238,279 @@ msgstr "消息在双方之间加密：这里只能看到数量、发送者和时
 msgctxt "roblosats-admin"
 msgid "Payment"
 msgstr "付款"
+
+msgctxt "roblosats-admin"
+msgid "Failed payouts"
+msgstr "失败的付款"
+
+msgctxt "roblosats-admin"
+msgid "Lightning payment to the buyer not arriving"
+msgstr "向买方的闪电支付未到账"
+
+msgctxt "roblosats-admin"
+msgid "Penalize the seller (no trade)"
+msgstr "处罚卖方（不成交）"
+
+msgctxt "roblosats-admin"
+msgid "Penalize the buyer (no trade)"
+msgstr "处罚买方（不成交）"
+
+msgctxt "roblosats-admin"
+msgid "won the dispute: their bond + the trade amount"
+msgstr "赢得争议：其保证金 + 交易金额"
+
+msgctxt "roblosats-admin"
+msgid "their bond is returned"
+msgstr "退还其保证金"
+
+msgctxt "roblosats-admin"
+msgid "their escrow is returned"
+msgstr "退还其托管资金"
+
+msgctxt "roblosats-admin"
+msgid "their bond"
+msgstr "其保证金"
+
+msgctxt "roblosats-admin"
+msgid "their escrow"
+msgstr "其托管资金"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s gets their escrow (%(escrow)s) back as a reward, but LOSES their bond (%(seller_bond)s), which the coordinator keeps."
+msgstr "卖方 %(seller)s 以奖励形式取回其托管资金（%(escrow)s），但失去其保证金（%(seller_bond)s），由协调者保留。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets their bond (%(buyer_bond)s) back as a reward. They do not receive the trade sats."
+msgstr "买方 %(buyer)s 以奖励形式取回其保证金（%(buyer_bond)s）。不会收到交易的聪。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s LOSES their bond (%(buyer_bond)s), which the coordinator keeps."
+msgstr "买方 %(buyer)s 失去其保证金（%(buyer_bond)s），由协调者保留。"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s gets their bond (%(seller_bond)s) and their escrow (%(escrow)s) back as a reward."
+msgstr "卖方 %(seller)s 以奖励形式取回其保证金（%(seller_bond)s）和托管资金（%(escrow)s）。"
+
+msgctxt "roblosats-admin"
+msgid "There is no trade: nobody takes what they did not pay for. Rewards are withdrawn from the app."
+msgstr "不成交：谁都拿不到自己没付钱的东西。奖励在应用中提取。"
+
+msgctxt "roblosats-admin"
+msgid "Failing now"
+msgstr "当前失败"
+
+msgctxt "roblosats-admin"
+msgid "Ran out of time (%(s)s s) looking for a route, with routes still left to try"
+msgstr "寻找路由超时（%(s)s 秒），仍有路由未尝试"
+
+msgctxt "roblosats-admin"
+msgid "No route reached their wallet (all failed, or there was none)"
+msgstr "没有路由能到达其钱包（全部失败或根本没有）"
+
+msgctxt "roblosats-admin"
+msgid "Non-recoverable error while paying"
+msgstr "支付时出现不可恢复的错误"
+
+msgctxt "roblosats-admin"
+msgid "The invoice does not work for this payment (unknown hash, wrong amount or CLTV)"
+msgstr "该发票不适用于此付款（未知哈希、金额或 CLTV 错误）"
+
+msgctxt "roblosats-admin"
+msgid "The coordinator's node did not have enough balance in its channels"
+msgstr "协调者节点的通道余额不足"
+
+msgctxt "roblosats-admin"
+msgid "unknown reason"
+msgstr "未知原因"
+
+msgctxt "roblosats-admin"
+msgid "not in the database"
+msgstr "不在数据库中"
+
+msgctxt "roblosats-admin"
+msgid "Failed payouts: history"
+msgstr "失败的付款：历史"
+
+msgctxt "roblosats-admin"
+msgid "Failed payouts to the buyer"
+msgstr "向买方的失败付款"
+
+msgctxt "roblosats-admin"
+msgid "Outcome of the dispute"
+msgstr "争议结果"
+
+msgctxt "roblosats-admin"
+msgid "What each party was credited as a reward, withdrawn from the app with a Lightning invoice, and what they lost. “Pending” is everything the robot still has to withdraw."
+msgstr "各方获得的奖励（在应用中用闪电发票提取）以及损失的部分。“待提取”是该机器人仍需提取的全部金额。"
+
+msgctxt "roblosats-admin"
+msgid "Receives"
+msgstr "获得"
+
+msgctxt "roblosats-admin"
+msgid "Already withdrawn: nothing pending"
+msgstr "已提取：无待提取"
+
+msgctxt "roblosats-admin"
+msgid "Pending withdrawal"
+msgstr "待提取"
+
+msgctxt "roblosats-admin"
+msgid "withdrawn in total"
+msgstr "累计已提取"
+
+msgctxt "roblosats-admin"
+msgid "Can be withdrawn from"
+msgstr "可提取时间起"
+
+msgctxt "roblosats-admin"
+msgid "Loses"
+msgstr "失去"
+
+msgctxt "roblosats-admin"
+msgid "No change"
+msgstr "无变化"
+
+msgctxt "roblosats-admin"
+msgid "Orders that went through a failed payout"
+msgstr "曾经付款失败的订单"
+
+msgctxt "roblosats-admin"
+msgid "Payments to the buyer that have failed"
+msgstr "向买方的付款失败"
+
+msgctxt "roblosats-admin"
+msgid "Sats to pay"
+msgstr "待付聪"
+
+msgctxt "roblosats-admin"
+msgid "Invoices / attempts"
+msgstr "发票 / 尝试"
+
+msgctxt "roblosats-admin"
+msgid "Last attempt"
+msgstr "最近一次尝试"
+
+msgctxt "roblosats-admin"
+msgid "Last error"
+msgstr "最近的错误"
+
+msgctxt "roblosats-admin"
+msgid "Where the invoice goes"
+msgstr "发票的去向"
+
+msgctxt "roblosats-admin"
+msgid "How it ended"
+msgstr "最终结果"
+
+msgctxt "roblosats-admin"
+msgid "invoices"
+msgstr "发票"
+
+msgctxt "roblosats-admin"
+msgid "failed attempts"
+msgstr "失败尝试"
+
+msgctxt "roblosats-admin"
+msgid "“Route hint”: the public node through which the buyer’s wallet says it can be reached (private channel). Hover over the short key to see it in full."
+msgstr "“路由提示”：买方钱包声称可通过其到达的公共节点（私有通道）。将鼠标悬停在短密钥上可查看完整内容。"
+
+msgctxt "roblosats-admin"
+msgid "No order has gone through a failed payout."
+msgstr "没有订单出现过付款失败。"
+
+msgctxt "roblosats-admin"
+msgid "No payment to the buyer is failing right now."
+msgstr "目前没有向买方的付款失败。"
+
+msgctxt "roblosats-admin"
+msgid "Orders that were in “Lightning payment to the buyer failed” and have left it. Taken from each order’s log (the %(history_limit)s most recent)."
+msgstr "曾处于“向买方的闪电支付失败”并已离开该状态的订单。取自每个订单的日志（最近 %(history_limit)s 个）。"
+
+msgctxt "roblosats-admin"
+msgid "The seller already received the fiat and the escrow is settled: the sats belong to the buyer, but the Lightning payment to their invoice does not arrive. The order stays like this until the buyer submits an invoice that can be paid; each attempt lasts at most %(timeout)s s."
+msgstr "卖方已收到法币且托管资金已结算：这些聪属于买方，但向其发票的闪电支付未到账。在买方提交可支付的发票之前，订单会一直保持此状态；每次尝试最多持续 %(timeout)s 秒。"
+
+msgctxt "roblosats-admin"
+msgid "The payment to the buyer is failing"
+msgstr "向买方的付款正在失败"
+
+msgctxt "roblosats-admin"
+msgid "The payment to the buyer failed before succeeding"
+msgstr "向买方的付款在成功之前曾失败"
+
+msgctxt "roblosats-admin"
+msgid "Sats to pay (current invoice)"
+msgstr "待付聪（当前发票）"
+
+msgctxt "roblosats-admin"
+msgid "Invoices submitted"
+msgstr "已提交的发票"
+
+msgctxt "roblosats-admin"
+msgid "Failed attempts"
+msgstr "失败尝试"
+
+msgctxt "roblosats-admin"
+msgid "Where the current invoice goes"
+msgstr "当前发票的去向"
+
+msgctxt "roblosats-admin"
+msgid "Routing fee budget (last invoice)"
+msgstr "路由费预算（最后一张发票）"
+
+msgctxt "roblosats-admin"
+msgid "All their invoices go to the same node."
+msgstr "其所有发票都指向同一个节点。"
+
+msgctxt "roblosats-admin"
+msgid "See their invoices"
+msgstr "查看其发票"
+
+msgctxt "roblosats-admin"
+msgid "Submitted"
+msgstr "提交时间"
+
+msgctxt "roblosats-admin"
+msgid "Routing budget"
+msgstr "路由预算"
+
+msgctxt "roblosats-admin"
+msgid "Failures"
+msgstr "失败次数"
+
+msgctxt "roblosats-admin"
+msgid "Last failure"
+msgstr "最近一次失败"
+
+msgctxt "roblosats-admin"
+msgid "Destination"
+msgstr "目的地"
+
+msgctxt "roblosats-admin"
+msgid "current"
+msgstr "当前"
+
+msgctxt "roblosats-admin"
+msgid "All failed payouts"
+msgstr "所有失败的付款"
+
+msgctxt "roblosats-admin"
+msgid "Their invoices have gone to %(n)s different nodes."
+msgstr "其发票指向了 %(n)s 个不同的节点。"
+
+msgctxt "roblosats-admin"
+msgid "What to do: the sats wait in the coordinator and the buyer can submit another invoice from the app at any time. If the invoices keep going to the same destination they will most likely fail the same way: ask for an invoice from another wallet or node (with more inbound liquidity), or to wait and retry later. Each attempt lasts at most %(s)s s."
+msgstr "怎么办：这些聪在协调者处等待，买方可随时在应用中提交新的发票。如果发票一直指向同一目的地，很可能会以同样方式失败：请其提供来自其他钱包或节点（入站流动性更多）的发票，或稍后再试。每次尝试最多持续 %(s)s 秒。"
+
+msgctxt "roblosats-admin"
+msgid "route hint via"
+msgstr "路由提示经由"
+
+msgctxt "roblosats-admin"
+msgid "The buyer is not getting paid"
+msgstr "买方收不到付款"
+
+msgctxt "roblosats-admin"
+msgid "Failed payouts: %(n)s"
+msgstr "失败的付款：%(n)s"

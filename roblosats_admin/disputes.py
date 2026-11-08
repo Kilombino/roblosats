@@ -63,8 +63,25 @@ DECISIONS = {
     "buyer": _lazy("Buyer wins"),
     "seller": _lazy("Seller wins"),
     "return": _lazy("Return everything"),
+    "penalize_seller": _lazy("Penalize the seller (no trade)"),
+    "penalize_buyer": _lazy("Penalize the buyer (no trade)"),
     "completed": _lazy("Trade completed (pay the buyer)"),
 }
+
+# note of a coord_reward_ledger row (written by api/admin.py _credit) -> plain text
+REWARD_REASONS = {
+    "maker_wins": _lazy("won the dispute: their bond + the trade amount"),
+    "taker_wins": _lazy("won the dispute: their bond + the trade amount"),
+    "maker_bond": _lazy("their bond is returned"),
+    "taker_bond": _lazy("their bond is returned"),
+    "bond_back": _lazy("their bond is returned"),
+    "escrow": _lazy("their escrow is returned"),
+    "escrow_back": _lazy("their escrow is returned"),
+}
+# Who does not lose their bond: whoever gets it back, or wins (the bond is in the prize).
+# The seller keeps their escrow if it is returned or if they win.
+BOND_KEPT = {"maker_bond", "taker_bond", "bond_back", "maker_wins", "taker_wins"}
+ESCROW_KEPT = {"escrow", "escrow_back", "maker_wins", "taker_wins"}
 
 RECIPIENTS = ("buyer", "seller", "both")
 
@@ -342,9 +359,97 @@ def action_for(order, decision):
         return "taker_wins" if maker_buys else "maker_wins"
     if decision == "return":
         return "return_everything"
+    # Penalize: nobody takes the trade; the guilty party loses their bond.
+    if decision == "penalize_seller":
+        return "penalize_taker" if maker_buys else "penalize_maker"
+    if decision == "penalize_buyer":
+        return "penalize_maker" if maker_buys else "penalize_taker"
     if decision == "completed":
         return "successful_trade"
     return None
+
+
+def _credits(order):
+    """Admin credits of this order in the reward ledger, by robot id:
+    {"sats", "notes", "available"}. Empty while the dispute is unresolved."""
+    from django.db import connection, transaction
+
+    credits = {}
+    try:
+        # savepoint: on a coordinator that never credited anything the ledger table
+        # does not exist yet, and a failed query must not abort the page's transaction
+        with transaction.atomic(), connection.cursor() as c:
+            c.execute(
+                "SELECT robot_id, SUM(amount), string_agg(DISTINCT note, '|'), "
+                "MAX(available_at) FROM coord_reward_ledger "
+                "WHERE order_id = %s AND kind = 'admin' AND amount > 0 "
+                "GROUP BY robot_id",
+                [order.pk],
+            )
+            for robot_id, sats, notes, available in c.fetchall():
+                credits[robot_id] = {
+                    "sats": int(sats),
+                    "notes": {n for n in (notes or "").split("|") if n},
+                    "available": available,
+                }
+    except Exception:  # noqa: BLE001 - extra information, never break the page
+        return {}
+    return credits
+
+
+def outcome(order):
+    """For a resolved dispute: per party, what they RECEIVE as a reward (from the
+    reward ledger) and what they LOSE (bond and/or escrow not returned). [] while
+    nothing has been credited for this order.
+
+    earned_rewards / claimed_rewards belong to the ROBOT (all its orders), so the
+    pending amount is shown for the robot as a whole."""
+    credits = _credits(order)
+    if not credits:
+        return []
+    r = roles(order)
+    escrow = order.trade_escrow
+    now = timezone.now()
+    rows = []
+    for user, role, side, bond, is_seller in (
+        (r["buyer"], "buyer", r["buyer_side"], r["buyer_bond"], False),
+        (r["seller"], "seller", r["seller_side"], r["seller_bond"], True),
+    ):
+        robot = getattr(user, "robot", None) if user else None
+        credit = credits.get(robot.id) if robot else None
+        notes = credit["notes"] if credit else set()
+        received = credit["sats"] if credit else 0
+        available = credit["available"] if credit else None
+        losses = []
+        if bond and not (notes & BOND_KEPT):
+            losses.append({"what": _("their bond"), "sats": fmt_sats(bond.num_satoshis)})
+        if is_seller and escrow and not (notes & ESCROW_KEPT):
+            losses.append(
+                {"what": _("their escrow"), "sats": fmt_sats(escrow.num_satoshis)}
+            )
+        pending = int(robot.earned_rewards) if robot else None
+        claimed = int(robot.claimed_rewards) if robot else None
+        rows.append(
+            {
+                "role": role,
+                "role_label": role_name(role),
+                "side_label": side_name(side),
+                "nick": user.username if user else _("(nobody)"),
+                "received": fmt_sats(received),
+                "received_n": received,
+                "reason": ", ".join(
+                    str(REWARD_REASONS.get(n, n)) for n in sorted(notes)
+                ),
+                "losses": losses,
+                "pending": fmt_sats(pending) if pending is not None else "?",
+                "claimed": fmt_sats(claimed) if claimed is not None else "?",
+                "all_claimed": pending == 0,
+                "available": fmt_time(available)
+                if available and available > now
+                else "",
+            }
+        )
+    return rows
 
 
 def is_open_dispute(order):
@@ -427,6 +532,44 @@ def plan(order, decision):
             % values
         )
         lines.append(_("The order ends as collaboratively cancelled."))
+    elif decision in ("penalize_seller", "penalize_buyer"):
+        if decision == "penalize_seller":
+            lines.append(
+                _(
+                    "The seller %(seller)s gets their escrow (%(escrow)s) back as a "
+                    "reward, but LOSES their bond (%(seller_bond)s), which the "
+                    "coordinator keeps."
+                )
+                % values
+            )
+            lines.append(
+                _(
+                    "The buyer %(buyer)s gets their bond (%(buyer_bond)s) back as a "
+                    "reward. They do not receive the trade sats."
+                )
+                % values
+            )
+        else:
+            lines.append(
+                _(
+                    "The buyer %(buyer)s LOSES their bond (%(buyer_bond)s), which the "
+                    "coordinator keeps."
+                )
+                % values
+            )
+            lines.append(
+                _(
+                    "The seller %(seller)s gets their bond (%(seller_bond)s) and their "
+                    "escrow (%(escrow)s) back as a reward."
+                )
+                % values
+            )
+        lines.append(
+            _(
+                "There is no trade: nobody takes what they did not pay for. Rewards "
+                "are withdrawn from the app."
+            )
+        )
     elif decision == "completed":
         if payout is None:
             missing.append(_("the buyer never submitted a payout invoice or address"))
@@ -693,6 +836,7 @@ def _context(order_admin, request, order, confirm=None):
         "max_message": MESSAGE_MAX,
         "message_head": message_head(order.pk),
         "plans": [plans[k] for k in DECISIONS],
+        "outcome": outcome(order),
         "confirm": plans.get(confirm),
         "log": render_log(order.logs, role_by_nick),
         "escrow": _payment(order.trade_escrow),

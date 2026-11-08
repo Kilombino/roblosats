@@ -19,6 +19,16 @@ It patches the already-registered `api` admin classes in `ready()` instead of ed
 
 - Opening a disputed order's change page (GET) redirects to its dispute page; `?raw=1` keeps
   the Django form (the dispute page links to it with that parameter).
+- "Penalize the seller / buyer (no trade)" call `penalize_maker` / `penalize_taker` (in
+  `api/admin.py`, same guards as the other resolutions): the escrow goes back to its sender and
+  the innocent side's bond back, as rewards; the guilty side's bond stays with the coordinator and
+  nobody gets trade sats they did not pay for. The order ends MLD/TLD like "maker/taker wins".
+- Once resolved, the "Outcome" section (`outcome`) shows per party what was credited (the
+  `coord_reward_ledger` rows with `kind='admin'` for the order) and what they lost: the bond
+  unless a note in `BOND_KEPT`, the seller's escrow unless in `ESCROW_KEPT`. `earned_rewards` /
+  `claimed_rewards` are per robot, not per order, so "pending" is the robot's total.
+  `order.payout` is NOT the source of truth after a "penalize": it can be an orphan from when the
+  dispute opened (valid status, expired invoice) and is never paid.
 - The list takes `?view=open` (default: open disputes + last 30 past), `waiting` (status 16
   only) or `history` (open + up to 500 past). The sidebar's dispute entries and the dashboard
   link to these views, not to changelist filters.
@@ -34,6 +44,18 @@ It patches the already-registered `api` admin classes in `ready()` instead of ed
 - The order list has an "Order page" column; opening any order's change page (GET) redirects
   here, or to the dispute page when `is_disputed`. `?raw=1` keeps the Django form.
 - `_party_summary.html` prints the statement line only when `p.show_statement` (dispute page).
+
+## Failed payouts (`payouts.py`)
+- `/coordinator/api/order/failed-payouts/` (`?view=now`: status 15; `history`: orders whose log
+  went into 15 and left it, last 200). The order page shows the same block when it applies.
+- The database keeps only the current payout invoice, so invoices and failed attempts come from
+  the order's JSON log (`read_history`: "added the invoice LNPayment(<64 hex>…) as payout
+  method", "Payment LNPayment(…) **failed**. Failure reason: …", "to 15: *Failed lightning").
+- Destinations (final node + route-hint nodes) are decoded by the coordinator's LND
+  (`DecodePayReq`, `GetNodeInfo` for aliases), cached 30 days / 1 day / 5 min on errors, with an
+  8 s budget per page (`Budget`): a slow or absent LND shows "unknown", never hangs the page.
+  Full invoices are never rendered. Read-only.
+- Sidebar entry with the status-15 badge, dashboard card and banner.
 
 ## Telegram alerts (`models.py`, `alerts.py`, `admin.py`)
 - One row (`TelegramAlerts`, pk 1, migration `0001_roblosats_telegram_alerts`) edited at

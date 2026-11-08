@@ -1,0 +1,40 @@
+{% extends "admin/base_site.html" %}{% load i18n %}
+{% block extrastyle %}{{ block.super }}{% include "roblosats_admin/_style.html" %}{% endblock %}
+{% block content %}
+<div class="rsd">
+<div class="rsd-top">
+  <nav class="rsd-langs" style="justify-content:flex-start;font-size:.9rem">{% for t in tabs %}<a href="{{ t.url }}"{% if t.current %} class="current" aria-current="page"{% endif %}>{{ t.label }}</a>{% endfor %}</nav>
+  {% include "roblosats_admin/_langs.html" %}
+</div>
+<section class="rsd-sec">
+  {% if view == "history" %}
+  <h2>{% translate "Orders that went through a failed payout" context "roblosats-admin" %}</h2>
+  <p class="rsd-note">{% blocktranslate trimmed context "roblosats-admin" %}Orders that were in “Lightning payment to the buyer failed” and have left it. Taken from each order’s log (the {{ history_limit }} most recent).{% endblocktranslate %}</p>
+  {% else %}
+  <h2>{% translate "Payments to the buyer that have failed" context "roblosats-admin" %}</h2>
+  <p class="rsd-note">{% blocktranslate trimmed context "roblosats-admin" %}The seller already received the fiat and the escrow is settled: the sats belong to the buyer, but the Lightning payment to their invoice does not arrive. The order stays like this until the buyer submits an invoice that can be paid; each attempt lasts at most {{ timeout }} s.{% endblocktranslate %}</p>
+  {% endif %}
+  {% if rows %}
+  <div class="rsd-scroll" style="margin-top:.6rem"><table class="rsd-table">
+    <tr><th>{% translate "Order" context "roblosats-admin" %}</th><th>{% translate "Amount" context "roblosats-admin" %}</th><th>{% translate "Buyer" context "roblosats-admin" %}</th><th>{% translate "Sats to pay" context "roblosats-admin" %}</th><th>{% translate "Invoices / attempts" context "roblosats-admin" %}</th><th>{% translate "Last attempt" context "roblosats-admin" %} ({{ tz }})</th><th>{% translate "Last error" context "roblosats-admin" %}</th><th>{% translate "Where the invoice goes" context "roblosats-admin" %}</th>{% if view == "history" %}<th>{% translate "How it ended" context "roblosats-admin" %}</th>{% endif %}</tr>
+    {% for f in rows %}
+    <tr>
+      <td><a href="{{ f.url }}"><b>{{ f.id }}</b></a></td>
+      <td>{{ f.amount }} {{ f.currency }}</td>
+      <td>{{ f.buyer }}</td>
+      <td>{{ f.sats }}</td>
+      <td>{% translate "invoices" context "roblosats-admin" %}: {{ f.invoices }} · {% translate "failed attempts" context "roblosats-admin" %}: {{ f.attempts }}</td>
+      <td class="time">{{ f.last|default:"—" }}</td>
+      <td>{{ f.reason|default:"—" }}</td>
+      <td>{% with d=f.destination %}{% include "roblosats_admin/_destination.html" %}{% endwith %}</td>
+      {% if view == "history" %}<td>{% if f.completed %}<span class="rsd-good">{{ f.status }}</span>{% else %}{{ f.status }}{% endif %}</td>{% endif %}
+    </tr>
+    {% endfor %}
+  </table></div>
+  <p class="rsd-note" style="margin-top:.5rem">{% translate "“Route hint”: the public node through which the buyer’s wallet says it can be reached (private channel). Hover over the short key to see it in full." context "roblosats-admin" %}</p>
+  {% else %}
+  <p class="rsd-empty">{% if view == "history" %}{% translate "No order has gone through a failed payout." context "roblosats-admin" %}{% else %}{% translate "No payment to the buyer is failing right now." context "roblosats-admin" %}{% endif %}</p>
+  {% endif %}
+</section>
+</div>
+{% endblock %}

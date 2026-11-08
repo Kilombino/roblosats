@@ -1238,3 +1238,279 @@ msgstr "Les messages sont chiffrés entre eux : vous ne voyez ici que leur nombr
 msgctxt "roblosats-admin"
 msgid "Payment"
 msgstr "Paiement"
+
+msgctxt "roblosats-admin"
+msgid "Failed payouts"
+msgstr "Paiements échoués"
+
+msgctxt "roblosats-admin"
+msgid "Lightning payment to the buyer not arriving"
+msgstr "le paiement Lightning à l'acheteur n'arrive pas"
+
+msgctxt "roblosats-admin"
+msgid "Penalize the seller (no trade)"
+msgstr "Pénaliser le vendeur (sans échange)"
+
+msgctxt "roblosats-admin"
+msgid "Penalize the buyer (no trade)"
+msgstr "Pénaliser l'acheteur (sans échange)"
+
+msgctxt "roblosats-admin"
+msgid "won the dispute: their bond + the trade amount"
+msgstr "a gagné le litige : sa caution + le montant de l'échange"
+
+msgctxt "roblosats-admin"
+msgid "their bond is returned"
+msgstr "sa caution lui est restituée"
+
+msgctxt "roblosats-admin"
+msgid "their escrow is returned"
+msgstr "son séquestre lui est restitué"
+
+msgctxt "roblosats-admin"
+msgid "their bond"
+msgstr "sa caution"
+
+msgctxt "roblosats-admin"
+msgid "their escrow"
+msgstr "son séquestre"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s gets their escrow (%(escrow)s) back as a reward, but LOSES their bond (%(seller_bond)s), which the coordinator keeps."
+msgstr "Le vendeur %(seller)s récupère son séquestre (%(escrow)s) en récompense, mais PERD sa caution (%(seller_bond)s), que le coordinateur conserve."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets their bond (%(buyer_bond)s) back as a reward. They do not receive the trade sats."
+msgstr "L'acheteur %(buyer)s récupère sa caution (%(buyer_bond)s) en récompense. Il ne reçoit pas les sats de l'échange."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s LOSES their bond (%(buyer_bond)s), which the coordinator keeps."
+msgstr "L'acheteur %(buyer)s PERD sa caution (%(buyer_bond)s), que le coordinateur conserve."
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s gets their bond (%(seller_bond)s) and their escrow (%(escrow)s) back as a reward."
+msgstr "Le vendeur %(seller)s récupère sa caution (%(seller_bond)s) et son séquestre (%(escrow)s) en récompense."
+
+msgctxt "roblosats-admin"
+msgid "There is no trade: nobody takes what they did not pay for. Rewards are withdrawn from the app."
+msgstr "Il n'y a pas d'échange : personne ne prend ce qu'il n'a pas payé. Les récompenses se retirent depuis l'application."
+
+msgctxt "roblosats-admin"
+msgid "Failing now"
+msgstr "En échec maintenant"
+
+msgctxt "roblosats-admin"
+msgid "Ran out of time (%(s)s s) looking for a route, with routes still left to try"
+msgstr "Temps écoulé (%(s)s s) en cherchant une route, alors qu'il restait des routes à essayer"
+
+msgctxt "roblosats-admin"
+msgid "No route reached their wallet (all failed, or there was none)"
+msgstr "Aucune route n'a atteint son portefeuille (toutes ont échoué ou il n'y en avait aucune)"
+
+msgctxt "roblosats-admin"
+msgid "Non-recoverable error while paying"
+msgstr "Erreur irrécupérable lors du paiement"
+
+msgctxt "roblosats-admin"
+msgid "The invoice does not work for this payment (unknown hash, wrong amount or CLTV)"
+msgstr "La facture ne convient pas à ce paiement (hash inconnu, montant ou CLTV incorrect)"
+
+msgctxt "roblosats-admin"
+msgid "The coordinator's node did not have enough balance in its channels"
+msgstr "Le nœud du coordinateur n'avait pas assez de solde dans ses canaux"
+
+msgctxt "roblosats-admin"
+msgid "unknown reason"
+msgstr "raison inconnue"
+
+msgctxt "roblosats-admin"
+msgid "not in the database"
+msgstr "absent de la base de données"
+
+msgctxt "roblosats-admin"
+msgid "Failed payouts: history"
+msgstr "Paiements échoués : historique"
+
+msgctxt "roblosats-admin"
+msgid "Failed payouts to the buyer"
+msgstr "Paiements échoués à l'acheteur"
+
+msgctxt "roblosats-admin"
+msgid "Outcome of the dispute"
+msgstr "Issue du litige"
+
+msgctxt "roblosats-admin"
+msgid "What each party was credited as a reward, withdrawn from the app with a Lightning invoice, and what they lost. “Pending” is everything the robot still has to withdraw."
+msgstr "Ce que chaque partie a reçu en récompense, à retirer depuis l'application avec une facture Lightning, et ce qu'elle a perdu. « En attente » est tout ce que le robot doit encore retirer."
+
+msgctxt "roblosats-admin"
+msgid "Receives"
+msgstr "Reçoit"
+
+msgctxt "roblosats-admin"
+msgid "Already withdrawn: nothing pending"
+msgstr "Déjà retiré : rien en attente"
+
+msgctxt "roblosats-admin"
+msgid "Pending withdrawal"
+msgstr "Retrait en attente"
+
+msgctxt "roblosats-admin"
+msgid "withdrawn in total"
+msgstr "retiré au total"
+
+msgctxt "roblosats-admin"
+msgid "Can be withdrawn from"
+msgstr "Peut être retiré à partir du"
+
+msgctxt "roblosats-admin"
+msgid "Loses"
+msgstr "Perd"
+
+msgctxt "roblosats-admin"
+msgid "No change"
+msgstr "Aucun changement"
+
+msgctxt "roblosats-admin"
+msgid "Orders that went through a failed payout"
+msgstr "Ordres passés par un paiement échoué"
+
+msgctxt "roblosats-admin"
+msgid "Payments to the buyer that have failed"
+msgstr "Paiements à l'acheteur qui ont échoué"
+
+msgctxt "roblosats-admin"
+msgid "Sats to pay"
+msgstr "Sats à payer"
+
+msgctxt "roblosats-admin"
+msgid "Invoices / attempts"
+msgstr "Factures / tentatives"
+
+msgctxt "roblosats-admin"
+msgid "Last attempt"
+msgstr "Dernière tentative"
+
+msgctxt "roblosats-admin"
+msgid "Last error"
+msgstr "Dernière erreur"
+
+msgctxt "roblosats-admin"
+msgid "Where the invoice goes"
+msgstr "Où va la facture"
+
+msgctxt "roblosats-admin"
+msgid "How it ended"
+msgstr "Comment cela s'est terminé"
+
+msgctxt "roblosats-admin"
+msgid "invoices"
+msgstr "factures"
+
+msgctxt "roblosats-admin"
+msgid "failed attempts"
+msgstr "tentatives échouées"
+
+msgctxt "roblosats-admin"
+msgid "“Route hint”: the public node through which the buyer’s wallet says it can be reached (private channel). Hover over the short key to see it in full."
+msgstr "« Indice de route » : le nœud public par lequel le portefeuille de l'acheteur dit être joignable (canal privé). Survolez la clé courte pour la voir en entier."
+
+msgctxt "roblosats-admin"
+msgid "No order has gone through a failed payout."
+msgstr "Aucun ordre n'est passé par un paiement échoué."
+
+msgctxt "roblosats-admin"
+msgid "No payment to the buyer is failing right now."
+msgstr "Aucun paiement à l'acheteur n'échoue en ce moment."
+
+msgctxt "roblosats-admin"
+msgid "Orders that were in “Lightning payment to the buyer failed” and have left it. Taken from each order’s log (the %(history_limit)s most recent)."
+msgstr "Ordres qui ont été en « Échec du paiement Lightning à l'acheteur » et en sont sortis. Tiré du journal de chaque ordre (les %(history_limit)s plus récents)."
+
+msgctxt "roblosats-admin"
+msgid "The seller already received the fiat and the escrow is settled: the sats belong to the buyer, but the Lightning payment to their invoice does not arrive. The order stays like this until the buyer submits an invoice that can be paid; each attempt lasts at most %(timeout)s s."
+msgstr "Le vendeur a déjà reçu le fiat et le séquestre est réglé : les sats appartiennent à l'acheteur, mais le paiement Lightning vers sa facture n'arrive pas. L'ordre reste ainsi jusqu'à ce que l'acheteur envoie une facture payable ; chaque tentative dure au plus %(timeout)s s."
+
+msgctxt "roblosats-admin"
+msgid "The payment to the buyer is failing"
+msgstr "Le paiement à l'acheteur échoue"
+
+msgctxt "roblosats-admin"
+msgid "The payment to the buyer failed before succeeding"
+msgstr "Le paiement à l'acheteur a échoué avant de réussir"
+
+msgctxt "roblosats-admin"
+msgid "Sats to pay (current invoice)"
+msgstr "Sats à payer (facture actuelle)"
+
+msgctxt "roblosats-admin"
+msgid "Invoices submitted"
+msgstr "Factures envoyées"
+
+msgctxt "roblosats-admin"
+msgid "Failed attempts"
+msgstr "Tentatives échouées"
+
+msgctxt "roblosats-admin"
+msgid "Where the current invoice goes"
+msgstr "Où va la facture actuelle"
+
+msgctxt "roblosats-admin"
+msgid "Routing fee budget (last invoice)"
+msgstr "Budget de frais de routage (dernière facture)"
+
+msgctxt "roblosats-admin"
+msgid "All their invoices go to the same node."
+msgstr "Toutes ses factures vont au même nœud."
+
+msgctxt "roblosats-admin"
+msgid "See their invoices"
+msgstr "Voir ses factures"
+
+msgctxt "roblosats-admin"
+msgid "Submitted"
+msgstr "Envoyée"
+
+msgctxt "roblosats-admin"
+msgid "Routing budget"
+msgstr "Budget de routage"
+
+msgctxt "roblosats-admin"
+msgid "Failures"
+msgstr "Échecs"
+
+msgctxt "roblosats-admin"
+msgid "Last failure"
+msgstr "Dernier échec"
+
+msgctxt "roblosats-admin"
+msgid "Destination"
+msgstr "Destination"
+
+msgctxt "roblosats-admin"
+msgid "current"
+msgstr "actuelle"
+
+msgctxt "roblosats-admin"
+msgid "All failed payouts"
+msgstr "Tous les paiements échoués"
+
+msgctxt "roblosats-admin"
+msgid "Their invoices have gone to %(n)s different nodes."
+msgstr "Ses factures sont allées vers %(n)s nœuds différents."
+
+msgctxt "roblosats-admin"
+msgid "What to do: the sats wait in the coordinator and the buyer can submit another invoice from the app at any time. If the invoices keep going to the same destination they will most likely fail the same way: ask for an invoice from another wallet or node (with more inbound liquidity), or to wait and retry later. Each attempt lasts at most %(s)s s."
+msgstr "Que faire : les sats attendent chez le coordinateur et l'acheteur peut envoyer une autre facture depuis l'application à tout moment. Si les factures continuent d'aller vers la même destination, elles échoueront très probablement de la même façon : demandez une facture d'un autre portefeuille ou nœud (avec plus de liquidité entrante), ou d'attendre et de réessayer plus tard. Chaque tentative dure au plus %(s)s s."
+
+msgctxt "roblosats-admin"
+msgid "route hint via"
+msgstr "indice de route via"
+
+msgctxt "roblosats-admin"
+msgid "The buyer is not getting paid"
+msgstr "L'acheteur n'est pas payé"
+
+msgctxt "roblosats-admin"
+msgid "Failed payouts: %(n)s"
+msgstr "Paiements échoués : %(n)s"
