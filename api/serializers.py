@@ -104,6 +104,7 @@ class ListOrderSerializer(serializers.ModelSerializer):
             "bond_size",
             "latitude",
             "longitude",
+            "escrow_type",
         )
 
 
@@ -388,6 +389,10 @@ class OrderDetailSerializer(serializers.ModelSerializer):
         required=False,
         help_text="True if the buyer can switch a failed lightning payout to an onchain address with `update_address` (`swap_allowed` says whether it is available now)",
     )
+    escrow_type = serializers.CharField(
+        required=False,
+        help_text="`onchain` for a Taproot onchain escrow (the escrow_* fields then describe it)",
+    )
     trade_fee_percent = serializers.IntegerField(
         required=False,
         help_text="The fee for the trade (fees differ for maker and taker)",
@@ -508,6 +513,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             "failure_reason",
             "invoice_expired",
             "onchain_rescue",
+            "escrow_type",
             "public_duration",
             "bond_size",
             "trade_fee_percent",
@@ -634,6 +640,7 @@ class MakeOrderSerializer(serializers.ModelSerializer):
             "longitude",
             "password",
             "description",
+            "escrow_type",
         )
 
 
@@ -682,8 +689,19 @@ class UpdateOrderSerializer(serializers.Serializer):
             "confirm",
             "undo_confirm",
             "rate_platform",
+            "escrow_keys",
+            "escrow_address",
+            "escrow_funding_signatures",
+            "escrow_nonce",
+            "escrow_partial",
+            "escrow_leaf_signature",
         ),
         allow_null=False,
+    )
+    escrow = serializers.JSONField(
+        required=False,
+        default=None,
+        help_text="Onchain escrow action data: escrow_keys {escrow_pubkey, funding_pubkey}, escrow_funding_signatures {signatures}, escrow_nonce {nonce}, escrow_partial {partial}, escrow_leaf_signature {signature}. escrow_address uses `address` (PGP signed).",
     )
     rating = serializers.ChoiceField(
         choices=("1", "2", "3", "4", "5"),

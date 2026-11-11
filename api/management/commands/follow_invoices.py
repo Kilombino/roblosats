@@ -41,6 +41,26 @@ class Command(BaseCommand):
                 self.send_payments()
             except Exception as e:
                 self.stderr.write(str(e))
+            try:
+                self.follow_onchain_escrows()
+            except Exception as e:
+                self.stderr.write(str(e))
+
+    def follow_onchain_escrows(self):
+        """Moves onchain-escrow orders forward (Roblosats): funding, deposit, confirmation, release."""
+        from api.escrow import flow
+
+        orders = Order.objects.filter(
+            escrow_type=Order.EscrowTypes.ONCHAIN,
+            status__in=[Order.Status.WF2, Order.Status.WFE, Order.Status.PAY],
+        )
+        for order in orders:
+            try:
+                with order_lock(order.pk):
+                    order.refresh_from_db()
+                    flow.advance(order)
+            except Exception as e:
+                self.stderr.write(f"onchain escrow of order {order.id}: {e}")
 
     def is_same_status(a: LNPayment.Status, b: LNPayment.Status) -> bool:
         """

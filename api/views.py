@@ -24,6 +24,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from api.errors import new_error
+from api.escrow import flow as escrow_flow
 from api.logics import Logics, order_lock, rewards_wait, withdrawable_rewards
 from api.tasks import cache_market
 from api.models import (
@@ -135,6 +136,12 @@ class MakerView(CreateAPIView):
         longitude = serializer.data.get("longitude")
         password = serializer.data.get("password")
         description = serializer.data.get("description")
+        escrow_type = serializer.data.get("escrow_type") or Order.EscrowTypes.LIGHTNING
+        if escrow_type == Order.EscrowTypes.ONCHAIN and not escrow_flow.service.enabled():
+            return Response(
+                {"bad_request": "This coordinator does not offer onchain escrow"},
+                status.HTTP_400_BAD_REQUEST,
+            )
 
         # Optional params
         if public_duration is None:
@@ -196,6 +203,7 @@ class MakerView(CreateAPIView):
                 longitude=longitude,
                 password=password,
                 description=description,
+                escrow_type=escrow_type,
             )
 
             order.last_satoshis = order.t0_satoshis = Logics.satoshis_now(order)
@@ -397,6 +405,13 @@ class OrderView(viewsets.ViewSet):
             else:
                 return Response(context, status.HTTP_400_BAD_REQUEST)
 
+        # Onchain escrow (Roblosats): no hold invoice nor buyer invoice, the escrow_* data instead
+        elif escrow_flow.is_onchain(order) and data["is_participant"] and order.status in (
+            Order.Status.WF2,
+            Order.Status.WFE,
+        ):
+            pass
+
         # 7 a. ) If seller and status is 'WF2' or 'WFE'
         elif data["is_seller"] and (
             order.status == Order.Status.WF2 or order.status == Order.Status.WFE
@@ -533,6 +548,14 @@ class OrderView(viewsets.ViewSet):
                         elif order.payout_tx.status == OnchainPayment.Status.QUEUE:
                             data["tx_queued"] = True
                             data["address"] = order.payout_tx.address
+
+        if escrow_flow.is_onchain(order):
+            data["escrow_type"] = "onchain"
+            if data["is_participant"]:
+                try:
+                    data.update(escrow_flow.order_data(order, request.user))
+                except escrow_flow.EscrowError as e:
+                    data["escrow_error"] = str(e)
 
         return Response(data, status.HTTP_200_OK)
 
@@ -672,6 +695,23 @@ class OrderView(viewsets.ViewSet):
             )
             if not valid:
                 return Response(context, status.HTTP_400_BAD_REQUEST)
+
+        # 5.c) Onchain escrow actions (Roblosats)
+        elif action.startswith("escrow_"):
+            if not escrow_flow.is_onchain(order):
+                return Response({"bad_request": "This order has no onchain escrow"}, status.HTTP_400_BAD_REQUEST)
+            escrow_data = dict(serializer.data.get("escrow") or {})
+            if action == "escrow_address":
+                valid_signature, address = verify_signed_message(
+                    request.user.robot.public_key, pgp_address
+                )
+                if not valid_signature:
+                    return Response(new_error(1048), status.HTTP_400_BAD_REQUEST)
+                escrow_data["address"] = address
+            try:
+                escrow_flow.action(order, request.user, action, escrow_data)
+            except (escrow_flow.EscrowError, KeyError, ValueError) as e:
+                return Response({"bad_request": f"{e}"}, status.HTTP_400_BAD_REQUEST)
 
         # 5) If action is confirm
         elif action == "confirm":
@@ -1090,6 +1130,7 @@ class InfoView(viewsets.ViewSet):
             )
         except BalanceLog.DoesNotExist:
             context["current_swap_fee_rate"] = 0
+        context["onchain_escrow"] = escrow_flow.service.enabled()
 
         # federation_hash lets clients vote on the federation list using the hash
         # from each coordinator's /api/info/ response — no separate /api/federation/

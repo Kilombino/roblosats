@@ -72,4 +72,28 @@ server secret. The JS client must produce the same keys: see the vectors in
   commit and the status moves only after `sendrawtransaction` returned.
 - Tested end to end against the regtest lab: `api/tests/test_escrow_service_regtest.py`
   (opt-in, `ESCROW_REGTEST=1`).
-- Not wired into `Logics`/views/frontend yet.
+
+## Order flow (`flow.py`, hooks in logics/views/admin/follow_invoices)
+- `Order.escrow_type` (`LIGHTNING`=0, `ONCHAIN`=1), chosen at creation (`escrow_type` in the
+  make-order request; refused unless `service.enabled()`). `/api/info` says `onchain_escrow`;
+  the book lists `escrow_type`; the Nostr order event carries `layer=onchain`.
+- Bonds stay Lightning hold invoices. States: WF2 (keys + the buyer's release address via
+  `escrow_*` actions) → WFE (funding; `ESCROW_FUNDING_SECONDS`, default 3 h) → CHA when the
+  deposit has 1 confirmation → FSE → seller `confirm` starts the cooperative release and the
+  bonds are returned → PAY → SUC when the release is broadcast (proceeds = the coordinator fee
+  inside the deposit).
+- `follow_invoices.follow_onchain_escrows` runs `flow.advance` under the order lock for onchain
+  orders in WF2/WFE/PAY: builds the deposit when both funding addresses hold enough (needs
+  `ESCROW_COORDINATOR_ADDRESS`), confirms it, completes the order after the release.
+- Expiry in WF2/WFE: `flow.expire_funding` blames whoever is missing (keys, address, funding,
+  deposit signature): that bond is settled and the other returned with the usual reward. A
+  deposit already broadcast pushes the expiry back an hour instead.
+- Disputes: `open_dispute` settles only the bonds (no LN escrow) and also accepts PAY (seller
+  confirmed but does not sign). `maker_wins`/`taker_wins` call `flow.resolve_dispute` (the
+  winner's release address must be set) and credit only the winner's bond; the escrow moves
+  when the winner signs the leaf.
+- Views: GET order adds `escrow_type` and, for traders, `flow.order_data` (funding address and
+  amounts, the deposit to sign, the release and the aggregate nonce); POST actions
+  `escrow_keys`, `escrow_address` (PGP signed like `update_address`), `escrow_funding_signatures`,
+  `escrow_nonce`, `escrow_partial`, `escrow_leaf_signature` with their data in `escrow`.
+- Regtest: `EscrowOrderFlowRegtest` (WF2 → SUC, and a dispute solved from the admin).

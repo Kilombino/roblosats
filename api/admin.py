@@ -9,6 +9,7 @@ from django_admin_relation_links import AdminChangeLinksMixin
 from rest_framework.authtoken.admin import TokenAdmin
 from rest_framework.authtoken.models import TokenProxy
 
+from api.escrow import flow as escrow_flow
 from api.logics import Logics, ledger_add, ledger_backed, ledger_credit
 from api.models import Currency, LNPayment, MarketTick, OnchainPayment, Order, Robot
 from api.utils import render_order_logs
@@ -48,6 +49,30 @@ def _lock_disputed(order):
     if not (order.trade_escrow and order.trade_escrow.status == LNPayment.Status.SETLED):
         return None
     return order
+
+def _lock_disputed_onchain(order):
+    """Onchain escrow (Roblosats): same locks, the escrow is on chain instead of settled in LND."""
+    from api.models import OnchainEscrow
+
+    with connection.cursor() as c:
+        c.execute("SELECT pg_advisory_xact_lock(%s, %s)", [7391, int(order.pk)])
+    order = Order.objects.select_for_update().get(pk=order.pk)
+    if not (order.status in [Order.Status.DIS, Order.Status.WFR] and order.is_disputed):
+        return None
+    escrow = OnchainEscrow.objects.filter(order=order).first()
+    if escrow is None or escrow.status not in (OnchainEscrow.Status.LOCKED, OnchainEscrow.Status.RELEASING):
+        return None
+    return order
+
+
+def _onchain_wins(order, winner):
+    """The winner gets its own bond back as reward credit and the escrow on chain once it
+    signs the release (the coordinator adds its signature)."""
+    bond = order.maker_bond if winner == order.maker else order.taker_bond
+    escrow_flow.resolve_dispute(order, buyer_wins=Logics.is_buyer(order, winner))
+    _credit(winner.robot, bond.num_satoshis, order, "maker_wins" if winner == order.maker else "taker_wins")
+    order.update_status(Order.Status.TLD if winner == order.maker else Order.Status.MLD)
+
 
 class RobotInline(admin.StackedInline):
     model = Robot
@@ -236,6 +261,19 @@ class OrderAdmin(AdminChangeLinksMixin, admin.ModelAdmin):
         Adds Sats to compensations (earned_rewards) of the maker robot.
         """
         for order in queryset:
+            if escrow_flow.is_onchain(order):
+                locked = _lock_disputed_onchain(order)
+                if locked is None:
+                    self.message_user(request, f"Order {order.id} is not in a disputed state, or its onchain escrow is not locked", messages.ERROR)
+                    continue
+                try:
+                    _onchain_wins(locked, locked.maker)
+                except escrow_flow.EscrowError as e:
+                    self.message_user(request, f"Order {order.id}: {e}", messages.ERROR)
+                    continue
+                self.message_user(request, f"Dispute of order {order.id} solved for the maker: the escrow is released when the maker signs", messages.SUCCESS)
+                send_notification.delay(order_id=order.id, message="dispute_closed")
+                continue
             locked = _lock_disputed(order)
             if locked is not None:
                 order = locked
@@ -273,6 +311,19 @@ class OrderAdmin(AdminChangeLinksMixin, admin.ModelAdmin):
         Adds Sats to compensations (earned_rewards) of the taker robot.
         """
         for order in queryset:
+            if escrow_flow.is_onchain(order):
+                locked = _lock_disputed_onchain(order)
+                if locked is None:
+                    self.message_user(request, f"Order {order.id} is not in a disputed state, or its onchain escrow is not locked", messages.ERROR)
+                    continue
+                try:
+                    _onchain_wins(locked, locked.taker)
+                except escrow_flow.EscrowError as e:
+                    self.message_user(request, f"Order {order.id}: {e}", messages.ERROR)
+                    continue
+                self.message_user(request, f"Dispute of order {order.id} solved for the taker: the escrow is released when the taker signs", messages.SUCCESS)
+                send_notification.delay(order_id=order.id, message="dispute_closed")
+                continue
             locked = _lock_disputed(order)
             if locked is not None:
                 order = locked

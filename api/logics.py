@@ -10,6 +10,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 from django.db import connection, transaction
 
+from api.escrow import flow as escrow_flow
 from api.lightning.node import LNNode
 from api.errors import new_error
 from api.models import (
@@ -624,6 +625,9 @@ class Logics:
 
             return True
 
+        elif order.status in (Order.Status.WF2, Order.Status.WFE) and escrow_flow.is_onchain(order):
+            return escrow_flow.expire_funding(order)
+
         elif order.status == Order.Status.WF2:
             """Weird case where an order expires and both participants
             did not proceed with the contract. Likely the site was
@@ -761,13 +765,20 @@ class Logics:
             Order.Status.FSE,
         ]
 
+        onchain = escrow_flow.is_onchain(order)
+        if onchain and order.status == Order.Status.PAY:
+            valid_status_open_dispute = valid_status_open_dispute + [Order.Status.PAY]
+
         if order.status not in valid_status_open_dispute:
             return False, new_error(1013)
 
-        if order.expires_at and timezone.now() < order.expires_at - timedelta(hours=18):
+        if order.status != Order.Status.PAY and order.expires_at and timezone.now() < order.expires_at - timedelta(hours=18):
             return False, new_error(1054)
 
-        if not order.trade_escrow.status == LNPayment.Status.SETLED:
+        if onchain:
+            cls.settle_bond(order.maker_bond)
+            cls.settle_bond(order.taker_bond)
+        elif not order.trade_escrow.status == LNPayment.Status.SETLED:
             cls.settle_escrow(order)
             cls.settle_bond(order.maker_bond)
             cls.settle_bond(order.taker_bond)
@@ -1711,6 +1722,7 @@ class Logics:
             ]
         )
         order.announce_status(old_status, Order.Status.WF2)
+        escrow_flow.on_contract(order)
 
         order.taker_bond.status = LNPayment.Status.LOCKED
         order.taker_bond.save(update_fields=["status"])
@@ -2082,6 +2094,17 @@ class Logics:
             elif cls.is_seller(order, user):
                 if not order.is_fiat_sent:
                     return False, new_error(1027)
+
+                if escrow_flow.is_onchain(order):
+                    try:
+                        escrow_flow.seller_confirms(order)
+                    except escrow_flow.EscrowError as e:
+                        return False, {"bad_request": str(e)}
+                    cls.return_bond(order.taker_bond)
+                    cls.return_bond(order.maker_bond)
+                    order.log("Taker bond was **unlocked**")
+                    order.log("Maker bond was **unlocked**")
+                    return True, None
 
                 # Make sure the trade escrow is at least as big as the buyer invoice
                 num_satoshis = (
@@ -2474,7 +2497,9 @@ class Logics:
         Computes Coordinator trade proceeds for finished orders.
         """
 
-        if order.is_swap:
+        if escrow_flow.is_onchain(order):
+            new_proceeds = int(escrow_flow.proceeds(order))
+        elif order.is_swap:
             payout_sats = (
                 order.payout_tx.sent_satoshis + order.payout_tx.mining_fee_sats
             )

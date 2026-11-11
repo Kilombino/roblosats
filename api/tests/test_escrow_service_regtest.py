@@ -18,7 +18,7 @@ from django.utils import timezone
 from api.escrow import bip327 as M
 from api.escrow import service
 from api.escrow.taproot import derive_secret, pubkey, schnorr_sign, with_hashtype
-from api.models import OnchainEscrow, Order
+from api.models import LNPayment, OnchainEscrow, Order
 
 REGTEST = os.environ.get("ESCROW_REGTEST") == "1"
 
@@ -154,3 +154,114 @@ class EscrowServiceRegtest(TransactionTestCase):
             service.submit_keys(order, _user(), k, k)
 
 
+
+
+@skipUnless(REGTEST, "needs the regtest lab (ESCROW_REGTEST=1)")
+class EscrowOrderFlowRegtest(TransactionTestCase):
+    """The order state machine with an onchain escrow: WF2 → WFE → CHA → FSE → PAY → SUC,
+    and a dispute solved from the admin for the buyer."""
+
+    def _bond(self, user, concept):
+        now = timezone.now()
+        return LNPayment.objects.create(
+            type=LNPayment.Types.HOLD, concept=concept, status=LNPayment.Status.LOCKED,
+            payment_hash=uuid.uuid4().hex, preimage=uuid.uuid4().hex, num_satoshis=30_000,
+            created_at=now, expires_at=now + timezone.timedelta(hours=1), sender=user,
+        )
+
+    def _to_chat(self):
+        from api.escrow import flow
+
+        buyer, seller = _user(), _user()
+        order = _order(buyer, seller)
+        order.maker_bond = self._bond(buyer, LNPayment.Concepts.MAKEBOND)
+        order.taker_bond = self._bond(seller, LNPayment.Concepts.TAKEBOND)
+        order.save()
+        flow.on_contract(order)
+        alias = service.coordinator_alias()
+        keys = {r: (derive_secret(f"f-{r}-{order.id}".encode(), alias, order.id, r),
+                    derive_secret(f"f-{r}-{order.id}".encode(), alias, order.id, "funding"))
+                for r in ("seller", "buyer")}
+        for r, u in (("seller", seller), ("buyer", buyer)):
+            flow.action(order, u, "escrow_keys", {"escrow_pubkey": pubkey(keys[r][0]).hex(), "funding_pubkey": pubkey(keys[r][1]).hex()})
+        flow.action(order, buyer, "escrow_address", {"address": _faucet("getnewaddress", "", "bech32m")})
+        flow.action(order, seller, "escrow_address", {"address": _faucet("getnewaddress", "", "bech32m")})
+        flow.advance(order)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.WFE)
+        for r, u in (("seller", seller), ("buyer", buyer)):
+            d = flow.order_data(order, u)
+            _faucet("sendtoaddress", d["escrow_funding_address"], d["escrow_funding_recommended"] / 1e8)
+        _mine()
+        flow.advance(order)
+        escrow = flow.escrow_of(order)
+        self.assertEqual(escrow.status, OnchainEscrow.Status.FUNDING)
+        for r, u in (("seller", seller), ("buyer", buyer)):
+            d = flow.order_data(order, u)
+            from api.escrow.taproot import Transaction, TxOut
+            tx = Transaction.parse(bytes.fromhex(d["escrow_deposit_tx"]))
+            spent = [TxOut(v, bytes.fromhex(s)) for v, s in d["escrow_deposit_spent"]]
+            sigs = [with_hashtype(schnorr_sign(keys[r][1], tx.sighash_unified(i, spent))).hex() for i in d["escrow_deposit_my_inputs"]]
+            flow.action(order, u, "escrow_funding_signatures", {"signatures": sigs})
+        _mine()
+        flow.advance(order)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.CHA)
+        return order, buyer, seller, keys
+
+    def test_happy_path_to_successful(self):
+        from unittest.mock import patch
+        from api.escrow import flow
+        from api.logics import Logics
+
+        order, buyer, seller, keys = self._to_chat()
+        with patch("api.logics.LNNode") as node, patch("api.logics.send_devfund_donation"), patch("api.logics.send_notification"):
+            node.cancel_return_hold_invoice.return_value = True
+            self.assertEqual(Logics.confirm_fiat(order, buyer), (True, None))
+            order.refresh_from_db()
+            self.assertEqual(Logics.confirm_fiat(order, seller), (True, None))
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.PAY)
+        c = service.contract_for(flow.escrow_of(order))
+        _, msg = service.release_message(flow.escrow_of(order))
+        pks, tw, isx = c.musig_pubkeys(), [c.tweak], [True]
+        secs = {}
+        for i, (r, u) in enumerate((("seller", seller), ("buyer", buyer))):
+            sec, pub = M.nonce_gen(keys[r][0], pks[i], c.output_key, msg, None)
+            secs[r] = sec
+            flow.action(order, u, "escrow_nonce", {"nonce": pub.hex()})
+        agg = bytes.fromhex(flow.order_data(order, buyer)["escrow_release_aggnonce"])
+        ctx = M.SessionContext(agg, pks, tw, isx, msg)
+        with patch("api.logics.send_devfund_donation"):
+            for r, u in (("seller", seller), ("buyer", buyer)):
+                flow.action(order, u, "escrow_partial", {"partial": M.sign(secs[r], keys[r][0], ctx).hex()})
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.SUC)
+        self.assertEqual(order.proceeds, flow.escrow_of(order).coordinator_fee_sats)
+
+    def test_dispute_for_the_buyer_from_the_admin(self):
+        from unittest.mock import MagicMock, patch
+        from api.admin import OrderAdmin
+        from api.escrow import flow
+        from api.logics import Logics
+        from django.contrib.admin.sites import AdminSite
+
+        order, buyer, seller, keys = self._to_chat()
+        order.expires_at = timezone.now()
+        order.save()
+        with patch("api.logics.LNNode") as node, patch("api.logics.send_notification"):
+            node.settle_hold_invoice.return_value = True
+            node.double_check_htlc_is_settled.return_value = True
+            self.assertEqual(Logics.open_dispute(order, buyer), (True, None))
+        admin = OrderAdmin(Order, AdminSite())
+        admin.message_user = MagicMock()
+        with patch("api.admin.send_notification"):
+            admin.taker_wins(MagicMock(), Order.objects.filter(pk=order.pk)) if order.taker == buyer else admin.maker_wins(MagicMock(), Order.objects.filter(pk=order.pk))
+        escrow = flow.escrow_of(order)
+        self.assertEqual(escrow.status, OnchainEscrow.Status.RELEASING)
+        _, msg = service.release_message(escrow)
+        flow.action(order, buyer, "escrow_leaf_signature", {"signature": with_hashtype(schnorr_sign(keys["buyer"][0], msg)).hex()})
+        _mine()
+        escrow.refresh_from_db()
+        self.assertEqual(escrow.status, OnchainEscrow.Status.RELEASED)
+        self.assertGreaterEqual(service.rpc("getrawtransaction", [escrow.release_txid, True])["confirmations"], 1)

@@ -143,7 +143,7 @@ class Nostr:
             ),
             Tag.parse(["y", "robosats", config("COORDINATOR_ALIAS", cast=str).lower()]),
             Tag.parse(["network", str(config("NETWORK"))]),
-            Tag.parse(["layer", "lightning"]),
+            Tag.parse(["layer", "onchain" if order.escrow_type == Order.EscrowTypes.ONCHAIN else "lightning"]),
             Tag.parse(["bond", str(order.bond_size)]),
             Tag.parse(["z", "order"]),
         ]
