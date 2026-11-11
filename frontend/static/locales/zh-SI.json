@@ -781,6 +781,7 @@
   "Retrying!": "重试中！",
   "RoboSats will try to pay your invoice 3 times with a one minute pause in between. If it keeps failing, you will be able to submit a new invoice. Check whether you have enough inbound liquidity. Remember that lightning nodes must be online in order to receive payments.": "Roblosats将尝试支付你的发票3次，每次尝试间隔1分钟。如果它一再失败，您将能够提交新的发票。检查您是否有足够的入站流动性。请注意，闪电节点必须在线才能接收付款。",
   "Your invoice has expired or more than 3 payment attempts have been made. Submit a new invoice.": "您的发票已到期或已进行超过3次付款尝试。提交一张新的发票。",
+  "The lightning payment failed. You can receive the sats onchain instead: the pending lightning payment will be cancelled.": "The lightning payment failed. You can receive the sats onchain instead: the pending lightning payment will be cancelled.",
   "#94": "Phrases in components/TradeBox/Prompts/SendingSats.tsx",
   "Lightning payments are usually instantaneous, but sometimes a node in the route may be down, which can cause your payout to take up to 24 hours to arrive in your wallet.": "闪电支付通常是即时的，但有时路由中的一个节点可能会关闭，这可能导致您的支付最多需要24小时才能到达您的钱包。",
   "RoboSats is trying to pay your lightning invoice. Remember that lightning nodes must be online in order to receive payments.": "Roblosats 正在尝试支付你的闪电发票。请注意，闪电节点必须在线才能接收付款。",

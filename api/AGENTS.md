@@ -71,6 +71,22 @@ via `confirm_fiat`) is irreversible; `PAU ⇄ PUB`, `FSE → CHA` (`undo_confirm
 `FAI → PAY` (retry) are reversible. `SUC`/`FAI` decided in node layer, not `logics.py`.
 `maker_wins`→`TLD`, `taker_wins`→`MLD`, both reachable directly from `DIS`/`WFR` via admin.
 
+**Onchain rescue (Roblosats): `FAI → SUC` via `update_address`.** When the buyer's lightning
+payout has failed (`order.payout` in `FAILRO`/`EXPIRE`, not `in_flight`), the GET of the order
+adds `onchain_rescue` plus the swap context, and `update_address` is accepted in `FAI`. The
+order is: `onchain_rescue_problem()` checks buyer, payout state and settled escrow; the normal
+address/fee validation runs; `pay_onchain_rescue()` then (1) moves the `LNPayment` to `CANCEL`
+with a conditional update (only one concurrent request wins), (2) asks LND with
+`LNNode.payment_status()` (TrackPaymentV2) and refuses, restoring the previous status, if any
+attempt is in flight or succeeded, or if LND cannot be reached, (3) re-checks the escrow in
+LND, and only then queues the `OnchainPayment`, sets `is_swap` and completes the order. A
+lightning retry can no longer start afterwards: `payout_problem()` holds payouts of orders
+with `is_swap` or whose `LNPayment` is not `FLIGHT`/`FAILRO`, and `tasks.follow_send_payment`
+takes the order lock for that check and keeps it until LND has registered the payment (the
+`on_started` callback), so a rescue cannot slip in between the check and `SendPaymentV2`.
+`audit_payouts` reports any order paid both by lightning and onchain. CLN has no
+`payment_status()`, so the rescue is always refused there.
+
 ## Bond mechanics
 3 hold invoices (`LNPayment.Types.HOLD`) per trade: **maker bond** (`MAKEBOND`, before
 `PUB`), **taker bond** (`TAKEBOND`, locking drives `WF2`), **trade escrow** (`TRESCROW`,

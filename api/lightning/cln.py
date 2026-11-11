@@ -632,7 +632,11 @@ class CLNNode:
             return False, failure_reason
 
     @classmethod
-    def follow_send_payment(cls, lnpayment, fee_limit_sat, timeout_seconds):
+    def follow_send_payment(
+        cls, lnpayment, fee_limit_sat, timeout_seconds, on_started=None
+    ):
+        if on_started is not None:
+            on_started()
         """Sends sats to buyer, continuous update"""
 
         from api.models import LNPayment, Order
@@ -858,6 +862,10 @@ class CLNNode:
                     print(str(e))
 
         handle_response()
+
+    @classmethod
+    def payment_status(cls, payment_hash):
+        raise NotImplementedError("payment_status is only implemented for LND")
 
     @classmethod
     def send_keysend(

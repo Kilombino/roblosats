@@ -80,6 +80,9 @@ ERRORS = {
     4003: "The amount remaining after subtracting mining fee is close to dust limit.",
     4004: "Invalid address",
     4005: "Unable to validate address, check bitcoind backend",
+    4006: "A lightning payment to your invoice is still in progress. Wait for it to finish and try again.",
+    4007: "Onchain payout is not available: {reason}",
+    4008: "Could not check the lightning payment. Try again later.",
     # 5000 - Bad summary
     5000: "Order has not finished yet",
     # 6000 - Chat bad request

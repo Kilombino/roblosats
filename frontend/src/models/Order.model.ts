@@ -127,6 +127,7 @@ class Order {
   next_retry_time: Date = new Date();
   failure_reason: string = '';
   invoice_expired: boolean = false;
+  onchain_rescue: boolean = false;
   public_duration: number = 0;
   bond_size: string = '';
   trade_fee_percent: number = 0;

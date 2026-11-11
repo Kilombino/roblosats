@@ -488,6 +488,13 @@ class OrderView(viewsets.ViewSet):
                 data["trade_satoshis"] = Logics.payout_amount(order, request.user)[1][
                     "invoice_amount"
                 ]
+            if data["is_buyer"] and order.payout.status in (
+                LNPayment.Status.FAILRO,
+                LNPayment.Status.EXPIRE,
+            ):
+                valid, context = Logics.payout_amount(order, request.user)
+                if valid:
+                    data = {**data, **context, "onchain_rescue": True}
 
         # 10) If status is 'Expired', "Sending", "Finished" or "failed routing", add info for renewal:
         elif order.status in [

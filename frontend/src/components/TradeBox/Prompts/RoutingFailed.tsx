@@ -1,10 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box, CircularProgress, Grid, Typography, useTheme } from '@mui/material';
+import {
+  Box,
+  CircularProgress,
+  Grid,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography,
+  useTheme,
+} from '@mui/material';
+import { Bolt, Link } from '@mui/icons-material';
 import Countdown, { type CountdownRenderProps, zeroPad } from 'react-countdown';
 
 import { type Order, type Settings } from '../../../models';
-import { type LightningForm, LightningPayoutForm } from '../Forms';
+import {
+  type LightningForm,
+  LightningPayoutForm,
+  type OnchainForm,
+  OnchainPayoutForm,
+} from '../Forms';
 
 interface RoutingFailedPromptProps {
   order: Order;
@@ -12,6 +26,10 @@ interface RoutingFailedPromptProps {
   lightning: LightningForm;
   loadingLightning: boolean;
   setLightning: (state: LightningForm) => void;
+  onClickSubmitAddress: () => void;
+  onchain: OnchainForm;
+  setOnchain: (state: OnchainForm) => void;
+  loadingOnchain: boolean;
   settings: Settings;
 }
 
@@ -48,9 +66,14 @@ export const RoutingFailedPrompt = ({
   loadingLightning,
   lightning,
   setLightning,
+  onClickSubmitAddress,
+  onchain,
+  setOnchain,
+  loadingOnchain,
   settings,
 }: RoutingFailedPromptProps): React.JSX.Element => {
   const { t } = useTranslation();
+  const [tab, setTab] = useState<'lightning' | 'onchain'>('lightning');
 
   const countdownRenderer = function ({
     minutes,
@@ -77,80 +100,138 @@ export const RoutingFailedPrompt = ({
     }
   };
 
-  if (order.invoice_expired) {
-    return (
-      <Grid
-        container
-        spacing={0.5}
-        sx={{
-          alignItems: 'center',
-          justifyContent: 'flex-start',
-          flexDirection: 'column',
-          padding: 1,
-        }}
-      >
-        <Grid>
-          <Typography variant='body2'>
-            {t(
-              'Your invoice has expired or more than 3 payment attempts have been made. Submit a new invoice.',
-            )}
-          </Typography>
-        </Grid>
+  const lightningPrompt = (): React.JSX.Element => {
+    if (order.invoice_expired) {
+      return (
+        <Grid
+          container
+          spacing={0.5}
+          sx={{
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            flexDirection: 'column',
+            padding: 1,
+          }}
+        >
+          <Grid>
+            <Typography variant='body2'>
+              {t(
+                'Your invoice has expired or more than 3 payment attempts have been made. Submit a new invoice.',
+              )}
+            </Typography>
+          </Grid>
 
-        {order.failure_reason != null ? (
+          {order.failure_reason != null ? (
+            <Grid>
+              <FailureReason failureReason={order.failure_reason} />
+            </Grid>
+          ) : (
+            <></>
+          )}
+
+          <Grid>
+            <LightningPayoutForm
+              order={order}
+              settings={settings}
+              loading={loadingLightning}
+              lightning={lightning}
+              setLightning={setLightning}
+              onClickSubmit={onClickSubmitInvoice}
+            />
+          </Grid>
+        </Grid>
+      );
+    } else {
+      return (
+        <Grid
+          container
+          spacing={1}
+          sx={{
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            flexDirection: 'column',
+            padding: 1,
+          }}
+        >
           <Grid>
             <FailureReason failureReason={order.failure_reason} />
           </Grid>
-        ) : (
-          <></>
-        )}
+          <Grid>
+            <Typography variant='body2'>
+              {t(
+                'RoboSats will try to pay your invoice 3 times with a one minute pause in between. If it keeps failing, you will be able to submit a new invoice. Check whether you have enough inbound liquidity. Remember that lightning nodes must be online in order to receive payments.',
+              )}
+            </Typography>
+          </Grid>
+          <div style={{ height: '0.6em' }} />
+          <Grid>
+            <Typography align='center'>
+              <b>{t('Next attempt in')}</b>
+            </Typography>
+          </Grid>
+          <Grid>
+            <Countdown date={new Date(order.next_retry_time)} renderer={countdownRenderer} />
+          </Grid>
+        </Grid>
+      );
+    }
+  };
 
-        <Grid>
-          <LightningPayoutForm
-            order={order}
-            settings={settings}
-            loading={loadingLightning}
-            lightning={lightning}
-            setLightning={setLightning}
-            onClickSubmit={onClickSubmitInvoice}
-          />
-        </Grid>
-      </Grid>
-    );
-  } else {
-    return (
-      <Grid
-        container
-        spacing={1}
-        sx={{
-          alignItems: 'center',
-          justifyContent: 'flex-start',
-          flexDirection: 'column',
-          padding: 1,
-        }}
-      >
-        <Grid>
-          <FailureReason failureReason={order.failure_reason} />
-        </Grid>
-        <Grid>
-          <Typography variant='body2'>
-            {t(
-              'RoboSats will try to pay your invoice 3 times with a one minute pause in between. If it keeps failing, you will be able to submit a new invoice. Check whether you have enough inbound liquidity. Remember that lightning nodes must be online in order to receive payments.',
-            )}
-          </Typography>
-        </Grid>
-        <div style={{ height: '0.6em' }} />
-        <Grid>
-          <Typography align='center'>
-            <b>{t('Next attempt in')}</b>
-          </Typography>
-        </Grid>
-        <Grid>
-          <Countdown date={new Date(order.next_retry_time)} renderer={countdownRenderer} />
-        </Grid>
-      </Grid>
-    );
+  if (!order.onchain_rescue) {
+    return lightningPrompt();
   }
+
+  return (
+    <Grid
+      container
+      spacing={1}
+      sx={{
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        flexDirection: 'column',
+        padding: 1,
+      }}
+    >
+      <Grid>
+        <ToggleButtonGroup
+          size='medium'
+          value={tab}
+          exclusive
+          onChange={(mouseEvent, value) => {
+            setTab(value == null ? tab : value);
+          }}
+        >
+          <ToggleButton value='lightning'>
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+              <Bolt /> {t('Lightning')}
+            </div>
+          </ToggleButton>
+          <ToggleButton value='onchain' disabled={!order.swap_allowed}>
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+              <Link /> {t('Onchain')}
+            </div>
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </Grid>
+
+      <Grid style={{ display: tab === 'lightning' ? '' : 'none' }}>{lightningPrompt()}</Grid>
+
+      <Grid style={{ display: tab === 'onchain' ? '' : 'none' }}>
+        <Typography variant='body2' sx={{ paddingBottom: 1 }}>
+          {t(
+            'The lightning payment failed. You can receive the sats onchain instead: the pending lightning payment will be cancelled.',
+          )}
+        </Typography>
+        <OnchainPayoutForm
+          order={order}
+          loading={loadingOnchain}
+          onchain={onchain}
+          setOnchain={setOnchain}
+          onClickSubmit={onClickSubmitAddress}
+        />
+      </Grid>
+    </Grid>
+  );
 };
 
 export default RoutingFailedPrompt;

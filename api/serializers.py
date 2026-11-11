@@ -384,6 +384,10 @@ class OrderDetailSerializer(serializers.ModelSerializer):
         required=False,
         help_text="True if the payout invoice expired. `invoice_amount` will be re-set and sent which means the user has to submit a new invoice to be payed",
     )
+    onchain_rescue = serializers.BooleanField(
+        required=False,
+        help_text="True if the buyer can switch a failed lightning payout to an onchain address with `update_address` (`swap_allowed` says whether it is available now)",
+    )
     trade_fee_percent = serializers.IntegerField(
         required=False,
         help_text="The fee for the trade (fees differ for maker and taker)",
@@ -503,6 +507,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             "next_retry_time",
             "failure_reason",
             "invoice_expired",
+            "onchain_rescue",
             "public_duration",
             "bond_size",
             "trade_fee_percent",

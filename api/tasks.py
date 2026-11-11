@@ -77,31 +77,53 @@ def users_cleansing():
 def follow_send_payment(hash):
     """Sends sats to buyer, continuous update"""
 
+    from decouple import config
+
+    from api.models import LNPayment
+
+    if config("DEBUG_PERMISSIONED_PAYOUTS", cast=bool, default=False):
+        return
+
+    from api.logics import acquire_order_lock, release_order_lock
+    from api.models import Order
+
+    lnpayment = LNPayment.objects.get(payment_hash=hash)
+    order = Order.objects.filter(payout=lnpayment).first()
+    locked = [False]
+    if order is not None:
+        acquire_order_lock(order.pk)
+        locked[0] = True
+        lnpayment.refresh_from_db()
+
+    def unlock():
+        if locked[0]:
+            locked[0] = False
+            release_order_lock(order.pk)
+
+    try:
+        return _follow_send_payment(lnpayment, order, unlock)
+    finally:
+        unlock()
+
+
+def _follow_send_payment(lnpayment, order, unlock):
     from datetime import timedelta
 
     from decouple import config
     from django.utils import timezone
 
     from api.lightning.node import LNNode
-    from api.models import LNPayment
+    from api.logics import payout_problem
 
-    if config("DEBUG_PERMISSIONED_PAYOUTS", cast=bool, default=False):
-        return
-
-    lnpayment = LNPayment.objects.get(payment_hash=hash)
+    hash = lnpayment.payment_hash
     lnpayment.last_routing_time = timezone.now()
     lnpayment.save(update_fields=["last_routing_time"])
 
     # Checked against the lightning node before every attempt; a payout that fails it
     # is held (and retried in an hour) until the coordinator looks at it.
-    from api.logics import payout_problem
-
     problem = payout_problem(lnpayment)
     if problem:
         print(f"PAYOUT HELD {hash}: {problem}", flush=True)
-        from api.models import Order
-
-        order = Order.objects.filter(payout=lnpayment).first()
         if order and "PAYOUT HELD" not in (order.logs or ""):
             order.log(f"PAYOUT HELD: {problem}", level="WARN")
         lnpayment.last_routing_time = timezone.now() + timedelta(hours=1)
@@ -114,7 +136,9 @@ def follow_send_payment(hash):
     )
     timeout_seconds = config("PAYOUT_TIMEOUT_SECONDS", cast=int, default=90)
     try:
-        results = LNNode.follow_send_payment(lnpayment, fee_limit_sat, timeout_seconds)
+        results = LNNode.follow_send_payment(
+            lnpayment, fee_limit_sat, timeout_seconds, on_started=unlock
+        )
 
     except SoftTimeLimitExceeded:
         # If the 175 seconds have been consumed without follow_send_payment()

@@ -45,6 +45,18 @@ GEOBLOCKED_COUNTRIES = config("GEOBLOCKED_COUNTRIES", cast=Csv(), default="")
 
 
 
+def acquire_order_lock(order_id, space=7391):
+    if connection.vendor != "postgresql":
+        raise ImproperlyConfigured("order_lock needs PostgreSQL (pg_advisory_lock)")
+    with connection.cursor() as c:
+        c.execute("SELECT pg_advisory_lock(%s, %s)", [space, int(order_id)])
+
+
+def release_order_lock(order_id, space=7391):
+    with connection.cursor() as c:
+        c.execute("SELECT pg_advisory_unlock(%s, %s)", [space, int(order_id)])
+
+
 @contextmanager
 def order_lock(order_id, space=7391):
     """Serializes everything done to one order (user actions and expiry) with a
@@ -53,17 +65,11 @@ def order_lock(order_id, space=7391):
     payment already sent can never be rolled back in the database by an error
     later in the same request. Re-entrant within one connection, and released
     by PostgreSQL if the process dies. space=7392 is used for robots."""
-    if connection.vendor != "postgresql":
-        # Advisory locks are PostgreSQL-only; without them every order action would run
-        # unserialized. Refuse loudly rather than run unprotected (e.g. on sqlite).
-        raise ImproperlyConfigured("order_lock needs PostgreSQL (pg_advisory_lock)")
-    with connection.cursor() as c:
-        c.execute("SELECT pg_advisory_lock(%s, %s)", [space, int(order_id)])
+    acquire_order_lock(order_id, space)
     try:
         yield
     finally:
-        with connection.cursor() as c:
-            c.execute("SELECT pg_advisory_unlock(%s, %s)", [space, int(order_id)])
+        release_order_lock(order_id, space)
 
 
 # Reward ledger (23 oct 2026). Robot.earned_rewards is only a cached number: any bug
@@ -284,6 +290,10 @@ def payout_problem(lnpayment):
         return "no order has this payout"
     if order.status not in (Order.Status.PAY, Order.Status.FAI):
         return f"order status is {order.get_status_display()}"
+    if order.is_swap is True:
+        return "the buyer switched to an onchain payout"
+    if lnpayment.status not in (LNPayment.Status.FLIGHT, LNPayment.Status.FAILRO):
+        return f"payout status is {lnpayment.get_status_display()}"
     escrow = order.trade_escrow
     if escrow is None or escrow.status != LNPayment.Status.SETLED:
         return "the trade escrow is not settled"
@@ -859,7 +869,8 @@ class Logics:
         If the user submits a LN invoice instead. The returned OnchainPayment goes unused.
         """
         # Make sure no invoice payout is attached to order
-        order.payout = None
+        if order.status != Order.Status.FAI:
+            order.payout = None
 
         # Create onchain_payment
         onchain_payment = OnchainPayment.objects.create(receiver=user)
@@ -958,7 +969,10 @@ class Logics:
             )
             return True, context
 
-        if order.payout_tx is None:
+        if order.payout_tx is None or (
+            order.status == Order.Status.FAI
+            and order.payout_tx.status == OnchainPayment.Status.CANCE
+        ):
             # Creates the OnchainPayment object and checks node balance
             valid = cls.create_onchain_payment(
                 order, user, preliminary_amount=context["invoice_amount"]
@@ -1013,8 +1027,13 @@ class Logics:
         # only the buyer can post a buyer address
         if not cls.is_buyer(order, user):
             return False, new_error(1015)
+        rescue = order.status == Order.Status.FAI
+        if rescue:
+            problem = cls.onchain_rescue_problem(order, user)
+            if problem:
+                return False, problem
         # not the right time to submit
-        if not (
+        elif not (
             order.taker_bond.status
             == order.maker_bond.status
             == LNPayment.Status.LOCKED
@@ -1033,7 +1052,12 @@ class Logics:
             )
             return False, context
 
-        num_satoshis = cls.payout_amount(order, user)[1]["invoice_amount"]
+        payout_context = cls.payout_amount(order, user)[1]
+        if rescue and not payout_context.get("swap_allowed"):
+            return False, new_error(
+                4007, {"reason": payout_context.get("swap_failure_reason", "")}
+            )
+        num_satoshis = payout_context["invoice_amount"]
         if mining_fee_rate:
             # not a valid mining fee
             min_mining_fee_rate = get_minning_fee("minimum", num_satoshis)
@@ -1075,6 +1099,8 @@ class Logics:
                 level="WARN",
             )
             return False, new_error(4003)
+        if rescue:
+            return cls.pay_onchain_rescue(order, user, tx)
         tx.status = OnchainPayment.Status.VALID
         tx.save()
 
@@ -1086,6 +1112,78 @@ class Logics:
         )
         cls.move_state_updated_payout_method(order)
 
+        return True, None
+
+    @classmethod
+    def onchain_rescue_problem(cls, order, user):
+        if not cls.is_buyer(order, user):
+            return new_error(1015)
+        payout = order.payout
+        if payout is None or payout.receiver != user:
+            return new_error(1016)
+        if payout.in_flight or payout.status not in (
+            LNPayment.Status.FAILRO,
+            LNPayment.Status.EXPIRE,
+        ):
+            return new_error(4006)
+        escrow = order.trade_escrow
+        if escrow is None or escrow.status != LNPayment.Status.SETLED:
+            return new_error(1016)
+        return None
+
+    @classmethod
+    def pay_onchain_rescue(cls, order, user, tx):
+        payout = order.payout
+        previous = payout.status
+        claimed = LNPayment.objects.filter(
+            pk=payout.pk,
+            status__in=[LNPayment.Status.FAILRO, LNPayment.Status.EXPIRE],
+            in_flight=False,
+        ).update(status=LNPayment.Status.CANCEL)
+        if claimed != 1:
+            return False, new_error(4006)
+
+        def undo():
+            LNPayment.objects.filter(
+                pk=payout.pk, status=LNPayment.Status.CANCEL
+            ).update(status=previous)
+
+        try:
+            ln_status = LNNode.payment_status(payout.payment_hash)
+        except Exception as e:
+            undo()
+            order.log(
+                f"Onchain rescue refused: could not check LNPayment({payout.payment_hash},{payout!s}) in the lightning node ({e})",
+                level="WARN",
+            )
+            return False, new_error(4008)
+        if ln_status not in (None, LNPayment.Status.FAILRO):
+            undo()
+            order.log(
+                f"Onchain rescue refused: the lightning node shows LNPayment({payout.payment_hash},{payout!s}) as {LNPayment.Status(ln_status).label}",
+                level="WARN",
+            )
+            return False, new_error(4006)
+        try:
+            if not LNNode.double_check_htlc_is_settled(order.trade_escrow.payment_hash):
+                undo()
+                return False, new_error(1016)
+        except Exception:
+            undo()
+            return False, new_error(4008)
+
+        tx.status = OnchainPayment.Status.QUEUE
+        tx.save()
+        order.is_swap = True
+        order.save(update_fields=["is_swap"])
+        order.log(
+            f"Lightning payout LNPayment({payout.payment_hash},{payout!s}) was **cancelled**: Robot({user.robot.id},{user.username}) switched to the onchain address OnchainPayment({tx.id},{tx.address[:6]}...{tx.address[-4:]}). Amount to be sent is {tx.sent_satoshis} Sats, mining fee is {tx.mining_fee_sats} Sats"
+        )
+        cls.complete_order(order)
+        order.contract_finalization_time = timezone.now()
+        order.save(update_fields=["contract_finalization_time"])
+        send_notification.delay(order_id=order.id, message="trade_successful")
+        order.log("**Paying buyer onchain address** after a failed lightning payout")
         return True, None
 
     @classmethod

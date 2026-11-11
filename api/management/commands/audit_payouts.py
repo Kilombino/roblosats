@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import Sum
 
 from api.lightning.node import LNNode
-from api.models import LNPayment, Order, Robot
+from api.models import LNPayment, OnchainPayment, Order, Robot
 
 REWARDED = re.compile(r"Robot\((\d+),[^)]*\) was rewarded (\d+) Sats")
 RETURNED = re.compile(r"Robot\((\d+),[^)]*\) was returned (\d+) Sats")
@@ -16,7 +16,7 @@ class Command(BaseCommand):
         "Read-only audit of past rewards and payouts against the payout safety rules: "
         "rewards credited more than once per order, rewards whose slashed bond the "
         "lightning node does not show as settled, robots that withdrew more than they "
-        "were ever credited, and buyer payouts not covered by a settled escrow. Changes nothing."
+        "were ever credited, buyer payouts not covered by a settled escrow, and buyers paid both by lightning and onchain. Changes nothing."
     )
 
     def add_arguments(self, parser):
@@ -110,5 +110,18 @@ class Command(BaseCommand):
                         )
                 except Exception as e:
                     report(f"order {order.id}: could not look up the escrow ({e})")
+
+        self.stdout.write("Buyers paid both by lightning and onchain:")
+        for order in Order.objects.filter(
+            payout__status=LNPayment.Status.SUCCED,
+            payout_tx__status__in=[
+                OnchainPayment.Status.QUEUE,
+                OnchainPayment.Status.MEMPO,
+                OnchainPayment.Status.CONFI,
+            ],
+        ):
+            report(
+                f"order {order.id}: lightning payout {order.payout.payment_hash} succeeded and onchain payout {order.payout_tx.id} is {order.payout_tx.get_status_display()}"
+            )
 
         self.stdout.write(f"{problems} finding(s).")

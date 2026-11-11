@@ -625,7 +625,9 @@ class LNDNode:
         return False, "Payment stream ended without a final status"
 
     @classmethod
-    def follow_send_payment(cls, lnpayment, fee_limit_sat, timeout_seconds):
+    def follow_send_payment(
+        cls, lnpayment, fee_limit_sat, timeout_seconds, on_started=None
+    ):
         """
         Sends sats to buyer, continuous update.
         Has a lot of boilerplate to correctly handle every possible condition and failure case.
@@ -646,9 +648,17 @@ class LNDNode:
             print(f"Order: {order.id} Payout is larger than collateral !?")
             return
 
+        started = [on_started]
+
+        def release():
+            if started[0] is not None:
+                callback, started[0] = started[0], None
+                callback()
+
         def handle_response(response, was_in_transit=False):
             from api.logics import Logics
 
+            release()
             if not order.transition_status(
                 Order.Status.PAY,
                 from_statuses=[Order.Status.PAY, Order.Status.FAI],
@@ -820,6 +830,26 @@ class LNDNode:
 
             else:
                 print(str(e))
+
+    @classmethod
+    def payment_status(cls, payment_hash):
+        from api.models import LNPayment
+
+        request = router_pb2.TrackPaymentRequest(payment_hash=bytes.fromhex(payment_hash))
+        routerstub = router_pb2_grpc.RouterStub(cls.channel)
+        try:
+            for response in routerstub.TrackPaymentV2(request, timeout=20):
+                log("router_pb2_grpc.TrackPaymentV2", request, response)
+                if response.status == lightning_pb2.Payment.PaymentStatus.SUCCEEDED:
+                    return LNPayment.Status.SUCCED
+                if response.status == lightning_pb2.Payment.PaymentStatus.FAILED:
+                    return LNPayment.Status.FAILRO
+                return LNPayment.Status.FLIGHT
+        except Exception as e:
+            if "payment isn't initiated" in str(e):
+                return None
+            raise
+        return LNPayment.Status.FLIGHT
 
     @classmethod
     def send_keysend(

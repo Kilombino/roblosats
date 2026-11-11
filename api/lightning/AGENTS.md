@@ -25,9 +25,14 @@ class-definition time (also import time), reused by every call.
   `{valid, context, description, payment_hash, created_at, expires_at}`.
 - `pay_invoice(cls, lnpayment)` — **rewards-withdrawal payouts only** (sole caller:
   `Logics.withdraw_rewards`). Returns `(bool, Optional[str] failure_reason)` on all paths — consistent with CLN.
-- `follow_send_payment(cls, lnpayment, fee_limit_sat, timeout_seconds)` — **`fee_limit_sat`
+- `follow_send_payment(cls, lnpayment, fee_limit_sat, timeout_seconds, on_started=None)` — **`fee_limit_sat`
   is absolute satoshis, not ppm** (converted by the caller in `tasks.py`). LND streams via
   `RouterStub.SendPaymentV2`; CLN polls `ListPays` in a loop with recursive retry.
+  `on_started` is called once, at the first response from LND (CLN: right away); the task
+  uses it to release the order lock (see the onchain rescue in `api/AGENTS.md`).
+- `payment_status(cls, payment_hash)` (LND only; CLN raises `NotImplementedError`) — current
+  state of an outgoing payment from the first `TrackPaymentV2` message: `SUCCED`, `FAILRO`,
+  `FLIGHT`, or `None` if LND never initiated it.
 - `send_keysend(cls, target_pubkey, message, num_satoshis, routing_budget_sats, timeout,
   sign)` → always `(True, keysend_payment_dict)` — the bool is not meaningful on either
   vendor. Self-keysend (`ALLOW_SELF_KEYSEND` env) is **LND-only**; CLN's request has no such

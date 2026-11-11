@@ -669,6 +669,10 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
                 loadingLightning={loadingButtons.submitInvoice}
                 lightning={lightning}
                 setLightning={setLightning}
+                onClickSubmitAddress={updateAddress}
+                loadingOnchain={loadingButtons.submitAddress}
+                onchain={onchain}
+                setOnchain={setOnchain}
               />
             );
           };
