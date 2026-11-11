@@ -208,6 +208,11 @@ class MakerView(CreateAPIView):
 
             order.last_satoshis = order.t0_satoshis = Logics.satoshis_now(order)
 
+            if escrow_type == Order.EscrowTypes.ONCHAIN and not escrow_flow.robot_allowed(request.user):
+                return Response(
+                    {"bad_request": "Onchain escrow is only open to some robots on this coordinator for now"},
+                    status.HTTP_400_BAD_REQUEST,
+                )
             escrow_cap = config("ESCROW_MAX_SATS", cast=int, default=0)
             if escrow_type == Order.EscrowTypes.ONCHAIN and escrow_cap and order.t0_satoshis > escrow_cap:
                 return Response(
@@ -620,6 +625,11 @@ class OrderView(viewsets.ViewSet):
 
         # 1) If action is take, it is a taker request!
         if action == "take":
+            if escrow_flow.is_onchain(order) and not escrow_flow.robot_allowed(request.user):
+                return Response(
+                    {"bad_request": "Onchain escrow is only open to some robots on this coordinator for now"},
+                    status.HTTP_400_BAD_REQUEST,
+                )
             if order.status == Order.Status.PUB:
                 if order.password is not None:
                     if password is None or not compare_digest(order.password, password):

@@ -485,3 +485,9 @@ def bonds_locked(order):
     maker = bond_of(order, "maker")
     taker = bond_of(order, "taker")
     return bool(maker and maker.status in held), bool(taker and taker.status in held)
+
+
+def robot_allowed(user):
+    """ESCROW_ALLOWED_ROBOTS (comma separated robot nicknames): empty means everyone."""
+    allowed = [x.strip() for x in config("ESCROW_ALLOWED_ROBOTS", default="").split(",") if x.strip()]
+    return not allowed or user.username in allowed
