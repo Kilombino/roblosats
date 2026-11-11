@@ -2,7 +2,7 @@ import { schnorr, secp256k1 } from '@noble/curves/secp256k1.js';
 import { hkdf } from '@noble/hashes/hkdf.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, hexToBytes, randomBytes } from '@noble/hashes/utils.js';
-import { bech32m } from '@scure/base';
+import { bech32, bech32m } from '@scure/base';
 
 import {
   applyTweak,
@@ -272,3 +272,22 @@ export const leafHashOf = (contract: EscrowContract | BondContract, index: numbe
 
 export const fundingScript = (pk33: Uint8Array): Uint8Array =>
   concat(Uint8Array.of(0x51, 0x20), xonly(pk33));
+
+export const addressToScript = (address: string): Uint8Array => {
+  const lower = address.toLowerCase() as `${string}1${string}`;
+  let decoded: { words: number[] };
+  let isM = false;
+  try {
+    decoded = bech32.decode(lower);
+  } catch {
+    decoded = bech32m.decode(lower);
+    isM = true;
+  }
+  const [version, ...words] = decoded.words;
+  const program = Uint8Array.from(bech32.fromWords(words));
+  if (version === 0 && !isM && (program.length === 20 || program.length === 32))
+    return concat(Uint8Array.of(0, program.length), program);
+  if (version === 1 && isM && program.length === 32)
+    return concat(Uint8Array.of(0x51, 0x20), program);
+  throw new Error('only segwit v0 and taproot addresses');
+};

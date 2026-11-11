@@ -355,6 +355,7 @@ def order_data(order, user):
         "escrow_rescue_csv": escrow.rescue_csv,
         "escrow_address": escrow.address,
         "escrow_sats": order.last_satoshis,
+        "escrow_output_sats": escrow.escrow_sats,
         "escrow_my_keys_set": bool(getattr(escrow, f"{role}_pubkey")),
         "escrow_peer_keys_set": bool(getattr(escrow, ("buyer" if role == "seller" else "seller") + "_pubkey")),
         "escrow_my_payout_address": escrow.funding_signatures.get(f"{role}_payout_address", ""),
