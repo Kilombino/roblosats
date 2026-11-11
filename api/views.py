@@ -493,7 +493,7 @@ class OrderView(viewsets.ViewSet):
                 LNPayment.Status.EXPIRE,
             ):
                 valid, context = Logics.payout_amount(order, request.user)
-                if valid:
+                if valid and context.get("swap_allowed"):
                     data = {**data, **context, "onchain_rescue": True}
 
         # 10) If status is 'Expired', "Sending", "Finished" or "failed routing", add info for renewal:

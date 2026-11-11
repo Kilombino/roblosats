@@ -73,7 +73,7 @@ via `confirm_fiat`) is irreversible; `PAU ⇄ PUB`, `FSE → CHA` (`undo_confirm
 
 **Onchain rescue (Roblosats): `FAI → SUC` via `update_address`.** When the buyer's lightning
 payout has failed (`order.payout` in `FAILRO`/`EXPIRE`, not `in_flight`), the GET of the order
-adds `onchain_rescue` plus the swap context, and `update_address` is accepted in `FAI`. The
+adds `onchain_rescue` plus the swap context (only when the coordinator offers onchain payouts and `swap_allowed` is true for this order), and `update_address` is accepted in `FAI`. The
 order is: `onchain_rescue_problem()` checks buyer, payout state and settled escrow; the normal
 address/fee validation runs; `pay_onchain_rescue()` then (1) moves the `LNPayment` to `CANCEL`
 with a conditional update (only one concurrent request wins), (2) asks LND with
