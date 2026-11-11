@@ -97,3 +97,16 @@ server secret. The JS client must produce the same keys: see the vectors in
   `escrow_keys`, `escrow_address` (PGP signed like `update_address`), `escrow_funding_signatures`,
   `escrow_nonce`, `escrow_partial`, `escrow_leaf_signature` with their data in `escrow`.
 - Regtest: `EscrowOrderFlowRegtest` (WF2 → SUC, and a dispute solved from the admin).
+
+## Onchain bonds (`taproot.BondContract`, no Lightning at all)
+- No key path: internal key is BIP341's NUMS point H, so nobody moves a bond alone before the
+  timelock. Leaf 0 `<owner> CHECKSIGVERIFY <coordinator> CHECKSIG` (into the deposit, early
+  return, or the penalty), leaf 1 `<owner> CHECKSIGVERIFY <refund_csv> CSV` (owner alone later).
+- Penalty: the owner signs `bond_spend_tx(..., coordinator_spk)` through leaf 0 when posting the
+  bond; the coordinator keeps that signature and adds its own only if the owner misbehaves.
+- `plan_deposit(..., seller_bond=BondInput, buyer_bond=BondInput)`: both bonds become inputs of
+  the deposit (leaf 0, owner + coordinator sign) and the escrow output holds amount + bonds; each
+  side's funding pays the mining fee of its own bond input. Release: cooperative pays the buyer
+  amount + its bond and the seller its bond; a dispute gives the loser's bond to the coordinator
+  with a reward share for the winner.
+- Regtest: lab-onchain/py/lab_bonds.py 10/10.

@@ -341,6 +341,68 @@ def keypath_witness(aggregate_sig: bytes) -> list[bytes]:
     return [with_hashtype(aggregate_sig)]
 
 
-def leaf_witness(contract: EscrowContract, index: int, sigs: list[bytes]) -> list[bytes]:
+def leaf_witness(contract, index: int, sigs: list[bytes]) -> list[bytes]:
     """sigs in the order the script consumes them from the stack top: the second key first."""
     return [with_hashtype(s) for s in sigs] + [contract.leaves[index], contract.control_block(index)]
+
+
+NUMS_H = bytes.fromhex("50929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0")
+
+
+def taproot_output_key(internal_xonly: bytes, merkle_root: bytes):
+    P = M.lift_x(internal_xonly)
+    if P is None:
+        raise ValueError("invalid internal key")
+    t = M.int_from_bytes(tagged_hash("TapTweak", internal_xonly + merkle_root))
+    if t >= M.n:
+        raise ValueError("tweak out of range")
+    Q = M.point_add(P, M.point_mul(M.G, t))
+    return M.xbytes(Q), 0 if M.has_even_y(Q) else 1
+
+
+@dataclass
+class BondContract:
+    """A fidelity bond on chain: no key path (NUMS internal key, BIP341), so the owner cannot
+    move it alone before the timelock. Leaf 0: owner + coordinator (into the deposit, early
+    return, or the penalty the owner signs in advance). Leaf 1: owner alone after `refund_csv`."""
+
+    owner_pk: bytes
+    coordinator_pk: bytes
+    refund_csv: int
+    hrp: str = "bc"
+    leaves: list[bytes] = field(init=False)
+    output_key: bytes = field(init=False)
+    parity: int = field(init=False)
+
+    COOPERATIVE = 0
+    REFUND = 1
+
+    def __post_init__(self):
+        if not 0 < self.refund_csv < 0xFFFF:
+            raise ValueError("refund_csv must be a block count below 65535")
+        o, c = xonly(self.owner_pk), xonly(self.coordinator_pk)
+        if o == c:
+            raise ValueError("owner and coordinator keys must differ")
+        self.leaves = [
+            push(o) + OP_CHECKSIGVERIFY + push(c) + OP_CHECKSIG,
+            push(o) + OP_CHECKSIGVERIFY + script_num(self.refund_csv) + OP_CSV,
+        ]
+        h = [tapleaf_hash(leaf) for leaf in self.leaves]
+        self._leaf_hashes = h
+        self.merkle_root = tapbranch_hash(h[0], h[1])
+        self.output_key, self.parity = taproot_output_key(NUMS_H, self.merkle_root)
+
+    @property
+    def script_pubkey(self) -> bytes:
+        return b"\x51\x20" + self.output_key
+
+    @property
+    def address(self) -> str:
+        return p2tr_address(self.output_key, self.hrp)
+
+    def leaf_hash(self, index: int) -> bytes:
+        return self._leaf_hashes[index]
+
+    def control_block(self, index: int) -> bytes:
+        sibling = self._leaf_hashes[1 - index]
+        return bytes([LEAF_VERSION | self.parity]) + NUMS_H + sibling
