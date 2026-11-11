@@ -77,7 +77,8 @@ server secret. The JS client must produce the same keys: see the vectors in
 - `Order.escrow_type` (`LIGHTNING`=0, `ONCHAIN`=1), chosen at creation (`escrow_type` in the
   make-order request; refused unless `service.enabled()`). `/api/info` says `onchain_escrow`;
   the book lists `escrow_type`; the Nostr order event carries `layer=onchain`.
-- Bonds stay Lightning hold invoices. States: WF2 (keys + the buyer's release address via
+- No Lightning at all: bonds are onchain too (`bonds.py`, see below). States: WFB (maker bond
+  locked → PUB), TAK (taker bond locked → contract), WF2 (keys + both release addresses via
   `escrow_*` actions) → WFE (funding; `ESCROW_FUNDING_SECONDS`, default 3 h) → CHA when the
   deposit has 1 confirmation → FSE → seller `confirm` starts the cooperative release and the
   bonds are returned → PAY → SUC when the release is broadcast (proceeds = the coordinator fee
@@ -110,3 +111,30 @@ server secret. The JS client must produce the same keys: see the vectors in
   amount + its bond and the seller its bond; a dispute gives the loser's bond to the coordinator
   with a reward share for the winner.
 - Regtest: lab-onchain/py/lab_bonds.py 10/10.
+
+## Onchain bonds in the order flow (`bonds.py`, `OnchainBond`)
+- `bond_key` (owner's bond key) → `OnchainBond` FUNDING with its address and `required_sats`
+  (bond_size % of the amount); `refund_csv` = the hold-invoice CLTV the LN bond would have had.
+  `bonds.refresh` (from `flow.advance`) waits for a confirmed output, fixes the penalty to
+  `ESCROW_COORDINATOR_ADDRESS` (`ESCROW_PENALTY_FEE_RATE`, default 10 sat/vB) → SIGN;
+  `bond_penalty_signature` → LOCKED. Maker LOCKED in WFB → `publish_order`; pretaker LOCKED in
+  PUB → `finalize_contract`.
+- The coordinator's key per bond is HKDF of `ESCROW_SECRET` with order, role and the owner's
+  bond key (stable whatever happens to the TakeOrder row); checked against the stored public key
+  before every signature.
+- Into the deposit as inputs; the trader signs its bond input together with its funding
+  inputs (`escrow_funding_signatures` with `bond_signature`); the coordinator adds its own.
+- Penalty (`bonds.penalize`): expiry in WF2/WFE (whoever is missing), unilateral cancel in
+  WF2/WFE (`flow.cancel_before_escrow`; taker cancelling sends the order back to the book with the
+  maker's bond still locked). `bonds.release` → RETURNABLE: public order cancelled or expired,
+  pretaker gone, the other party's bond. RETURNABLE bonds come back with `bond_return {address}`
+  + `bond_return_signature` (owner + coordinator), or alone after `refund_csv`.
+- After the deposit the bonds are inside the escrow output: cooperative release gives each bond
+  back, a collaborative cancel returns amount + bond to the seller and its bond to the buyer
+  (order → CCA once broadcast), a dispute gives the winner amount + its bond + a
+  `SLASHED_BOND_REWARD_SPLIT` share of the loser's bond and the rest to the coordinator (nothing
+  is credited to the robot: all paid on chain).
+- LN paths that touch `order.maker_bond`/`taker_bond` are guarded (`settle_bond(None)` is a
+  no-op; views skip hold-invoice generation and the LN lock checks for onchain orders).
+- Regtest: `EscrowOrderFlowRegtest` — WFB → PUB → take → WF2 → WFE → CHA → PAY → SUC, a
+  collaborative cancel, a dispute from the admin, and a taker that never funds (penalty mined).

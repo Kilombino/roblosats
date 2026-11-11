@@ -346,6 +346,9 @@ class OrderView(viewsets.ViewSet):
         else:
             data["taker_locked"] = False
 
+        if escrow_flow.is_onchain(order):
+            data["maker_locked"], data["taker_locked"] = escrow_flow.bonds_locked(order)
+
         # Is there an escrow? If so, True if locked, False otherwise
         if order.trade_escrow:
             data["escrow_locked"] = order.trade_escrow.status == LNPayment.Status.LOCKED
@@ -364,7 +367,9 @@ class OrderView(viewsets.ViewSet):
             Order.Status.SUC,
             Order.Status.FAI,
         ]:
-            if (
+            if escrow_flow.is_onchain(order):
+                data["trade_satoshis"] = order.last_satoshis
+            elif (
                 order.maker_bond.status
                 == order.taker_bond.status
                 == LNPayment.Status.LOCKED
@@ -381,7 +386,9 @@ class OrderView(viewsets.ViewSet):
                     ]["invoice_amount"]
 
         # 5) If status is 'waiting for maker bond' and user is MAKER, reply with a MAKER hold invoice.
-        if order.status == Order.Status.WFB and data["is_maker"]:
+        if order.status == Order.Status.WFB and data["is_maker"] and escrow_flow.is_onchain(order):
+            pass
+        elif order.status == Order.Status.WFB and data["is_maker"]:
             valid, context = Logics.gen_maker_hold_invoice(order, request.user)
             if valid:
                 data = {**data, **context}
@@ -398,7 +405,10 @@ class OrderView(viewsets.ViewSet):
             data["total_secs_exp"] = order.t_to_expire(Order.Status.TAK)
             data["amount"] = str(take_order.first().amount)
 
-            valid, context = Logics.gen_taker_hold_invoice(order, request.user)
+            if escrow_flow.is_onchain(order):
+                valid, context = True, {}
+            else:
+                valid, context = Logics.gen_taker_hold_invoice(order, request.user)
 
             if valid:
                 data = {**data, **context}
@@ -447,7 +457,7 @@ class OrderView(viewsets.ViewSet):
         # 8) If status is 'CHA' or 'FSE' and all HTLCS are in LOCKED
         elif order.status in [Order.Status.WFI, Order.Status.CHA, Order.Status.FSE]:
             # If all bonds are locked.
-            if (
+            if escrow_flow.is_onchain(order) or (
                 order.maker_bond.status
                 == order.taker_bond.status
                 == order.trade_escrow.status
@@ -551,7 +561,7 @@ class OrderView(viewsets.ViewSet):
 
         if escrow_flow.is_onchain(order):
             data["escrow_type"] = "onchain"
-            if data["is_participant"]:
+            if data["is_participant"] or take_order.exists():
                 try:
                     data.update(escrow_flow.order_data(order, request.user))
                 except escrow_flow.EscrowError as e:
@@ -697,7 +707,7 @@ class OrderView(viewsets.ViewSet):
                 return Response(context, status.HTTP_400_BAD_REQUEST)
 
         # 5.c) Onchain escrow actions (Roblosats)
-        elif action.startswith("escrow_"):
+        elif action.startswith("escrow_") or action.startswith("bond_"):
             if not escrow_flow.is_onchain(order):
                 return Response({"bad_request": "This order has no onchain escrow"}, status.HTTP_400_BAD_REQUEST)
             escrow_data = dict(serializer.data.get("escrow") or {})

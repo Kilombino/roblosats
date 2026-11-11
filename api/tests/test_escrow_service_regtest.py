@@ -7,6 +7,7 @@ fork is active and that has a funded wallet called "faucet" (the lab in
 keys a real client derives from its token.
 """
 
+import math
 import os
 import uuid
 from unittest import skipUnless
@@ -158,34 +159,76 @@ class EscrowServiceRegtest(TransactionTestCase):
 
 @skipUnless(REGTEST, "needs the regtest lab (ESCROW_REGTEST=1)")
 class EscrowOrderFlowRegtest(TransactionTestCase):
-    """The order state machine with an onchain escrow: WF2 → WFE → CHA → FSE → PAY → SUC,
-    and a dispute solved from the admin for the buyer."""
+    """The whole order with onchain bonds and escrow, no Lightning at all:
+    WFB → PUB → (take) → WF2 → WFE → CHA → FSE → PAY → SUC, a dispute solved from the admin,
+    a collaborative cancellation and a taker that never funds (penalty broadcast)."""
 
-    def _bond(self, user, concept):
+    def setUp(self):
+        from unittest.mock import patch
+
+        self.patches = [patch("api.logics.send_notification"),
+                        patch("api.logics.nostr_send_order_event"), patch("api.logics.send_devfund_donation"),
+                        patch("api.models.order.send_notification")]
+        for p in self.patches:
+            p.start()
+
+    def tearDown(self):
+        for p in self.patches:
+            p.stop()
+
+    def _keys(self, order, r):
+        alias = service.coordinator_alias()
+        return {k: derive_secret(f"g-{r}-{order.id}".encode(), alias, order.id, k) for k in ("escrow", "funding", "bond")}
+
+    def _pay_bond(self, order, user, keys):
+        from api.escrow import flow
+        from api.escrow.bonds import penalty_message
+
+        flow.action(order, user, "bond_key", {"bond_pubkey": pubkey(keys["bond"]).hex()})
+        d = flow.order_data(order, user)
+        _faucet("sendtoaddress", d["bond_address"], d["bond_required_sats"] / 1e8)
+        _mine()
+        flow.advance(order)
+        bond = flow.bond_of(order, d["bond_role"], owner=user)
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, bond.Status.SIGN)
+        _, msg = penalty_message(bond)
+        flow.action(order, user, "bond_penalty_signature", {"signature": with_hashtype(schnorr_sign(keys["bond"], msg)).hex()})
+        flow.advance(order)
+        order.refresh_from_db()
+        return bond
+
+    def _make_and_take(self):
+        from api.escrow import flow
+        from api.logics import Logics
+
+        from api.models import Currency
+
+        buyer, seller = _user(), _user()
         now = timezone.now()
-        return LNPayment.objects.create(
-            type=LNPayment.Types.HOLD, concept=concept, status=LNPayment.Status.LOCKED,
-            payment_hash=uuid.uuid4().hex, preimage=uuid.uuid4().hex, num_satoshis=30_000,
-            created_at=now, expires_at=now + timezone.timedelta(hours=1), sender=user,
+        currency, _ = Currency.objects.get_or_create(currency=2, defaults={"exchange_rate": 100_000})
+        order = Order.objects.create(
+            currency=currency, type=Order.Types.BUY, status=Order.Status.WFB, escrow_type=Order.EscrowTypes.ONCHAIN,
+            created_at=now, expires_at=now + timezone.timedelta(hours=24), has_range=False, amount=100,
+            satoshis=1_000_000, t0_satoshis=1_000_000, last_satoshis=1_000_000, maker=buyer, bond_size=3, is_explicit=True,
         )
+        kb, ks = self._keys(order, "buyer"), self._keys(order, "seller")
+        self._pay_bond(order, buyer, kb)
+        self.assertEqual(order.status, Order.Status.PUB)
+        Logics.take(order, seller)
+        self._pay_bond(order, seller, ks)
+        self.assertEqual(order.status, Order.Status.WF2)
+        self.assertIsNotNone(flow.escrow_of(order))
+        return order, buyer, seller, {"buyer": kb, "seller": ks}
 
     def _to_chat(self):
         from api.escrow import flow
+        from api.escrow.taproot import Transaction, TxOut
 
-        buyer, seller = _user(), _user()
-        order = _order(buyer, seller)
-        order.maker_bond = self._bond(buyer, LNPayment.Concepts.MAKEBOND)
-        order.taker_bond = self._bond(seller, LNPayment.Concepts.TAKEBOND)
-        order.save()
-        flow.on_contract(order)
-        alias = service.coordinator_alias()
-        keys = {r: (derive_secret(f"f-{r}-{order.id}".encode(), alias, order.id, r),
-                    derive_secret(f"f-{r}-{order.id}".encode(), alias, order.id, "funding"))
-                for r in ("seller", "buyer")}
+        order, buyer, seller, keys = self._make_and_take()
         for r, u in (("seller", seller), ("buyer", buyer)):
-            flow.action(order, u, "escrow_keys", {"escrow_pubkey": pubkey(keys[r][0]).hex(), "funding_pubkey": pubkey(keys[r][1]).hex()})
-        flow.action(order, buyer, "escrow_address", {"address": _faucet("getnewaddress", "", "bech32m")})
-        flow.action(order, seller, "escrow_address", {"address": _faucet("getnewaddress", "", "bech32m")})
+            flow.action(order, u, "escrow_keys", {"escrow_pubkey": pubkey(keys[r]["escrow"]).hex(), "funding_pubkey": pubkey(keys[r]["funding"]).hex()})
+            flow.action(order, u, "escrow_address", {"address": _faucet("getnewaddress", "", "bech32m")})
         flow.advance(order)
         order.refresh_from_db()
         self.assertEqual(order.status, Order.Status.WFE)
@@ -194,50 +237,73 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
             _faucet("sendtoaddress", d["escrow_funding_address"], d["escrow_funding_recommended"] / 1e8)
         _mine()
         flow.advance(order)
-        escrow = flow.escrow_of(order)
-        self.assertEqual(escrow.status, OnchainEscrow.Status.FUNDING)
+        self.assertEqual(flow.escrow_of(order).status, OnchainEscrow.Status.FUNDING)
         for r, u in (("seller", seller), ("buyer", buyer)):
             d = flow.order_data(order, u)
-            from api.escrow.taproot import Transaction, TxOut
             tx = Transaction.parse(bytes.fromhex(d["escrow_deposit_tx"]))
-            spent = [TxOut(v, bytes.fromhex(s)) for v, s in d["escrow_deposit_spent"]]
-            sigs = [with_hashtype(schnorr_sign(keys[r][1], tx.sighash_unified(i, spent))).hex() for i in d["escrow_deposit_my_inputs"]]
-            flow.action(order, u, "escrow_funding_signatures", {"signatures": sigs})
+            spent = [TxOut(v, bytes.fromhex(sp)) for v, sp in d["escrow_deposit_spent"]]
+            sigs = [with_hashtype(schnorr_sign(keys[r]["funding"], tx.sighash_unified(i, spent))).hex() for i in d["escrow_deposit_my_inputs"]]
+            bi = d["escrow_deposit_my_bond_input"]
+            from api.escrow.bonds import contract_of
+            bc = contract_of(flow.bond_of(order, d["bond_role"], owner=u))
+            bsig = with_hashtype(schnorr_sign(keys[r]["bond"], tx.sighash_unified(bi, spent, 0x21, bc.leaf_hash(bc.COOPERATIVE)))).hex()
+            flow.action(order, u, "escrow_funding_signatures", {"signatures": sigs, "bond_signature": bsig})
         _mine()
         flow.advance(order)
         order.refresh_from_db()
         self.assertEqual(order.status, Order.Status.CHA)
+        escrow = flow.escrow_of(order)
+        self.assertEqual(escrow.escrow_sats, 1_000_000 + 2 * 30_000)
         return order, buyer, seller, keys
 
+    def _musig(self, order, users, keys):
+        from api.escrow import flow
+
+        escrow = flow.escrow_of(order)
+        c = service.contract_for(escrow)
+        _, msg = service.release_message(escrow)
+        pks, tw, isx = c.musig_pubkeys(), [c.tweak], [True]
+        secs = {}
+        for i, r in enumerate(("seller", "buyer")):
+            sec, pub = M.nonce_gen(keys[r]["escrow"], pks[i], c.output_key, msg, None)
+            secs[r] = sec
+            flow.action(order, users[r], "escrow_nonce", {"nonce": pub.hex()})
+        ctx = M.SessionContext(bytes.fromhex(flow.order_data(order, users["buyer"])["escrow_release_aggnonce"]), pks, tw, isx, msg)
+        for r in ("seller", "buyer"):
+            flow.action(order, users[r], "escrow_partial", {"partial": M.sign(secs[r], keys[r]["escrow"], ctx).hex()})
+        return flow.escrow_of(order)
+
     def test_happy_path_to_successful(self):
-        from unittest.mock import patch
+        from api.logics import Logics
+
+        order, buyer, seller, keys = self._to_chat()
+        self.assertEqual(Logics.confirm_fiat(order, buyer), (True, None))
+        order.refresh_from_db()
+        self.assertEqual(Logics.confirm_fiat(order, seller), (True, None))
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.PAY)
+        escrow = self._musig(order, {"seller": seller, "buyer": buyer}, keys)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.SUC)
+        _mine()
+        outs = sorted(round(o["value"] * 1e8) for o in service.rpc("getrawtransaction", [escrow.release_txid, True])["vout"])
+        info = service.rpc("getrawtransaction", [escrow.release_txid, True])
+        self.assertEqual(outs[0], 30_000)
+        self.assertEqual(outs[1], 1_030_000 - math.ceil(math.ceil(info["vsize"]) * escrow.release_fee_rate))
+
+    def test_collaborative_cancel(self):
         from api.escrow import flow
         from api.logics import Logics
 
         order, buyer, seller, keys = self._to_chat()
-        with patch("api.logics.LNNode") as node, patch("api.logics.send_devfund_donation"), patch("api.logics.send_notification"):
-            node.cancel_return_hold_invoice.return_value = True
-            self.assertEqual(Logics.confirm_fiat(order, buyer), (True, None))
-            order.refresh_from_db()
-            self.assertEqual(Logics.confirm_fiat(order, seller), (True, None))
+        Logics.cancel_order(order, buyer)
         order.refresh_from_db()
-        self.assertEqual(order.status, Order.Status.PAY)
-        c = service.contract_for(flow.escrow_of(order))
-        _, msg = service.release_message(flow.escrow_of(order))
-        pks, tw, isx = c.musig_pubkeys(), [c.tweak], [True]
-        secs = {}
-        for i, (r, u) in enumerate((("seller", seller), ("buyer", buyer))):
-            sec, pub = M.nonce_gen(keys[r][0], pks[i], c.output_key, msg, None)
-            secs[r] = sec
-            flow.action(order, u, "escrow_nonce", {"nonce": pub.hex()})
-        agg = bytes.fromhex(flow.order_data(order, buyer)["escrow_release_aggnonce"])
-        ctx = M.SessionContext(agg, pks, tw, isx, msg)
-        with patch("api.logics.send_devfund_donation"):
-            for r, u in (("seller", seller), ("buyer", buyer)):
-                flow.action(order, u, "escrow_partial", {"partial": M.sign(secs[r], keys[r][0], ctx).hex()})
+        Logics.cancel_order(order, seller)
+        escrow = self._musig(order, {"seller": seller, "buyer": buyer}, keys)
+        flow.advance(order)
         order.refresh_from_db()
-        self.assertEqual(order.status, Order.Status.SUC)
-        self.assertEqual(order.proceeds, flow.escrow_of(order).coordinator_fee_sats)
+        self.assertEqual(order.status, Order.Status.CCA)
+        self.assertEqual(escrow.status, OnchainEscrow.Status.RELEASED)
 
     def test_dispute_for_the_buyer_from_the_admin(self):
         from unittest.mock import MagicMock, patch
@@ -249,19 +315,42 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
         order, buyer, seller, keys = self._to_chat()
         order.expires_at = timezone.now()
         order.save()
-        with patch("api.logics.LNNode") as node, patch("api.logics.send_notification"):
-            node.settle_hold_invoice.return_value = True
-            node.double_check_htlc_is_settled.return_value = True
-            self.assertEqual(Logics.open_dispute(order, buyer), (True, None))
+        self.assertEqual(Logics.open_dispute(order, buyer), (True, None))
         admin = OrderAdmin(Order, AdminSite())
         admin.message_user = MagicMock()
         with patch("api.admin.send_notification"):
-            admin.taker_wins(MagicMock(), Order.objects.filter(pk=order.pk)) if order.taker == buyer else admin.maker_wins(MagicMock(), Order.objects.filter(pk=order.pk))
+            admin.maker_wins(MagicMock(), Order.objects.filter(pk=order.pk))
         escrow = flow.escrow_of(order)
         self.assertEqual(escrow.status, OnchainEscrow.Status.RELEASING)
         _, msg = service.release_message(escrow)
-        flow.action(order, buyer, "escrow_leaf_signature", {"signature": with_hashtype(schnorr_sign(keys["buyer"][0], msg)).hex()})
+        flow.action(order, buyer, "escrow_leaf_signature", {"signature": with_hashtype(schnorr_sign(keys["buyer"]["escrow"], msg)).hex()})
         _mine()
         escrow.refresh_from_db()
-        self.assertEqual(escrow.status, OnchainEscrow.Status.RELEASED)
-        self.assertGreaterEqual(service.rpc("getrawtransaction", [escrow.release_txid, True])["confirmations"], 1)
+        outs = sorted(round(o["value"] * 1e8) for o in service.rpc("getrawtransaction", [escrow.release_txid, True])["vout"])
+        info = service.rpc("getrawtransaction", [escrow.release_txid, True])
+        self.assertEqual(outs[0], 15_000)
+        self.assertEqual(outs[1], 1_045_000 - math.ceil(math.ceil(info["vsize"]) * escrow.release_fee_rate))
+
+    def test_taker_never_funds_is_penalized(self):
+        from api.escrow import flow
+        from api.logics import Logics
+
+        order, buyer, seller, keys = self._make_and_take()
+        for r, u in (("seller", seller), ("buyer", buyer)):
+            flow.action(order, u, "escrow_keys", {"escrow_pubkey": pubkey(keys[r]["escrow"]).hex(), "funding_pubkey": pubkey(keys[r]["funding"]).hex()})
+            flow.action(order, u, "escrow_address", {"address": _faucet("getnewaddress", "", "bech32m")})
+        flow.advance(order)
+        order.refresh_from_db()
+        d = flow.order_data(order, buyer)
+        _faucet("sendtoaddress", d["escrow_funding_address"], d["escrow_funding_recommended"] / 1e8)
+        _mine()
+        order.expires_at = timezone.now()
+        order.save()
+        Logics.order_expires(order)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.EXP)
+        seller_bond = flow.bond_of(order, "taker")
+        self.assertEqual(seller_bond.status, seller_bond.Status.PENALIZED)
+        self.assertEqual(flow.bond_of(order, "maker").status, seller_bond.Status.RETURNABLE)
+        _mine()
+        self.assertGreaterEqual(service.rpc("getrawtransaction", [seller_bond.spend_txid, True])["confirmations"], 1)

@@ -66,11 +66,9 @@ def _lock_disputed_onchain(order):
 
 
 def _onchain_wins(order, winner):
-    """The winner gets its own bond back as reward credit and the escrow on chain once it
-    signs the release (the coordinator adds its signature)."""
-    bond = order.maker_bond if winner == order.maker else order.taker_bond
+    """The winner gets the escrow, its own bond and a reward share of the loser's bond on chain
+    once it signs the release (the coordinator adds its signature); nothing is credited."""
     escrow_flow.resolve_dispute(order, buyer_wins=Logics.is_buyer(order, winner))
-    _credit(winner.robot, bond.num_satoshis, order, "maker_wins" if winner == order.maker else "taker_wins")
     order.update_status(Order.Status.TLD if winner == order.maker else Order.Status.MLD)
 
 

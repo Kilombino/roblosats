@@ -557,6 +557,8 @@ class Logics:
             take_order.expires_at = timezone.now()
             take_order.save(update_fields=["expires_at"])
         cls.cancel_bond(take_order.taker_bond)
+        if escrow_flow.is_onchain(take_order.order) and take_order.taker:
+            escrow_flow.release_bond(take_order.order, "taker", take_order.taker)
 
     @classmethod
     def order_expires(cls, order):
@@ -598,6 +600,8 @@ class Logics:
             order.update_status(Order.Status.EXP)
             order.expiry_reason = Order.ExpiryReasons.NMBOND
             cls.cancel_bond(order.maker_bond)
+            if escrow_flow.is_onchain(order):
+                escrow_flow.release_bond(order, "maker")
             order.save(update_fields=["expiry_reason"])
 
             order.log("Order expired while waiting for maker bond")
@@ -607,6 +611,8 @@ class Logics:
 
         elif order.status in [Order.Status.PUB, Order.Status.PAU]:
             cls.return_bond(order.maker_bond)
+            if escrow_flow.is_onchain(order):
+                escrow_flow.release_bond(order, "maker")
             order.update_status(Order.Status.EXP)
             order.expiry_reason = Order.ExpiryReasons.NTAKEN
 
@@ -1336,7 +1342,9 @@ class Logics:
             return False, None
 
         # Return the maker bond. If this fails, the order is left untouched.
-        if not cls.return_bond(order.maker_bond):
+        if escrow_flow.is_onchain(order):
+            escrow_flow.release_bond(order, "maker")
+        elif not cls.return_bond(order.maker_bond):
             return False, None
 
         # Atomically flip PUB/PAU -> UCA. If the status is no longer
@@ -1402,6 +1410,8 @@ class Logics:
         # status becomes "cancelled"
         if order.status == Order.Status.WFB and order.maker == user:
             cls.cancel_bond(order.maker_bond)
+            if escrow_flow.is_onchain(order):
+                escrow_flow.release_bond(order, "maker")
             order.update_status(Order.Status.UCA)
 
             order.log("Order expired while waiting for maker bond")
@@ -1448,6 +1458,11 @@ class Logics:
 
         # 4.a) When maker cancel after bond (before escrow)
         # The order into cancelled status if maker cancels.
+        elif order.status in [Order.Status.WF2, Order.Status.WFE] and escrow_flow.is_onchain(order) and user in (order.maker, order.taker):
+            escrow_flow.cancel_before_escrow(order, "maker" if user == order.maker else "taker")
+            nostr_send_order_event.delay(order_id=order.id)
+            return True, None
+
         elif (
             order.status in [Order.Status.WF2, Order.Status.WFE] and order.maker == user
         ):
@@ -1549,6 +1564,9 @@ class Logics:
     @classmethod
     def collaborative_cancel(cls, order):
         if order.status not in [Order.Status.WFI, Order.Status.CHA]:
+            return
+        if escrow_flow.is_onchain(order):
+            escrow_flow.collaborative_cancel(order)
             return
         # cancel onchain payment if existing
         cls.cancel_onchain_payment(order)
@@ -1724,8 +1742,9 @@ class Logics:
         order.announce_status(old_status, Order.Status.WF2)
         escrow_flow.on_contract(order)
 
-        order.taker_bond.status = LNPayment.Status.LOCKED
-        order.taker_bond.save(update_fields=["status"])
+        if order.taker_bond is not None:
+            order.taker_bond.status = LNPayment.Status.LOCKED
+            order.taker_bond.save(update_fields=["status"])
 
         # Both users robots are added one more contract // Unsafe can add more than once.
         order.maker.robot.total_contracts += 1
@@ -1942,6 +1961,8 @@ class Logics:
         invoice succeeds in LND, so without this guard a repeated call would
         be reported as a new slash and rewards would be credited again.
         """
+        if bond is None:
+            return False
         bond.refresh_from_db(fields=["status"])
         if bond.status == LNPayment.Status.SETLED:
             return False

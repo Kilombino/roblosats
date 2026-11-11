@@ -182,9 +182,13 @@ def fee_rate(blocks=1):
         return config("ESCROW_FALLBACK_FEE_RATE", cast=float, default=5.0)
 
 
-def build_deposit(escrow, escrow_sats, seller_fee, buyer_fee, coordinator_spk, dev_sats, dev_spk):
-    """Plan the deposit from the confirmed funding of both traders and store it unsigned."""
+def build_deposit(escrow, escrow_sats, seller_fee, buyer_fee, coordinator_spk, dev_sats, dev_spk, bonds=None):
+    """Plan the deposit from the confirmed funding of both traders and store it unsigned.
+    bonds: {"seller": OnchainBond, "buyer": OnchainBond} (onchain bonds become inputs)."""
+    from api.escrow import bonds as bond_service
     from api.models import OnchainEscrow
+
+    bonds = bonds or {}
 
     seller = funding_utxos(escrow, "seller")
     buyer = funding_utxos(escrow, "buyer") if buyer_fee else []
@@ -192,8 +196,10 @@ def build_deposit(escrow, escrow_sats, seller_fee, buyer_fee, coordinator_spk, d
         seller, buyer, contract_for(escrow), escrow_sats, seller_fee, buyer_fee,
         coordinator_spk, dev_sats, dev_spk, funding_spk(escrow, "seller"), funding_spk(escrow, "buyer"),
         fee_rate(int(config("ESCROW_DEPOSIT_TARGET_BLOCKS", default=2))),
+        bond_service.bond_input(bonds["seller"]) if bonds.get("seller") else None,
+        bond_service.bond_input(bonds["buyer"]) if bonds.get("buyer") else None,
     )
-    escrow.escrow_sats = escrow_sats
+    escrow.escrow_sats = plan.tx.outputs[0].value
     dev_paid = sum(o.value for o in plan.tx.outputs[1:] if dev_spk and o.script_pubkey == dev_spk)
     escrow.dev_fee_sats = dev_paid
     escrow.coordinator_fee_sats = seller_fee + buyer_fee - dev_paid
@@ -203,6 +209,9 @@ def build_deposit(escrow, escrow_sats, seller_fee, buyer_fee, coordinator_spk, d
         "spent": [[s.value, s.script_pubkey.hex()] for s in plan.spent],
         "seller_inputs": plan.seller_inputs,
         "buyer_inputs": plan.buyer_inputs,
+        "bond_inputs": plan.bond_inputs or {},
+        "bond_ids": {r: b.pk for r, b in bonds.items() if b},
+        "trade_sats": escrow_sats,
     }
     escrow.funding_signatures = sigs
     escrow.status = OnchainEscrow.Status.FUNDING
@@ -219,9 +228,11 @@ def stored_deposit(escrow):
     return tx, spent, p
 
 
-def submit_funding_signatures(escrow, role, sigs_hex):
-    """A trader sends one BIP340 signature (0x21) per own input of the deposit; broadcast when both are in."""
-    from api.models import OnchainEscrow
+def submit_funding_signatures(escrow, role, sigs_hex, bond_sig_hex=None):
+    """A trader sends one BIP340 signature (0x21) per own funding input of the deposit, plus
+    one for its bond input if it has an onchain bond; broadcast when both sides are in."""
+    from api.escrow import bonds as bond_service
+    from api.models import OnchainBond, OnchainEscrow
 
     with transaction.atomic():
         escrow = OnchainEscrow.objects.select_for_update().get(pk=escrow.pk)
@@ -239,13 +250,31 @@ def submit_funding_signatures(escrow, role, sigs_hex):
             if not schnorr_verify(tx.sighash_unified(i, spent), fpk, sig[:64]):
                 raise EscrowError("a signature does not verify")
         data = dict(escrow.funding_signatures)
+        bond_index = plan.get("bond_inputs", {}).get(role)
+        if bond_index is not None:
+            bond = OnchainBond.objects.get(pk=plan["bond_ids"][role])
+            c = bond_service.contract_of(bond)
+            sig = bytes.fromhex(bond_sig_hex or "")
+            msg = tx.sighash_unified(bond_index, spent, SIGHASH_ALL_UNIFIED, c.leaf_hash(c.COOPERATIVE))
+            if len(sig) != 65 or sig[64] != SIGHASH_ALL_UNIFIED or not schnorr_verify(msg, xonly(bytes.fromhex(bond.owner_pubkey)), sig[:64]):
+                raise EscrowError("the bond signature does not verify")
+            data[f"{role}_bond_sig"] = bond_sig_hex
         data[f"{role}_sigs"] = sigs_hex
         escrow.funding_signatures = data
-        complete = all(data.get(f"{r}_sigs") or not plan[f"{r}_inputs"] for r in ROLES)
+        complete = all(
+            (data.get(f"{r}_sigs") or not plan[f"{r}_inputs"])
+            and (plan.get("bond_inputs", {}).get(r) is None or data.get(f"{r}_bond_sig"))
+            for r in ROLES
+        )
         if complete:
             for r in ROLES:
                 for i, s in zip(plan[f"{r}_inputs"], data.get(f"{r}_sigs", [])):
                     tx.inputs[i].witness = [bytes.fromhex(s)]
+            for r, i in plan.get("bond_inputs", {}).items():
+                bond = OnchainBond.objects.get(pk=plan["bond_ids"][r])
+                c = bond_service.contract_of(bond)
+                coord = bond_service.coordinator_deposit_signature(bond, tx, spent, i)
+                tx.inputs[i].witness = leaf_witness(c, c.COOPERATIVE, [coord, bytes.fromhex(data[f"{r}_bond_sig"])[:64]])
             escrow.funding_tx = tx.serialize().hex()
             escrow.funding_txid = tx.txid()
             escrow.funding_vout = 0
@@ -254,6 +283,9 @@ def submit_funding_signatures(escrow, role, sigs_hex):
         rpc("sendrawtransaction", [escrow.funding_tx])
         escrow.status = OnchainEscrow.Status.MEMPOOL
         escrow.save(update_fields=["status", "updated_at"])
+        OnchainBond.objects.filter(pk__in=list(plan.get("bond_ids", {}).values())).update(
+            status=OnchainBond.Status.IN_DEPOSIT, spend_txid=escrow.funding_txid
+        )
     return escrow
 
 
@@ -270,21 +302,24 @@ def refresh_confirmation(escrow, min_conf=1):
     return escrow
 
 
-def _release_tx(escrow, payout_spk, kind):
+def _release_tx(escrow, payouts, kind, fee_payer=0):
     rate = fee_rate(1)
     vb = VB_KEYPATH if kind == escrow.ReleaseKind.COOPERATIVE else VB_LEAF_2SIG
+    if isinstance(payouts, (bytes, bytearray)):
+        payouts = [TxOut(escrow.escrow_sats, bytes(payouts))]
     tx = release_tx(contract_for(escrow), escrow.funding_txid, escrow.funding_vout, escrow.escrow_sats,
-                    [TxOut(escrow.escrow_sats, payout_spk)], vb, rate)
+                    payouts, vb, rate, fee_payer)
     return tx, rate
 
 
-def start_release(escrow, payout_spk, kind):
-    """Fix the release transaction (buyer's address, next-block fee paid by the buyer)."""
+def start_release(escrow, payouts, kind, fee_payer=0):
+    """Fix the release transaction. payouts: list of TxOut adding up to the escrow output (or a
+    single script that takes it all); payouts[fee_payer] pays the next-block mining fee."""
     from api.models import OnchainEscrow
 
     if escrow.status != OnchainEscrow.Status.LOCKED:
         raise EscrowError("the escrow is not locked")
-    tx, rate = _release_tx(escrow, payout_spk, kind)
+    tx, rate = _release_tx(escrow, payouts, kind, fee_payer)
     escrow.release_kind = kind
     escrow.release_tx = tx.serialize().hex()
     escrow.release_fee_rate = rate

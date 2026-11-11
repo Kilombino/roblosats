@@ -52,7 +52,7 @@ class Command(BaseCommand):
 
         orders = Order.objects.filter(
             escrow_type=Order.EscrowTypes.ONCHAIN,
-            status__in=[Order.Status.WF2, Order.Status.WFE, Order.Status.PAY],
+            status__in=[Order.Status.WFB, Order.Status.PUB, Order.Status.WF2, Order.Status.WFE, Order.Status.CHA, Order.Status.PAY],
         )
         for order in orders:
             try:
