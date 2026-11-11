@@ -55,6 +55,10 @@ class Order(models.Model):
         MLD = 17, "Maker lost dispute"
         TLD = 18, "Taker lost dispute"
 
+    class EscrowTypes(models.IntegerChoices):
+        LIGHTNING = 0, "Lightning hold invoice"
+        ONCHAIN = 1, "Onchain Taproot escrow"
+
     class ExpiryReasons(models.IntegerChoices):
         NTAKEN = 0, "Expired not taken"
         NMBOND = 1, "Maker bond not locked"
@@ -66,6 +70,9 @@ class Order(models.Model):
     reference = models.UUIDField(default=custom_uuid, editable=False)
     status = models.PositiveSmallIntegerField(
         choices=Status.choices, null=False, default=Status.WFB
+    )
+    escrow_type = models.PositiveSmallIntegerField(
+        choices=EscrowTypes.choices, null=False, default=EscrowTypes.LIGHTNING
     )
     created_at = models.DateTimeField(default=timezone.now)
     expires_at = models.DateTimeField()
