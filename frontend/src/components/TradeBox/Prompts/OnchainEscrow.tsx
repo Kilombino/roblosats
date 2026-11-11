@@ -81,6 +81,7 @@ const PayBox = ({
         <Tooltip title={t('Copy to clipboard')} enterTouchDelay={0}>
           <Button
             size='small'
+            sx={{ textTransform: 'none' }}
             startIcon={<ContentCopy />}
             onClick={() => systemClient.copyToClipboard(address)}
           >
