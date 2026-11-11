@@ -222,6 +222,7 @@ def bond_data(bond):
         "bond_refund_csv": bond.refund_csv,
         "bond_coordinator_pubkey": bond.coordinator_pubkey,
         "bond_hrp": service.network_hrp(),
+        "escrow_alias": service.coordinator_alias(),
     }
     if bond.txid:
         data.update({"bond_txid": bond.txid, "bond_vout": bond.vout, "bond_value": bond.value})

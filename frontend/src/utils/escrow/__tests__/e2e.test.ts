@@ -20,6 +20,7 @@ import { addressToScript } from '../taproot';
 const URL = process.env.ESCROW_E2E_URL;
 const maybe = URL ? test : test.skip;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const call = async (path: string, body: object = {}): Promise<any> => {
   const r = await fetch(`${URL}/${path}`, { method: 'POST', body: JSON.stringify(body) });
   const j = await r.json();
@@ -32,16 +33,28 @@ maybe(
   async () => {
     const { order_id: id, alias } = await call('setup');
     const tokens = { buyer: 'buyer-token-' + id, seller: 'seller-token-' + id };
-    const keys = { buyer: escrowKeys(tokens.buyer, alias, id), seller: escrowKeys(tokens.seller, alias, id) };
-    const data = async (user: string): Promise<EscrowOrderData & { status: number }> => await call('data', { user });
+    const keys = {
+      buyer: escrowKeys(tokens.buyer, alias, id),
+      seller: escrowKeys(tokens.seller, alias, id),
+    };
+    const data = async (user: string): Promise<EscrowOrderData & { status: number }> =>
+      await call('data', { user });
 
     const postBond = async (user: 'buyer' | 'seller'): Promise<void> => {
-      await call('action', { user, name: 'bond_key', data: { bond_pubkey: publicKeys(keys[user]).bond } });
+      await call('action', {
+        user,
+        name: 'bond_key',
+        data: { bond_pubkey: publicKeys(keys[user]).bond },
+      });
       let d = await data(user);
       await call('pay', { address: d.bond_address, sats: d.bond_required_sats });
       await call('advance');
       d = await data(user);
-      await call('action', { user, name: 'bond_penalty_signature', data: { signature: signBondPenalty(d, keys[user]) } });
+      await call('action', {
+        user,
+        name: 'bond_penalty_signature',
+        data: { signature: signBondPenalty(d, keys[user]) },
+      });
       await call('advance');
     };
 
@@ -54,7 +67,11 @@ maybe(
     const payout: Record<string, string> = {};
     for (const user of ['seller', 'buyer'] as const) {
       const pk = publicKeys(keys[user]);
-      await call('action', { user, name: 'escrow_keys', data: { escrow_pubkey: pk.escrow, funding_pubkey: pk.funding } });
+      await call('action', {
+        user,
+        name: 'escrow_keys',
+        data: { escrow_pubkey: pk.escrow, funding_pubkey: pk.funding },
+      });
       payout[user] = (await call('newaddress')).address;
       await call('action', { user, name: 'escrow_address', data: { address: payout[user] } });
     }

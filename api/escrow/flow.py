@@ -332,10 +332,10 @@ def order_data(order, user):
     """What a trader's client needs to follow and sign its onchain bond and the escrow."""
     from api.escrow import bonds
 
-    bond_data = {}
+    bond_data = {"escrow_alias": service.coordinator_alias(), "escrow_hrp": service.network_hrp()}
     try:
         brole, _ = bond_role(order, user)
-        bond_data = bonds.bond_data(bond_of(order, brole, owner=user))
+        bond_data.update(bonds.bond_data(bond_of(order, brole, owner=user)))
         bond_data["bond_role"] = brole
     except EscrowError:
         pass
@@ -352,6 +352,7 @@ def order_data(order, user):
         "escrow_seller_pubkey": escrow.seller_pubkey,
         "escrow_buyer_pubkey": escrow.buyer_pubkey,
         "escrow_hrp": service.network_hrp(),
+        "escrow_alias": service.coordinator_alias(),
         "escrow_rescue_csv": escrow.rescue_csv,
         "escrow_address": escrow.address,
         "escrow_sats": order.last_satoshis,

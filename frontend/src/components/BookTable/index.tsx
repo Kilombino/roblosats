@@ -35,7 +35,7 @@ import { PaymentStringAsIcons } from '../PaymentMethods';
 import RobotAvatar from '../RobotAvatar';
 
 // Icons
-import { Fullscreen, FullscreenExit, Refresh } from '@mui/icons-material';
+import { Fullscreen, FullscreenExit, Link as ChainIcon, Refresh } from '@mui/icons-material';
 import { AppContext, type UseAppStoreType } from '../../contexts/AppContext';
 import { FederationContext, type UseFederationStoreType } from '../../contexts/FederationContext';
 import headerStyleFix from '../DataGrid/HeaderFix';
@@ -368,7 +368,14 @@ const BookTable = ({
               onOrderClicked(params.row.id, params.row.coordinatorShortAlias ?? '');
             }}
           >
-            <div style={{ position: 'relative', top: '0.4em' }}>
+            <div
+              style={{ position: 'relative', top: '0.4em', display: 'flex', alignItems: 'center' }}
+            >
+              {params.row.escrow_type === 1 ? (
+                <Tooltip title={t('Onchain escrow (no Lightning)')} enterTouchDelay={0}>
+                  <ChainIcon color='warning' sx={{ marginRight: '0.3em' }} />
+                </Tooltip>
+              ) : null}
               <PaymentStringAsIcons
                 othersText={t('Others')}
                 verbose={false}
@@ -400,6 +407,7 @@ const BookTable = ({
               onOrderClicked(params.row.id, params.row.coordinatorShortAlias ?? '');
             }}
           >
+            {params.row.escrow_type === 1 ? <ChainIcon color='warning' fontSize='small' /> : null}
             <PaymentStringAsIcons
               othersText={t('Others')}
               size={1.3 * fontSize}

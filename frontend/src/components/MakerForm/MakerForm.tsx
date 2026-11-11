@@ -273,6 +273,7 @@ const MakerForm = ({
     shortAlias: maker.coordinator,
     password: maker.password ? sha256(maker.password) : null,
     description: maker.description ? maker.description : null,
+    escrow_type: maker.onchainEscrow ? 1 : 0,
   });
 
   const submitOrder = (): void => {
@@ -1269,6 +1270,28 @@ const MakerForm = ({
           });
         }}
       />
+
+      {federation.getCoordinator(maker.coordinator)?.info?.onchain_escrow ? (
+        <Tooltip
+          enterTouchDelay={0}
+          title={t(
+            'Bonds and escrow on chain, without Lightning: nobody can move them alone, the trade takes longer (1 confirmation for each bond and for the deposit) and the fees are paid in the deposit.',
+          )}
+        >
+          <FormControlLabel
+            sx={{ marginLeft: 0 }}
+            control={
+              <Switch
+                checked={maker.onchainEscrow}
+                onChange={(e) => {
+                  setMaker({ ...maker, onchainEscrow: e.target.checked });
+                }}
+              />
+            }
+            label={t('Onchain escrow (no Lightning)')}
+          />
+        </Tooltip>
+      ) : null}
 
       <Grid container sx={{ alignItems: 'center', flexDirection: 'column' }}>
         <Grid sx={{ marginBottom: '8px', marginTop: '8px' }}>

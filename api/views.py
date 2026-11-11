@@ -208,6 +208,13 @@ class MakerView(CreateAPIView):
 
             order.last_satoshis = order.t0_satoshis = Logics.satoshis_now(order)
 
+            escrow_cap = config("ESCROW_MAX_SATS", cast=int, default=0)
+            if escrow_type == Order.EscrowTypes.ONCHAIN and escrow_cap and order.t0_satoshis > escrow_cap:
+                return Response(
+                    {"bad_request": f"Onchain escrow orders are limited to {escrow_cap} Sats on this coordinator for now"},
+                    status.HTTP_400_BAD_REQUEST,
+                )
+
             valid, context = Logics.validate_order_size(order)
             if not valid:
                 return Response(context, status.HTTP_400_BAD_REQUEST)

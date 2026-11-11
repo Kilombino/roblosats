@@ -24,6 +24,7 @@ export interface Maker {
   password: string | null;
   description: string | null;
   badDescription: boolean;
+  onchainEscrow: boolean;
 }
 
 export const defaultMaker: Maker = {
@@ -53,6 +54,7 @@ export const defaultMaker: Maker = {
   password: null,
   description: null,
   badDescription: false,
+  onchainEscrow: false,
 };
 
 export default Maker;

@@ -87,6 +87,9 @@ const eventToPublicOrder = (
       case 'bond':
         publicOrder.bond_size = tag[1];
         break;
+      case 'layer':
+        publicOrder.escrow_type = tag[1] === 'onchain' ? 1 : 0;
+        break;
       case 'name':
         publicOrder.maker_nick = tag[1];
         publicOrder.maker_hash_id = tag[2];

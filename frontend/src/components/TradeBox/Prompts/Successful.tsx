@@ -195,10 +195,7 @@ export const SuccessfulPrompt = ({
             <Typography variant='body2' align='center'>
               <Trans i18nKey='let_us_know_hot_to_improve'>
                 Let us know how the platform could improve (
-                <Link
-                  target='_blank'
-                  href='https://t.me/roblosats'
-                >
+                <Link target='_blank' href='https://t.me/roblosats'>
                   SimpleX
                 </Link>
                 {' / '}

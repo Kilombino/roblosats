@@ -17,6 +17,7 @@ export interface PublicOrder {
   latitude: number | null;
   longitude: number | null;
   bond_size: string;
+  escrow_type?: number;
   maker: number | null;
   escrow_duration: number;
   maker_nick: string | null;

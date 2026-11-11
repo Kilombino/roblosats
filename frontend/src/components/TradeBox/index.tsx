@@ -39,6 +39,8 @@ import { type EncryptedChatMessage } from './EncryptedChat';
 import CollabCancelAlert from './CollabCancelAlert';
 import { Bolt } from '@mui/icons-material';
 import { signCleartextMessage } from '../../pgp';
+import OnchainEscrowPrompt, { type EscrowAction } from './Prompts/OnchainEscrow';
+import { isOnchainEscrow, onchainEscrowStep, onchainEscrowTitle } from './onchainEscrowSteps';
 import { type UseGarageStoreType, GarageContext } from '../../contexts/GarageContext';
 import { type UseAppStoreType, AppContext } from '../../contexts/AppContext';
 import { FederationContext, type UseFederationStoreType } from '../../contexts/FederationContext';
@@ -112,7 +114,9 @@ export interface SubmitActionProps {
     | 'update_invoice'
     | 'update_address'
     | 'submit_statement'
-    | 'rate_platform';
+    | 'rate_platform'
+    | EscrowAction;
+  escrow?: object;
   invoice?: string;
   routing_budget_ppm?: number;
   address?: string;
@@ -208,6 +212,7 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
     statement,
     rating,
     cancel_status,
+    escrow,
   }: SubmitActionProps): void {
     const slot = garage.getSlot();
 
@@ -226,6 +231,7 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
           statement,
           rating,
           cancel_status,
+          escrow,
         })
         .then((data: Order) => {
           setOpen(closeAll);
@@ -361,6 +367,18 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
     }
   }, [slotUpdatedAt]);
 
+  const escrowAction = function (action: EscrowAction, data: object, signedAddress?: string): void {
+    submitAction({ action, escrow: data, address: signedAddress });
+  };
+
+  const signAddress = function (address: string, then: (signed: string) => void): void {
+    const slot = garage.getSlot();
+    const robot = slot?.getRobot();
+    if (robot?.encPrivKey != null && slot?.token != null) {
+      void signCleartextMessage(address, robot.encPrivKey, slot.token).then(then);
+    }
+  };
+
   const statusToContract = function (): Contract {
     const order = currentOrder;
 
@@ -378,6 +396,21 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
     const status = order.status;
     const isBuyer = order.is_buyer;
     const isMaker = order.is_maker;
+
+    if (isOnchainEscrow(order) && onchainEscrowStep(order)) {
+      baseContract.title = onchainEscrowTitle(order);
+      baseContract.titleColor = 'warning';
+      baseContract.bondStatus = 'hide';
+      baseContract.prompt = () => (
+        <OnchainEscrowPrompt
+          order={order}
+          token={garage.getSlot()?.token ?? undefined}
+          onAction={escrowAction}
+          onSignedAddress={signAddress}
+        />
+      );
+      return baseContract;
+    }
 
     switch (status) {
       // 0: 'Waiting for maker bond'

@@ -13,7 +13,18 @@ export interface SubmitActionProps {
     | 'update_address'
     | 'submit_statement'
     | 'rate_platform'
-    | 'take';
+    | 'take'
+    | 'bond_key'
+    | 'bond_penalty_signature'
+    | 'bond_return'
+    | 'bond_return_signature'
+    | 'escrow_keys'
+    | 'escrow_address'
+    | 'escrow_funding_signatures'
+    | 'escrow_nonce'
+    | 'escrow_partial'
+    | 'escrow_leaf_signature';
+  escrow?: object;
   invoice?: string;
   routing_budget_ppm?: number;
   address?: string;
@@ -185,6 +196,7 @@ class Order {
   address: string = '';
   network: 'mainnet' | 'testnet' = 'mainnet';
   shortAlias: string = '';
+  escrow_type?: number | string;
   bad_request?: string = '';
   bad_address?: string = '';
   bad_invoice?: string = '';
@@ -214,6 +226,7 @@ class Order {
       longitude: this.longitude,
       password: this.password,
       description: this.description,
+      escrow_type: this.escrow_type,
     };
 
     if (slot) {

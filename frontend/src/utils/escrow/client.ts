@@ -28,6 +28,16 @@ export interface EscrowKeys {
 
 export interface EscrowOrderData {
   id: number;
+  status?: number;
+  is_maker?: boolean;
+  escrow_type?: string | number;
+  escrow_alias?: string;
+  escrow_status_code?: number;
+  escrow_my_keys_set?: boolean;
+  escrow_deposit_signed?: boolean;
+  escrow_release_my_nonce?: string;
+  escrow_release_my_partial?: boolean;
+  bond_status_code?: number;
   escrow_role?: 'seller' | 'buyer';
   escrow_coordinator_pubkey?: string;
   escrow_seller_pubkey?: string;
