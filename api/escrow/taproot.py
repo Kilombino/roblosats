@@ -2,7 +2,6 @@ import hashlib
 import hmac
 import struct
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple
 
 from api.escrow import bip327 as M
 
@@ -89,7 +88,7 @@ def xonly(pk33: bytes) -> bytes:
     return pk33[1:]
 
 
-def _polymod(values: List[int]) -> int:
+def _polymod(values: list[int]) -> int:
     gen = [0x3B6A57B2, 0x26508E6D, 0x1EA119FA, 0x3D4233DD, 0x2A1462B3]
     chk = 1
     for v in values:
@@ -100,11 +99,11 @@ def _polymod(values: List[int]) -> int:
     return chk
 
 
-def _hrp_expand(hrp: str) -> List[int]:
+def _hrp_expand(hrp: str) -> list[int]:
     return [ord(c) >> 5 for c in hrp] + [0] + [ord(c) & 31 for c in hrp]
 
 
-def _convertbits(data: bytes, frombits: int, tobits: int) -> List[int]:
+def _convertbits(data: bytes, frombits: int, tobits: int) -> list[int]:
     acc = bits = 0
     out = []
     maxv = (1 << tobits) - 1
@@ -143,7 +142,7 @@ class EscrowContract:
     coordinator_pk: bytes
     seller_rescue_csv: int
     hrp: str = "bc"
-    leaves: List[bytes] = field(init=False)
+    leaves: list[bytes] = field(init=False)
     internal_key: bytes = field(init=False)
     merkle_root: bytes = field(init=False)
     tweak: bytes = field(init=False)
@@ -177,7 +176,7 @@ class EscrowContract:
         self.output_key = M.get_xonly_pk(tweaked)
         self.parity = 0 if M.has_even_y(tweaked.Q) else 1
 
-    def musig_pubkeys(self) -> List[bytes]:
+    def musig_pubkeys(self) -> list[bytes]:
         return [self.seller_pk, self.buyer_pk]
 
     @property
@@ -196,7 +195,7 @@ class EscrowContract:
             self._paths[index]
         )
 
-    def descriptor_address_check(self) -> Tuple[str, str]:
+    def descriptor_address_check(self) -> tuple[str, str]:
         return self.address, self.script_pubkey.hex()
 
 
@@ -205,7 +204,7 @@ class TxIn:
     txid: str
     vout: int
     sequence: int = SEQUENCE_RBF
-    witness: List[bytes] = field(default_factory=list)
+    witness: list[bytes] = field(default_factory=list)
 
     def outpoint(self) -> bytes:
         return bytes.fromhex(self.txid)[::-1] + struct.pack("<I", self.vout)
@@ -222,8 +221,8 @@ class TxOut:
 
 @dataclass
 class Transaction:
-    inputs: List[TxIn]
-    outputs: List[TxOut]
+    inputs: list[TxIn]
+    outputs: list[TxOut]
     version: int = 2
     locktime: int = 0
 
@@ -252,9 +251,9 @@ class Transaction:
     def sighash_unified(
         self,
         index: int,
-        spent: List[TxOut],
+        spent: list[TxOut],
         hashtype: int = SIGHASH_ALL_UNIFIED,
-        leaf_hash: Optional[bytes] = None,
+        leaf_hash: bytes | None = None,
     ) -> bytes:
         """Knots' SignatureHashUnified for a Taproot input, SIGHASH_ALL|UNIFIED only."""
         if hashtype != SIGHASH_ALL_UNIFIED:
@@ -297,10 +296,10 @@ def with_hashtype(sig: bytes, hashtype: int = SIGHASH_ALL_UNIFIED) -> bytes:
     return sig + bytes([hashtype])
 
 
-def keypath_witness(aggregate_sig: bytes) -> List[bytes]:
+def keypath_witness(aggregate_sig: bytes) -> list[bytes]:
     return [with_hashtype(aggregate_sig)]
 
 
-def leaf_witness(contract: EscrowContract, index: int, sigs: List[bytes]) -> List[bytes]:
+def leaf_witness(contract: EscrowContract, index: int, sigs: list[bytes]) -> list[bytes]:
     """sigs in the order the script consumes them from the stack top: the second key first."""
     return [with_hashtype(s) for s in sigs] + [contract.leaves[index], contract.control_block(index)]

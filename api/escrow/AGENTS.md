@@ -35,3 +35,20 @@ server secret. The JS client must produce the same keys: see the vectors in
   constant time: the server uses it only for public operations (key aggregation, nonce
   aggregation, partial signature verification and aggregation) and tests use it to play the
   traders. Never sign with a secret key through it on the server.
+
+## Deposit and release (`transactions.py`)
+- Funding address per trader and order: `rawtr(<funding key>)` (no tweak), key derived from the
+  token with role `funding`. The trader pays it from any wallet; the coordinator watches it
+  read-only (`funding_descriptor`).
+- `plan_deposit` builds the joint deposit: escrow output first, coordinator fee, dev fee (only
+  if ≥ 330 sats and a dev script is set; it comes out of the trading fees), then each side's
+  change. Each side pays the mining fee of its own inputs and change plus half of the shared
+  part; change below dust is left as fee. Short funding raises `DepositError` with the amount
+  missing.
+- `check_deposit` is what a client verifies before signing its inputs: escrow output and
+  amount, what it is charged at most, and a fee-rate ceiling.
+- `release_tx`: one escrow input, payouts adding up to the escrow, `fee_payer` (the buyer by
+  default) pays the mining fee; outputs below dust are dropped.
+- Size constants match the real transactions on regtest (key-path release 112 vB, two-signature
+  leaf 170 vB, 2-in/5-out deposit 341 vB); sizes are rounded up before applying the fee rate so
+  the requested rate is always reached (lab-onchain/py/lab_flow.py, 16/16).
