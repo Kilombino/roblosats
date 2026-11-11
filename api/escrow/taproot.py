@@ -226,6 +226,47 @@ class Transaction:
     version: int = 2
     locktime: int = 0
 
+    @classmethod
+    def parse(cls, raw: bytes) -> "Transaction":
+        pos = 0
+
+        def take(n):
+            nonlocal pos
+            out = raw[pos : pos + n]
+            if len(out) != n:
+                raise ValueError("truncated transaction")
+            pos += n
+            return out
+
+        def compact():
+            first = take(1)[0]
+            if first < 0xFD:
+                return first
+            return int.from_bytes(take({0xFD: 2, 0xFE: 4, 0xFF: 8}[first]), "little")
+
+        version = struct.unpack("<I", take(4))[0]
+        segwit = raw[pos : pos + 2] == b"\x00\x01"
+        if segwit:
+            take(2)
+        inputs = []
+        for _ in range(compact()):
+            txid = take(32)[::-1].hex()
+            vout = struct.unpack("<I", take(4))[0]
+            if take(compact()):
+                raise ValueError("only segwit inputs with empty scriptSig are supported")
+            inputs.append(TxIn(txid, vout, struct.unpack("<I", take(4))[0]))
+        outputs = []
+        for _ in range(compact()):
+            value = struct.unpack("<q", take(8))[0]
+            outputs.append(TxOut(value, take(compact())))
+        if segwit:
+            for txin in inputs:
+                txin.witness = [take(compact()) for _ in range(compact())]
+        locktime = struct.unpack("<I", take(4))[0]
+        if pos != len(raw):
+            raise ValueError("trailing bytes after the transaction")
+        return cls(inputs, outputs, version, locktime)
+
     def serialize(self, with_witness: bool = True) -> bytes:
         has_witness = with_witness and any(i.witness for i in self.inputs)
         out = struct.pack("<I", self.version)

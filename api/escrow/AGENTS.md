@@ -52,3 +52,24 @@ server secret. The JS client must produce the same keys: see the vectors in
 - Size constants match the real transactions on regtest (key-path release 112 vB, two-signature
   leaf 170 vB, 2-in/5-out deposit 341 vB); sizes are rounded up before applying the fee rate so
   the requested rate is always reached (lab-onchain/py/lab_flow.py, 16/16).
+
+## Service (`service.py`, Django glue)
+- Off unless `ONCHAIN_ESCROW=True` and `ESCROW_SECRET` (the coordinator's escrow keys are
+  HKDF of it per order; losing it loses the ability to sign dispute leaves, so back it up with
+  the coordinator's other secrets). `ESCROW_RESCUE_CSV` (default 4480 blocks ≈ 4 weeks at 9 min),
+  `ESCROW_WATCH_WALLET` (default `roblosats-escrow`, a watch-only descriptor wallet created on
+  first use in the coordinator's bitcoind), `ESCROW_DEPOSIT_TARGET_BLOCKS`, `ESCROW_FALLBACK_FEE_RATE`.
+- Flow: `create_escrow` → `submit_keys` (each trader: escrow key + funding key; when both are
+  in, the address is fixed and the funding addresses and the escrow are imported read-only) →
+  traders pay their funding addresses → `build_deposit` (status FUNDING) →
+  `submit_funding_signatures` (each signature checked against the trader's funding key; broadcast
+  when both are in; MEMPOOL) → `refresh_confirmation` (LOCKED at 1 confirmation) →
+  `start_release` (fixes the release: the buyer's address, next-block fee paid by the buyer) →
+  cooperative: `submit_release_nonce` ×2, `aggregate_nonce`, `submit_release_partial` ×2 (each
+  partial verified; broadcast when both verify; RELEASED) — dispute: `submit_leaf_signature` by
+  the winner only, the coordinator adds its own and broadcasts.
+- Row locks (`select_for_update`) guard every state change; the broadcast happens after the
+  commit and the status moves only after `sendrawtransaction` returned.
+- Tested end to end against the regtest lab: `api/tests/test_escrow_service_regtest.py`
+  (opt-in, `ESCROW_REGTEST=1`).
+- Not wired into `Logics`/views/frontend yet.
