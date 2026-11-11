@@ -354,8 +354,8 @@ def submit_release_nonce(escrow, role, pubnonce_hex):
         if len(nonce) != 66:
             raise EscrowError("a MuSig2 public nonce is 66 bytes")
         nonces = dict(escrow.release_nonces)
-        if role in nonces and nonces[role] != pubnonce_hex:
-            raise EscrowError("the nonce was already given")
+        if role in nonces and nonces[role] != pubnonce_hex and escrow.release_partial_sigs:
+            raise EscrowError("the nonce can no longer change: a partial signature was already given")
         nonces[role] = pubnonce_hex
         escrow.release_nonces = nonces
         escrow.save(update_fields=["release_nonces", "updated_at"])
