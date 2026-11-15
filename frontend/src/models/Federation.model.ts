@@ -46,6 +46,19 @@ const withTimeout = <T>(promise: Promise<T>): Promise<T | undefined> =>
     ),
   ]);
 
+/** Comparable form of an identity field (nostrHexPubkey, mainnet, testnet).
+ *  Network objects are compared the way the federation hash sees them: fixed key
+ *  order and null / '' / missing addresses as the same thing, so a document that
+ *  only spells an absent address differently (or comes back with its keys in another
+ *  order) does not count as an identity change and replace a loaded coordinator. */
+const identityValue = (value: unknown): string => {
+  if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+    const net = value as Record<string, unknown>;
+    return JSON.stringify(['onion', 'clearnet', 'i2p'].map((k) => net[k] ?? ''));
+  }
+  return JSON.stringify(value ?? null);
+};
+
 export class Federation {
   constructor(origin: Origin, settings: Settings, hostUrl: string) {
     // Roblosats: with a single coordinator its optional fields type as null, so cast via unknown.
@@ -351,9 +364,9 @@ export class Federation {
       const winnerEntry = finalDoc[alias] as Record<string, unknown>;
       const existing = this.coordinators[alias];
       const hasChange = identityFields.some((field) => {
-        const newVal = winnerEntry[field];
-        const oldVal = (existing as unknown as Record<string, unknown>)[field];
-        return JSON.stringify(newVal) !== JSON.stringify(oldVal);
+        const newVal = identityValue(winnerEntry[field]);
+        const oldVal = identityValue((existing as unknown as Record<string, unknown>)[field]);
+        return newVal !== oldVal;
       });
       if (hasChange) identityChanged.push(alias);
     }
@@ -464,9 +477,17 @@ export class Federation {
 
     // New coordinators also need their info fetched (limits, fees, federation_hash)
     // so they can participate in the next discovery vote and appear correctly in the UI.
-    added.forEach((alias) => {
+    // Coordinators replaced by a fresh instance because an identity field changed
+    // (mainnet/testnet urls, nostr key) start with loadingInfo=true and no info:
+    // without this they stayed as a skeleton (no fees, no limits, no on-chain switch)
+    // until the app was restarted.
+    [...added, ...identityChanged].forEach((alias) => {
       this.coordinators[alias]?.loadInfo(() => {
         this.onCoordinatorSaved();
+      });
+      void this.coordinators[alias]?.loadLimits(() => {
+        this.updateExchange();
+        this.triggerHook('onFederationUpdate');
       });
     });
 

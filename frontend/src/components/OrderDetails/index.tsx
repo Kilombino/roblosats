@@ -48,6 +48,7 @@ import { F2fMapDialog, OrderDescriptionDialog } from '../Dialogs';
 import { type UseFederationStoreType, FederationContext } from '../../contexts/FederationContext';
 import { Coordinator, type Order } from '../../models';
 import CoordinatorFeeRow from '../CoordinatorFeeRow';
+import { isOnchainEscrow } from '../TradeBox/onchainEscrowSteps';
 
 interface OrderDetailsProps {
   shortAlias: string;
@@ -191,6 +192,7 @@ const OrderDetails = ({
     if (order === null) return {};
 
     const isBuyer = (order.type === 0 && order.is_maker) || (order.type === 1 && !order.is_maker);
+    const onchain = isOnchainEscrow(order);
     const tradeFee = order.is_maker
       ? (coordinator?.info?.maker_fee ?? 0)
       : (coordinator?.info?.taker_fee ?? 0);
@@ -231,9 +233,10 @@ const OrderDetails = ({
         amount: amountString,
         method: order.payment_method,
       });
-      receive = t('You receive {{amount}} Sats (Approx)', {
-        amount: sats,
-      });
+      // Roblosats: in an onchain escrow order the sats move on chain, not over Lightning.
+      receive = onchain
+        ? t('You receive onchain {{amount}} Sats (Approx)', { amount: sats })
+        : t('You receive {{amount}} Sats (Approx)', { amount: sats });
     } else {
       if (order.trade_satoshis) {
         sats = pn(order.trade_satoshis);
@@ -258,7 +261,9 @@ const OrderDetails = ({
         });
         sats = `${String(min)}-${String(max)}`;
       }
-      send = t('You send via Lightning {{amount}} Sats (Approx)', { amount: sats });
+      send = onchain
+        ? t('You send onchain {{amount}} Sats (Approx)', { amount: sats })
+        : t('You send via Lightning {{amount}} Sats (Approx)', { amount: sats });
       receive = t('You receive via {{method}} {{amount}}', {
         amount: amountString,
         method: order.payment_method,

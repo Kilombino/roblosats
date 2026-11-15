@@ -874,5 +874,7 @@
   "Use a valid segwit or taproot address": "Use a valid segwit or taproot address",
   "Waiting for the coordinator…": "Waiting for the coordinator…",
   "Your bond is free. Get it back to an address of yours.": "Your bond is free. Get it back to an address of yours.",
-  "Your release address": "La teva adreça de cobrament"
+  "Your release address": "La teva adreça de cobrament",
+  "You receive onchain {{amount}} Sats (Approx)": "Tu reps onchain {{amount}} Sats (Approx)",
+  "You send onchain {{amount}} Sats (Approx)": "Tu envies onchain {{amount}} Sats (Approx)"
 }
