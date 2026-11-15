@@ -487,7 +487,57 @@ def bonds_locked(order):
     return bool(maker and maker.status in held), bool(taker and taker.status in held)
 
 
+def allowed_list():
+    """ESCROW_ALLOWED_ROBOTS: comma separated robot nicknames, robot hash ids or
+    robot nostr keys (hex or npub). Empty means everyone."""
+    return [x.strip() for x in config("ESCROW_ALLOWED_ROBOTS", default="").split(",") if x.strip()]
+
+
+def restricted():
+    """While a list of robots is set, onchain escrow stays hidden from everybody
+    else: not announced in /api/info, not in the public book, not on Nostr."""
+    return bool(allowed_list())
+
+
+def _nostr_hex(value):
+    if not value.startswith("npub1"):
+        return value.lower()
+    try:
+        from nostr_sdk import PublicKey
+
+        return PublicKey.parse(value).to_hex()
+    except Exception:
+        return value
+
+
 def robot_allowed(user):
-    """ESCROW_ALLOWED_ROBOTS (comma separated robot nicknames): empty means everyone."""
-    allowed = [x.strip() for x in config("ESCROW_ALLOWED_ROBOTS", default="").split(",") if x.strip()]
-    return not allowed or user.username in allowed
+    allowed = allowed_list()
+    if not allowed:
+        return True
+    if user is None or not getattr(user, "is_authenticated", False):
+        return False
+    robot = getattr(user, "robot", None)
+    names = {user.username}
+    if robot is not None:
+        if robot.hash_id:
+            names.add(robot.hash_id.lower())
+        if robot.nostr_pubkey:
+            names.add(robot.nostr_pubkey.lower())
+    return any(x in names or _nostr_hex(x) in names for x in allowed)
+
+
+def onchain_size_error(order):
+    """Onchain orders use their own size limits: ESCROW_MIN_SATS (default
+    MIN_ORDER_SIZE) to ESCROW_MAX_SATS (default MAX_ORDER_SIZE)."""
+    from api.logics import Logics
+
+    low = config("ESCROW_MIN_SATS", cast=int, default=config("MIN_ORDER_SIZE", cast=int, default=20000))
+    high = config("ESCROW_MAX_SATS", cast=int, default=0) or config("MAX_ORDER_SIZE", cast=int, default=250000)
+    if order.has_range:
+        rate = order.currency.exchange_rate
+        sizes = [Logics.calc_sats(order.min_amount, rate, order.premium), Logics.calc_sats(order.max_amount, rate, order.premium)]
+    else:
+        sizes = [order.t0_satoshis]
+    if min(sizes) < low or max(sizes) > high:
+        return f"Onchain escrow orders must be between {low} and {high} Sats on this coordinator for now"
+    return None

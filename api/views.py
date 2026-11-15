@@ -213,16 +213,14 @@ class MakerView(CreateAPIView):
                     {"bad_request": "Onchain escrow is only open to some robots on this coordinator for now"},
                     status.HTTP_400_BAD_REQUEST,
                 )
-            escrow_cap = config("ESCROW_MAX_SATS", cast=int, default=0)
-            if escrow_type == Order.EscrowTypes.ONCHAIN and escrow_cap and order.t0_satoshis > escrow_cap:
-                return Response(
-                    {"bad_request": f"Onchain escrow orders are limited to {escrow_cap} Sats on this coordinator for now"},
-                    status.HTTP_400_BAD_REQUEST,
-                )
-
-            valid, context = Logics.validate_order_size(order)
-            if not valid:
-                return Response(context, status.HTTP_400_BAD_REQUEST)
+            if escrow_type == Order.EscrowTypes.ONCHAIN:
+                size_error = escrow_flow.onchain_size_error(order)
+                if size_error:
+                    return Response({"bad_request": size_error}, status.HTTP_400_BAD_REQUEST)
+            else:
+                valid, context = Logics.validate_order_size(order)
+                if not valid:
+                    return Response(context, status.HTTP_400_BAD_REQUEST)
 
             valid, context = Logics.validate_location(order)
             if not valid:
@@ -815,6 +813,11 @@ class RobotView(APIView):
         context["webhook_api_key"] = user.robot.webhook_api_key
 
         context["last_login"] = user.last_login
+        if escrow_flow.service.enabled() and escrow_flow.robot_allowed(user):
+            context["onchain_escrow"] = {
+                "min_sats": config("ESCROW_MIN_SATS", cast=int, default=config("MIN_ORDER_SIZE", cast=int, default=20000)),
+                "max_sats": config("ESCROW_MAX_SATS", cast=int, default=0) or config("MAX_ORDER_SIZE", cast=int, default=250000),
+            }
 
         # Adds/generate telegram token and whether it is enabled
         context = {**context, **Notifications.get_context(user)}
@@ -883,6 +886,9 @@ class BookView(ListAPIView):
         if book_data is None:
             # Always exclude password-protected orders from the public book.
             queryset = Order.objects.filter(status=Order.Status.PUB, password=None)
+            # Onchain escrow orders stay out of the public book while it is open to some robots only.
+            if escrow_flow.restricted():
+                queryset = queryset.exclude(escrow_type=Order.EscrowTypes.ONCHAIN)
 
             # Currency 0 and type 2 are special cases treated as "ANY". (These are not really possible choices)
             if int(type) != 2:
@@ -1157,7 +1163,9 @@ class InfoView(viewsets.ViewSet):
             )
         except BalanceLog.DoesNotExist:
             context["current_swap_fee_rate"] = 0
-        context["onchain_escrow"] = escrow_flow.service.enabled()
+        # Announced to everybody only when it is open to everybody; the allowed robots
+        # learn it from /api/robot/ while ESCROW_ALLOWED_ROBOTS is set.
+        context["onchain_escrow"] = escrow_flow.service.enabled() and not escrow_flow.restricted()
 
         # federation_hash lets clients vote on the federation list using the hash
         # from each coordinator's /api/info/ response — no separate /api/federation/

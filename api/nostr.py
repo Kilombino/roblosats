@@ -29,6 +29,13 @@ class Nostr:
         if order.password is not None:
             return
 
+        # Onchain escrow orders are not announced while it is open to some robots only
+        if order.escrow_type == Order.EscrowTypes.ONCHAIN:
+            from api.escrow.flow import restricted
+
+            if restricted():
+                return
+
         if config("NOSTR_NSEC", cast=str, default="") == "":
             return
 

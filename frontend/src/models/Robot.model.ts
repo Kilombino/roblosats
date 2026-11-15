@@ -19,6 +19,7 @@ interface RobotApiResponse {
   webhook_url?: string;
   webhook_enabled?: boolean;
   webhook_api_key?: string;
+  onchain_escrow?: { min_sats: number; max_sats: number };
 }
 
 interface RewardApiResponse {
@@ -64,6 +65,8 @@ class Robot {
   public webhookUrl: string = '';
   public webhookEnabled: boolean = false;
   public webhookApiKey: string = '';
+  // Set by the coordinator when this robot may make and take onchain escrow orders
+  public onchainEscrow: { minSats: number; maxSats: number } | null = null;
 
   update = (attributes: object): void => {
     Object.assign(this, attributes);
@@ -136,6 +139,9 @@ class Robot {
           webhookUrl: data.webhook_url ?? '',
           webhookEnabled: data.webhook_enabled ?? false,
           webhookApiKey: data.webhook_api_key ?? '',
+          onchainEscrow: data.onchain_escrow
+            ? { minSats: data.onchain_escrow.min_sats, maxSats: data.onchain_escrow.max_sats }
+            : null,
         });
       })
       .catch((e) => {

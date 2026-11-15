@@ -95,6 +95,12 @@ const MakerForm = ({
   const [limits, setLimits] = useState<LimitList>({});
 
   const amountSafeThresholds = [1.03, 0.98];
+  // Onchain escrow: offered to everybody by /api/info, or only to this robot by /api/robot/
+  const robotEscrow =
+    garage.getSlot()?.getRobot(maker.coordinator)?.onchainEscrow ?? null;
+  const onchainAvailable = Boolean(
+    federation.getCoordinator(maker.coordinator)?.info?.onchain_escrow || robotEscrow,
+  );
 
   useEffect(() => {
     setCurrencyCode(currencyDict[String(fav.currency === 0 ? 1 : fav.currency)]);
@@ -103,6 +109,16 @@ const MakerForm = ({
   useEffect(() => {
     updateCoordinatorInfo();
   }, [maker.coordinator]);
+
+  useEffect(() => {
+    if (maker.onchainEscrow && !onchainAvailable) {
+      setMaker((maker) => ({ ...maker, onchainEscrow: false }));
+      return;
+    }
+    if (Object.keys(limits).length > 0) {
+      updateAmountLimits(limits, fav.currency, maker.premium ?? 0);
+    }
+  }, [maker.onchainEscrow, onchainAvailable, robotEscrow?.minSats, robotEscrow?.maxSats]);
 
   const updateCoordinatorInfo = (): void => {
     if (maker.coordinator != null) {
@@ -151,6 +167,12 @@ const MakerForm = ({
       ((federation.getCoordinator(maker.coordinator)?.size_limit ?? 0) / 100000000) *
       limitList[index].price;
     maxAmountLimit = Math.min(coordinatorSizeLimit, maxAmountLimit);
+
+    if (maker.onchainEscrow && robotEscrow) {
+      const price = limitList[index].price * (1 + premium / 100);
+      minAmountLimit = (robotEscrow.minSats / 100000000) * price;
+      maxAmountLimit = Math.min(maxAmountLimit, (robotEscrow.maxSats / 100000000) * price);
+    }
 
     // apply thresholds to ensure good request
     minAmountLimit = minAmountLimit * amountSafeThresholds[0];
@@ -1271,7 +1293,7 @@ const MakerForm = ({
         }}
       />
 
-      {federation.getCoordinator(maker.coordinator)?.info?.onchain_escrow ? (
+      {onchainAvailable ? (
         <Tooltip
           enterTouchDelay={0}
           title={t(
