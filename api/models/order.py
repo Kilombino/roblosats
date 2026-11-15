@@ -318,6 +318,11 @@ class Order(models.Model):
         return f"Order {self.id}: {self.Types(self.type).label} BTC for {amt} {self.currency}"
 
     def t_to_expire(self, status):
+        # On-chain escrow: the bonds are on-chain deposits that need a confirmation, not a
+        # Lightning hold invoice paid in seconds, so the waits for the maker's and the taker's
+        # bond get the on-chain window (Kilombino, 15 nov 2026: 5 minutes was not enough).
+        if self.escrow_type == Order.EscrowTypes.ONCHAIN and status in (0, 3):
+            return config("ESCROW_BOND_SECONDS", cast=int, default=3 * 3600)
         t_to_expire = {
             0: config(
                 "EXP_MAKER_BOND_INVOICE", cast=int, default=300
