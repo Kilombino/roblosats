@@ -580,6 +580,10 @@ class OrderView(viewsets.ViewSet):
 
         if escrow_flow.is_onchain(order):
             data["escrow_type"] = "onchain"
+            # The client merges each reply into the order it keeps (Object.assign) and never drops
+            # an old error: an empty one clears it (16 nov 2026: the seller's app stuck on 1029
+            # "cannot confirm" after a retried confirm, and could not sign the release).
+            data["bad_request"] = ""
             if data["is_participant"] or take_order.exists():
                 try:
                     data.update(escrow_flow.order_data(order, request.user))
