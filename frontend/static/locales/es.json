@@ -757,8 +757,8 @@
   "Renew Order": "Renovar Orden",
   "#88": "Phrases in components/TradeBox/Prompts/LockInvoice.tsx",
   "Copy to clipboard": "Copiar al portapapeles",
-  "This is a hold invoice, it will freeze in your wallet. It will be charged only if you cancel or lose a dispute.": "This is a hold invoice, it will freeze in your wallet. It will be charged only if you cancel or lose a dispute.",
-  "This is a hold invoice, it will freeze in your wallet. It will be released to the buyer once you confirm to have received the {{currencyCode}}.": "This is a hold invoice, it will freeze in your wallet. It will be released to the buyer once you confirm to have received the {{currencyCode}}.",
+  "This is a hold invoice, it will freeze in your wallet. It will be charged only if you cancel or lose a dispute.": "Es una factura retenida: se quedará congelada en tu cartera. Solo se cobrará si cancelas o pierdes una disputa.",
+  "This is a hold invoice, it will freeze in your wallet. It will be released to the buyer once you confirm to have received the {{currencyCode}}.": "Es una factura retenida: se quedará congelada en tu cartera. Se liberará al comprador cuando confirmes que has recibido los {{currencyCode}}.",
   "#89": "Phrases in components/TradeBox/Prompts/Paused.tsx",
   "Unpause Order": "Reactivar Orden",
   "Your public order has been paused. At the moment it cannot be seen or taken by other robots. You can choose to unpause it at any time.": "Tu orden pública ha sido pausada. Ahora mismo, la orden no puede ser vista ni tomada por otros robots. Puedes volver a activarla cuando desees.",
@@ -949,5 +949,9 @@
   "Say hi! Ask for payment details and click 'Confirm Sent' as soon as the payment is sent.": "¡Saluda! Pide los datos de pago y pulsa 'Confirmar enviado' en cuanto hayas enviado el pago.",
   "The escrow and your bond were sent on chain to the address you gave. If there is anything the staff can help with, do not hesitate to contact to {{email}} (or via your provided burner contact method).": "El escrow y tu fianza se te han enviado on-chain a la dirección que indicaste. Si el personal puede ayudar en algo, no dudes en contactar con {{email}} (o a través de tu método de contacto desechable).",
   "Your taker bond is settled": "Tu fianza de tomador está liquidada",
-  "Your maker bond is settled": "Tu fianza de creador está liquidada"
+  "Your maker bond is settled": "Tu fianza de creador está liquidada",
+  "Lock {{amountSats}} Sats to TAKE order": "Bloquea {{amountSats}} Sats para TOMAR la orden",
+  "Lock {{amountSats}} Sats to PUBLISH order": "Bloquea {{amountSats}} Sats para PUBLICAR la orden",
+  "Lock {{amountSats}} Sats as collateral": "Bloquea {{amountSats}} Sats como depósito",
+  "Submit payout info": "Indica cómo cobrar"
 }

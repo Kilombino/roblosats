@@ -949,5 +949,9 @@
   "Say hi! Ask for payment details and click 'Confirm Sent' as soon as the payment is sent.": "Say hi! Ask for payment details and click 'Confirm Sent' as soon as the payment is sent.",
   "The escrow and your bond were sent on chain to the address you gave. If there is anything the staff can help with, do not hesitate to contact to {{email}} (or via your provided burner contact method).": "The escrow and your bond were sent on chain to the address you gave. If there is anything the staff can help with, do not hesitate to contact to {{email}} (or via your provided burner contact method).",
   "Your taker bond is settled": "Your taker bond is settled",
-  "Your maker bond is settled": "Your maker bond is settled"
+  "Your maker bond is settled": "Your maker bond is settled",
+  "Lock {{amountSats}} Sats to TAKE order": "Lock {{amountSats}} Sats to TAKE order",
+  "Lock {{amountSats}} Sats to PUBLISH order": "Lock {{amountSats}} Sats to PUBLISH order",
+  "Lock {{amountSats}} Sats as collateral": "Lock {{amountSats}} Sats as collateral",
+  "Submit payout info": "Submit payout info"
 }

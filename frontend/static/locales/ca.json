@@ -757,8 +757,8 @@
   "Renew Order": "Renovar Ordre",
   "#88": "Phrases in components/TradeBox/Prompts/LockInvoice.tsx",
   "Copy to clipboard": "Copia al porta-retalls",
-  "This is a hold invoice, it will freeze in your wallet. It will be charged only if you cancel or lose a dispute.": "Això és una factura retinguda, els Sats es bloquegen a la teva cartera. Només es cobrarà si cancel·les o si perds una disputa.",
-  "This is a hold invoice, it will freeze in your wallet. It will be released to the buyer once you confirm to have received the {{currencyCode}}.": "Això és una factura retinguda, els Sats es bloquegen a la teva cartera. Serà alliberada al comprador al confirmar que has rebut {{currencyCode}}.",
+  "This is a hold invoice, it will freeze in your wallet. It will be charged only if you cancel or lose a dispute.": "És una factura retinguda: quedarà congelada a la teva cartera. Només es cobrarà si cancel·les o perds una disputa.",
+  "This is a hold invoice, it will freeze in your wallet. It will be released to the buyer once you confirm to have received the {{currencyCode}}.": "És una factura retinguda: quedarà congelada a la teva cartera. S'alliberarà al comprador quan confirmis que has rebut els {{currencyCode}}.",
   "#89": "Phrases in components/TradeBox/Prompts/Paused.tsx",
   "Unpause Order": "Activar Ordre",
   "Your public order has been paused. At the moment it cannot be seen or taken by other robots. You can choose to unpause it at any time.": "La teva ordre pública va ser pausada. Ara mateix, l'ordre no pot ser vista ni presa per altres robots. Pots tornar a activarla quan desitgis.",
@@ -949,5 +949,9 @@
   "Say hi! Ask for payment details and click 'Confirm Sent' as soon as the payment is sent.": "Saluda! Demana les dades de pagament i prem 'Confirma enviat' tan bon punt hagis enviat el pagament.",
   "The escrow and your bond were sent on chain to the address you gave. If there is anything the staff can help with, do not hesitate to contact to {{email}} (or via your provided burner contact method).": "L'escrow i la teva fiança se t'han enviat on-chain a l'adreça que vas indicar. Si el personal pot ajudar en alguna cosa, no dubtis a contactar amb {{email}} (o a través del teu mètode de contacte d'un sol ús).",
   "Your taker bond is settled": "La teva fiança de prenedor està liquidada",
-  "Your maker bond is settled": "La teva fiança de creador està liquidada"
+  "Your maker bond is settled": "La teva fiança de creador està liquidada",
+  "Lock {{amountSats}} Sats to TAKE order": "Bloqueja {{amountSats}} Sats per PRENDRE l'ordre",
+  "Lock {{amountSats}} Sats to PUBLISH order": "Bloqueja {{amountSats}} Sats per PUBLICAR l'ordre",
+  "Lock {{amountSats}} Sats as collateral": "Bloqueja {{amountSats}} Sats com a dipòsit",
+  "Submit payout info": "Indica com cobrar"
 }
