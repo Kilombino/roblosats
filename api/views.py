@@ -545,7 +545,13 @@ class OrderView(viewsets.ViewSet):
             data["bond_size"] = str(order.bond_size)
 
             # Adds trade summary
-            if order.status in [Order.Status.SUC, Order.Status.PAY, Order.Status.FAI]:
+            # (the trade summary reads the Lightning bonds and payout: an onchain order has none,
+            # it gets its escrow_* data below; 16 nov 2026 it crashed the release with a 500)
+            if order.status in [
+                Order.Status.SUC,
+                Order.Status.PAY,
+                Order.Status.FAI,
+            ] and not escrow_flow.is_onchain(order):
                 valid, context = Logics.summarize_trade(order, request.user)
                 if valid:
                     data = {**data, **context}
