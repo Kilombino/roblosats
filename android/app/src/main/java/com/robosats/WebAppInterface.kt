@@ -133,6 +133,12 @@ class WebAppInterface(private val context: MainActivity, private val webView: We
         }
 
         try {
+            // Orbot mode never starts the built-in Tor: there is no Tor object to ask
+            // (it threw "lateinit property torKmp has not been initialized" every 5 s).
+            if (!context.useProxy) {
+                resolvePromise(uuid, "OFF")
+                return
+            }
             // Get Tor status safely
             val torState = getTorKmpObject().torState.state.name
 

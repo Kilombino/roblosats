@@ -81,6 +81,10 @@ export interface EscrowOrderData {
   escrow_funding_mempool_txid?: string;
   escrow_funding_mempool_sats?: number;
   escrow_funding_txid?: string;
+  escrow_leftover_sats?: number;
+  escrow_sweep_tx?: string;
+  escrow_sweep_spent?: Array<[number, string]>;
+  escrow_sweep_txid?: string;
   escrow_release_txid?: string;
   escrow_waiting_for?: '' | 'you' | 'peer' | 'confirmation' | 'coordinator';
   escrow_waiting_what?: string;
@@ -345,3 +349,29 @@ export const signDisputeRelease = (
 };
 
 export { partialSigVerify };
+
+/** Sweep of what is left on our own funding address: every input must be our funding, the only
+ * output our address, and the fee at most maxFeeSats. One signature per input. */
+export const signSweep = (
+  data: EscrowOrderData,
+  keys: EscrowKeys,
+  myScript: Uint8Array,
+  maxFeeSats: number,
+): string[] => {
+  const tx = Transaction.parse(data.escrow_sweep_tx!);
+  const spent: TxOut[] = (data.escrow_sweep_spent ?? []).map(([v, spk]) => ({
+    value: BigInt(v),
+    script: hexToBytes(spk),
+  }));
+  if (spent.length !== tx.inputs.length) fail('inputs and spent outputs do not match');
+  const myFunding = bytesToHex(fundingScript(pubkey(keys.funding)));
+  for (const sp of spent)
+    if (bytesToHex(sp.script) !== myFunding) fail('an input is not our funding');
+  if (tx.outputs.length !== 1 || bytesToHex(tx.outputs[0].script) !== bytesToHex(myScript))
+    fail('the sweep does not pay our address');
+  const totalIn = spent.reduce((a, sp) => a + sp.value, BigInt(0));
+  if (totalIn - tx.outputs[0].value > BigInt(maxFeeSats)) fail('the sweep fee is too high');
+  return tx.inputs.map((_, i) =>
+    bytesToHex(signSchnorr(keys.funding, tx.sighashUnified(i, spent))),
+  );
+};

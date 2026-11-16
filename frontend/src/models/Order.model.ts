@@ -23,7 +23,9 @@ export interface SubmitActionProps {
     | 'escrow_funding_signatures'
     | 'escrow_nonce'
     | 'escrow_partial'
-    | 'escrow_leaf_signature';
+    | 'escrow_leaf_signature'
+    | 'escrow_sweep'
+    | 'escrow_sweep_signatures';
   escrow?: object;
   invoice?: string;
   routing_budget_ppm?: number;

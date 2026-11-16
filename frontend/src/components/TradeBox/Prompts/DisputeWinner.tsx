@@ -2,6 +2,7 @@ import React, { useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { List, ListItem, Divider, Typography } from '@mui/material';
 import { type Order } from '../../../models';
+import { isOnchainEscrow } from '../onchainEscrowSteps';
 import {
   FederationContext,
   type UseFederationStoreType,
@@ -30,10 +31,15 @@ export const DisputeWinnerPrompt = ({ order }: DisputeWinnerPromptProps): React.
       <Divider />
       <ListItem>
         <Typography variant='body2'>
-          {t(
-            'You can claim the dispute resolution amount (escrow and fidelity bond) from your profile rewards. If there is anything the staff can help with, do not hesitate to contact to {{email}} (or via your provided burner contact method).',
-            { email },
-          )}
+          {order && isOnchainEscrow(order)
+            ? t(
+                'The escrow and your bond were sent on chain to the address you gave. If there is anything the staff can help with, do not hesitate to contact to {{email}} (or via your provided burner contact method).',
+                { email },
+              )
+            : t(
+                'You can claim the dispute resolution amount (escrow and fidelity bond) from your profile rewards. If there is anything the staff can help with, do not hesitate to contact to {{email}} (or via your provided burner contact method).',
+                { email },
+              )}
         </Typography>
       </ListItem>
     </List>

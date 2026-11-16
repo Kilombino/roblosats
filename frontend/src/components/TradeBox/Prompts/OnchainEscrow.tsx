@@ -17,6 +17,7 @@ import { type Order } from '../../../models';
 import { systemClient } from '../../../services/System';
 import { pn } from '../../../utils';
 import {
+  signSweep,
   EscrowCheckError,
   checkFundingAddress,
   escrowKeys,
@@ -42,7 +43,9 @@ export type EscrowAction =
   | 'escrow_funding_signatures'
   | 'escrow_nonce'
   | 'escrow_partial'
-  | 'escrow_leaf_signature';
+  | 'escrow_leaf_signature'
+  | 'escrow_sweep'
+  | 'escrow_sweep_signatures';
 
 interface Props {
   order: Order;
@@ -228,7 +231,7 @@ export const OnchainEscrowPrompt = ({
       data.escrow_deposit_tx &&
       !data.escrow_deposit_signed
     )
-      once(`deposit-${data.escrow_deposit_tx.slice(0, 64)}`, () =>
+      once(`deposit-${data.escrow_deposit_tx}`, () =>
         onAction(
           'escrow_funding_signatures',
           signDeposit(data, keys, data, {
@@ -245,15 +248,22 @@ export const OnchainEscrowPrompt = ({
       const myScript = addressToScript(data.escrow_my_payout_address);
       const isBuyer = data.escrow_role === 'buyer';
       const cooperative = (data.escrow_release_kind ?? '').startsWith('Seller and buyer');
+      // A collaborative cancel returns the escrow: the seller gets the trade amount back and
+      // the buyer only its bond (less its fee if the fee came out of it).
+      const cancel = Boolean((data as { escrow_release_cancel?: boolean }).escrow_release_cancel);
       const minToMe = cooperative
-        ? isBuyer
-          ? Math.floor((data.escrow_sats ?? 0) * 0.98)
-          : Math.floor((data.bond_value ?? 0) * 0.98)
+        ? cancel
+          ? isBuyer
+            ? Math.floor((data.bond_value ?? 0) * 0.5)
+            : Math.floor((data.escrow_sats ?? 0) * 0.98)
+          : isBuyer
+            ? Math.floor((data.escrow_sats ?? 0) * 0.98)
+            : Math.floor((data.bond_value ?? 0) * 0.98)
         : Math.floor((data.escrow_sats ?? 0) * 0.98);
       const check = { myScript, minToMe };
       if (cooperative) {
         if (!data.escrow_release_my_nonce)
-          once(`nonce-${data.escrow_release_tx.slice(0, 64)}`, () => {
+          once(`nonce-${data.escrow_release_tx}`, () => {
             const n = releaseNonce(data, keys, check);
             secnonce.current = n.secnonce;
             onAction('escrow_nonce', { nonce: n.pubnonce });
@@ -273,21 +283,34 @@ export const OnchainEscrowPrompt = ({
           !secnonce.current &&
           !data.escrow_release_my_partial
         )
-          once(`renonce-${data.escrow_release_tx.slice(0, 64)}`, () => {
+          once(`renonce-${data.escrow_release_tx}`, () => {
             const n = releaseNonce(data, keys, check);
             secnonce.current = n.secnonce;
             onAction('escrow_nonce', { nonce: n.pubnonce });
           });
-      } else {
-        once(`leaf-${data.escrow_release_tx.slice(0, 64)}`, () =>
+      } else if (
+        (data.escrow_release_kind ?? '').toLowerCase().startsWith(isBuyer ? 'buyer' : 'seller')
+      ) {
+        // A dispute release goes through the winner's leaf: only the winner signs it.
+        once(`leaf-${data.escrow_release_tx}`, () =>
           onAction('escrow_leaf_signature', { signature: signDisputeRelease(data, keys, check) }),
         );
       }
     }
+    if (data.escrow_sweep_tx && (data.escrow_leftover_sats ?? 0) > 0) {
+      const target = address || data.escrow_my_payout_address;
+      // A sweep built earlier for another address of ours: wait for a new one (no error).
+      if (target && data.escrow_sweep_tx.includes(bytesToHex(addressToScript(target))))
+        once(`sweep-${data.escrow_sweep_tx}`, () =>
+          onAction('escrow_sweep_signatures', {
+            signatures: signSweep(data, keys, addressToScript(target), 20_000),
+          }),
+        );
+    }
     if (data.bond_status_code === BOND.RETURNABLE && data.bond_return_tx) {
       const target = address || data.escrow_my_payout_address;
-      if (target)
-        once(`return-${data.bond_return_tx.slice(0, 64)}`, () =>
+      if (target && data.bond_return_tx.includes(bytesToHex(addressToScript(target))))
+        once(`return-${data.bond_return_tx}`, () =>
           onAction('bond_return_signature', {
             signature: signBondReturn(data, keys, addressToScript(target), 20_000),
           }),
@@ -301,9 +324,11 @@ export const OnchainEscrowPrompt = ({
     data.escrow_release_tx,
     data.escrow_release_aggnonce,
     data.bond_return_tx,
+    data.escrow_sweep_tx,
+    address,
   ]);
 
-  const submitAddress = (name: 'escrow_address' | 'bond_return'): void => {
+  const submitAddress = (name: 'escrow_address' | 'bond_return' | 'escrow_sweep'): void => {
     try {
       addressToScript(address);
     } catch {
@@ -312,7 +337,7 @@ export const OnchainEscrowPrompt = ({
     }
     if (name === 'escrow_address')
       onSignedAddress(address, (signed) => onAction('escrow_address', {}, signed));
-    else onAction('bond_return', { address });
+    else onAction(name, { address });
   };
 
   if (!keys) return <CircularProgress />;
@@ -369,6 +394,11 @@ export const OnchainEscrowPrompt = ({
       </Grid>
     ) : null;
 
+  const deadlineRaw =
+    order.status === 3
+      ? (order as unknown as { take_expires_at?: string }).take_expires_at
+      : order.expires_at;
+  const bondDeadline = deadlineRaw ? new Date(deadlineRaw) : null;
   let body: React.JSX.Element = waiting(waitingText());
 
   if ((order.status === 0 || order.status === 3) && data.bond_status_code !== undefined) {
@@ -389,7 +419,8 @@ export const OnchainEscrowPrompt = ({
               address={data.bond_address}
               sats={data.bond_required_sats ?? 0}
               label={t(
-                'Send exactly this amount from any wallet. It is your bond: nobody can move it alone, it comes back to you after the trade (or after about 3 days in any case), and you lose it only if you cancel or do not complete your part in time.',
+                'Send exactly this amount from any wallet. It is your bond: nobody can move it alone, it comes back to you after the trade (or after about {{days}} days in any case), and you lose it only if you cancel or do not complete your part in time.',
+                { days: Math.max(1, Math.round(((data.bond_refund_csv ?? 432) * 10) / 1440)) },
               )}
               note={t(
                 'Send exactly {{amount}} Sats in one payment. Less than that is not taken as your bond.',
@@ -397,6 +428,23 @@ export const OnchainEscrowPrompt = ({
               )}
             />
           </Grid>
+          {bondDeadline ? (
+            <Grid>
+              <Alert severity='info'>
+                {t(
+                  order.status === 3
+                    ? 'Send it before {{time}} or the order goes on without you.'
+                    : 'Send it before {{time}} or the order expires.',
+                  {
+                    time: bondDeadline.toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    }),
+                  },
+                )}
+              </Alert>
+            </Grid>
+          ) : null}
           {data.bond_mempool_txid ? (
             <Grid>
               <Alert severity='warning'>
@@ -588,6 +636,42 @@ export const OnchainEscrowPrompt = ({
           </Button>
         </Grid>
       </Grid>
+    );
+  } else if ((data.escrow_leftover_sats ?? 0) > 0 && ![9, 10, 11, 13].includes(order.status)) {
+    body = (
+      <Grid container spacing={1} sx={{ flexDirection: 'column', alignItems: 'center' }}>
+        <Grid>
+          <Typography variant='body2' align='center'>
+            {t(
+              'You have {{amount}} Sats left on your funding address that the deposit did not take. They are yours: get them back to an address of yours.',
+              { amount: pn(data.escrow_leftover_sats ?? 0) },
+            )}
+          </Typography>
+        </Grid>
+        <Grid>
+          <TextField
+            size='small'
+            fullWidth
+            value={address}
+            onChange={(e) => setAddress(e.target.value.trim())}
+            label={t('Bitcoin address')}
+          />
+        </Grid>
+        <Grid>
+          <Button
+            variant='contained'
+            disabled={!address}
+            onClick={() => submitAddress('escrow_sweep')}
+          >
+            {t('Get my sats back')}
+          </Button>
+        </Grid>
+      </Grid>
+    );
+  } else if (data.escrow_sweep_txid && data.bond_status_code !== BOND.RETURNABLE) {
+    body = waiting(
+      t('Your leftover sats are on their way back.'),
+      <TxLine label={t('Your payment')} txid={data.escrow_sweep_txid} />,
     );
   }
 

@@ -341,6 +341,10 @@ class Slot {
 
     if (this.activeOrder) return false;
 
+    // Roblosats: a robot the coordinator lets into the onchain escrow beta stays usable for
+    // more orders (a new robot would not be on its list and would lose the onchain option).
+    if (Object.values(this.robots).some((robot) => robot?.onchainEscrow)) return true;
+
     if (!this.lastOrder) {
       return true;
     }

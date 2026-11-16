@@ -23,7 +23,14 @@ export interface EnsureReusableSlotResult {
   switched: boolean;
   fromIndex: number;
   toIndex: number;
-  reason: 'reusable' | 'active_order' | 'manual_navigation' | 'switched' | 'no_slot';
+  reason:
+    | 'reusable'
+    | 'active_order'
+    | 'manual_navigation'
+    | 'switched'
+    | 'no_slot'
+    | 'loading'
+    | 'onchain_beta';
 }
 
 type GarageHooks = 'onSlotUpdate';
@@ -215,6 +222,16 @@ class Garage {
       return { switched: false, fromIndex: currentIndex, toIndex: currentIndex, reason: 'no_slot' };
     }
 
+    // Roblosats: the robot's data must be loaded before deciding: a slot still loading is not
+    // reusable, so evaluating it at start-up moved every user to a brand new robot on each
+    // launch (16 nov 2026, QA: the index went up on every reload with no order at all).
+    for (let i = 0; i < 60 && currentSlot.loading; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    if (currentSlot.loading) {
+      return { switched: false, fromIndex: currentIndex, toIndex: currentIndex, reason: 'loading' };
+    }
+
     currentSlot.updateSlotFromOrder(currentSlot.activeOrder);
     if (currentSlot.activeOrder?.id) {
       return {
@@ -226,6 +243,18 @@ class Garage {
     }
 
     await currentSlot.ensureLastOrderStatus(federation);
+
+    // Roblosats: while onchain escrow is a beta open only to some robots, a robot the
+    // coordinator lets in keeps being used for the next order instead of being replaced by a
+    // new one (which would not be on the list and would lose the onchain option).
+    if (Object.values(currentSlot.robots).some((robot) => robot?.onchainEscrow)) {
+      return {
+        switched: false,
+        fromIndex: currentIndex,
+        toIndex: currentIndex,
+        reason: 'onchain_beta',
+      };
+    }
 
     if (currentSlot.isReusable()) {
       return {

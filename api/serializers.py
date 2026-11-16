@@ -695,6 +695,8 @@ class UpdateOrderSerializer(serializers.Serializer):
             "escrow_nonce",
             "escrow_partial",
             "escrow_leaf_signature",
+            "escrow_sweep",
+            "escrow_sweep_signatures",
             "bond_key",
             "bond_penalty_signature",
             "bond_return",

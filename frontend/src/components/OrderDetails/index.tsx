@@ -390,7 +390,7 @@ const OrderDetails = ({
               </ListItemIcon>
               <ListItemText
                 primary={amountString}
-                secondary={(currentOrder?.amount ?? 0) > 0 ? 'Amount' : 'Amount Range'}
+                secondary={(currentOrder?.amount ?? 0) > 0 ? t('Amount') : t('Amount Range')}
               />
               <ListItemIcon sx={{ minWidth: 56 }}>
                 <RobotAvatar

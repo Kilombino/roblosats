@@ -61,6 +61,12 @@ class Command(BaseCommand):
                     flow.advance(order)
             except Exception as e:
                 self.stderr.write(f"onchain escrow of order {order.id}: {e}")
+        try:
+            from api.escrow import bonds
+
+            bonds.recover_abandoned()
+        except Exception as e:
+            self.stderr.write(f"late onchain bonds: {e}")
 
     def is_same_status(a: LNPayment.Status, b: LNPayment.Status) -> bool:
         """

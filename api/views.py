@@ -274,10 +274,18 @@ class OrderView(viewsets.ViewSet):
         data["is_maker"] = order.maker == request.user
         data["is_taker"] = order.taker == request.user or take_order.exists()
         data["is_participant"] = data["is_maker"] or data["is_taker"]
+        if take_order.exists():
+            # Roblosats: the taker's deadline to lock its bond (not the order's public expiry)
+            data["take_expires_at"] = take_order.first().expires_at
         data["has_password"] = order.password is not None
 
         # 2) If order has been cancelled
-        if order.status == Order.Status.UCA or order.status == Order.Status.CCA:
+        # (Roblosats: an onchain order still has its bonds, a return or leftovers to settle
+        # on chain: its traders keep seeing it. 16 nov 2026 QA: a maker could not get its
+        # bond back from a cancelled public order.)
+        if (order.status == Order.Status.UCA or order.status == Order.Status.CCA) and not (
+            escrow_flow.is_onchain(order) and data["is_participant"]
+        ):
             return Response(new_error(1043), status.HTTP_400_BAD_REQUEST)
 
         data["total_secs_exp"] = order.t_to_expire(order.status)
@@ -862,6 +870,7 @@ class RobotView(APIView):
             context["onchain_escrow"] = {
                 "min_sats": config("ESCROW_MIN_SATS", cast=int, default=config("MIN_ORDER_SIZE", cast=int, default=20000)),
                 "max_sats": config("ESCROW_MAX_SATS", cast=int, default=0) or config("MAX_ORDER_SIZE", cast=int, default=250000),
+                "min_bond_sats": escrow_flow.min_bond_sats(),
             }
 
         # Adds/generate telegram token and whether it is enabled

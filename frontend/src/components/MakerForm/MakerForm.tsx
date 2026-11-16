@@ -96,8 +96,7 @@ const MakerForm = ({
 
   const amountSafeThresholds = [1.03, 0.98];
   // Onchain escrow: offered to everybody by /api/info, or only to this robot by /api/robot/
-  const robotEscrow =
-    garage.getSlot()?.getRobot(maker.coordinator)?.onchainEscrow ?? null;
+  const robotEscrow = garage.getSlot()?.getRobot(maker.coordinator)?.onchainEscrow ?? null;
   const onchainAvailable = Boolean(
     federation.getCoordinator(maker.coordinator)?.info?.onchain_escrow || robotEscrow,
   );
@@ -641,7 +640,13 @@ const MakerForm = ({
         </Typography>
         {bondAmount !== null && (
           <Typography variant='caption' color='text.secondary' sx={{ mt: 0.5 }}>
-            {t('Estimated Bond')}: {pn(Number(bondAmount))} Sats
+            {t('Estimated Bond')}:{' '}
+            {pn(
+              maker.onchainEscrow && robotEscrow?.minBondSats
+                ? Math.max(Number(bondAmount), robotEscrow.minBondSats)
+                : Number(bondAmount),
+            )}{' '}
+            Sats
           </Typography>
         )}
       </Box>

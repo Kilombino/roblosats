@@ -1,3 +1,5 @@
+import math
+
 from django.db import transaction
 from django.utils import timezone
 
@@ -15,7 +17,7 @@ from api.escrow.taproot import (
     schnorr_verify,
     xonly,
 )
-from api.escrow.transactions import BondInput, Utxo, bond_spend_tx
+from api.escrow.transactions import DUST_P2TR, BondInput, Utxo, bond_spend_tx
 
 
 def coordinator_bond_key(bond_order_id, role, owner_pubkey_hex):
@@ -41,9 +43,29 @@ def bond_input(bond):
     )
 
 
+def min_bond_sats():
+    """The smallest onchain bond the coordinator can still take as a penalty: the penalty
+    spend's mining fee at ESCROW_PENALTY_FEE_RATE plus a dust-free output, with room for a
+    pricier mempool (16 nov 2026, QA: a 3 % bond of a small order, 1,811 sats, was accepted,
+    paid and then stuck, because the penalty needed 1,830). ESCROW_MIN_BOND_SATS overrides."""
+    from api.escrow.flow import coordinator_fee_spk
+    from api.escrow.transactions import VB_BOND_COOP, VB_OVERHEAD, output_vbytes
+
+    floor = service.config("ESCROW_MIN_BOND_SATS", cast=int, default=0)
+    if floor:
+        return floor
+    rate = service.config("ESCROW_PENALTY_FEE_RATE", cast=float, default=10.0)
+    try:
+        spk = coordinator_fee_spk()
+    except Exception:
+        spk = b"\x00" * 34
+    vb = math.ceil(VB_OVERHEAD + VB_BOND_COOP + output_vbytes(spk))
+    return 2 * math.ceil(vb * rate) + DUST_P2TR
+
+
 def required_sats(order, take_order=None):
     sats = take_order.last_satoshis if take_order is not None and take_order.last_satoshis else order.last_satoshis
-    return int(sats * order.bond_size / 100)
+    return max(int(sats * order.bond_size / 100), min_bond_sats())
 
 
 def open_bond(order, user, role, owner_pubkey_hex, take_order=None):
@@ -98,8 +120,17 @@ def refresh(bond, min_conf=1):
     bond.txid, bond.vout, bond.value = u["txid"], u["vout"], round(u["amount"] * 1e8)
     from api.escrow.flow import coordinator_fee_spk
 
-    tx = bond_spend_tx(bond.txid, bond.vout, bond.value, coordinator_fee_spk(),
-                       service.config("ESCROW_PENALTY_FEE_RATE", cast=float, default=10.0))
+    rate = service.config("ESCROW_PENALTY_FEE_RATE", cast=float, default=10.0)
+    try:
+        tx = bond_spend_tx(bond.txid, bond.vout, bond.value, coordinator_fee_spk(), rate)
+    except ValueError:
+        # A bond paid before the floor existed (or a mempool rate change): a cheaper penalty
+        # beats an order stuck forever on a confirmed bond.
+        from api.escrow.transactions import VB_BOND_COOP, VB_OVERHEAD, output_vbytes
+
+        vb = math.ceil(VB_OVERHEAD + VB_BOND_COOP + output_vbytes(coordinator_fee_spk()))
+        tx = bond_spend_tx(bond.txid, bond.vout, bond.value, coordinator_fee_spk(),
+                           max(1.0, (bond.value - DUST_P2TR) // vb))
     bond.penalty_tx = tx.serialize().hex()
     bond.status = OnchainBond.Status.SIGN
     bond.save()
@@ -233,3 +264,34 @@ def bond_data(bond):
     if bond.spend_txid:
         data["bond_spend_txid"] = bond.spend_txid
     return data
+
+
+def recover_abandoned(days=30):
+    """A bond paid after its order was gone (expired or cancelled while it was still unpaid)
+    is never taken: it becomes free for its owner to take back with the coordinator's signature
+    (16 nov 2026, QA: a late maker bond stayed "Never funded" with no way back but the
+    timelock). One listunspent for all of them."""
+    from datetime import timedelta
+
+    from api.models import OnchainBond
+
+    since = timezone.now() - timedelta(days=days)
+    bonds = list(OnchainBond.objects.filter(status=OnchainBond.Status.ABANDONED, created_at__gte=since))
+    if not bonds:
+        return 0
+    found = service.rpc("listunspent", [1, 9999999, [b.address for b in bonds]], wallet=service.watch_wallet())
+    by_addr = {}
+    for u in found:
+        by_addr.setdefault(u["address"], []).append(u)
+    n = 0
+    for b in bonds:
+        us = by_addr.get(b.address)
+        if not us:
+            continue
+        u = max(us, key=lambda x: x["amount"])
+        b.txid, b.vout, b.value = u["txid"], u["vout"], round(u["amount"] * 1e8)
+        b.status = OnchainBond.Status.RETURNABLE
+        b.save(update_fields=["txid", "vout", "value", "status", "updated_at"])
+        b.order.log(f"Onchain {b.role} bond paid after the order was gone: **free to return** to its owner")
+        n += 1
+    return n

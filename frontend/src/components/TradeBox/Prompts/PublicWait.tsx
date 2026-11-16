@@ -14,6 +14,7 @@ import { LoadingButton } from '@mui/lab';
 
 import currencies from '../../../utils/currencies';
 
+import { isOnchainEscrow } from '../onchainEscrowSteps';
 import { type Order } from '../../../models';
 import {
   FederationContext,
@@ -92,7 +93,11 @@ export const PublicWaitPrompt = ({
 
       <ListItem>
         <Typography variant='body2' align='left'>
-          {t('If the order expires untaken, your bond will return to you (no action needed).')}
+          {isOnchainEscrow(order)
+            ? t(
+                'If the order expires untaken, your onchain bond is free: this screen will ask you for an address to send it back to.',
+              )
+            : t('If the order expires untaken, your bond will return to you (no action needed).')}
         </Typography>
       </ListItem>
 

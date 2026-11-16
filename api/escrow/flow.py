@@ -317,6 +317,35 @@ def collaborative_cancel(order):
     order.log("Collaborative cancellation: **onchain return to the seller** started")
 
 
+def return_everything(order):
+    """Dispute solved with no winner: the seller gets the trade amount and its bond back, the
+    buyer its bond (what is left of it in the escrow), through the seller's leaf with the
+    coordinator, so it works even if the buyer is gone. A Lightning taker bond is unlocked."""
+    from api.escrow.taproot import TxOut
+    from api.models import OnchainEscrow
+
+    escrow = escrow_of(order)
+    if escrow.status == OnchainEscrow.Status.RELEASING:
+        escrow.status = OnchainEscrow.Status.LOCKED
+        escrow.save(update_fields=["status"])
+    bonds, trade = _bond_values(escrow)
+    payouts = [TxOut(trade + bonds["seller"], _spk(escrow, "seller"))]
+    if bonds["buyer"] >= DUST_P2TR:
+        payouts.append(TxOut(bonds["buyer"], _spk(escrow, "buyer")))
+    elif bonds["buyer"]:
+        payouts[0].value += bonds["buyer"]
+    service.start_release(escrow, payouts, OnchainEscrow.ReleaseKind.SELLER_WINS, 0)
+    data = dict(escrow.funding_signatures)
+    data["cancel"] = True
+    escrow.funding_signatures = data
+    escrow.save(update_fields=["funding_signatures"])
+    if order.taker_lightning and order.taker_bond is not None:
+        from api.logics import Logics
+
+        Logics.return_bond(order.taker_bond)
+    order.log("Dispute solved with **everything returned**: waiting for the seller's signature on the return")
+
+
 def resolve_dispute(order, buyer_wins):
     """Winner: amount (if buyer) or amount back (if seller) + its own bond + a reward share of
     the loser's bond; the rest of the loser's bond goes to the coordinator."""
@@ -405,6 +434,10 @@ def action(order, user, name, data):
         advance(order)
     elif name == "escrow_leaf_signature":
         service.submit_leaf_signature(escrow, role, data["signature"])
+    elif name == "escrow_sweep":
+        sweep_tx(order, escrow, role, _spk_for_address(data["address"]))
+    elif name == "escrow_sweep_signatures":
+        submit_sweep(order, escrow, role, data["signatures"])
     else:
         raise EscrowError("unknown escrow action")
 
@@ -489,6 +522,9 @@ def order_data(order, user):
     if escrow.status == escrow.Status.RELEASING:
         data["escrow_release_tx"] = escrow.release_tx
         data["escrow_release_kind"] = escrow.get_release_kind_display()
+        # A cooperative release that returns the escrow (collaborative cancel): the client
+        # checks it against what a return owes it, not against a trade release.
+        data["escrow_release_cancel"] = bool(escrow.funding_signatures.get("cancel"))
         data["escrow_release_fee_rate"] = escrow.release_fee_rate
         data["escrow_release_my_nonce"] = escrow.release_nonces.get(role, "")
         data["escrow_release_aggnonce"] = service.aggregate_nonce(escrow) or ""
@@ -498,6 +534,20 @@ def order_data(order, user):
         summary = trade_summary(order, user)
         if summary:
             data["onchain_summary"] = summary
+    try:
+        left = funding_leftover(order, escrow, role)
+    except EscrowError:
+        left = []
+    if left:
+        data["escrow_leftover_sats"] = sum(u.value for u in left)
+        if not data.get("escrow_funding_address"):
+            data["escrow_funding_address"] = _funding_address(escrow, role)
+    sw = escrow.funding_signatures.get(f"sweep_{role}")
+    if sw and left:
+        data["escrow_sweep_tx"] = sw["tx"]
+        data["escrow_sweep_spent"] = sw["spent"]
+    if escrow.funding_signatures.get(f"sweep_{role}_txid"):
+        data["escrow_sweep_txid"] = escrow.funding_signatures[f"sweep_{role}_txid"]
     return data
 
 
@@ -990,3 +1040,81 @@ def ln_bond_dispute_credit(order, buyer_wins):
         ledger_credit(order.maker.robot, reward, "slash_reward",
                       f"slash_reward:{order.id}:{order.taker_bond.payment_hash}", order_id=order.id)
         order.log(f"Dispute lost by the Lightning taker: the maker is rewarded {reward} Sats of its bond")
+
+
+def min_bond_sats():
+    """The smallest onchain bond (see bonds.min_bond_sats)."""
+    from api.escrow import bonds
+
+    return bonds.min_bond_sats()
+
+
+
+# Leftovers on a funding address (Roblosats, 16 nov 2026 QA): what a trader sent to its own
+# funding address and the deposit never took (order expired or cancelled first, or sent after
+# the deposit) is its own, under its own key. The coordinator builds a sweep to an address of
+# the owner's; the owner's client checks it and signs it; the coordinator broadcasts it.
+SWEEP_DONE_STATUSES = (4, 5, 12, 14, 15, 17, 18)
+
+
+def funding_leftover(order, escrow, role):
+    if escrow is None or not escrow.funding_signatures.get(f"{role}_funding_pubkey"):
+        return []
+    from api.models import OnchainEscrow
+
+    deposit_pending = escrow.status in (OnchainEscrow.Status.KEYS, OnchainEscrow.Status.FUNDING, OnchainEscrow.Status.MEMPOOL)
+    if deposit_pending and order.status not in SWEEP_DONE_STATUSES:
+        return []
+    utxos = service.funding_utxos(escrow, role)
+    if escrow.funding_txid:  # never offer what the deposit spent
+        try:
+            dep = service.rpc("getrawtransaction", [escrow.funding_txid, True])
+            used = {(v["txid"], v["vout"]) for v in dep["vin"]}
+            utxos = [u for u in utxos if (u.txid, u.vout) not in used]
+        except EscrowError:
+            pass
+    return utxos
+
+
+def sweep_tx(order, escrow, role, payout_spk):
+    from api.escrow.taproot import Transaction, TxIn, TxOut
+
+    utxos = funding_leftover(order, escrow, role)
+    if not utxos:
+        raise EscrowError("there is nothing left on your funding address")
+    total = sum(u.value for u in utxos)
+    vb = math.ceil(VB_OVERHEAD + len(utxos) * VB_TAPROOT_KEY_INPUT + output_vbytes(payout_spk))
+    value = total - math.ceil(vb * service.fee_rate(2))
+    if value < DUST_P2TR:
+        raise EscrowError("what is left is too small to send back")
+    tx = Transaction([TxIn(u.txid, u.vout) for u in utxos], [TxOut(value, payout_spk)])
+    data = dict(escrow.funding_signatures)
+    data[f"sweep_{role}"] = {"tx": tx.serialize().hex(), "spent": [[u.value, u.script_pubkey.hex()] for u in utxos]}
+    escrow.funding_signatures = data
+    escrow.save(update_fields=["funding_signatures"])
+    return tx
+
+
+def submit_sweep(order, escrow, role, sigs_hex):
+    from api.escrow.taproot import SIGHASH_ALL_UNIFIED, Transaction, TxOut, schnorr_verify, xonly
+
+    sw = escrow.funding_signatures.get(f"sweep_{role}")
+    if not sw:
+        raise EscrowError("ask for the sweep first")
+    tx = Transaction.parse(bytes.fromhex(sw["tx"]))
+    spent = [TxOut(v, bytes.fromhex(spk)) for v, spk in sw["spent"]]
+    if len(sigs_hex) != len(tx.inputs):
+        raise EscrowError("one signature per input is needed")
+    fpk = xonly(bytes.fromhex(escrow.funding_signatures[f"{role}_funding_pubkey"]))
+    for i, s in enumerate(sigs_hex):
+        sig = bytes.fromhex(s)
+        if len(sig) != 65 or sig[64] != SIGHASH_ALL_UNIFIED or not schnorr_verify(tx.sighash_unified(i, spent), fpk, sig[:64]):
+            raise EscrowError("a signature does not verify")
+        tx.inputs[i].witness = [sig]
+    service.rpc("sendrawtransaction", [tx.serialize().hex()])
+    data = dict(escrow.funding_signatures)
+    data[f"sweep_{role}_txid"] = tx.txid()
+    data.pop(f"sweep_{role}", None)
+    escrow.funding_signatures = data
+    escrow.save(update_fields=["funding_signatures"])
+    order.log(f"Onchain funding leftover of the {role} **sent back** in {tx.txid()}")
