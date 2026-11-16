@@ -217,6 +217,9 @@ class MakerView(CreateAPIView):
                 size_error = escrow_flow.onchain_size_error(order)
                 if size_error:
                     return Response({"bad_request": size_error}, status.HTTP_400_BAD_REQUEST)
+                # The maker's bond is an on-chain deposit: give it the on-chain window, not the
+                # Lightning bond invoice's EXP_MAKER_BOND_INVOICE set above (16 nov 2026).
+                order.expires_at = timezone.now() + timedelta(seconds=order.t_to_expire(Order.Status.WFB))
             else:
                 valid, context = Logics.validate_order_size(order)
                 if not valid:
