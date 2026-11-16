@@ -73,6 +73,11 @@ export interface EscrowOrderData {
   bond_mempool_txid?: string;
   bond_mempool_sats?: number;
   escrow_fee_from_bond?: boolean;
+  escrow_fee_at_release?: boolean;
+  escrow_fee_at_release_sats?: number;
+  take_lightning?: boolean;
+  taker_lightning?: boolean;
+  hybrid_onchain_maker_bond?: boolean;
   escrow_funding_mempool_txid?: string;
   escrow_funding_mempool_sats?: number;
   escrow_funding_txid?: string;
@@ -91,6 +96,8 @@ export interface OnchainSummary {
   bond_back_sats: number;
   coordinator_fee_sats: number;
   fee_from_bond: boolean;
+  fee_at_release?: boolean;
+  lightning_bond?: boolean;
   deposit_mining_sats?: number | null;
   release_mining_sats: number;
   deposit_txid?: string;

@@ -713,6 +713,11 @@ class UpdateOrderSerializer(serializers.Serializer):
         allow_blank=True,
         default=None,
     )
+    take_lightning = serializers.BooleanField(
+        required=False,
+        default=False,
+        help_text="Roblosats: take an onchain order with Lightning (bond as a hold invoice; as seller the escrow too, the buyer then gets paid onchain by the coordinator)",
+    )
     amount = serializers.DecimalField(
         max_digits=18, decimal_places=8, allow_null=True, required=False, default=None
     )

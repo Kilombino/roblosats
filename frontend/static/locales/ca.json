@@ -911,5 +911,14 @@
   "Your bond is free. Get it back to an address of yours.": "Your bond is free. Get it back to an address of yours.",
   "Your release address": "La teva adreça de cobrament",
   "You receive onchain {{amount}} Sats (Approx)": "Tu reps onchain {{amount}} Sats (Approx)",
-  "You send onchain {{amount}} Sats (Approx)": "Tu envies onchain {{amount}} Sats (Approx)"
+  "You send onchain {{amount}} Sats (Approx)": "Tu envies onchain {{amount}} Sats (Approx)",
+  "Take this onchain order with": "Pren aquesta ordre on-chain amb",
+  "⛓️ Onchain": "⛓️ On-chain",
+  "⚡ Lightning": "⚡ Lightning",
+  "With Lightning your bond and the trade escrow are Lightning hold invoices. The buyer asked for onchain: the coordinator pays it onchain with its swap (the buyer pays that swap fee and the mining fee).": "Amb Lightning la teva fiança i el dipòsit de l'intercanvi són factures retingudes de Lightning. El comprador va demanar on-chain: el coordinador li paga on-chain amb el seu swap (el comprador paga la comissió d'aquest swap i la de mineria).",
+  "With Lightning your bond is a Lightning hold invoice and you do not need to send anything onchain. The seller still locks the sats onchain and you receive them onchain; your coordinator fee comes out of what you receive.": "Amb Lightning la teva fiança és una factura retinguda de Lightning i no has d'enviar res on-chain. El venedor continua bloquejant els sats on-chain i tu els reps on-chain; la teva comissió del coordinador surt del que reps.",
+  "You took with Lightning: your bond is a Lightning hold invoice and you do not need to send anything onchain. Your fee ({{fee}} Sats) comes out of what you receive in the release.": "Vas prendre amb Lightning: la teva fiança és una factura retinguda de Lightning i no has d'enviar res on-chain. La teva comissió ({{fee}} Sats) surt del que reps en l'alliberament.",
+  "Your bond (Lightning)": "La teva fiança (Lightning)",
+  "Bond unlocked in your wallet": "Fiança desbloquejada al teu moneder",
+  "Your fee (out of what you received)": "La teva comissió (surt del que has rebut)"
 }

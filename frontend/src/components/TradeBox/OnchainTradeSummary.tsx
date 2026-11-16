@@ -33,10 +33,20 @@ const OnchainTradeSummary = ({ summary }: { summary: OnchainSummary }): React.JS
           {row(t('Your role'), summary.is_buyer ? t('Buyer') : t('Seller'))}
           {row(t('Trade amount'), `${pn(summary.trade_sats)} Sats`)}
           {row(t('You received onchain'), `${pn(summary.received_sats)} Sats`)}
-          {row(t('Your bond'), `${pn(summary.bond_sats)} Sats`)}
-          {row(t('Bond back to you'), `${pn(summary.bond_back_sats)} Sats`)}
           {row(
-            summary.fee_from_bond ? t('Your fee (out of your bond)') : t('Your fee'),
+            summary.lightning_bond ? t('Your bond (Lightning)') : t('Your bond'),
+            `${pn(summary.bond_sats)} Sats`,
+          )}
+          {row(
+            summary.lightning_bond ? t('Bond unlocked in your wallet') : t('Bond back to you'),
+            `${pn(summary.bond_back_sats)} Sats`,
+          )}
+          {row(
+            summary.fee_from_bond
+              ? t('Your fee (out of your bond)')
+              : summary.fee_at_release
+                ? t('Your fee (out of what you received)')
+                : t('Your fee'),
             `${pn(summary.coordinator_fee_sats)} Sats`,
           )}
           {row(t('Mining fees you paid'), `${pn(mining)} Sats`)}

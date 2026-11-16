@@ -418,10 +418,12 @@ class OrderView(viewsets.ViewSet):
             data["total_secs_exp"] = order.t_to_expire(Order.Status.TAK)
             data["amount"] = str(take_order.first().amount)
 
-            if escrow_flow.is_onchain(order):
+            if escrow_flow.is_onchain(order) and not take_order.first().lightning:
                 valid, context = True, {}
             else:
                 valid, context = Logics.gen_taker_hold_invoice(order, request.user)
+                if escrow_flow.is_onchain(order):
+                    context = {**(context or {}), "take_lightning": True}
 
             if valid:
                 data = {**data, **context}
@@ -589,6 +591,17 @@ class OrderView(viewsets.ViewSet):
                     data.update(escrow_flow.order_data(order, request.user))
                 except escrow_flow.EscrowError as e:
                     data["escrow_error"] = str(e)
+        elif escrow_flow.has_proxy(order):
+            # Hybrid B: a Lightning order now, but the maker's bond is onchain: the maker's app
+            # follows it (and takes it back when it is free) with the usual bond data.
+            data["bad_request"] = ""
+            data["hybrid_onchain_maker_bond"] = True
+            if data["is_maker"]:
+                from api.escrow import bonds as onchain_bonds
+
+                data.update(onchain_bonds.bond_data(escrow_flow.proxied_bond(order.maker_bond)))
+                data["bond_role"] = "maker"
+        data["taker_lightning"] = bool(order.taker_lightning)
 
         return Response(data, status.HTTP_200_OK)
 
@@ -669,10 +682,16 @@ class OrderView(viewsets.ViewSet):
                     if not valid:
                         return Response(context, status=status.HTTP_409_CONFLICT)
 
+                    take_lightning = bool(serializer.data.get("take_lightning")) and escrow_flow.is_onchain(order)
+                    if take_lightning and not escrow_flow.lightning_taker_enabled():
+                        return Response(
+                            {"bad_request": "Taking onchain orders with Lightning is off on this coordinator"},
+                            status.HTTP_400_BAD_REQUEST,
+                        )
                     if order.has_range:
-                        valid, context = Logics.take(order, request.user, amount)
+                        valid, context = Logics.take(order, request.user, amount, lightning=take_lightning)
                     else:
-                        valid, context = Logics.take(order, request.user)
+                        valid, context = Logics.take(order, request.user, lightning=take_lightning)
                     if not valid:
                         return Response(context, status=status.HTTP_403_FORBIDDEN)
 
@@ -747,7 +766,9 @@ class OrderView(viewsets.ViewSet):
 
         # 5.c) Onchain escrow actions (Roblosats)
         elif action.startswith("escrow_") or action.startswith("bond_"):
-            if not escrow_flow.is_onchain(order):
+            if not escrow_flow.is_onchain(order) and not (
+                action.startswith("bond_") and escrow_flow.has_proxy(order)
+            ):
                 return Response({"bad_request": "This order has no onchain escrow"}, status.HTTP_400_BAD_REQUEST)
             escrow_data = dict(serializer.data.get("escrow") or {})
             if action == "escrow_address":

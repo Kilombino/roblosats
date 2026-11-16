@@ -40,7 +40,12 @@ import CollabCancelAlert from './CollabCancelAlert';
 import { Bolt } from '@mui/icons-material';
 import { signCleartextMessage } from '../../pgp';
 import OnchainEscrowPrompt, { type EscrowAction } from './Prompts/OnchainEscrow';
-import { isOnchainEscrow, onchainEscrowStep, onchainEscrowTitle } from './onchainEscrowSteps';
+import {
+  hybridBondStep,
+  isOnchainEscrow,
+  onchainEscrowStep,
+  onchainEscrowTitle,
+} from './onchainEscrowSteps';
 import { type UseGarageStoreType, GarageContext } from '../../contexts/GarageContext';
 import { type UseAppStoreType, AppContext } from '../../contexts/AppContext';
 import { FederationContext, type UseFederationStoreType } from '../../contexts/FederationContext';
@@ -397,7 +402,7 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
     const isBuyer = order.is_buyer;
     const isMaker = order.is_maker;
 
-    if (isOnchainEscrow(order) && onchainEscrowStep(order)) {
+    if ((isOnchainEscrow(order) && onchainEscrowStep(order)) || hybridBondStep(order)) {
       baseContract.title = onchainEscrowTitle(order);
       baseContract.titleColor = 'warning';
       baseContract.bondStatus = 'hide';

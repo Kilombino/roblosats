@@ -1,6 +1,17 @@
 import React, { useState, useMemo, useEffect, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box, Tooltip, Grid, TextField, useTheme, Typography, FormHelperText } from '@mui/material';
+import {
+  Alert,
+  Box,
+  Tooltip,
+  Grid,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
+  useTheme,
+  Typography,
+  FormHelperText,
+} from '@mui/material';
 
 import Countdown from 'react-countdown';
 
@@ -55,6 +66,44 @@ const TakeButton = ({
   const [openUsedRobotDialog, setOpenUsedRobotDialog] = useState<boolean>(false);
   const [usedRobotHasActiveOrder, setUsedRobotHasActiveOrder] = useState<boolean>(false);
   const [changingRobot, setChangingRobot] = useState<boolean>(false);
+  // Roblosats hybrid: an onchain order may be taken with Lightning instead.
+  const isOnchainOrder =
+    (currentOrder as unknown as { escrow_type?: number | string })?.escrow_type === 1 ||
+    (currentOrder as unknown as { escrow_type?: number | string })?.escrow_type === 'onchain';
+  const [takeWith, setTakeWith] = useState<'onchain' | 'lightning'>('onchain');
+  // The maker's order type: 0 = the maker buys (the taker sells), 1 = the maker sells.
+  const takerSells = currentOrder?.type === 0;
+
+  const takeWithChoice = (): React.JSX.Element | null => {
+    if (!isOnchainOrder) return null;
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, mb: 1 }}>
+        <Typography variant='body2'>{t('Take this onchain order with')}</Typography>
+        <ToggleButtonGroup
+          size='small'
+          exclusive
+          value={takeWith}
+          onChange={(_e, v: 'onchain' | 'lightning' | null) => {
+            if (v) setTakeWith(v);
+          }}
+        >
+          <ToggleButton value='onchain'>{t('⛓️ Onchain')}</ToggleButton>
+          <ToggleButton value='lightning'>{t('⚡ Lightning')}</ToggleButton>
+        </ToggleButtonGroup>
+        {takeWith === 'lightning' ? (
+          <Alert severity='warning' sx={{ maxWidth: '30em' }}>
+            {takerSells
+              ? t(
+                  'With Lightning your bond and the trade escrow are Lightning hold invoices. The buyer asked for onchain: the coordinator pays it onchain with its swap (the buyer pays that swap fee and the mining fee).',
+                )
+              : t(
+                  'With Lightning your bond is a Lightning hold invoice and you do not need to send anything onchain. The seller still locks the sats onchain and you receive them onchain; your coordinator fee comes out of what you receive.',
+                )}
+          </Alert>
+        ) : null}
+      </Box>
+    );
+  };
 
   const satoshisNow = (): string | undefined => {
     if (currentOrder === null) return;
@@ -335,7 +384,7 @@ const TakeButton = ({
     setLoadingTake(true);
 
     slot
-      .takeOrder(federation, currentOrder, takeAmount)
+      .takeOrder(federation, currentOrder, takeAmount, isOnchainOrder && takeWith === 'lightning')
       .then((order) => {
         if (order?.bad_request !== undefined) {
           setBadRequest(order.bad_request);
@@ -353,6 +402,7 @@ const TakeButton = ({
 
   return (
     <Box>
+      {takeWithChoice()}
       <Countdown
         date={new Date(currentOrder?.penalty ?? '')}
         renderer={countdownTakeOrderRenderer}

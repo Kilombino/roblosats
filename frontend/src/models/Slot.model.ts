@@ -198,8 +198,13 @@ class Slot {
     }
   };
 
-  takeOrder = async (federation: Federation, order: Order, takeAmount: string): Promise<Order> => {
-    await order.take(federation, this, takeAmount);
+  takeOrder = async (
+    federation: Federation,
+    order: Order,
+    takeAmount: string,
+    lightning = false,
+  ): Promise<Order> => {
+    await order.take(federation, this, takeAmount, lightning);
     this.updateSlotFromOrder(order);
     return order;
   };

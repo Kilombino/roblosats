@@ -177,8 +177,11 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
             p.stop()
 
     def _keys(self, order, r):
+        # a fresh token per test: the lab node outlives the test database, order ids repeat
+        if not hasattr(self, "salt"):
+            self.salt = uuid.uuid4().hex
         alias = service.coordinator_alias()
-        return {k: derive_secret(f"g-{r}-{order.id}".encode(), alias, order.id, k) for k in ("escrow", "funding", "bond")}
+        return {k: derive_secret(f"g-{r}-{order.id}-{self.salt}".encode(), alias, order.id, k) for k in ("escrow", "funding", "bond")}
 
     def _pay_bond(self, order, user, keys):
         from api.escrow import flow
@@ -234,6 +237,9 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
         self.assertEqual(order.status, Order.Status.WFE)
         for r, u in (("seller", seller), ("buyer", buyer)):
             d = flow.order_data(order, u)
+            if "escrow_funding_address" not in d:  # beta9: the buyer's fee comes out of its bond
+                self.assertTrue(d.get("escrow_fee_from_bond"))
+                continue
             _faucet("sendtoaddress", d["escrow_funding_address"], d["escrow_funding_recommended"] / 1e8)
         _mine()
         flow.advance(order)
@@ -253,7 +259,9 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
         order.refresh_from_db()
         self.assertEqual(order.status, Order.Status.CHA)
         escrow = flow.escrow_of(order)
-        self.assertEqual(escrow.escrow_sats, 1_000_000 + 2 * 30_000)
+        # beta9: the buyer's fee and mining share may have come out of its bond
+        self.buyer_in = escrow.funding_signatures["plan"].get("bond_in_escrow", {}).get("buyer", 30_000)
+        self.assertEqual(escrow.escrow_sats, 1_000_000 + 30_000 + self.buyer_in)
         return order, buyer, seller, keys
 
     def _musig(self, order, users, keys):
@@ -289,7 +297,7 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
         outs = sorted(round(o["value"] * 1e8) for o in service.rpc("getrawtransaction", [escrow.release_txid, True])["vout"])
         info = service.rpc("getrawtransaction", [escrow.release_txid, True])
         self.assertEqual(outs[0], 30_000)
-        self.assertEqual(outs[1], 1_030_000 - math.ceil(math.ceil(info["vsize"]) * escrow.release_fee_rate))
+        self.assertEqual(outs[1], 1_000_000 + self.buyer_in - math.ceil(math.ceil(info["vsize"]) * escrow.release_fee_rate))
 
     def test_collaborative_cancel(self):
         from api.escrow import flow
@@ -329,7 +337,7 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
         outs = sorted(round(o["value"] * 1e8) for o in service.rpc("getrawtransaction", [escrow.release_txid, True])["vout"])
         info = service.rpc("getrawtransaction", [escrow.release_txid, True])
         self.assertEqual(outs[0], 15_000)
-        self.assertEqual(outs[1], 1_045_000 - math.ceil(math.ceil(info["vsize"]) * escrow.release_fee_rate))
+        self.assertEqual(outs[1], 1_000_000 + self.buyer_in + 15_000 - math.ceil(math.ceil(info["vsize"]) * escrow.release_fee_rate))
 
     def test_taker_never_funds_is_penalized(self):
         from api.escrow import flow
@@ -342,7 +350,8 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
         flow.advance(order)
         order.refresh_from_db()
         d = flow.order_data(order, buyer)
-        _faucet("sendtoaddress", d["escrow_funding_address"], d["escrow_funding_recommended"] / 1e8)
+        if "escrow_funding_address" in d:  # beta9: the buyer's fee may come out of its bond
+            _faucet("sendtoaddress", d["escrow_funding_address"], d["escrow_funding_recommended"] / 1e8)
         _mine()
         order.expires_at = timezone.now()
         order.save()
@@ -354,3 +363,171 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
         self.assertEqual(flow.bond_of(order, "maker").status, seller_bond.Status.RETURNABLE)
         _mine()
         self.assertGreaterEqual(service.rpc("getrawtransaction", [seller_bond.spend_txid, True])["confirmations"], 1)
+
+
+@skipUnless(REGTEST, "needs the regtest lab (ESCROW_REGTEST=1)")
+class EscrowHybridRegtest(EscrowOrderFlowRegtest):
+    """rl31-beta10: a Lightning taker on an onchain order (the Lightning side mocked, the
+    onchain side against the node). A: the buyer takes a SELL with a Lightning bond; B: the
+    seller takes a BUY with Lightning, the order runs over Lightning and the maker's onchain
+    bond sits behind a proxy LNPayment."""
+
+    # only the helpers of the parent class, not its tests again
+    test_happy_path_to_successful = None
+    test_collaborative_cancel = None
+    test_dispute_for_the_buyer_from_the_admin = None
+    test_taker_never_funds_is_penalized = None
+
+    def _ln_take(self, order, taker):
+        import uuid as _uuid
+
+        from api.logics import Logics
+        from api.models import TakeOrder
+
+        Logics.take(order, taker, lightning=True)
+        take = TakeOrder.objects.get(order=order, taker=taker)
+        now = timezone.now()
+        take.taker_bond = LNPayment.objects.create(
+            concept=LNPayment.Concepts.TAKEBOND, type=LNPayment.Types.HOLD, sender=taker,
+            status=LNPayment.Status.LOCKED, num_satoshis=30_000, payment_hash=_uuid.uuid4().hex,
+            preimage=_uuid.uuid4().hex, invoice=f"lnbcrt{_uuid.uuid4().hex}", created_at=now,
+            expires_at=now + timezone.timedelta(hours=3),
+        )
+        take.save(update_fields=["taker_bond"])
+        Logics.finalize_contract(take)
+        order.refresh_from_db()
+        return order
+
+    def _make(self, maker_sells):
+        from api.models import Currency
+
+        maker, taker = _user(), _user()
+        User.objects.get_or_create(username="admin")
+        now = timezone.now()
+        currency, _ = Currency.objects.get_or_create(currency=2, defaults={"exchange_rate": 100_000})
+        order = Order.objects.create(
+            currency=currency, type=Order.Types.SELL if maker_sells else Order.Types.BUY, status=Order.Status.WFB,
+            escrow_type=Order.EscrowTypes.ONCHAIN, created_at=now, expires_at=now + timezone.timedelta(hours=24),
+            has_range=False, amount=100, satoshis=1_000_000, t0_satoshis=1_000_000, last_satoshis=1_000_000,
+            maker=maker, bond_size=3, is_explicit=True,
+        )
+        km = self._keys(order, "seller" if maker_sells else "buyer")
+        self._pay_bond(order, maker, km)
+        self.assertEqual(order.status, Order.Status.PUB)
+        return order, maker, taker, km
+
+    def test_case_a_lightning_buyer_to_successful(self):
+        from unittest.mock import patch
+
+        from api.escrow import flow
+        from api.escrow.bonds import contract_of
+        from api.escrow.taproot import Transaction, TxOut
+        from api.logics import Logics
+
+        order, seller, buyer, ks = self._make(maker_sells=True)
+        order = self._ln_take(order, buyer)
+        self.assertEqual(order.escrow_type, Order.EscrowTypes.ONCHAIN)
+        self.assertTrue(order.taker_lightning)
+        keys = {"seller": ks, "buyer": self._keys(order, "buyer")}
+        users = {"seller": seller, "buyer": buyer}
+        for r, u in users.items():
+            flow.action(order, u, "escrow_keys", {"escrow_pubkey": pubkey(keys[r]["escrow"]).hex(), "funding_pubkey": pubkey(keys[r]["funding"]).hex()})
+            flow.action(order, u, "escrow_address", {"address": _faucet("getnewaddress", "", "bech32m")})
+        flow.advance(order)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.WFE)
+        db = flow.order_data(order, buyer)
+        self.assertTrue(db["escrow_fee_at_release"])
+        self.assertNotIn("escrow_funding_address", db)
+        self.assertEqual(flow.waiting_for(order, flow.escrow_of(order), "buyer"), ("peer", "funding"))
+        ds = flow.order_data(order, seller)
+        _faucet("sendtoaddress", ds["escrow_funding_address"], ds["escrow_funding_recommended"] / 1e8)
+        _mine()
+        flow.advance(order)
+        escrow = flow.escrow_of(order)
+        self.assertEqual(escrow.status, OnchainEscrow.Status.FUNDING)
+        plan = escrow.funding_signatures["plan"]
+        self.assertEqual(list(plan["bond_ids"]), ["seller"])
+        self.assertEqual(plan["buyer_inputs"], [])
+        seller_fee, buyer_fee = flow.fees(order)
+        self.assertEqual(plan["buyer_fee_at_release"], buyer_fee)
+        for r, u in (("buyer", buyer), ("seller", seller)):  # the buyer's app sends no signature
+            d = flow.order_data(order, u)
+            tx = Transaction.parse(bytes.fromhex(d["escrow_deposit_tx"]))
+            spent = [TxOut(v, bytes.fromhex(sp)) for v, sp in d["escrow_deposit_spent"]]
+            sigs = [with_hashtype(schnorr_sign(keys[r]["funding"], tx.sighash_unified(i, spent))).hex() for i in d["escrow_deposit_my_inputs"]]
+            bsig = None
+            if d["escrow_deposit_my_bond_input"] is not None:
+                bc = contract_of(flow.bond_of(order, d["bond_role"], owner=u))
+                bsig = with_hashtype(schnorr_sign(keys[r]["bond"], tx.sighash_unified(d["escrow_deposit_my_bond_input"], spent, 0x21, bc.leaf_hash(bc.COOPERATIVE)))).hex()
+            flow.action(order, u, "escrow_funding_signatures", {"signatures": sigs, "bond_signature": bsig})
+        _mine()
+        flow.advance(order)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.CHA)
+        self.assertEqual(flow.escrow_of(order).escrow_sats, 1_000_000 + 30_000)
+        self.assertEqual(Logics.confirm_fiat(order, buyer), (True, None))
+        order.refresh_from_db()
+        with patch("api.logics.LNNode") as ln:
+            self.assertEqual(Logics.confirm_fiat(order, seller), (True, None))
+            ln.cancel_return_hold_invoice.assert_called_once_with(order.taker_bond.payment_hash)
+        order.refresh_from_db()
+        self.assertEqual(order.taker_bond.status, LNPayment.Status.RETNED)
+        escrow = self._musig(order, users, keys)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.SUC)
+        _mine()
+        info = service.rpc("getrawtransaction", [escrow.release_txid, True])
+        outs = {o["scriptPubKey"]["address"]: round(o["value"] * 1e8) for o in info["vout"]}
+        mining = math.ceil(math.ceil(info["vsize"]) * escrow.release_fee_rate)
+        values = sorted(outs.values())
+        self.assertEqual(values, sorted([buyer_fee, 30_000, 1_000_000 - buyer_fee - mining]))
+        self.assertEqual(order.proceeds, seller_fee + buyer_fee)
+        summary = flow.trade_summary(order, buyer)
+        self.assertTrue(summary["lightning_bond"])
+        self.assertTrue(summary["fee_at_release"])
+        self.assertEqual(summary["received_sats"], 1_000_000 - buyer_fee - mining)
+
+    def test_case_b_proxy_return_and_penalty_onchain(self):
+        from unittest.mock import patch
+
+        from api.escrow import bonds, flow
+        from api.escrow.taproot import SIGHASH_ALL_UNIFIED, Transaction, TxOut
+        from api.logics import Logics
+        from api.models import OnchainBond
+
+        order, buyer, seller, kb = self._make(maker_sells=False)
+        order = self._ln_take(order, seller)
+        self.assertEqual(order.escrow_type, Order.EscrowTypes.LIGHTNING)
+        self.assertTrue(flow.has_proxy(order))
+        self.assertIsNone(flow.escrow_of(order))
+        # the trade goes well: the proxy is returned when the seller confirms -> onchain bond free
+        with patch("api.logics.LNNode") as ln:
+            Logics.return_bond(order.maker_bond)
+            ln.cancel_return_hold_invoice.assert_not_called()
+        bond = flow.bond_of(order, "maker")
+        self.assertEqual(bond.status, OnchainBond.Status.RETURNABLE)
+        back = _faucet("getnewaddress", "", "bech32m")
+        flow.action(order, buyer, "bond_return", {"address": back})
+        bond.refresh_from_db()
+        c = bonds.contract_of(bond)
+        tx = Transaction.parse(bytes.fromhex(bond.return_tx))
+        msg = tx.sighash_unified(0, [TxOut(bond.value, c.script_pubkey)], SIGHASH_ALL_UNIFIED, c.leaf_hash(c.COOPERATIVE))
+        flow.action(order, buyer, "bond_return_signature", {"signature": with_hashtype(schnorr_sign(kb["bond"], msg)).hex()})
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, OnchainBond.Status.RETURNED)
+        _mine()
+        info = service.rpc("getrawtransaction", [bond.spend_txid, True])
+        self.assertGreaterEqual(info["confirmations"], 1)
+        self.assertEqual(info["vout"][0]["scriptPubKey"]["address"], back)
+
+        # another one where the maker (buyer) lets it expire: settling the proxy = onchain penalty
+        order, buyer, seller, kb = self._make(maker_sells=False)
+        order = self._ln_take(order, seller)
+        self.assertTrue(Logics.settle_bond(order.maker_bond))
+        self.assertFalse(Logics.settle_bond(order.maker_bond))
+        bond = flow.bond_of(order, "maker")
+        self.assertEqual(bond.status, OnchainBond.Status.PENALIZED)
+        _mine()
+        self.assertGreaterEqual(service.rpc("getrawtransaction", [bond.spend_txid, True])["confirmations"], 1)
+        self.assertIsNone(Logics.reward_source_problem(order, order.maker_bond, order.taker_bond, 15_000))

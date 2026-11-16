@@ -454,6 +454,21 @@ export const OnchainEscrowPrompt = ({
     order.status === 7 &&
     data.escrow_status_code === ESCROW.KEYS &&
     isBuyer &&
+    data.escrow_fee_at_release
+  ) {
+    body = waiting(
+      waitingText(),
+      <Alert severity='info'>
+        {t(
+          'You took with Lightning: your bond is a Lightning hold invoice and you do not need to send anything onchain. Your fee ({{fee}} Sats) comes out of what you receive in the release.',
+          { fee: pn(data.escrow_fee_at_release_sats ?? 0) },
+        )}
+      </Alert>,
+    );
+  } else if (
+    order.status === 7 &&
+    data.escrow_status_code === ESCROW.KEYS &&
+    isBuyer &&
     data.escrow_fee_from_bond
   ) {
     body = waiting(

@@ -34,6 +34,7 @@ export interface SubmitActionProps {
   amount?: number;
   cancel_status?: number;
   password?: string;
+  take_lightning?: boolean;
 }
 
 export interface TradeRobotSummary {
@@ -253,15 +254,18 @@ class Order {
     return this;
   };
 
-  take: (federation: Federation, slot: Slot, takeAmount: string) => Promise<this> = async (
-    federation,
-    slot,
-    takeAmount,
-  ) => {
+  take: (
+    federation: Federation,
+    slot: Slot,
+    takeAmount: string,
+    lightning?: boolean,
+  ) => Promise<this> = async (federation, slot, takeAmount, lightning = false) => {
     return await this.submitAction(federation, slot, {
       action: 'take',
       password: this?.password,
       amount: this?.currency === 1000 ? Number(takeAmount) / 100000000 : Number(takeAmount),
+      // Roblosats hybrid: take an onchain order with Lightning
+      ...(lightning ? { take_lightning: true } : {}),
     });
   };
 

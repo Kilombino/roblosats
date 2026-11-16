@@ -74,6 +74,11 @@ class Order(models.Model):
     escrow_type = models.PositiveSmallIntegerField(
         choices=EscrowTypes.choices, null=False, default=EscrowTypes.LIGHTNING
     )
+    # Roblosats hybrid: the taker of an onchain order took it with Lightning (its bond is a
+    # Lightning hold invoice; as seller its escrow too, and the order then runs as a
+    # Lightning order with the maker's onchain bond behind a proxy LNPayment).
+    # db_default keeps a rollback to an older image working (it inserts without the column)
+    taker_lightning = models.BooleanField(default=False, db_default=False, null=False)
     created_at = models.DateTimeField(default=timezone.now)
     expires_at = models.DateTimeField()
     expiry_reason = models.PositiveSmallIntegerField(

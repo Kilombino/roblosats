@@ -88,6 +88,9 @@ class Command(BaseCommand):
         queryset = LNPayment.objects.filter(
             type=LNPayment.Types.HOLD,
             status__in=[LNPayment.Status.INVGEN, LNPayment.Status.LOCKED],
+        ).exclude(
+            # Roblosats hybrid: proxies of onchain maker bonds are not in LND
+            payment_hash__startswith="onchain-bond-"
         )
 
         generated_invoices = queryset.filter(

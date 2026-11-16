@@ -443,7 +443,7 @@ class Logics:
             return "Inactive"
 
     @classmethod
-    def take(cls, order, user, amount=None):
+    def take(cls, order, user, amount=None, lightning=False):
         is_penalized, time_out = cls.is_penalized(user)
         take_order = TakeOrder.objects.filter(
             taker=user, order=order, expires_at__gt=timezone.now()
@@ -459,6 +459,7 @@ class Logics:
             take_order = TakeOrder.objects.create(
                 taker=user,
                 order=order,
+                lightning=bool(lightning) and escrow_flow.is_onchain(order),
                 expires_at=timezone.now()
                 + timedelta(seconds=order.t_to_expire(Order.Status.TAK)),
             )
@@ -955,6 +956,13 @@ class Logics:
 
         # context necessary for the user to submit an onchain address
         MIN_SWAP_AMOUNT = config("MIN_SWAP_AMOUNT", cast=int, default=20_000)
+        if escrow_flow.has_proxy(order):
+            # Hybrid B: the buyer made an onchain order; the swap is how it still gets it onchain,
+            # down to the onchain escrow minimum.
+            MIN_SWAP_AMOUNT = min(
+                MIN_SWAP_AMOUNT,
+                config("ESCROW_MIN_SATS", cast=int, default=config("MIN_ORDER_SIZE", cast=int, default=20000)),
+            )
         MAX_SWAP_AMOUNT = config("MAX_SWAP_AMOUNT", cast=int, default=500_000)
 
         if context["invoice_amount"] < MIN_SWAP_AMOUNT:
@@ -1598,6 +1606,7 @@ class Logics:
             order.last_satoshis_time = timezone.now()
 
         # clear fields in case of re-publishing after expiry
+        escrow_flow.to_onchain(order)  # hybrid: a Lightning seller failed, onchain order again
         order.taker = None
         order.taker_bond = None
         order.trade_escrow = None
@@ -1711,6 +1720,13 @@ class Logics:
 
         order.taker = take_order.taker
         order.taker_bond = take_order.taker_bond
+        if escrow_flow.is_onchain(order) and take_order.lightning and take_order.taker_bond is not None:
+            # Hybrid: the onchain order was taken with Lightning (Roblosats rl31-beta10)
+            order.taker_lightning = True
+            if cls.is_seller(order, take_order.taker):
+                escrow_flow.to_lightning(order)  # case B: Lightning order from now on
+            else:
+                order.log("Taken with Lightning by the buyer: Lightning taker bond, onchain escrow (case A)")
 
         if order.has_range:
             order.amount = take_order.amount
@@ -1737,6 +1753,9 @@ class Logics:
                 "last_satoshis_time",
                 "spamcoin_sats",
                 "expires_at",
+                "taker_lightning",
+                "escrow_type",
+                "maker_bond",
             ]
         )
         order.announce_status(old_status, Order.Status.WF2)
@@ -1963,6 +1982,8 @@ class Logics:
         """
         if bond is None:
             return False
+        if escrow_flow.is_bond_proxy(bond):  # hybrid: an onchain maker bond, penalized onchain
+            return escrow_flow.proxy_settle(bond)
         bond.refresh_from_db(fields=["status"])
         if bond.status == LNPayment.Status.SETLED:
             return False
@@ -1999,6 +2020,8 @@ class Logics:
         """returns a bond"""
         if bond is None:
             return
+        if escrow_flow.is_bond_proxy(bond):
+            return escrow_flow.proxy_return(bond, LNPayment.Status.RETNED)
         try:
             LNNode.cancel_return_hold_invoice(bond.payment_hash)
             bond.status = LNPayment.Status.RETNED
@@ -2032,6 +2055,8 @@ class Logics:
         # Same as return bond, but used when the invoice was never LOCKED
         if bond is None:
             return True
+        if escrow_flow.is_bond_proxy(bond):
+            return escrow_flow.proxy_return(bond, LNPayment.Status.CANCEL)
         try:
             LNNode.cancel_return_hold_invoice(bond.payment_hash)
             bond.status = LNPayment.Status.CANCEL
@@ -2242,6 +2267,11 @@ class Logics:
             return "the slashed bond is not settled"
         if reward < 0 or reward > min(slashed_bond.num_satoshis, staked_bond.num_satoshis):
             return f"reward {reward} is larger than the smaller bond"
+        if escrow_flow.is_bond_proxy(slashed_bond):
+            # hybrid: the onchain maker bond went to the coordinator in its penalty transaction
+            if not escrow_flow.proxy_is_penalized(slashed_bond):
+                return "the onchain maker bond is not penalized"
+            return None
         try:
             if not LNNode.double_check_htlc_is_settled(slashed_bond.payment_hash):
                 return "the lightning node does not show the slashed bond as settled"

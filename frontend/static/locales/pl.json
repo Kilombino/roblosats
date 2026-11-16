@@ -910,5 +910,14 @@
   "Your bond is free. Get it back to an address of yours.": "Your bond is free. Get it back to an address of yours.",
   "Your release address": "Your release address",
   "You receive onchain {{amount}} Sats (Approx)": "You receive onchain {{amount}} Sats (Approx)",
-  "You send onchain {{amount}} Sats (Approx)": "You send onchain {{amount}} Sats (Approx)"
+  "You send onchain {{amount}} Sats (Approx)": "You send onchain {{amount}} Sats (Approx)",
+  "Take this onchain order with": "Take this onchain order with",
+  "⛓️ Onchain": "⛓️ Onchain",
+  "⚡ Lightning": "⚡ Lightning",
+  "With Lightning your bond and the trade escrow are Lightning hold invoices. The buyer asked for onchain: the coordinator pays it onchain with its swap (the buyer pays that swap fee and the mining fee).": "With Lightning your bond and the trade escrow are Lightning hold invoices. The buyer asked for onchain: the coordinator pays it onchain with its swap (the buyer pays that swap fee and the mining fee).",
+  "With Lightning your bond is a Lightning hold invoice and you do not need to send anything onchain. The seller still locks the sats onchain and you receive them onchain; your coordinator fee comes out of what you receive.": "With Lightning your bond is a Lightning hold invoice and you do not need to send anything onchain. The seller still locks the sats onchain and you receive them onchain; your coordinator fee comes out of what you receive.",
+  "You took with Lightning: your bond is a Lightning hold invoice and you do not need to send anything onchain. Your fee ({{fee}} Sats) comes out of what you receive in the release.": "You took with Lightning: your bond is a Lightning hold invoice and you do not need to send anything onchain. Your fee ({{fee}} Sats) comes out of what you receive in the release.",
+  "Your bond (Lightning)": "Your bond (Lightning)",
+  "Bond unlocked in your wallet": "Bond unlocked in your wallet",
+  "Your fee (out of what you received)": "Your fee (out of what you received)"
 }

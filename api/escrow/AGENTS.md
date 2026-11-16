@@ -155,3 +155,26 @@ server secret. The JS client must produce the same keys: see the vectors in
   for onchain orders since beta7).
 - `/api/book/?onchain=1`: the onchain public orders, only for an authenticated allowed robot
   while `ESCROW_ALLOWED_ROBOTS` is set (never cached).
+
+## Hybrid: a Lightning taker on an onchain order (rl31-beta10)
+- Take with `take_lightning: true` (only on onchain orders, `ESCROW_LIGHTNING_TAKER`, default
+  on): `TakeOrder.lightning`; the taker gets a normal Lightning hold invoice for its bond; on
+  lock `finalize_contract` sets `Order.taker_lightning`.
+- Case A (taker = buyer): the escrow stays onchain (seller funds it, only the seller's onchain
+  bond goes into the deposit). The buyer funds nothing: its coordinator fee comes out of its
+  payout in the cooperative release (`plan.buyer_fee_at_release`, coordinator output in the
+  release, `release_coordinator_sats` counted in `proceeds`). Its Lightning bond is returned
+  on success / collaborative cancel, settled on expiry-at-fault / cancel / dispute open
+  (`penalize_side` / `free_side`); a dispute credits it back or rewards the maker
+  (`ln_bond_dispute_credit`, ledger).
+- Case B (taker = seller): `flow.to_lightning` turns the order into a Lightning order. The
+  maker's onchain bond is represented by a proxy `LNPayment` (`payment_hash =
+  "onchain-bond-<OnchainBond.pk>"`) in `order.maker_bond`, so the Lightning machinery runs
+  unchanged: `Logics.settle_bond` on the proxy penalizes the onchain bond,
+  `return_bond`/`cancel_bond` free it (the maker takes it back with the usual bond_return
+  actions, allowed on such orders), `reward_source_problem` accepts a penalized proxy without
+  asking LND, `follow_invoices` never looks proxies up. The buyer gets the onchain swap down to
+  `ESCROW_MIN_SATS`. Back in the book (`publish_order` → `to_onchain`) it is onchain again.
+- Case C (buyer of an onchain escrow paid by Lightning through the coordinator) is NOT
+  implemented: `ln_payout_enabled()` is hard-wired False.
+- Tests: `api/tests/test_roblosats_hybrid.py` (mocked) and `EscrowHybridRegtest` (regtest).
