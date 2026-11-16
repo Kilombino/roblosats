@@ -102,11 +102,11 @@ const EncryptedNostrChat: React.FC<Props> = ({
 
     if (nostrPubKey && nostrSecKey) {
       setMessages(() => {
-        const robotNotifications = notifications[nostrPubKey] ?? [];
+        const robotNotifications = notifications[nostrPubKey] ?? new Map<string, Event[]>();
         const expectedOrderId = `${order.shortAlias}/${order.id}`;
-        // A plain array: Array.prototype.values().filter (iterator helpers) needs Chrome 122+
-        // and crashed the chat in older Android WebViews (16 nov 2026 QA, WebView 113).
-        const chatMessages = robotNotifications
+        // Array.from, not Map.values().filter(): iterator helpers need Chrome 122+ and
+        // crashed the chat in older Android WebViews (16 nov 2026 QA, WebView 113).
+        const chatMessages = Array.from(robotNotifications.values())
           .filter(([_wrappedEvent, event]) => {
             const orderIdTag = event.tags.find((t) => t[0] === 'order_id');
             const pubKeysRefs = event.tags.filter((t) => t[0] === 'p');
@@ -150,8 +150,7 @@ const EncryptedNostrChat: React.FC<Props> = ({
               userNick,
               time: new Date(event.created_at * 1000).toISOString(),
             };
-          })
-          .toArray();
+          });
 
         // The index here is the Nostr timestamp, with decimals. It must not become
         // lastIndex: that is the coordinator's integer message offset, and a
