@@ -690,8 +690,19 @@ class OrderView(viewsets.ViewSet):
                     status.HTTP_200_OK,
                 )
 
-        # Any other action is only allowed if the user is a participant
-        elif not (order.maker == request.user or order.taker == request.user):
+        # Any other action is only allowed if the user is a participant. An onchain taker is
+        # not order.taker until its bond confirms: its pending take (TakeOrder) lets it send
+        # its bond_* actions (16 nov 2026: the taker got "not a participant" at its bond).
+        elif not (
+            order.maker == request.user
+            or order.taker == request.user
+            or (
+                action.startswith("bond_")
+                and TakeOrder.objects.filter(
+                    taker=request.user, order=order, expires_at__gt=timezone.now()
+                ).exists()
+            )
+        ):
             return Response(new_error(1047), status.HTTP_403_FORBIDDEN)
 
         # 3) If action is 'update invoice'
