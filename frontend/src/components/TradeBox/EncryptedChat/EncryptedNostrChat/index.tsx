@@ -104,8 +104,9 @@ const EncryptedNostrChat: React.FC<Props> = ({
       setMessages(() => {
         const robotNotifications = notifications[nostrPubKey] ?? [];
         const expectedOrderId = `${order.shortAlias}/${order.id}`;
+        // A plain array: Array.prototype.values().filter (iterator helpers) needs Chrome 122+
+        // and crashed the chat in older Android WebViews (16 nov 2026 QA, WebView 113).
         const chatMessages = robotNotifications
-          .values()
           .filter(([_wrappedEvent, event]) => {
             const orderIdTag = event.tags.find((t) => t[0] === 'order_id');
             const pubKeysRefs = event.tags.filter((t) => t[0] === 'p');
