@@ -78,11 +78,15 @@ maybe(
     await call('advance');
     expect((await data('buyer')).status).toBe(7);
 
-    for (const user of ['seller', 'buyer'] as const) {
-      const d = await data(user);
-      checkFundingAddress(d, keys[user]);
-      await call('pay', { address: d.escrow_funding_address, sats: d.escrow_funding_recommended });
-    }
+    // The buyer sends nothing: its fee and mining share come out of its bond.
+    const b = await data('buyer');
+    expect(b.escrow_fee_from_bond).toBe(true);
+    expect(b.escrow_funding_address).toBeUndefined();
+    expect(b.escrow_waiting_for).toBe('peer');
+    const s = await data('seller');
+    expect(s.escrow_waiting_for).toBe('you');
+    checkFundingAddress(s, keys.seller);
+    await call('pay', { address: s.escrow_funding_address, sats: s.escrow_funding_recommended });
     await call('advance');
 
     for (const user of ['seller', 'buyer'] as const) {
@@ -114,7 +118,21 @@ maybe(
       const partial = releasePartial(await data(user), keys[user], checks[user], secrets[user]);
       await call('action', { user, name: 'escrow_partial', data: { partial } });
     }
-    expect((await data('buyer')).status).toBe(14);
+    const done = await data('buyer');
+    expect(done.status).toBe(14);
+    const summary = done.onchain_summary!;
+    expect(summary.is_buyer).toBe(true);
+    expect(summary.fee_from_bond).toBe(true);
+    expect(summary.bond_back_sats).toBe(
+      30_000 - summary.coordinator_fee_sats - summary.deposit_mining_sats!,
+    );
+    expect(summary.received_sats).toBe(
+      1_000_000 + summary.bond_back_sats - summary.release_mining_sats,
+    );
+    const seller = (await data('seller')).onchain_summary!;
+    expect(seller.role).toBe('seller');
+    expect(seller.bond_back_sats).toBe(30_000);
+    expect(seller.received_sats).toBe(30_000);
   },
   180_000,
 );

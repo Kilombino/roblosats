@@ -182,22 +182,25 @@ def fee_rate(blocks=1):
         return config("ESCROW_FALLBACK_FEE_RATE", cast=float, default=5.0)
 
 
-def build_deposit(escrow, escrow_sats, seller_fee, buyer_fee, coordinator_spk, dev_sats, dev_spk, bonds=None):
+def build_deposit(escrow, escrow_sats, seller_fee, buyer_fee, coordinator_spk, dev_sats, dev_spk, bonds=None,
+                  buyer_fee_from_bond=False):
     """Plan the deposit from the confirmed funding of both traders and store it unsigned.
-    bonds: {"seller": OnchainBond, "buyer": OnchainBond} (onchain bonds become inputs)."""
+    bonds: {"seller": OnchainBond, "buyer": OnchainBond} (onchain bonds become inputs).
+    buyer_fee_from_bond: the buyer funds nothing, its fee comes out of its bond."""
     from api.escrow import bonds as bond_service
     from api.models import OnchainEscrow
 
     bonds = bonds or {}
 
     seller = funding_utxos(escrow, "seller")
-    buyer = funding_utxos(escrow, "buyer") if buyer_fee else []
+    buyer = funding_utxos(escrow, "buyer") if buyer_fee and not buyer_fee_from_bond else []
     plan = plan_deposit(
         seller, buyer, contract_for(escrow), escrow_sats, seller_fee, buyer_fee,
         coordinator_spk, dev_sats, dev_spk, funding_spk(escrow, "seller"), funding_spk(escrow, "buyer"),
         fee_rate(int(config("ESCROW_DEPOSIT_TARGET_BLOCKS", default=2))),
         bond_service.bond_input(bonds["seller"]) if bonds.get("seller") else None,
         bond_service.bond_input(bonds["buyer"]) if bonds.get("buyer") else None,
+        buyer_fee_from_bond=buyer_fee_from_bond,
     )
     escrow.escrow_sats = plan.tx.outputs[0].value
     dev_paid = sum(o.value for o in plan.tx.outputs[1:] if dev_spk and o.script_pubkey == dev_spk)
@@ -212,6 +215,15 @@ def build_deposit(escrow, escrow_sats, seller_fee, buyer_fee, coordinator_spk, d
         "bond_inputs": plan.bond_inputs or {},
         "bond_ids": {r: b.pk for r, b in bonds.items() if b},
         "trade_sats": escrow_sats,
+        "bond_in_escrow": plan.bond_in_escrow or {},
+        "buyer_fee_from_bond": bool(buyer_fee_from_bond),
+        "seller_pays": plan.seller_pays,
+        "buyer_pays": plan.buyer_pays,
+        "seller_mining": plan.seller_mining,
+        "buyer_mining": plan.buyer_mining,
+        "seller_fee": seller_fee,
+        "buyer_fee": buyer_fee,
+        "mining_fee": plan.mining_fee,
     }
     escrow.funding_signatures = sigs
     escrow.status = OnchainEscrow.Status.FUNDING

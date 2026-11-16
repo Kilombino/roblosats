@@ -10,7 +10,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { ContentCopy } from '@mui/icons-material';
+import { ContentCopy, OpenInNew } from '@mui/icons-material';
 import QRCode from 'react-qr-code';
 
 import { type Order } from '../../../models';
@@ -30,7 +30,7 @@ import {
   type EscrowKeys,
   type EscrowOrderData,
 } from '../../../utils/escrow/client';
-import { addressToScript } from '../../../utils/escrow/taproot';
+import { Transaction, addressToScript, bytesToHex } from '../../../utils/escrow/taproot';
 
 export type EscrowAction =
   | 'bond_key'
@@ -54,17 +54,59 @@ interface Props {
 const BOND = { FUNDING: 0, SIGN: 1, LOCKED: 2, RETURNABLE: 5 };
 const ESCROW = { KEYS: 0, FUNDING: 1, MEMPOOL: 2, LOCKED: 3, RELEASING: 4 };
 
+const EXPLORER = 'https://mempool.kilombino.com/tx/';
+
+/** A transaction of the trade: short txid, copy button and a link to the explorer. */
+export const TxLine = ({ label, txid }: { label: string; txid: string }): React.JSX.Element => {
+  const { t } = useTranslation();
+  return (
+    <Grid container spacing={0.5} sx={{ flexDirection: 'column', alignItems: 'center' }}>
+      <Grid>
+        <Typography variant='caption' align='center'>
+          {label}
+        </Typography>
+      </Grid>
+      <Grid sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
+        <Tooltip title={t('Copy to clipboard')} enterTouchDelay={0}>
+          <Button
+            size='small'
+            variant='outlined'
+            sx={{ textTransform: 'none' }}
+            startIcon={<ContentCopy />}
+            onClick={() => systemClient.copyToClipboard(txid)}
+          >
+            {t('Copy TXID')} {txid.slice(0, 8)}…{txid.slice(-6)}
+          </Button>
+        </Tooltip>
+        <Button
+          size='small'
+          sx={{ textTransform: 'none' }}
+          startIcon={<OpenInNew />}
+          href={`${EXPLORER}${txid}`}
+          target='_blank'
+          rel='noreferrer'
+        >
+          {t('View on mempool.kilombino.com')}
+        </Button>
+      </Grid>
+    </Grid>
+  );
+};
+
 const PayBox = ({
   address,
   sats,
   label,
+  note,
 }: {
   address: string;
   sats: number;
   label: string;
+  note?: string;
 }): React.JSX.Element => {
   const { t } = useTranslation();
-  const uri = `bitcoin:${address}?amount=${(sats / 1e8).toFixed(8)}`;
+  const btc = (sats / 1e8).toFixed(8);
+  const uri = `bitcoin:${address}?amount=${btc}`;
   return (
     <Grid container spacing={1} sx={{ flexDirection: 'column', alignItems: 'center' }}>
       <Grid>
@@ -94,8 +136,50 @@ const PayBox = ({
           <b>{pn(sats)} Sats</b>
         </Typography>
       </Grid>
+      <Grid sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
+        <Tooltip title={t('Copy to clipboard')} enterTouchDelay={0}>
+          <Button
+            size='small'
+            variant='outlined'
+            startIcon={<ContentCopy />}
+            onClick={() => systemClient.copyToClipboard(String(sats))}
+          >
+            {t('Copy amount (Sats)')}
+          </Button>
+        </Tooltip>
+        <Tooltip title={t('Copy to clipboard')} enterTouchDelay={0}>
+          <Button
+            size='small'
+            variant='outlined'
+            startIcon={<ContentCopy />}
+            onClick={() => systemClient.copyToClipboard(btc)}
+          >
+            {t('Copy amount (BTC)')}
+          </Button>
+        </Tooltip>
+      </Grid>
+      {note ? (
+        <Grid>
+          <Alert severity='info' sx={{ textAlign: 'left' }}>
+            {note}
+          </Alert>
+        </Grid>
+      ) : null}
     </Grid>
   );
+};
+
+/** What the release pays to our own address (0 if we cannot tell). */
+const releaseToMe = (data: EscrowOrderData): number => {
+  try {
+    if (!data.escrow_release_tx || !data.escrow_my_payout_address) return 0;
+    const mine = bytesToHex(addressToScript(data.escrow_my_payout_address));
+    return Transaction.parse(data.escrow_release_tx)
+      .outputs.filter((o) => bytesToHex(o.script) === mine)
+      .reduce((a, o) => a + Number(o.value), 0);
+  } catch {
+    return 0;
+  }
 };
 
 export const OnchainEscrowPrompt = ({
@@ -233,7 +317,10 @@ export const OnchainEscrowPrompt = ({
 
   if (!keys) return <CircularProgress />;
 
-  const waiting = (text: string): React.JSX.Element => (
+  const isBuyer = data.escrow_role === 'buyer';
+  const peer = isBuyer ? t('the seller') : t('the buyer');
+
+  const waiting = (text: string, extra?: React.JSX.Element | null): React.JSX.Element => (
     <Grid container spacing={1} sx={{ flexDirection: 'column', alignItems: 'center' }}>
       <Grid>
         <Typography variant='body2' align='center'>
@@ -243,23 +330,92 @@ export const OnchainEscrowPrompt = ({
       <Grid>
         <CircularProgress />
       </Grid>
+      {extra ? <Grid>{extra}</Grid> : null}
     </Grid>
   );
 
-  let body: React.JSX.Element = waiting(t('Waiting for the coordinator…'));
+  // Who the escrow is waiting for, said in words (the coordinator only when it really is).
+  const waitingText = (): string => {
+    const who = data.escrow_waiting_for;
+    const what = data.escrow_waiting_what;
+    if (who === 'peer') {
+      if (what === 'keys') return t('Waiting for {{peer}} to join the onchain escrow…', { peer });
+      if (what === 'address')
+        return t('Waiting for {{peer}} to give their onchain address…', { peer });
+      if (what === 'funding') return t('Waiting for the deposit of {{peer}}…', { peer });
+      if (what === 'deposit_signature')
+        return t('Waiting for {{peer}} to sign the deposit…', { peer });
+      if (what === 'release_signature')
+        return t('Waiting for {{peer}} to sign the release…', { peer });
+    }
+    if (who === 'confirmation') {
+      if (what === 'funding') return t('Payment received, waiting for 1 confirmation…');
+      return t('Deposit sent. Waiting for 1 confirmation…');
+    }
+    return t('Waiting for the coordinator…');
+  };
+
+  const seenInMempool = (txid?: string): React.JSX.Element | null =>
+    txid ? (
+      <Grid container spacing={1} sx={{ flexDirection: 'column', alignItems: 'center' }}>
+        <Grid>
+          <Alert severity='success'>
+            {t('📥 Payment seen in the mempool, waiting for 1 confirmation.')}
+          </Alert>
+        </Grid>
+        <Grid>
+          <TxLine label={t('Your payment')} txid={txid} />
+        </Grid>
+      </Grid>
+    ) : null;
+
+  let body: React.JSX.Element = waiting(waitingText());
 
   if ((order.status === 0 || order.status === 3) && data.bond_status_code !== undefined) {
-    if (data.bond_status_code === BOND.FUNDING && data.bond_address)
-      body = (
-        <PayBox
-          address={data.bond_address}
-          sats={data.bond_required_sats ?? 0}
-          label={t(
-            'Send exactly this amount from any wallet. It is your bond: nobody can move it alone, it comes back to you after the trade (or after about 3 days in any case), and you lose it only if you cancel or do not complete your part in time.',
-          )}
-        />
+    if (
+      data.bond_status_code === BOND.FUNDING &&
+      data.bond_mempool_txid &&
+      (data.bond_mempool_sats ?? 0) >= (data.bond_required_sats ?? 0)
+    )
+      body = waiting(
+        t('Bond seen in the mempool, waiting for 1 confirmation…'),
+        <TxLine label={t('Your bond')} txid={data.bond_mempool_txid} />,
       );
-    else body = waiting(t('Bond received, waiting for 1 confirmation…'));
+    else if (data.bond_status_code === BOND.FUNDING && data.bond_address)
+      body = (
+        <Grid container spacing={1} sx={{ flexDirection: 'column', alignItems: 'center' }}>
+          <Grid>
+            <PayBox
+              address={data.bond_address}
+              sats={data.bond_required_sats ?? 0}
+              label={t(
+                'Send exactly this amount from any wallet. It is your bond: nobody can move it alone, it comes back to you after the trade (or after about 3 days in any case), and you lose it only if you cancel or do not complete your part in time.',
+              )}
+              note={t(
+                'Send exactly {{amount}} Sats in one payment. Less than that is not taken as your bond.',
+                { amount: pn(data.bond_required_sats ?? 0) },
+              )}
+            />
+          </Grid>
+          {data.bond_mempool_txid ? (
+            <Grid>
+              <Alert severity='warning'>
+                {t(
+                  'A payment of {{amount}} Sats is in the mempool, but it is less than the bond.',
+                  {
+                    amount: pn(data.bond_mempool_sats ?? 0),
+                  },
+                )}
+              </Alert>
+            </Grid>
+          ) : null}
+        </Grid>
+      );
+    else
+      body = waiting(
+        t('Bond received, waiting for 1 confirmation…'),
+        data.bond_txid ? <TxLine label={t('Your bond')} txid={data.bond_txid} /> : null,
+      );
   } else if (
     order.status === 6 &&
     data.escrow_status_code === ESCROW.KEYS &&
@@ -269,7 +425,7 @@ export const OnchainEscrowPrompt = ({
       <Grid container spacing={1} sx={{ flexDirection: 'column', alignItems: 'center' }}>
         <Grid>
           <Typography variant='body2' align='center'>
-            {data.escrow_role === 'buyer'
+            {isBuyer
               ? t('Bitcoin address where you will receive the sats (and your bond back).')
               : t('Bitcoin address for your bond back (and a refund if the trade is cancelled).')}
           </Typography>
@@ -297,38 +453,99 @@ export const OnchainEscrowPrompt = ({
   } else if (
     order.status === 7 &&
     data.escrow_status_code === ESCROW.KEYS &&
+    isBuyer &&
+    data.escrow_fee_from_bond
+  ) {
+    body = waiting(
+      waitingText(),
+      <Alert severity='info'>
+        {t(
+          'You do not need to send anything else: your fee ({{fee}} Sats) and your part of the mining fee come out of your bond, and the rest of the bond comes back to you with the trade.',
+          { fee: pn(data.escrow_funding_owed ?? 0) },
+        )}
+      </Alert>,
+    );
+  } else if (
+    order.status === 7 &&
+    data.escrow_status_code === ESCROW.KEYS &&
     data.escrow_funding_address
   ) {
+    const seen = data.escrow_funding_mempool_txid;
+    const enough = (data.escrow_funding_mempool_sats ?? 0) >= (data.escrow_funding_owed ?? 0);
     try {
       checkFundingAddress(data, keys);
-      body = (
-        <PayBox
-          address={data.escrow_funding_address}
-          sats={data.escrow_funding_recommended ?? 0}
-          label={
-            data.escrow_role === 'seller'
-              ? t(
-                  'Send this amount to your funding address: the trade amount, your fee and the mining fee. Anything left over comes back to you in the deposit.',
-                )
-              : t(
-                  'Send this amount to your funding address: your fee and the mining fee. Anything left over comes back to you.',
-                )
-          }
-        />
-      );
+      body =
+        seen && enough ? (
+          waiting(waitingText(), seenInMempool(seen))
+        ) : (
+          <Grid container spacing={1} sx={{ flexDirection: 'column', alignItems: 'center' }}>
+            <Grid>
+              <PayBox
+                address={data.escrow_funding_address}
+                sats={data.escrow_funding_recommended ?? 0}
+                label={
+                  data.escrow_role === 'seller'
+                    ? t(
+                        'Send this amount to your funding address: the trade amount, your fee and the mining fee. Anything left over comes back to you in the deposit.',
+                      )
+                    : t(
+                        'Send this amount to your funding address: your fee and the mining fee. Anything left over comes back to you.',
+                      )
+                }
+                note={t(
+                  'Send exactly {{amount}} Sats. If you send more, the change comes back to you in the deposit; if you send less, send the rest to the same address before the order expires.',
+                  { amount: pn(data.escrow_funding_recommended ?? 0) },
+                )}
+              />
+            </Grid>
+            {seen ? (
+              <Grid>
+                <Alert severity='warning'>
+                  {t(
+                    'Seen in the mempool: {{amount}} Sats. It is not enough yet: send the rest to the same address.',
+                    { amount: pn(data.escrow_funding_mempool_sats ?? 0) },
+                  )}
+                </Alert>
+              </Grid>
+            ) : null}
+          </Grid>
+        );
     } catch (e) {
       body = <Alert severity='error'>{String(e)}</Alert>;
     }
   } else if (data.escrow_status_code === ESCROW.FUNDING) {
     body = waiting(
       data.escrow_deposit_signed
-        ? t('Deposit signed. Waiting for your peer…')
+        ? t(
+            '✍️ Your app checked the deposit (the trade amount, the escrow contract and your change) and signed it automatically. Waiting for {{peer}} to sign…',
+            { peer },
+          )
         : t('Checking and signing the deposit…'),
     );
   } else if (data.escrow_status_code === ESCROW.MEMPOOL) {
-    body = waiting(t('Deposit sent. Waiting for 1 confirmation…'));
+    body = waiting(
+      t(
+        '✍️ Your app checked and signed the deposit automatically. Deposit sent: waiting for 1 confirmation…',
+      ),
+      data.escrow_funding_txid ? (
+        <TxLine label={t('Escrow deposit')} txid={data.escrow_funding_txid} />
+      ) : null,
+    );
   } else if (data.escrow_status_code === ESCROW.RELEASING) {
-    body = waiting(t('Signing the release together with your peer…'));
+    const toMe = releaseToMe(data);
+    body = waiting(
+      data.escrow_release_my_partial || data.escrow_waiting_for === 'peer'
+        ? t(
+            '✍️ Your app checked the release (you receive {{amount}} Sats) and signed it automatically. Waiting for {{peer}}…',
+            { amount: pn(toMe), peer },
+          )
+        : t('Signing the release together with your peer…'),
+    );
+  } else if (data.escrow_release_txid && order.status === 13) {
+    body = waiting(
+      t('Release sent. Finishing the order…'),
+      <TxLine label={t('Escrow release')} txid={data.escrow_release_txid} />,
+    );
   } else if (data.bond_status_code === BOND.RETURNABLE) {
     body = (
       <Grid container spacing={1} sx={{ flexDirection: 'column', alignItems: 'center' }}>

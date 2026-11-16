@@ -8,6 +8,32 @@ import hexToBase91 from '../utils/hexToBase91';
 import { validateTokenEntropy } from '../utils/token';
 import { getPublicKey } from 'nostr-tools';
 
+/** Roblosats onchain escrow: the steps inside one order status (bond seen, deposit built,
+ * signed, release nonces…) must repaint the order too, not only a change of status. */
+const ONCHAIN_KEYS = [
+  'escrow_status_code',
+  'bond_status_code',
+  'escrow_deposit_tx',
+  'escrow_deposit_signed',
+  'escrow_release_tx',
+  'escrow_release_aggnonce',
+  'escrow_release_my_nonce',
+  'escrow_release_my_partial',
+  'escrow_release_txid',
+  'escrow_funding_txid',
+  'escrow_waiting_for',
+  'escrow_waiting_what',
+  'escrow_my_payout_address',
+  'bond_mempool_txid',
+  'escrow_funding_mempool_txid',
+  'bond_return_tx',
+];
+const onchainSignature = (order: Order): string => {
+  const o = order as unknown as Record<string, unknown>;
+  if (o.escrow_type !== 'onchain' && o.escrow_type !== 1) return '';
+  return JSON.stringify(ONCHAIN_KEYS.map((k) => o[k] ?? null));
+};
+
 class Slot {
   constructor(
     token: string,
@@ -159,11 +185,16 @@ class Slot {
     if (this.activeOrder) {
       const order = this.activeOrder;
       const previousStatus = order.status;
+      const previousOnchain = onchainSignature(order);
       await order.fecth(federation, this);
       this.loading = false;
       if (this.activeOrder !== order) return;
       this.updateSlotFromOrder(order);
-      if (this.activeOrder && order.status !== previousStatus) this.onSlotUpdate();
+      if (
+        this.activeOrder &&
+        (order.status !== previousStatus || onchainSignature(order) !== previousOnchain)
+      )
+        this.onSlotUpdate();
     }
   };
 
@@ -223,6 +254,17 @@ class Slot {
         if (changed || this.activeOrder === null) {
           this.onSlotUpdate();
         }
+      } else if (
+        newOrder?.is_participant &&
+        !newOrder.bad_request &&
+        this.lastOrder?.id === newOrder.id &&
+        this.lastOrder?.shortAlias === newOrder.shortAlias &&
+        ![4, 5, 12, 14, 17, 18].includes(newOrder.status)
+      ) {
+        // Parked as the last order by an error that is gone now and still running: follow it
+        // again as the active order (otherwise nobody refreshes it any more).
+        this.activeOrder = newOrder;
+        this.onSlotUpdate();
       } else if (
         newOrder?.is_participant &&
         (this.lastOrder?.id !== newOrder.id || this.lastOrder?.shortAlias !== newOrder.shortAlias)

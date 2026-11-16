@@ -905,6 +905,31 @@ class BookView(ListAPIView):
         currency = request.GET.get("currency", 0)
         type = request.GET.get("type", 2)
 
+        # Roblosats: while onchain escrow is open to some robots only, those robots ask for
+        # the onchain orders apart (authenticated, never cached); nobody else gets them.
+        if request.GET.get("onchain") in ("1", "true"):
+            if not (
+                escrow_flow.restricted()
+                and request.user.is_authenticated
+                and escrow_flow.robot_allowed(request.user)
+            ):
+                return Response(
+                    {"not_found": "No orders found, be the first to make one"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            queryset = Order.objects.filter(
+                status=Order.Status.PUB,
+                password=None,
+                escrow_type=Order.EscrowTypes.ONCHAIN,
+            )
+            book_data = [self._public(order) for order in queryset]
+            if not book_data:
+                return Response(
+                    {"not_found": "No orders found, be the first to make one"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            return Response(book_data, status=status.HTTP_200_OK)
+
         cache_key = f"book:{currency}:{type}"
         book_data = cache.get(cache_key)
         if book_data is None:
@@ -926,30 +951,30 @@ class BookView(ListAPIView):
                     status=status.HTTP_404_NOT_FOUND,
                 )
 
-            book_data = []
-            for order in queryset:
-                data = ListOrderSerializer(order).data
-                data["maker_nick"] = str(order.maker)
-                data["maker_hash_id"] = str(order.maker.robot.hash_id)
-
-                data["satoshis_now"] = Logics.satoshis_now(order)
-                # Compute current premium for those orders that are explicitly priced.
-                price, premium = Logics.price_and_premium_now(order)
-                data["price"], data["premium"] = price, str(premium)
-                data["maker_status"] = Logics.user_activity_status(
-                    order.maker.last_login
-                )
-                for key in (
-                    "status",
-                    "taker",
-                ):  # Non participants should not see the status or who is the taker
-                    del data[key]
-
-                book_data.append(data)
+            book_data = [self._public(order) for order in queryset]
 
             cache.set(cache_key, book_data, timeout=BOOK_CACHE_TTL)
 
         return Response(book_data, status=status.HTTP_200_OK)
+
+
+    @staticmethod
+    def _public(order):
+        data = ListOrderSerializer(order).data
+        data["maker_nick"] = str(order.maker)
+        data["maker_hash_id"] = str(order.maker.robot.hash_id)
+
+        data["satoshis_now"] = Logics.satoshis_now(order)
+        # Compute current premium for those orders that are explicitly priced.
+        price, premium = Logics.price_and_premium_now(order)
+        data["price"], data["premium"] = price, str(premium)
+        data["maker_status"] = Logics.user_activity_status(order.maker.last_login)
+        for key in (
+            "status",
+            "taker",
+        ):  # Non participants should not see the status or who is the taker
+            del data[key]
+        return data
 
 
 class NotificationsView(ListAPIView):

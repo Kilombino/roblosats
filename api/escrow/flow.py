@@ -1,3 +1,4 @@
+import logging
 import math
 from datetime import timedelta
 
@@ -6,7 +7,11 @@ from django.utils import timezone
 
 from api.escrow import service
 from api.escrow.service import EscrowError
+
+logger = logging.getLogger(__name__)
 from api.escrow.transactions import (
+    DUST_P2TR,
+    VB_BOND_COOP,
     VB_OVERHEAD,
     VB_TAPROOT_KEY_INPUT,
     output_vbytes,
@@ -60,15 +65,39 @@ def fees(order):
     return service.fee_split(order)
 
 
-def recommended_funding(order, escrow, role):
+def recommended_funding(order, escrow, role, from_bond=False):
     """What each trader should send to its funding address: what it owes plus room for its
-    share of the deposit's mining fee at a generous rate."""
+    share of the deposit's mining fee at a generous rate. from_bond: the buyer's fee comes
+    out of its bond instead (no funding input nor change of its own, only its bond input)."""
     seller_fee, buyer_fee = fees(order)
     owed = order.last_satoshis + seller_fee if role == "seller" else buyer_fee
     rate = max(service.fee_rate(2) * 2, 2.0)
     shared = VB_OVERHEAD + 3 * output_vbytes(b"\x00" * 34)
-    vb = VB_TAPROOT_KEY_INPUT + output_vbytes(b"\x00" * 34) + shared / 2
+    if from_bond:
+        vb = VB_BOND_COOP + shared / 2
+    else:
+        vb = VB_TAPROOT_KEY_INPUT + output_vbytes(b"\x00" * 34) + shared / 2
     return owed, owed + math.ceil(vb * rate)
+
+
+def buyer_fee_from_bond(order, escrow=None):
+    """The buyer only pays its onchain bond: its coordinator fee and its share of the deposit's
+    mining fee come out of the bond, which is an input of the deposit anyway
+    (ESCROW_BUYER_FEE_FROM_BOND, on by default). Kilombino, 16 nov 2026: "que el comprador
+    aporte esa minúscula cantidad con el primer pago que ya hizo". Once the deposit is
+    planned, the plan says which way it went."""
+    from api.models import OnchainBond
+
+    escrow = escrow or escrow_of(order)
+    if escrow is not None and escrow.funding_signatures.get("plan"):
+        return bool(escrow.funding_signatures["plan"].get("buyer_fee_from_bond"))
+    if not config("ESCROW_BUYER_FEE_FROM_BOND", cast=bool, default=True):
+        return False
+    bond = trade_bonds(order).get("buyer")
+    if bond is None or not bond.value or bond.status not in (OnchainBond.Status.LOCKED, OnchainBond.Status.SIGN):
+        return False
+    _, worst = recommended_funding(order, escrow, "buyer", from_bond=True)
+    return bond.value - worst >= DUST_P2TR
 
 
 def coordinator_fee_spk():
@@ -138,6 +167,10 @@ def advance(order):
     _advance_bonds(order)
     order.refresh_from_db()
     escrow = escrow_of(order)
+    try:
+        notify_mempool(order, escrow)
+    except Exception as e:  # a notice never holds the order up
+        logger.warning(f"Order {order.id}: onchain mempool check failed: {e}")
     if escrow is None:
         return
     S = OnchainEscrow.Status
@@ -152,18 +185,26 @@ def advance(order):
     if escrow.status == S.KEYS and order.status == Order.Status.WFE:
         seller_fee, buyer_fee = fees(order)
         seller_owed, _ = recommended_funding(order, escrow, "seller")
-        buyer_owed, _ = recommended_funding(order, escrow, "buyer")
-        have_s = sum(u.value for u in service.funding_utxos(escrow, "seller"))
-        have_b = sum(u.value for u in service.funding_utxos(escrow, "buyer"))
         tb = trade_bonds(order)
         bonds_ready = all(b is not None and b.status == OnchainBond.Status.LOCKED for b in tb.values())
-        if bonds_ready and have_s >= seller_owed and (have_b >= buyer_owed or not buyer_fee):
+        from_bond = bool(buyer_fee) and buyer_fee_from_bond(order, escrow)
+        have_s = sum(u.value for u in service.funding_utxos(escrow, "seller"))
+        buyer_ready = from_bond or not buyer_fee
+        if not buyer_ready:
+            buyer_owed, _ = recommended_funding(order, escrow, "buyer")
+            buyer_ready = sum(u.value for u in service.funding_utxos(escrow, "buyer")) >= buyer_owed
+        if bonds_ready and have_s >= seller_owed and buyer_ready:
             dev_sats, dev_spk = dev_fee()
             try:
                 service.build_deposit(
-                    escrow, order.last_satoshis, seller_fee, buyer_fee, coordinator_fee_spk(), dev_sats, dev_spk, tb
+                    escrow, order.last_satoshis, seller_fee, buyer_fee, coordinator_fee_spk(), dev_sats, dev_spk, tb,
+                    buyer_fee_from_bond=from_bond,
                 )
-                order.log("Onchain deposit **built** (trade amount + both bonds), waiting for the traders' signatures")
+                order.log(
+                    "Onchain deposit **built** (trade amount + both bonds"
+                    + (", the buyer's fee out of its bond" if from_bond else "")
+                    + "), waiting for the traders' signatures"
+                )
             except Exception as e:
                 order.log(f"Onchain deposit not built yet: {e}", level="WARN")
     if escrow.status == S.MEMPOOL:
@@ -183,12 +224,15 @@ def advance(order):
 
 
 def _bond_values(escrow):
+    """What each bond left in the escrow output (the buyer's bond minus its fee when the fee
+    came out of it) and the trade amount."""
     plan = escrow.funding_signatures.get("plan", {})
     from api.models import OnchainBond
 
     values = {"seller": 0, "buyer": 0}
+    in_escrow = plan.get("bond_in_escrow") or {}
     for role, pk in plan.get("bond_ids", {}).items():
-        values[role] = OnchainBond.objects.get(pk=pk).value
+        values[role] = in_escrow[role] if role in in_escrow else OnchainBond.objects.get(pk=pk).value
     return values, plan.get("trade_sats", escrow.escrow_sats - sum(values.values()))
 
 
@@ -332,11 +376,19 @@ def order_data(order, user):
     """What a trader's client needs to follow and sign its onchain bond and the escrow."""
     from api.escrow import bonds
 
+    from api.models import OnchainBond
+
     bond_data = {"escrow_alias": service.coordinator_alias(), "escrow_hrp": service.network_hrp()}
     try:
         brole, _ = bond_role(order, user)
-        bond_data.update(bonds.bond_data(bond_of(order, brole, owner=user)))
+        my_bond = bond_of(order, brole, owner=user)
+        bond_data.update(bonds.bond_data(my_bond))
         bond_data["bond_role"] = brole
+        if my_bond is not None and my_bond.status == OnchainBond.Status.FUNDING:
+            pending = _unconfirmed(my_bond.address)
+            if pending:
+                bond_data["bond_mempool_txid"] = pending[0][0]
+                bond_data["bond_mempool_sats"] = sum(v for _, v in pending)
     except EscrowError:
         pass
     escrow = escrow_of(order)
@@ -362,13 +414,27 @@ def order_data(order, user):
         "escrow_my_payout_address": escrow.funding_signatures.get(f"{role}_payout_address", ""),
     }
     fpk = escrow.funding_signatures.get(f"{role}_funding_pubkey")
-    if fpk and escrow.address:
-        owed, recommended = recommended_funding(order, escrow, role)
-        data["escrow_funding_address"] = service.rpc(
-            "decodescript", [service.funding_spk(escrow, role).hex()]
-        )["address"]
+    from_bond = role == "buyer" and bool(fees(order)[1]) and buyer_fee_from_bond(order, escrow)
+    if from_bond:
+        # Nothing to send: the buyer's fee and mining share come out of its bond. The client
+        # still needs the most the deposit may take from it to check the deposit.
+        owed, recommended = recommended_funding(order, escrow, role, from_bond=True)
+        data["escrow_fee_from_bond"] = True
         data["escrow_funding_owed"] = owed
         data["escrow_funding_recommended"] = recommended
+    elif fpk and escrow.address:
+        owed, recommended = recommended_funding(order, escrow, role)
+        data["escrow_funding_address"] = _funding_address(escrow, role)
+        data["escrow_funding_owed"] = owed
+        data["escrow_funding_recommended"] = recommended
+        if escrow.status == escrow.Status.KEYS:
+            pending = _unconfirmed(data["escrow_funding_address"])
+            if pending:
+                data["escrow_funding_mempool_txid"] = pending[0][0]
+                data["escrow_funding_mempool_sats"] = sum(v for _, v in pending)
+    who, what = waiting_for(order, escrow, role)
+    data["escrow_waiting_for"] = who or ""
+    data["escrow_waiting_what"] = what or ""
     if escrow.funding_tx and escrow.status == escrow.Status.FUNDING:
         tx, spent, plan = service.stored_deposit(escrow)
         data["escrow_deposit_tx"] = escrow.funding_tx
@@ -387,7 +453,157 @@ def order_data(order, user):
         data["escrow_release_my_partial"] = bool(escrow.release_partial_sigs.get(role))
     if escrow.release_txid:
         data["escrow_release_txid"] = escrow.release_txid
+        summary = trade_summary(order, user)
+        if summary:
+            data["onchain_summary"] = summary
     return data
+
+
+def _unconfirmed(address):
+    """Unconfirmed outputs paying an address the watch-only wallet follows: [(txid, sats)]."""
+    found = service.rpc("listunspent", [0, 0, [address]], wallet=service.watch_wallet())
+    return [(u["txid"], round(u["amount"] * 1e8)) for u in found]
+
+
+def _funding_address(escrow, role):
+    return service.rpc("decodescript", [service.funding_spk(escrow, role).hex()])["address"]
+
+
+def mempool_seen(order, escrow=None):
+    """Payments of this order seen in the node's mempool and not confirmed yet:
+    [{"what": "bond"|"funding", "role": maker/taker or seller/buyer, "owner": user id,
+      "txid": ..., "sats": ...}]. Bonds still waiting for their confirmation, and the funding
+    addresses while the deposit is not built."""
+    from api.models import OnchainBond, OnchainEscrow
+
+    seen = []
+    for bond in OnchainBond.objects.filter(order=order, status=OnchainBond.Status.FUNDING):
+        for txid, sats in _unconfirmed(bond.address):
+            seen.append({"what": "bond", "role": bond.role, "owner": bond.owner_id, "txid": txid, "sats": sats})
+    escrow = escrow or escrow_of(order)
+    if escrow is not None and escrow.status == OnchainEscrow.Status.KEYS and escrow.address:
+        for role in service.ROLES:
+            if not escrow.funding_signatures.get(f"{role}_funding_pubkey"):
+                continue
+            user = order.maker if role_user_is_maker(order, role) else order.taker
+            for txid, sats in _unconfirmed(_funding_address(escrow, role)):
+                seen.append({"what": "funding", "role": role, "owner": user.id if user else None, "txid": txid, "sats": sats})
+    return seen
+
+
+def role_user_is_maker(order, role):
+    from api.logics import Logics
+
+    return (role == "seller") == Logics.is_seller(order, order.maker)
+
+
+def notify_mempool(order, escrow=None):
+    """Tell the payer, once per transaction, that its payment is in the mempool and waits for
+    1 confirmation (Kilombino, 16 nov 2026)."""
+    from django.core.cache import cache
+
+    from api.tasks import send_notification
+
+    for item in mempool_seen(order, escrow):
+        key = f"onchain-mempool:{order.id}:{item['what']}:{item['role']}:{item['txid']}"
+        if not cache.add(key, 1, timeout=7 * 24 * 3600):
+            continue
+        order.log(f"Onchain {item['role']} {item['what']} of {item['sats']} Sats **seen in the mempool** ({item['txid']})")
+        if item["owner"]:
+            send_notification.delay(
+                order_id=order.id, message=f"onchain_mempool:{item['owner']}:{item['what']}:{item['sats']}"
+            )
+
+
+def waiting_for(order, escrow, role):
+    """Who the onchain escrow is waiting for, as the trader 'role' sees it: 'you', 'peer'
+    (the other trader), 'confirmation' (a block), 'coordinator' or None. Plus what for."""
+    from api.models import OnchainEscrow, Order
+
+    S = OnchainEscrow.Status
+    peer = "buyer" if role == "seller" else "seller"
+    data = escrow.funding_signatures
+    if escrow.status == S.KEYS:
+        if not getattr(escrow, f"{role}_pubkey"):
+            return "you", "keys"
+        if not data.get(f"{role}_payout_spk"):
+            return "you", "address"
+        if not getattr(escrow, f"{peer}_pubkey"):
+            return "peer", "keys"
+        if not data.get(f"{peer}_payout_spk"):
+            return "peer", "address"
+        if order.status == Order.Status.WFE:
+            from_bond = buyer_fee_from_bond(order, escrow)
+            owed = {r: recommended_funding(order, escrow, r)[0] for r in service.ROLES}
+            funded = {r: sum(u.value for u in service.funding_utxos(escrow, r, 0)) for r in service.ROLES}
+            need = ["seller"] + ([] if from_bond or not fees(order)[1] else ["buyer"])
+            missing = [r for r in need if funded[r] < owed[r]]
+            if role in missing:
+                return "you", "funding"
+            if peer in missing:
+                return "peer", "funding"
+            confirmed = {r: sum(u.value for u in service.funding_utxos(escrow, r, 1)) for r in need}
+            if any(confirmed[r] < owed[r] for r in need):
+                return "confirmation", "funding"
+        return "coordinator", "deposit"
+    if escrow.status == S.FUNDING:
+        plan = data.get("plan", {})
+        signed = lambda r: (data.get(f"{r}_sigs") or not plan.get(f"{r}_inputs")) and (
+            plan.get("bond_inputs", {}).get(r) is None or data.get(f"{r}_bond_sig"))
+        if not signed(role):
+            return "you", "deposit_signature"
+        if not signed(peer):
+            return "peer", "deposit_signature"
+        return "coordinator", "deposit"
+    if escrow.status == S.MEMPOOL:
+        return "confirmation", "deposit"
+    if escrow.status == S.RELEASING:
+        if escrow.release_kind != escrow.ReleaseKind.COOPERATIVE:
+            return "coordinator", "release"
+        if role not in escrow.release_nonces or role not in escrow.release_partial_sigs and service.aggregate_nonce(escrow):
+            return "you", "release_signature"
+        if peer not in escrow.release_nonces or peer not in escrow.release_partial_sigs:
+            return "peer", "release_signature"
+        return "coordinator", "release"
+    return None, None
+
+
+def trade_summary(order, user):
+    """What an onchain trade left to each side, from the deposit plan and the release."""
+    from api.escrow.taproot import Transaction
+
+    escrow = escrow_of(order)
+    if escrow is None or not escrow.release_txid:
+        return None
+    role = service.role_of(order, user)
+    plan = escrow.funding_signatures.get("plan", {})
+    bonds, trade = _bond_values(escrow)
+    seller_fee, buyer_fee = (plan["seller_fee"], plan["buyer_fee"]) if "seller_fee" in plan else fees(order)
+    tx = Transaction.parse(bytes.fromhex(escrow.release_tx))
+    my_spk = escrow.funding_signatures.get(f"{role}_payout_spk", "")
+    received = sum(o.value for o in tx.outputs if o.script_pubkey.hex() == my_spk)
+    release_mining = escrow.escrow_sats - sum(o.value for o in tx.outputs)
+    # payouts[0] paid the release's mining fee: the buyer when released, the seller when returned
+    payer = "buyer" if escrow.status == escrow.Status.RELEASED and not escrow.funding_signatures.get("cancel") else "seller"
+    from api.models import OnchainBond
+
+    bond_ids = plan.get("bond_ids", {})
+    bond_sats = OnchainBond.objects.get(pk=bond_ids[role]).value if role in bond_ids else 0
+    return {
+        "role": role,
+        "is_buyer": role == "buyer",
+        "trade_sats": trade,
+        "received_sats": received,
+        "bond_sats": bond_sats,
+        "bond_back_sats": bonds.get(role, 0),
+        "coordinator_fee_sats": seller_fee if role == "seller" else buyer_fee,
+        "fee_from_bond": role == "buyer" and bool(plan.get("buyer_fee_from_bond")),
+        "deposit_mining_sats": plan.get(f"{role}_mining"),
+        "release_mining_sats": release_mining if role == payer else 0,
+        "deposit_txid": escrow.funding_txid,
+        "release_txid": escrow.release_txid,
+        "release_kind": escrow.get_release_kind_display(),
+    }
 
 
 def funding_fault(order):

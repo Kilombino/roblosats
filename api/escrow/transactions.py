@@ -50,6 +50,10 @@ class DepositPlan:
     buyer_pays: int
     mining_fee: int
     bond_inputs: dict = None
+    # What each bond leaves in the escrow output (the buyer's is smaller when its fee came out of it)
+    bond_in_escrow: dict = None
+    seller_mining: int = 0
+    buyer_mining: int = 0
 
 
 class DepositError(ValueError):
@@ -77,16 +81,24 @@ def plan_deposit(
     fee_rate: float,
     seller_bond: "BondInput | None" = None,
     buyer_bond: "BondInput | None" = None,
+    buyer_fee_from_bond: bool = False,
 ) -> DepositPlan:
     """Joint deposit: escrow output, coordinator fee, dev fee and each side's change.
 
     The seller puts in the escrow plus its fee; the buyer its fee. Each side pays the mining
     fee of its own inputs and change, and half of the rest. The dev share comes out of the
     trading fees (it is not charged on top); below dust it stays with the coordinator.
+
+    buyer_fee_from_bond: the buyer sends nothing; its fee and its share of the mining fee come
+    out of its bond (already an input), which leaves the rest in the escrow output.
     """
     if not seller_utxos:
         raise DepositError("the seller has not funded yet")
-    if not buyer_utxos and buyer_fee_sats:
+    if buyer_fee_from_bond:
+        if buyer_bond is None:
+            raise DepositError("the buyer's fee can only come out of an onchain bond")
+        buyer_utxos = []
+    elif not buyer_utxos and buyer_fee_sats:
         raise DepositError("the buyer has not funded yet")
     if escrow_sats < DUST_P2TR or seller_fee_sats < 0 or buyer_fee_sats < 0:
         raise DepositError("bad amounts")
@@ -96,8 +108,8 @@ def plan_deposit(
     if coordinator_sats < 0:
         raise DepositError("the dev share is larger than the fees")
 
-    bonds_sats = sum(b.utxo.value for b in (seller_bond, buyer_bond) if b)
-    outputs = [TxOut(escrow_sats + bonds_sats, contract.script_pubkey)]
+    bond_in_escrow = {r: b.utxo.value for r, b in (("seller", seller_bond), ("buyer", buyer_bond)) if b}
+    outputs = [TxOut(escrow_sats + sum(bond_in_escrow.values()), contract.script_pubkey)]
     if coordinator_sats >= DUST_P2TR:
         outputs.append(TxOut(coordinator_sats, coordinator_spk))
     if dev_sats:
@@ -128,7 +140,14 @@ def plan_deposit(
     if seller_change is None:
         raise DepositError(f"the seller's funding is short by {escrow_sats + seller_fee_sats + seller_mining - seller_in} sats")
     buyer_change, buyer_mining = (0, 0)
-    if buyer_utxos:
+    if buyer_fee_from_bond:
+        buyer_mining = side_fee(0, buyer_change_spk, False, buyer_bond)
+        cost = buyer_fee_sats + buyer_mining
+        if buyer_bond.utxo.value - cost < DUST_P2TR:
+            raise DepositError(f"the buyer's bond is too small for its fee ({cost} sats)")
+        bond_in_escrow["buyer"] = buyer_bond.utxo.value - cost
+        outputs[0] = TxOut(escrow_sats + sum(bond_in_escrow.values()), contract.script_pubkey)
+    elif buyer_utxos:
         buyer_change, buyer_mining = change_for(
             buyer_in, buyer_fee_sats, len(buyer_utxos), buyer_change_spk, buyer_bond
         )
@@ -155,9 +174,12 @@ def plan_deposit(
         seller_inputs=list(range(len(seller_utxos))),
         buyer_inputs=list(range(len(seller_utxos), len(seller_utxos) + len(buyer_utxos))),
         seller_pays=seller_in - seller_change,
-        buyer_pays=buyer_in - buyer_change,
+        buyer_pays=(buyer_fee_sats + buyer_mining) if buyer_fee_from_bond else buyer_in - buyer_change,
         mining_fee=mining_fee,
         bond_inputs=bond_inputs,
+        bond_in_escrow=bond_in_escrow,
+        seller_mining=seller_mining,
+        buyer_mining=buyer_mining,
     )
 
 

@@ -207,6 +207,14 @@ class Order {
     return this;
   };
 
+  /** A good reply from the coordinator drops an old error: Object.assign alone never removes
+   * it, and the order stayed stuck on it (16 nov 2026: "You cannot confirm the fiat payment
+   * at this stage" after a retried confirm, while the order itself was fine). */
+  private updateFromReply = (data: object): void => {
+    if (!(data as { bad_request?: string }).bad_request) this.bad_request = '';
+    this.update(data);
+  };
+
   make: (federation: Federation, slot: Slot) => Promise<this> = async (federation, slot) => {
     const body = {
       type: this.type,
@@ -271,7 +279,7 @@ class Order {
           .catch((e) => {
             console.log(e);
           });
-        if (data) this.update(data);
+        if (data) this.updateFromReply(data);
       }
       return this;
     };
@@ -290,7 +298,7 @@ class Order {
         console.log(e);
       });
 
-    if (data) this.update(data);
+    if (data) this.updateFromReply(data);
 
     return this;
   };

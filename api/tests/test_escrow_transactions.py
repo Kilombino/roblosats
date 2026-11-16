@@ -8,9 +8,10 @@ with estimated sizes equal to the real ones and the requested fee rate reached.
 
 from django.test import SimpleTestCase
 
-from api.escrow.taproot import EscrowContract, TxOut, derive_secret, pubkey
+from api.escrow.taproot import BondContract, EscrowContract, TxOut, derive_secret, pubkey
 from api.escrow.transactions import (
     DUST_P2TR,
+    BondInput,
     VB_KEYPATH,
     DepositError,
     Utxo,
@@ -67,6 +68,44 @@ class DepositPlanTest(SimpleTestCase):
     def test_descriptor(self):
         _, fs = _setup()
         self.assertEqual(funding_descriptor(b"\x02" + fs[2:]), f"rawtr({fs[2:].hex()})")
+
+
+def _bond(n, value):
+    owner = pubkey(derive_secret(b"t", "kilobot", 1, f"bond-{n}"))
+    coord = pubkey(derive_secret(b"t", "kilobot", 1, f"bond-coord-{n}"))
+    c = BondContract(owner, coord, 300)
+    return BondInput(Utxo(f"{n}{n}" * 32, 0, value, c.script_pubkey), c)
+
+
+class BuyerFeeFromBondTest(SimpleTestCase):
+    """Kilombino, 16 nov 2026: the buyer only pays its bond; its fee and mining share come
+    out of it."""
+
+    def _plan(self, buyer_bond=30_000, rate=3.0):
+        c, fs = _setup()
+        us = [Utxo("aa" * 32, 0, 1_040_000, fs)]
+        return c, plan_deposit(
+            us, [Utxo("bb" * 32, 1, 5_000, SPK(9))], c, 1_000_000, 1_700, 200, SPK(1), 0, None, fs, SPK(9),
+            rate, _bond("c", 30_000), _bond("d", buyer_bond), buyer_fee_from_bond=True,
+        )
+
+    def test_buyer_sends_nothing_and_its_bond_pays(self):
+        c, p = self._plan()
+        self.assertEqual(p.buyer_inputs, [])  # its funding (if any) is left alone
+        self.assertEqual(p.bond_in_escrow["seller"], 30_000)
+        cost = 30_000 - p.bond_in_escrow["buyer"]
+        self.assertEqual(cost, 200 + p.buyer_mining)
+        self.assertGreater(p.buyer_mining, 0)
+        self.assertEqual(p.buyer_pays, cost)
+        self.assertEqual(p.tx.outputs[0].value, 1_000_000 + 30_000 + p.bond_in_escrow["buyer"])
+        coord = {o.script_pubkey: o.value for o in p.tx.outputs}[SPK(1)]
+        self.assertEqual(coord, 1_900)
+        total_in = sum(s.value for s in p.spent)
+        self.assertEqual(total_in - sum(o.value for o in p.tx.outputs), p.mining_fee)
+
+    def test_bond_too_small(self):
+        with self.assertRaisesRegex(DepositError, "bond is too small"):
+            self._plan(buyer_bond=400)
 
 
 class CheckDepositTest(SimpleTestCase):

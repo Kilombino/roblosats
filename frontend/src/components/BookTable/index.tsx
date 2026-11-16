@@ -38,6 +38,8 @@ import RobotAvatar from '../RobotAvatar';
 import { Fullscreen, FullscreenExit, Link as ChainIcon, Refresh } from '@mui/icons-material';
 import { AppContext, type UseAppStoreType } from '../../contexts/AppContext';
 import { FederationContext, type UseFederationStoreType } from '../../contexts/FederationContext';
+import { GarageContext, type UseGarageStoreType } from '../../contexts/GarageContext';
+import { apiClient } from '../../services/api';
 import headerStyleFix from '../DataGrid/HeaderFix';
 import thirdParties from '../../../static/thirdparties.json';
 
@@ -101,13 +103,56 @@ const BookTable = ({
   fillContainer = false,
   onOrderClicked = () => null,
 }: BookTableProps): React.JSX.Element => {
-  const { fav, settings } = useContext<UseAppStoreType>(AppContext);
+  const { fav, settings, slotUpdatedAt } = useContext<UseAppStoreType>(AppContext);
   const { federation } = useContext<UseFederationStoreType>(FederationContext);
+  const { garage } = useContext<UseGarageStoreType>(GarageContext);
 
   const { t } = useTranslation();
   const theme = useTheme();
   const isLargeScreen = useMediaQuery(theme.breakpoints.up('lg'));
-  const orders = orderList ?? Object.values(federation.book) ?? [];
+
+  // Roblosats: while onchain escrow is open to some robots only, their onchain orders are not
+  // in the public book; a robot allowed on a coordinator asks for them apart (authenticated).
+  const [onchainOrders, setOnchainOrders] = useState<PublicOrder[]>([]);
+  const bookSize = Object.keys(federation.book).length;
+  useEffect(() => {
+    if (orderList) return;
+    const slot = garage.getSlot();
+    if (!slot) {
+      setOnchainOrders([]);
+      return;
+    }
+    let cancelled = false;
+    const requests = federation
+      .getCoordinators()
+      .filter((c) => c.enabled && c.url)
+      .map(async (c) => {
+        const robot = slot.getRobot(c.shortAlias);
+        const auth = robot?.onchainEscrow ? robot.getAuthHeaders() : null;
+        if (!auth) return [];
+        const raw = await apiClient
+          .get(c.url, '/api/book/?onchain=1', auth, true)
+          .catch(() => null);
+        if (!Array.isArray(raw)) return [];
+        return (raw as PublicOrder[]).map((o) => ({ ...o, coordinatorShortAlias: c.shortAlias }));
+      });
+    void Promise.all(requests).then((lists) => {
+      if (!cancelled) setOnchainOrders(lists.flat());
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [garage.currentSlot, slotUpdatedAt, bookSize, orderList]);
+
+  const orders = useMemo(() => {
+    if (orderList) return orderList;
+    const book = Object.values(federation.book).filter(Boolean) as PublicOrder[];
+    const known = new Set(book.map((o) => `${o.coordinatorShortAlias}${o.id}`));
+    return [
+      ...book,
+      ...onchainOrders.filter((o) => !known.has(`${o.coordinatorShortAlias}${o.id}`)),
+    ];
+  }, [orderList, federation.book, bookSize, onchainOrders]);
 
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     pageSize: 0,

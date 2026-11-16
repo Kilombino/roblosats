@@ -190,6 +190,22 @@ class Notifications:
         user.robot.save(update_fields=["telegram_welcomed"])
         return
 
+    def onchain_seen_mempool(self, order, user_id, what, sats):
+        """Roblosats onchain escrow: a payment of this robot (its bond or its funding) is in
+        the mempool, waiting for 1 confirmation."""
+        user = order.maker if order.maker_id == user_id else order.taker
+        if user is None or user.id != user_id:
+            return
+        lang = user.robot.telegram_lang_code
+        amount = f"{sats:,}".replace(",", ".")
+        if lang == "es":
+            concept = "tu fianza" if what == "bond" else "tu depósito"
+            title = f"📥 Pago visto en la mempool: {concept} de {amount} sats (orden {order.id}), esperando 1 confirmación."
+        else:
+            concept = "your bond" if what == "bond" else "your deposit"
+            title = f"📥 Payment seen in the mempool: {concept} of {amount} Sats (order {order.id}), waiting for 1 confirmation."
+        self.send_message(order, user.robot, title)
+
     def order_taken_confirmed(self, order):
         lang = order.maker.robot.telegram_lang_code
         if lang == "es":

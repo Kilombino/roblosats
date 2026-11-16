@@ -542,4 +542,9 @@ def send_notification(order_id=None, chat_message_id=None, message=None):
     elif message == "lightning_failed":
         notifications.lightning_failed(order)
 
+    elif message and message.startswith("onchain_mempool:"):
+        # onchain_mempool:<user id>:<bond|funding>:<sats>
+        _, user_id, what, sats = message.split(":")
+        notifications.onchain_seen_mempool(order, int(user_id), what, int(sats))
+
     return

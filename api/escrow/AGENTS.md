@@ -138,3 +138,20 @@ server secret. The JS client must produce the same keys: see the vectors in
   no-op; views skip hold-invoice generation and the LN lock checks for onchain orders).
 - Regtest: `EscrowOrderFlowRegtest` — WFB → PUB → take → WF2 → WFE → CHA → PAY → SUC, a
   collaborative cancel, a dispute from the admin, and a taker that never funds (penalty mined).
+
+## rl31-beta9 (16 nov 2026, after the first real onchain trade, order #20 on Kilobot)
+- Buyer fee out of its bond (`flow.buyer_fee_from_bond`, `ESCROW_BUYER_FEE_FROM_BOND`, default
+  on): the buyer funds nothing; `plan_deposit(..., buyer_fee_from_bond=True)` takes its fee and
+  its mining share (bond input + half the shared part) from its bond and leaves the rest in the
+  escrow output. The plan stores `bond_in_escrow` (what each bond left in the escrow), and the
+  release/cancel/dispute payouts use it (`_bond_values`). The order data tells the buyer's
+  client `escrow_fee_from_bond` and the most it may lose (`escrow_funding_recommended`).
+- Mempool: `mempool_seen` (bonds still FUNDING, funding addresses while KEYS) → order data
+  `bond_mempool_txid/sats`, `escrow_funding_mempool_txid/sats`; `notify_mempool` (from
+  `advance`) logs it and notifies the payer once per txid (Redis cache key).
+- `waiting_for` → `escrow_waiting_for` (`you`/`peer`/`confirmation`/`coordinator`) and
+  `escrow_waiting_what` so the app names who it waits for.
+- `trade_summary` → `onchain_summary` once released (the Lightning `summarize_trade` is skipped
+  for onchain orders since beta7).
+- `/api/book/?onchain=1`: the onchain public orders, only for an authenticated allowed robot
+  while `ESCROW_ALLOWED_ROBOTS` is set (never cached).

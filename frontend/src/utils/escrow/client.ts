@@ -69,6 +69,33 @@ export interface EscrowOrderData {
   bond_value?: number;
   bond_penalty_tx?: string;
   bond_return_tx?: string;
+  bond_spend_txid?: string;
+  bond_mempool_txid?: string;
+  bond_mempool_sats?: number;
+  escrow_fee_from_bond?: boolean;
+  escrow_funding_mempool_txid?: string;
+  escrow_funding_mempool_sats?: number;
+  escrow_funding_txid?: string;
+  escrow_release_txid?: string;
+  escrow_waiting_for?: '' | 'you' | 'peer' | 'confirmation' | 'coordinator';
+  escrow_waiting_what?: string;
+  onchain_summary?: OnchainSummary;
+}
+
+export interface OnchainSummary {
+  role: 'seller' | 'buyer';
+  is_buyer: boolean;
+  trade_sats: number;
+  received_sats: number;
+  bond_sats: number;
+  bond_back_sats: number;
+  coordinator_fee_sats: number;
+  fee_from_bond: boolean;
+  deposit_mining_sats?: number | null;
+  release_mining_sats: number;
+  deposit_txid?: string;
+  release_txid?: string;
+  release_kind?: string;
 }
 
 export class EscrowCheckError extends Error {}

@@ -71,6 +71,10 @@ const OrderPageContent = (): React.JSX.Element => {
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
   const [openNoRobot, setOpenNoRobot] = useState<boolean>(false);
   const [orderStep, setOrderStep] = useState<number>(0);
+  // The order object is updated in place: setCurrentOrder with the same object does not
+  // repaint, so a counter forces it (16 nov 2026: the phone stayed on "Releasing the onchain
+  // escrow…" after the trade had finished).
+  const [, setRefreshed] = useState<number>(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -87,6 +91,7 @@ const OrderPageContent = (): React.JSX.Element => {
       void order.fecth(federation, slot).then((updatedOrder) => {
         if (cancelled || garage.getSlot() !== slot) return;
         setCurrentOrder(updatedOrder);
+        setRefreshed((n) => n + 1);
         slot.updateSlotFromOrder(updatedOrder);
       });
     } else {

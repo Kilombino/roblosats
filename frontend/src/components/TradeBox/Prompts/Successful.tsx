@@ -14,6 +14,9 @@ import {
 } from '@mui/material';
 import currencies from '../../../utils/currencies';
 import TradeSummary from '../TradeSummary';
+import OnchainTradeSummary from '../OnchainTradeSummary';
+import { isOnchainEscrow } from '../onchainEscrowSteps';
+import { type OnchainSummary } from '../../../utils/escrow/client';
 import { Favorite, RocketLaunch, ContentCopy, Refresh } from '@mui/icons-material';
 import { LoadingButton } from '@mui/lab';
 import { finalizeEvent, type Event } from 'nostr-tools';
@@ -281,7 +284,15 @@ export const SuccessfulPrompt = ({
         ) : null}
       </Grid>
 
-      {order.platform_summary != null ? (
+      {isOnchainEscrow(order) ? (
+        (order as unknown as { onchain_summary?: OnchainSummary }).onchain_summary ? (
+          <Grid sx={{ marginTop: 0.5, width: '100%' }}>
+            <OnchainTradeSummary
+              summary={(order as unknown as { onchain_summary: OnchainSummary }).onchain_summary}
+            />
+          </Grid>
+        ) : null
+      ) : order.platform_summary != null ? (
         <Grid sx={{ marginTop: 0.5 }}>
           <TradeSummary
             robotNick={order.ur_nick}
