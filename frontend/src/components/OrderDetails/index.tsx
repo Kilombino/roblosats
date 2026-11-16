@@ -292,7 +292,18 @@ const OrderDetails = ({
     else receive += note;
 
     return { send, receive };
-  }, [currentOrder, amountString, coordinator?.limits]);
+    // The order object is updated in place on each refresh, so list the fields that change
+    // the text (16 nov 2026: the desktop kept "≈ 371" after the coordinator fixed "= 311").
+  }, [
+    currentOrder,
+    currentOrder?.status,
+    currentOrder?.amount,
+    currentOrder?.spamcoin_sats,
+    currentOrder?.trade_satoshis,
+    currentOrder?.escrow_satoshis,
+    amountString,
+    coordinator?.limits,
+  ]);
 
   const revesiblePaymentMethods = useMemo(() => {
     return swapMethods
