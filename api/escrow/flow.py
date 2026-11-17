@@ -165,6 +165,14 @@ def recommended_funding(order, escrow, role, from_bond=False):
         vb = VB_BOND_COOP + shared / 2
     else:
         vb = VB_TAPROOT_KEY_INPUT + output_vbytes(b"\x00" * 34) + shared / 2
+    # a topped-up bond (rl31-beta18) is one more bond input per extra coin, paid by its owner
+    try:
+        from api.escrow import bonds as _bonds
+
+        mine = trade_bonds(order).get(role) if not role_is_ln(order, role) else None
+        vb += VB_BOND_COOP * max(0, len(_bonds.coins_of(mine)) - 1)
+    except Exception:
+        pass
     recommended = owed + math.ceil(vb * rate)
     if escrow is not None and getattr(escrow, "pk", None):
         from api.models import OnchainEscrow
@@ -579,11 +587,15 @@ def bond_action(order, user, name, data):
     if bond is None:
         raise EscrowError("send your bond key first")
     if name == "bond_penalty_signature":
-        bonds.submit_penalty_signature(bond, data["signature"])
+        bonds.submit_penalty_signature(bond, data.get("signatures") or data["signature"])
     elif name == "bond_return":
         bonds.return_tx(bond, _spk_for_address(data["address"]))
     elif name == "bond_return_signature":
-        bonds.submit_return_signature(bond, data["signature"])
+        bonds.submit_return_signature(bond, data.get("signatures") or data["signature"])
+    elif name == "bond_leftover_return":
+        bonds.leftover_return_tx(bond, _spk_for_address(data["address"]))
+    elif name == "bond_leftover_signatures":
+        bonds.submit_leftover_signatures(bond, data["signatures"])
     else:
         raise EscrowError("unknown bond action")
 
@@ -603,7 +615,7 @@ def action(order, user, name, data):
     elif name == "escrow_rescue_signature":
         service.submit_rescue_signature(escrow, role, data["signature"])
     elif name == "escrow_funding_signatures":
-        service.submit_funding_signatures(escrow, role, data["signatures"], data.get("bond_signature"))
+        service.submit_funding_signatures(escrow, role, data["signatures"], data.get("bond_signatures") or data.get("bond_signature"))
     elif name == "escrow_nonce":
         service.submit_release_nonce(escrow, role, data["nonce"])
     elif name == "escrow_partial":
@@ -704,6 +716,7 @@ def order_data(order, user):
         data["escrow_deposit_spent"] = plan["spent"]
         data["escrow_deposit_my_inputs"] = plan[f"{role}_inputs"]
         data["escrow_deposit_my_bond_input"] = plan.get("bond_inputs", {}).get(role)
+        data["escrow_deposit_my_bond_inputs"] = service.bond_indexes(plan, role)
         data["escrow_deposit_signed"] = bool(escrow.funding_signatures.get(f"{role}_sigs"))
     # Rescue plan 2 (rl31-beta16): the rescue both traders pre-sign before the deposit. The
     # client stores the complete rescue on the device and only then signs the deposit.
@@ -726,6 +739,7 @@ def order_data(order, user):
                 data["escrow_deposit_spent"] = plan.get("spent", [])
                 data["escrow_deposit_my_inputs"] = plan.get(f"{role}_inputs", [])
                 data["escrow_deposit_my_bond_input"] = plan.get("bond_inputs", {}).get(role)
+                data["escrow_deposit_my_bond_inputs"] = service.bond_indexes(plan, role)
     if escrow.funding_txid:
         data["escrow_funding_txid"] = escrow.funding_txid
     if escrow.status == escrow.Status.RELEASING:
@@ -787,8 +801,19 @@ def mempool_seen(order, escrow=None):
 
     seen = []
     for bond in OnchainBond.objects.filter(order=order, status=OnchainBond.Status.FUNDING):
-        for txid, sats in _unconfirmed(bond.address):
-            seen.append({"what": "bond", "role": bond.role, "owner": bond.owner_id, "txid": txid, "sats": sats})
+        pending = _unconfirmed(bond.address)
+        if not pending:
+            continue
+        # rl31-beta18: whether this payment, with what is already there, reaches the bond
+        from api.escrow import bonds as _bonds
+
+        try:
+            have = sum(c[2] for c in _bonds.confirmed_coins(bond.address)) + sum(v for _, v in pending)
+        except EscrowError:
+            have = None
+        for txid, sats in pending:
+            seen.append({"what": "bond", "role": bond.role, "owner": bond.owner_id, "txid": txid, "sats": sats,
+                         "short": None if have is None else max(0, bond.required_sats - have)})
     escrow = escrow or escrow_of(order)
     if escrow is not None and escrow.status == OnchainEscrow.Status.KEYS and escrow.address:
         for role in service.ROLES:
@@ -819,8 +844,11 @@ def notify_mempool(order, escrow=None):
             continue
         order.log(f"Onchain {item['role']} {item['what']} of {item['sats']} Sats **seen in the mempool** ({item['txid']})")
         if item["owner"]:
+            short = item.get("short")
             send_notification.delay(
-                order_id=order.id, message=f"onchain_mempool:{item['owner']}:{item['what']}:{item['sats']}"
+                order_id=order.id,
+                message=f"onchain_mempool:{item['owner']}:{item['what']}:{item['sats']}"
+                + ("" if short is None else f":{short}"),
             )
 
 
@@ -858,7 +886,7 @@ def waiting_for(order, escrow, role):
     if escrow.status == S.FUNDING:
         plan = data.get("plan", {})
         signed = lambda r: (data.get(f"{r}_sigs") or not plan.get(f"{r}_inputs")) and (
-            plan.get("bond_inputs", {}).get(r) is None or data.get(f"{r}_bond_sig"))
+            not service.bond_indexes(plan, r) or data.get(f"{r}_bond_sig"))
         if service.rescue_plan(escrow) >= 2:
             if not data.get(f"{role}_rescue_sig"):
                 return "you", "rescue_signature"

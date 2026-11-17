@@ -53,7 +53,10 @@ def _onchain_bond(bond):
     sats = bond.value or 0
     txs = []
     if bond.txid:
-        txs.append({"label": "bond", "txid": bond.txid})
+        from api.escrow.bonds import coins_of
+
+        for txid in dict.fromkeys(c[0] for c in coins_of(bond)):  # a topped-up bond: each payment
+            txs.append({"label": "bond", "txid": txid})
     if bond.status == S.PENALIZED:
         if bond.spend_txid:
             txs.append({"label": "bond_penalty", "txid": bond.spend_txid})
@@ -64,7 +67,8 @@ def _onchain_bond(bond):
         if bond.return_tx:
             try:
                 out = sum(o.value for o in Transaction.parse(bytes.fromhex(bond.return_tx)).outputs)
-                mining = max(0, sats - out)
+                spent = sum(int(c[2]) for c in bond.return_coins) if bond.return_coins else sats
+                mining = max(0, spent - out)
                 returned = out
             except Exception:
                 pass
@@ -173,6 +177,8 @@ def _base(order, user, role, former_taker):
         "bond_returned_sats": 0,
         "bond_lost_sats": 0,
         "bond_lost_reason": "",
+        "bond_extra_sats": 0,
+        "bond_extra_returned_sats": 0,
         "fee_from_bond": False,
         "fee_at_release": False,
         "coordinator_fee_sats": 0,
@@ -185,6 +191,31 @@ def _base(order, user, role, former_taker):
         "txs": [],
         "hashes": [],
     }
+
+
+def _apply_bond_leftovers(s, bonds):
+    """Sats at a bond address that were not the bond: still there (bond_extra_sats, the owner
+    gets them back from the order page, or alone after the bond's timelock) and sent back."""
+    from api.escrow import bonds as bond_service
+
+    for b in bonds:
+        for item in b.leftover_txids or []:
+            s["bond_extra_returned_sats"] = s.get("bond_extra_returned_sats", 0) + int(item.get("sats", 0))
+            spent = sum(int(c[2]) for c in item.get("coins", []))
+            s["mining_fee_sats"] += max(0, spent - int(item.get("sats", 0)))
+            s["txs"].append({"label": "bond_leftover_return", "txid": item["txid"]})
+        try:
+            if b.status == OnchainBond.Status.RETURNABLE:
+                mine = {(c[0], c[1]) for c in bond_service.coins_of(b)} | bond_service._in_flight(b)
+                extra = sum(c[2] for c in bond_service.confirmed_coins(b.address) if (c[0], c[1]) not in mine)
+            elif b.status == OnchainBond.Status.ABANDONED:
+                extra = sum(c[2] for c in bond_service.confirmed_coins(b.address))
+            else:
+                extra = sum(c[2] for c in bond_service.leftovers(b))
+        except Exception:
+            extra = 0
+        if extra:
+            s["bond_extra_sats"] = s.get("bond_extra_sats", 0) + extra
 
 
 def _apply_bond(s, order, user, role, ln_bond):
@@ -214,6 +245,8 @@ def _apply_bond(s, order, user, role, ln_bond):
             if state == "lost":
                 s["bond_lost_sats"] += sats
             s["txs"] += txs
+        # rl31-beta18: coins at the bond address(es) that were not the bond
+        _apply_bond_leftovers(s, bonds)
         # the most telling state: lost > recoverable > locked > in_escrow > returned
         for st in ("lost", "recoverable", "locked", "in_escrow", "returned"):
             if st in states:

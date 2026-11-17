@@ -228,6 +228,7 @@ def build_deposit(escrow, escrow_sats, seller_fee, buyer_fee, coordinator_spk, d
         "seller_inputs": plan.seller_inputs,
         "buyer_inputs": plan.buyer_inputs,
         "bond_inputs": plan.bond_inputs or {},
+        "bond_input_lists": plan.bond_input_lists or {},
         "bond_ids": {r: b.pk for r, b in bonds.items() if b},
         "trade_sats": escrow_sats,
         "bond_in_escrow": plan.bond_in_escrow or {},
@@ -255,6 +256,15 @@ def stored_deposit(escrow):
         txin.witness = []
     spent = [TxOut(v, bytes.fromhex(s)) for v, s in p["spent"]]
     return tx, spent, p
+
+
+def bond_indexes(plan, role):
+    """Input indexes of a trader's bond in the deposit (several when it was topped up)."""
+    lists = plan.get("bond_input_lists") or {}
+    if role in lists:
+        return list(lists[role])
+    i = (plan.get("bond_inputs") or {}).get(role)
+    return [] if i is None else [i]
 
 
 def submit_funding_signatures(escrow, role, sigs_hex, bond_sig_hex=None):
@@ -285,31 +295,41 @@ def submit_funding_signatures(escrow, role, sigs_hex, bond_sig_hex=None):
             if not schnorr_verify(tx.sighash_unified(i, spent), fpk, sig[:64]):
                 raise EscrowError("a signature does not verify")
         data = dict(escrow.funding_signatures)
-        bond_index = plan.get("bond_inputs", {}).get(role)
-        if bond_index is not None:
+        bond_idx = bond_indexes(plan, role)
+        if bond_idx:
             bond = OnchainBond.objects.get(pk=plan["bond_ids"][role])
             c = bond_service.contract_of(bond)
-            sig = bytes.fromhex(bond_sig_hex or "")
-            msg = tx.sighash_unified(bond_index, spent, SIGHASH_ALL_UNIFIED, c.leaf_hash(c.COOPERATIVE))
-            if len(sig) != 65 or sig[64] != SIGHASH_ALL_UNIFIED or not schnorr_verify(msg, xonly(bytes.fromhex(bond.owner_pubkey)), sig[:64]):
-                raise EscrowError("the bond signature does not verify")
-            data[f"{role}_bond_sig"] = bond_sig_hex
+            bond_sigs = [bond_sig_hex] if isinstance(bond_sig_hex, str) else list(bond_sig_hex or [])
+            if len(bond_sigs) != len(bond_idx):
+                raise EscrowError(f"the bond needs one signature per coin ({len(bond_idx)})")
+            for i, s in zip(bond_idx, bond_sigs):
+                sig = bytes.fromhex(s or "")
+                msg = tx.sighash_unified(i, spent, SIGHASH_ALL_UNIFIED, c.leaf_hash(c.COOPERATIVE))
+                if len(sig) != 65 or sig[64] != SIGHASH_ALL_UNIFIED or not schnorr_verify(msg, xonly(bytes.fromhex(bond.owner_pubkey)), sig[:64]):
+                    raise EscrowError("the bond signature does not verify")
+            data[f"{role}_bond_sig"] = bond_sigs[0]
+            data[f"{role}_bond_sigs"] = bond_sigs
         data[f"{role}_sigs"] = sigs_hex
         escrow.funding_signatures = data
         complete = all(
             (data.get(f"{r}_sigs") or not plan[f"{r}_inputs"])
-            and (plan.get("bond_inputs", {}).get(r) is None or data.get(f"{r}_bond_sig"))
+            and (not bond_indexes(plan, r) or data.get(f"{r}_bond_sig"))
             for r in ROLES
         )
         if complete:
             for r in ROLES:
                 for i, s in zip(plan[f"{r}_inputs"], data.get(f"{r}_sigs", [])):
                     tx.inputs[i].witness = [bytes.fromhex(s)]
-            for r, i in plan.get("bond_inputs", {}).items():
+            for r in ROLES:
+                idx = bond_indexes(plan, r)
+                if not idx:
+                    continue
                 bond = OnchainBond.objects.get(pk=plan["bond_ids"][r])
                 c = bond_service.contract_of(bond)
-                coord = bond_service.coordinator_deposit_signature(bond, tx, spent, i)
-                tx.inputs[i].witness = leaf_witness(c, c.COOPERATIVE, [coord, bytes.fromhex(data[f"{r}_bond_sig"])[:64]])
+                owner_sigs = data.get(f"{r}_bond_sigs") or [data[f"{r}_bond_sig"]]
+                for i, s in zip(idx, owner_sigs):
+                    coord = bond_service.coordinator_deposit_signature(bond, tx, spent, i)
+                    tx.inputs[i].witness = leaf_witness(c, c.COOPERATIVE, [coord, bytes.fromhex(s)[:64]])
             escrow.funding_tx = tx.serialize().hex()
             escrow.funding_txid = tx.txid()
             escrow.funding_vout = 0

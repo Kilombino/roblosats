@@ -190,7 +190,7 @@ class Notifications:
         user.robot.save(update_fields=["telegram_welcomed"])
         return
 
-    def onchain_seen_mempool(self, order, user_id, what, sats):
+    def onchain_seen_mempool(self, order, user_id, what, sats, short=None):
         """Roblosats onchain escrow: a payment of this robot (its bond or its funding) is in
         the mempool, waiting for 1 confirmation."""
         user = order.maker if order.maker_id == user_id else order.taker
@@ -201,9 +201,24 @@ class Notifications:
         if lang == "es":
             concept = "tu fianza" if what == "bond" else "tu depósito"
             title = f"📥 Pago visto en la mempool: {concept} de {amount} sats (orden {order.id}), esperando 1 confirmación."
+            if what == "bond" and short is not None:
+                if short:
+                    missing = f"{short:,}".replace(",", ".")
+                    title = (f"📥 Pago de {amount} sats visto en la mempool para tu fianza (orden {order.id}). "
+                             f"Con lo que ya enviaste NO llega a la fianza: faltan {missing} sats. Envía lo que falta a la misma dirección.")
+                else:
+                    title = (f"📥 Pago de {amount} sats visto en la mempool para tu fianza (orden {order.id}). "
+                             f"Con lo que ya enviaste llega a la fianza; esperando 1 confirmación.")
         else:
             concept = "your bond" if what == "bond" else "your deposit"
             title = f"📥 Payment seen in the mempool: {concept} of {amount} Sats (order {order.id}), waiting for 1 confirmation."
+            if what == "bond" and short is not None:
+                if short:
+                    title = (f"📥 Payment of {amount} Sats seen in the mempool for your bond (order {order.id}). "
+                             f"Together with what you already sent it does NOT reach the bond: {short:,} Sats missing. Send the rest to the same address.")
+                else:
+                    title = (f"📥 Payment of {amount} Sats seen in the mempool for your bond (order {order.id}). "
+                             f"Together with what you already sent it reaches the bond; waiting for 1 confirmation.")
         self.send_message(order, user.robot, title)
 
     def order_taken_confirmed(self, order):

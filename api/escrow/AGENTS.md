@@ -231,3 +231,14 @@ server secret. The JS client must produce the same keys: see the vectors in
 - Tests: api/tests/test_escrow_rescue_plan2.py (unit), EscrowOrderFlowRegtest
   `test_fair_rescue_without_the_coordinator` / `test_rescue_plan_1_kept_for_old_escrows`, JS
   e2e `fair rescue without the coordinator`.
+
+## Bond coins and leftovers (`bonds.py`, rl31-beta18)
+- A bond is `coins_of(bond)`: one coin, or up to `MAX_BOND_COINS` (3) when topped up.
+  `choose_coins` takes the smallest single confirmed coin that reaches `required_sats`, else
+  the fewest largest coins that add up to it. `bond.txid/vout` = first coin, `bond.value` = sum.
+- Penalty, deposit (`plan.bond_input_lists`, `service.bond_indexes`) and return spend every
+  coin: one owner signature per coin (`signatures`; a lone `signature` still works).
+- `leftovers(bond)`: confirmed coins at the bond address that are not the bond (not while
+  FUNDING/ABANDONED; RETURNABLE folds them into the return). `bond_leftover_return` +
+  `bond_leftover_signatures` send them back with the coordinator's signature at any time;
+  the owner's refund leaf takes any coin there alone after `refund_csv` (client rescue dialog).

@@ -103,6 +103,14 @@ class OnchainBond(models.Model):
     penalty_owner_sig = models.CharField(max_length=130, blank=True, default="")
     spend_txid = models.CharField(max_length=64, blank=True, default="")
     return_tx = models.TextField(blank=True, default="")
+    # rl31-beta18: a bond made of several coins (topped up), the penalty signed per coin, what a
+    # return spent, and coins at the bond address that were not the bond, sent back
+    coins = models.JSONField(default=list, blank=True)
+    penalty_owner_sigs = models.JSONField(default=list, blank=True)
+    return_coins = models.JSONField(default=list, blank=True)
+    leftover_tx = models.TextField(blank=True, default="")
+    leftover_coins = models.JSONField(default=list, blank=True)
+    leftover_txids = models.JSONField(default=list, blank=True)
 
     def __str__(self):
         return f"BOND-{self.order_id}-{self.role}: {self.get_status_display()}"

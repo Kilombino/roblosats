@@ -201,11 +201,19 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
         bond = flow.bond_of(order, d["bond_role"], owner=user)
         bond.refresh_from_db()
         self.assertEqual(bond.status, bond.Status.SIGN)
-        _, msg = penalty_message(bond)
-        flow.action(order, user, "bond_penalty_signature", {"signature": with_hashtype(schnorr_sign(keys["bond"], msg)).hex()})
+        self._sign_penalty(order, user, keys, bond)
+        return bond
+
+    def _sign_penalty(self, order, user, keys, bond):
+        """The owner's penalty signature(s), one per coin of the bond (rl31-beta18)."""
+        from api.escrow import flow
+        from api.escrow.bonds import penalty_message
+
+        _, msgs = penalty_message(bond)
+        sigs = [with_hashtype(schnorr_sign(keys["bond"], m)).hex() for m in msgs]
+        flow.action(order, user, "bond_penalty_signature", {"signature": sigs[0], "signatures": sigs})
         flow.advance(order)
         order.refresh_from_db()
-        return bond
 
     def _make_and_take(self):
         from api.escrow import flow
@@ -256,11 +264,15 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
             tx = Transaction.parse(bytes.fromhex(d["escrow_deposit_tx"]))
             spent = [TxOut(v, bytes.fromhex(sp)) for v, sp in d["escrow_deposit_spent"]]
             sigs = [with_hashtype(schnorr_sign(keys[r]["funding"], tx.sighash_unified(i, spent))).hex() for i in d["escrow_deposit_my_inputs"]]
-            bi = d["escrow_deposit_my_bond_input"]
             from api.escrow.bonds import contract_of
             bc = contract_of(flow.bond_of(order, d["bond_role"], owner=u))
-            bsig = with_hashtype(schnorr_sign(keys[r]["bond"], tx.sighash_unified(bi, spent, 0x21, bc.leaf_hash(bc.COOPERATIVE)))).hex()
-            flow.action(order, u, "escrow_funding_signatures", {"signatures": sigs, "bond_signature": bsig})
+            self.assertEqual(d["escrow_deposit_my_bond_inputs"][0], d["escrow_deposit_my_bond_input"])
+            bsigs = [with_hashtype(schnorr_sign(keys[r]["bond"], tx.sighash_unified(bi, spent, 0x21, bc.leaf_hash(bc.COOPERATIVE)))).hex()
+                     for bi in d["escrow_deposit_my_bond_inputs"]]
+            payload = {"signatures": sigs, "bond_signature": bsigs[0]}
+            if len(bsigs) > 1:
+                payload["bond_signatures"] = bsigs
+            flow.action(order, u, "escrow_funding_signatures", payload)
         _mine()
         flow.advance(order)
         order.refresh_from_db()
