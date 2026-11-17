@@ -57,6 +57,7 @@ export interface Info {
   max_swap: number;
   current_swap_fee_rate: number;
   blossom_enabled: boolean;
+  fixed_price?: boolean; // rl31-beta17: understands fixed-price orders
   network: 'mainnet' | 'testnet' | undefined;
   openUpdateClient: boolean;
   notice_severity: 'none' | 'warning' | 'error' | 'success' | 'info';

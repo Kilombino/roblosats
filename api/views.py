@@ -1300,6 +1300,9 @@ class InfoView(viewsets.ViewSet):
         context["swap_enabled"] = not config("DISABLE_ONCHAIN", cast=bool, default=True)
         context["max_swap"] = config("MAX_SWAP_AMOUNT", cast=int, default=0)
         context["blossom_enabled"] = config("BLOSSOM_ENABLED", cast=bool, default=False)
+        # rl31-beta17: this coordinator understands fixed_price (others would silently make a
+        # market order out of it, so clients only offer it where this is true)
+        context["fixed_price"] = True
 
         try:
             context["current_swap_fee_rate"] = Logics.compute_swap_fee_rate(

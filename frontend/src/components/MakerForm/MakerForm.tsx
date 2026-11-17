@@ -118,7 +118,9 @@ const MakerForm = ({
   // Roblosats rl31-beta17: FIXED PRICE. The maker types the price per BTC (the currency, or
   // Spamsuits for Spamcoin); the order carries it in the order's currency (fixed_price) and
   // the sats are amount / price: no market price needed. vs market is only informative.
-  const fixedMode = maker.priceMode === 'fixed';
+  // Only coordinators that announce it: any other would silently make a market order of it.
+  const fixedAvailable = Boolean(federation.getCoordinator(maker.coordinator)?.info?.fixed_price);
+  const fixedMode = maker.priceMode === 'fixed' && fixedAvailable;
   const priceCurrency = fav.currency === 0 ? 1 : fav.currency;
   const fixedPriceUnits =
     fixedMode && maker.fixedPrice && maker.fixedPrice > 0
@@ -154,6 +156,12 @@ const MakerForm = ({
   useEffect(() => {
     setCurrencyCode(currencyDict[String(fav.currency === 0 ? 1 : fav.currency)]);
   }, [federationUpdatedAt]);
+
+  useEffect(() => {
+    if (maker.priceMode === 'fixed' && !fixedAvailable) {
+      setMaker((maker) => ({ ...maker, priceMode: 'market' }));
+    }
+  }, [maker.coordinator, fixedAvailable, federationUpdatedAt]);
 
   useEffect(() => {
     if (fixedMode) {
@@ -1227,7 +1235,7 @@ const MakerForm = ({
               <ToggleButton value='market' sx={{ textTransform: 'none' }}>
                 {t('Market price + premium')}
               </ToggleButton>
-              <ToggleButton value='fixed' sx={{ textTransform: 'none' }}>
+              <ToggleButton value='fixed' disabled={!fixedAvailable} sx={{ textTransform: 'none' }}>
                 {t('Fixed price')}
               </ToggleButton>
             </ToggleButtonGroup>
