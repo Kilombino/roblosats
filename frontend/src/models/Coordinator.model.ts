@@ -275,6 +275,12 @@ export class Coordinator {
     return this._bookPromise;
   };
 
+  /** Forget the cached info/limits requests so the next load asks the coordinator again. */
+  refreshData = (): void => {
+    this._infoPromise = undefined;
+    this._limitsPromise = undefined;
+  };
+
   loadLimits = (onDataLoad: () => void = () => {}): Promise<void> => {
     if (!this.enabled) return Promise.resolve();
     if (this.url === '') {

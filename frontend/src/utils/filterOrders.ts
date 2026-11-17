@@ -14,6 +14,8 @@ interface FilterOrders {
   premium?: number | null;
   amountFilter?: AmountFilter | null;
   paymentMethods?: string[];
+  /** Orders to filter instead of the federation book (Roblosats: book + onchain orders). */
+  orders?: Array<PublicOrder | null | undefined>;
 }
 
 const filterByPayment = function (order: PublicOrder, paymentMethods: string[]): boolean {
@@ -74,12 +76,13 @@ const filterOrders = function ({
   premium = null,
   paymentMethods = [],
   amountFilter = null,
+  orders,
 }: FilterOrders): PublicOrder[] {
   const enabledCoordinators = federation
     .getCoordinators()
     .filter((coord) => coord.enabled)
     .map((coord) => coord.shortAlias);
-  const filteredOrders = Object.values(federation.book).filter((order) => {
+  const filteredOrders = (orders ?? Object.values(federation.book)).filter((order) => {
     if (!order) return false;
 
     const coordinatorCheck = [...enabledCoordinators, ...Object.keys(thirdParties)].includes(

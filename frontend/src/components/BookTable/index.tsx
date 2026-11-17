@@ -1035,6 +1035,9 @@ const BookTable = ({
           federation,
           baseFilter: fav,
           paymentMethods,
+          // Roblosats: the onchain orders a robot gets apart are not in federation.book
+          // (17 nov 2026: order #21 never showed with the filters on).
+          orders,
         })
       : orders;
   }, [showControls, orders, fav, paymentMethods]);

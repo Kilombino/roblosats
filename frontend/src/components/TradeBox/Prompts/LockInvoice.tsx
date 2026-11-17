@@ -75,8 +75,12 @@ export const LockInvoicePrompt = ({
         <Typography color='secondary' variant='h6' align='center'>
           <b>
             {order.currency === 1000
-              ? t(`${order.is_buyer ? 'SWAPPING INTO' : 'SWAPPING OUT of'} Lightning`)
-              : t(`You are ${order.is_buyer ? 'BUYING' : 'SELLING'} BTC`)}
+              ? order.is_buyer
+                ? t('SWAPPING INTO Lightning')
+                : t('SWAPPING OUT of Lightning')
+              : order.is_buyer
+                ? t('You are BUYING BTC')
+                : t('You are SELLING BTC')}
           </b>
         </Typography>
       ) : (

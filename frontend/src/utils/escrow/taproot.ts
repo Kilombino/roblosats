@@ -136,6 +136,13 @@ export class EscrowContract {
     return [this.sellerPk, this.buyerPk];
   }
 
+  /** Control block to spend leaf [index] (tree ((0, 1), 2)). */
+  controlBlock(index: number): Uint8Array {
+    const [h0, h1, h2] = this.leafHashes;
+    const path = index === 2 ? [tapbranch(h0, h1)] : index === 0 ? [h1, h2] : [h0, h2];
+    return concat(Uint8Array.of(LEAF_VERSION | this.parity), this.internalKey, ...path);
+  }
+
   get scriptPubkey(): Uint8Array {
     return concat(Uint8Array.of(0x51, 0x20), this.outputKey);
   }
@@ -151,6 +158,7 @@ export class BondContract {
   leaves: Uint8Array[];
   leafHashes: Uint8Array[];
   outputKey: Uint8Array;
+  parity = 0;
 
   constructor(
     public ownerPk: Uint8Array,
@@ -164,7 +172,18 @@ export class BondContract {
     const P = schnorr.utils.lift_x(toBig(NUMS_H));
     const t = toBig(taggedHash('TapTweak', NUMS_H, root));
     const Q = P.add(Point.BASE.multiply(t));
-    this.outputKey = Q.toBytes(true).slice(1);
+    const q = Q.toBytes(true);
+    this.outputKey = q.slice(1);
+    this.parity = q[0] === 3 ? 1 : 0;
+  }
+
+  /** Control block to spend leaf [index] (tree (0, 1), internal key NUMS H). */
+  controlBlock(index: number): Uint8Array {
+    return concat(
+      Uint8Array.of(LEAF_VERSION | this.parity),
+      NUMS_H,
+      this.leafHashes[index === 0 ? 1 : 0],
+    );
   }
 
   get scriptPubkey(): Uint8Array {
@@ -228,6 +247,26 @@ export class Transaction {
     const locktime = Number(readLe(4));
     if (pos !== raw.length) throw new Error('trailing bytes');
     return new Transaction(inputs, outputs, version, locktime);
+  }
+
+  /** Raw transaction; with [witnesses] (one stack per input) in the segwit format. */
+  serialize(witnesses?: Uint8Array[][]): Uint8Array {
+    const ins = this.inputs.map((i) =>
+      concat(this.outpoint(i), Uint8Array.of(0), le(i.sequence, 4)),
+    );
+    const body = concat(
+      compact(this.inputs.length),
+      ...ins,
+      compact(this.outputs.length),
+      ...this.outputs.map((o) => this.serOut(o)),
+    );
+    if (!witnesses) return concat(le(this.version, 4), body, le(this.locktime, 4));
+    const wit = witnesses.map((stack) => concat(compact(stack.length), ...stack.map(serBytes)));
+    return concat(le(this.version, 4), Uint8Array.of(0, 1), body, ...wit, le(this.locktime, 4));
+  }
+
+  txid(): string {
+    return bytesToHex(sha256(sha256(this.serialize())).reverse());
   }
 
   private outpoint(i: TxIn): Uint8Array {

@@ -106,13 +106,14 @@ const OrderPageContent = (): React.JSX.Element => {
   useEffect(() => {
     if (!currentOrder) return;
 
+    // Same five steps for maker and taker (rl31-beta12): publish, take, setup, trade, finish.
     setOrderStep(0);
-    if ([1].includes(currentOrder.status)) {
+    if ([1, 2, 3].includes(currentOrder.status)) {
       setOrderStep(1);
     } else if ([6, 7, 8].includes(currentOrder.status)) {
-      setOrderStep(currentOrder.is_taker ? 1 : 2);
+      setOrderStep(2);
     } else if ([9, 10, 11, 12].includes(currentOrder.status)) {
-      setOrderStep(currentOrder.is_taker ? 2 : 3);
+      setOrderStep(3);
     } else if ([13, 14, 15, 16, 17, 18].includes(currentOrder.status)) {
       setOrderStep(5);
     }
@@ -139,9 +140,7 @@ const OrderPageContent = (): React.JSX.Element => {
 
   const tradeBoxSpace = currentOrder ? <TradeBox currentOrder={currentOrder} /> : <></>;
 
-  const steps = currentOrder?.is_taker
-    ? [t('Take'), t('Setup'), t('Trade'), t('Finish')]
-    : [t('Publish'), t('Wait'), t('Setup'), t('Trade'), t('Finish')];
+  const steps = [t('Publish'), t('Take'), t('Setup'), t('Trade'), t('Finish')];
 
   return (
     <Box>

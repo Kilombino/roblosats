@@ -20,6 +20,7 @@ import { AppContext, closeAll, type UseAppStoreType } from '../../contexts/AppCo
 import { GarageContext, type UseGarageStoreType } from '../../contexts/GarageContext';
 import { type UseFederationStoreType, FederationContext } from '../../contexts/FederationContext';
 import { DeleteGarageKeyConfirmationDialog } from '../../components/Dialogs';
+import { OnchainRescueButton } from '../../components/Dialogs/OnchainRescue';
 
 interface GarageKeyProfileProps {
   setView: (state: 'welcome' | 'onboarding' | 'profile') => void;
@@ -247,6 +248,9 @@ const GarageKeyProfile = ({ setView, width, setInputGarageKey }: GarageKeyProfil
           {!slot?.activeOrder && !slot?.lastOrder && !slot?.loading ? (
             <Grid>{t('No existing orders found')}</Grid>
           ) : null}
+          <Grid sx={{ width: '100%', textAlign: 'center' }}>
+            <OnchainRescueButton token={slot?.token ?? undefined} />
+          </Grid>
         </Grid>
 
         <Grid sx={{ width: '100%' }}>

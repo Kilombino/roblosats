@@ -89,6 +89,10 @@ export interface EscrowOrderData {
   escrow_waiting_for?: '' | 'you' | 'peer' | 'confirmation' | 'coordinator';
   escrow_waiting_what?: string;
   onchain_summary?: OnchainSummary;
+  escrow_release_cancel?: boolean;
+  escrow_trade_sats?: number;
+  escrow_bond_in_escrow?: { seller: number; buyer: number };
+  escrow_release_coordinator_sats?: number;
 }
 
 export interface OnchainSummary {
@@ -213,6 +217,15 @@ export const signBondReturn = (
   return bytesToHex(signSchnorr(keys.bond, msg));
 };
 
+/** Most the deposit may take from us: the recommended funding (which the coordinator
+ * recomputes from the live fee rate, so it drifts by a few sats after we paid: order #21 on
+ * 17 nov 2026 failed by 1 sat) plus a small tolerance, plus our bond. Never unlimited. */
+export const depositSpendLimit = (data: EscrowOrderData): number => {
+  const recommended = data.escrow_funding_recommended ?? 0;
+  const tolerance = Math.max(546, Math.ceil(recommended * 0.01));
+  return recommended + tolerance + (data.bond_value ?? 0);
+};
+
 export interface DepositLimits {
   maxSpendSats: number;
   maxFeeRate: number;
@@ -277,7 +290,47 @@ export const signDeposit = (
 export interface ReleaseCheck {
   myScript: Uint8Array;
   minToMe: number;
+  /** When set, the release must pay us exactly this (less the mining fee if we pay it). */
+  owed?: { due: number; paysFee: boolean };
 }
+
+// Most the release may leave to miners when we pay it: ~200 vB at 25 sat/vB.
+export const MAX_RELEASE_FEE_SATS = 5000;
+
+/** What a cooperative release (trade or collaborative cancel) owes us, to the sat, from the
+ * amounts the coordinator states, after checking them against what we know ourselves. Null when
+ * the coordinator does not state them (older servers) or for dispute releases. */
+export const owedInRelease = (data: EscrowOrderData): { due: number; paysFee: boolean } | null => {
+  const bonds = data.escrow_bond_in_escrow;
+  const trade = data.escrow_trade_sats;
+  if (
+    !bonds ||
+    trade === undefined ||
+    !(data.escrow_release_kind ?? '').startsWith('Seller and buyer')
+  )
+    return null;
+  const role = data.escrow_role;
+  if (trade + bonds.seller + bonds.buyer !== data.escrow_output_sats)
+    fail('the amounts of the release do not add up to the escrow');
+  if (data.escrow_sats !== undefined && trade !== data.escrow_sats)
+    fail('the release does not keep the trade amount');
+  const myBond = role === 'seller' ? bonds.seller : bonds.buyer;
+  if (data.bond_value !== undefined && data.bond_txid) {
+    if (myBond > data.bond_value) fail('the release counts more bond than we posted');
+    const mayLose = data.escrow_fee_from_bond ? (data.escrow_funding_recommended ?? 0) : 0;
+    if (myBond < data.bond_value - mayLose) fail('the release does not give our bond back');
+  }
+  const atRelease = data.escrow_release_coordinator_sats ?? 0;
+  if (atRelease && atRelease !== (data.escrow_fee_at_release_sats ?? -1))
+    fail('the release charges a fee we did not agree');
+  if (data.escrow_release_cancel)
+    return role === 'seller'
+      ? { due: trade + bonds.seller, paysFee: true }
+      : { due: bonds.buyer, paysFee: false };
+  return role === 'buyer'
+    ? { due: trade + bonds.buyer - atRelease, paysFee: true }
+    : { due: bonds.seller, paysFee: false };
+};
 
 const checkRelease = (
   data: EscrowOrderData,
@@ -288,6 +341,15 @@ const checkRelease = (
   const toMe = tx.outputs
     .filter((o) => bytesToHex(o.script) === bytesToHex(check.myScript))
     .reduce((a, o) => a + o.value, BigInt(0));
+  if (check.owed) {
+    const out = tx.outputs.reduce((a, o) => a + o.value, BigInt(0));
+    const fee = BigInt(data.escrow_output_sats!) - out;
+    if (fee < BigInt(0) || fee > BigInt(MAX_RELEASE_FEE_SATS))
+      fail('the release mining fee is too high');
+    const expect = BigInt(check.owed.due) - (check.owed.paysFee ? fee : BigInt(0));
+    if (toMe !== expect) fail('the release does not pay us exactly what we are owed');
+    return { tx, c };
+  }
   if (toMe < BigInt(check.minToMe)) fail('the release pays us less than agreed');
   return { tx, c };
 };

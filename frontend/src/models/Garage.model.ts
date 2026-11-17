@@ -66,7 +66,9 @@ class Garage {
     this.slots = {};
     this.currentSlot = null;
     this.garageKey = null;
-    this.mode = 'legacy'; // Keep the transition default requested in the PR review.
+    // Roblosats (rl31-beta12): new users start with a Garage Key; Legacy is only a way to
+    // import an old token (nobody traded with legacy robots on Roblosats).
+    this.mode = 'garageKey';
     this.manualNavigationActive = false;
 
     this.hooks = {
@@ -232,6 +234,19 @@ class Garage {
       return { switched: false, fromIndex: currentIndex, toIndex: currentIndex, reason: 'loading' };
     }
 
+    // Roblosats: no coordinator answered (offline or gone): nothing can be known about this
+    // robot's orders, so never move to a new robot (17 nov 2026, QA: with the coordinator down
+    // the app jumped to a fresh robot and the one with the onchain escrow was out of sight).
+    const robots = Object.values(currentSlot.robots).filter(Boolean);
+    if (robots.length > 0 && robots.every((robot) => robot.unreachable)) {
+      return {
+        switched: false,
+        fromIndex: currentIndex,
+        toIndex: currentIndex,
+        reason: 'loading',
+      };
+    }
+
     currentSlot.updateSlotFromOrder(currentSlot.activeOrder);
     if (currentSlot.activeOrder?.id) {
       return {
@@ -355,6 +370,15 @@ class Garage {
     await this.waitForSlotsLoaded();
     if (savedMode === 'legacy' || savedMode === 'garageKey') {
       this.mode = savedMode;
+      this.triggerHook('onSlotUpdate');
+    } else if (
+      Object.keys(this.slots).length > 0 &&
+      !this.garageKey &&
+      !(await systemClient.getItem('garage_key')) &&
+      !this.garageKey
+    ) {
+      // An old install with legacy robots and no saved mode: keep showing them.
+      this.mode = 'legacy';
       this.triggerHook('onSlotUpdate');
     }
   };

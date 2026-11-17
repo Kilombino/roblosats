@@ -95,7 +95,20 @@ export const GarageContextProvider = ({
 
     // Wait for garage mode, key and slots before any auto-switch evaluation.
     void Promise.all([garage.loadGarageKey(), garage.loadMode(), garage.waitForSlotsLoaded()]).then(
-      () => {
+      async () => {
+        // Roblosats (17 nov 2026): always load the current robot once the garage is read.
+        // The page effect below only fetches it when the page changes, and the slots are not
+        // loaded yet on the first run: opening /order/... directly left the robot unloaded
+        // forever (no /api/robot, no /api/order, endless spinner) since robots stopped being
+        // rotated at start-up.
+        const slot = garage.getSlot();
+        if (slot?.token) {
+          // A slot saved before a coordinator joined has no robot for it: add it.
+          for (const alias of federation.getCoordinatorsAlias()) {
+            if (!slot.robots[alias]) slot.syncCoordinator(federation, alias);
+          }
+          await garage.fetchRobot(federation, slot.token).catch(() => {});
+        }
         if (garage.getMode() === 'garageKey' && garage.getGarageKey()) {
           garage.resetManualNavigation();
           void garage.ensureReusableSlot(federation, { source: 'auto' });

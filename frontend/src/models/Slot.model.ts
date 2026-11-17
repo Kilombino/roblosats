@@ -331,7 +331,12 @@ class Slot {
         encPrivKey: defaultRobot.encPrivKey,
         nostrPubKey: defaultRobot.nostrPubKey,
       });
-      void this.robots[shortAlias].fetch(federation);
+      // Roblosats: repaint once it answers (its onchain escrow permission arrives with it;
+      // 17 nov 2026 the phone's maker form never showed the onchain switch).
+      void this.robots[shortAlias].fetch(federation).then((robot) => {
+        this.updateSlotFromRobot(robot);
+        this.onSlotUpdate();
+      });
       this.updateSlotFromRobot(this.robots[shortAlias]);
     }
   };

@@ -66,9 +66,9 @@ export const OnchainPayoutForm = ({
 
         <ListItem>
           <ListItemText
-            primary={`${pn(Math.floor((order.invoice_amount * order.swap_fee_rate) / 100))} Sats (${
-              order.swap_fee_rate
-            }%)`}
+            primary={`${pn(Math.floor((order.invoice_amount * order.swap_fee_rate) / 100))} Sats (${Number(
+              Number(order.swap_fee_rate).toFixed(2),
+            )}%)`}
             secondary={t('Swap fee')}
           />
         </ListItem>

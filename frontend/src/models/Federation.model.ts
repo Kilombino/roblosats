@@ -539,6 +539,31 @@ export class Federation {
     void this.loadCoordinatorData();
   };
 
+  /** Roblosats (17 nov 2026): the book's refresh button. Re-subscribes the Nostr book (or
+   * reloads the API book) and asks every enabled coordinator again for its info and limits. */
+  refreshAll = (robosatsOnly: boolean): void => {
+    if (this.connection === 'nostr') {
+      this.book = {};
+      this.exchange.loadingCache = this.roboPool.relays.length;
+      this.loadBookNostr(robosatsOnly);
+    } else {
+      void this.loadBook();
+    }
+    Object.values(this.coordinators)
+      .filter((c) => c.enabled)
+      .forEach((c) => {
+        c.refreshData();
+        c.loadInfo(() => {
+          this.onCoordinatorSaved();
+        });
+        void c.loadLimits(() => {
+          this.updateExchange();
+          this.triggerHook('onFederationUpdate');
+        });
+      });
+    this.triggerHook('onFederationUpdate');
+  };
+
   refreshBookHosts: (robosatsOnly: boolean) => void = (robosatsOnly) => {
     if (this.connection === 'nostr') {
       this.loadBookNostr(robosatsOnly);

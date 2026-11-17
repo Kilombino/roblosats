@@ -24,6 +24,7 @@ import { LoadingButton } from '@mui/lab';
 import { GarageContext, type UseGarageStoreType } from '../../contexts/GarageContext';
 import { type UseFederationStoreType, FederationContext } from '../../contexts/FederationContext';
 import { DeleteRobotConfirmationDialog } from '../../components/Dialogs';
+import { OnchainRescueButton } from '../../components/Dialogs/OnchainRescue';
 import useLegacyMode from '../../hooks/useLegacyMode';
 
 interface RobotProfileProps {
@@ -381,6 +382,9 @@ const RobotProfile = ({
         </Box>
       </Grid>
 
+      <Grid sx={{ width: '100%', textAlign: 'center' }}>
+        <OnchainRescueButton token={slot?.token ?? undefined} />
+      </Grid>
       <DeleteRobotConfirmationDialog
         open={deleteDialogOpen}
         onClose={handleCancelDelete}

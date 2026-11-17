@@ -147,7 +147,7 @@ it('publishes the creating account even if navigation changes during the request
   expect((nip59.unwrapEvent(event, secret) as Event).tags).toContainEqual(['account', '0']);
 });
 
-it('keeps the requested legacy default and loads saved mode without overwriting pending slots', async () => {
+it('starts in Garage Key mode (rl31-beta12) and loads saved mode without overwriting pending slots', async () => {
   let finishSlots!: (value: string) => void;
   const slots = new Promise<string>((resolve) => {
     finishSlots = resolve;
@@ -161,7 +161,7 @@ it('keeps the requested legacy default and loads saved mode without overwriting 
   const garage = new Garage();
   const updated = jest.fn();
   garage.registerHook('onSlotUpdate', updated);
-  expect(garage.mode).toBe('legacy');
+  expect(garage.mode).toBe('garageKey');
   await Promise.resolve();
   expect(systemClient.setItem).not.toHaveBeenCalled();
   finishSlots(JSON.stringify({ [token]: { token, robots: { test: {} } } }));
@@ -252,12 +252,12 @@ it('activeOrder from coordinator A is not cleared by a no-active-order response 
   expect(slot.lastOrder?.id).toBe(3);
 });
 
-it('generateRobot creates a garageKey and uses account #0 when starting from legacy mode', async () => {
+it('generateRobot creates a garageKey and uses account #0 on a fresh install', async () => {
   const garage = new Garage();
   await garage.waitForSlotsLoaded();
   jest.spyOn(apiClient, 'get').mockResolvedValue({ earned_rewards: 0 });
 
-  expect(garage.getMode()).toBe('legacy');
+  expect(garage.getMode()).toBe('garageKey');
   expect(garage.getGarageKey()).toBeNull();
 
   await garage.generateRobot(federation);

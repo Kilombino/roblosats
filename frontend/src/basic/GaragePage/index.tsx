@@ -1,8 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
 import {
   Paper,
-  ToggleButtonGroup,
-  ToggleButton,
   Stack,
   Alert,
   Dialog,
@@ -13,7 +11,6 @@ import {
   Button,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { VpnKey, SmartToy } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 
 import GarageKeyOnboarding from './GarageKeyOnboarding';
@@ -113,29 +110,7 @@ const GaragePage = (): React.JSX.Element => {
         overflowX: 'clip',
       }}
     >
-      <Stack direction='column' spacing={1} sx={{ alignItems: 'center', pt: 1.5, px: 1.5 }}>
-        <ToggleButtonGroup
-          sx={{ width: '100%' }}
-          exclusive={true}
-          value={garage.getMode()}
-          onChange={(_e, garageMode) => {
-            handleModeChange(garageMode);
-          }}
-        >
-          <ToggleButton value='garageKey' color='primary' sx={{ flexGrow: 1 }}>
-            <Stack sx={{ alignItems: 'center' }} direction='row' spacing={1}>
-              <VpnKey />
-              <span>{t('Garage Key')}</span>
-            </Stack>
-          </ToggleButton>
-          <ToggleButton value='legacy' color='secondary' sx={{ flexGrow: 1 }}>
-            <Stack sx={{ alignItems: 'center' }} direction='row' spacing={1}>
-              <SmartToy />
-              <span>{t('Legacy')}</span>
-            </Stack>
-          </ToggleButton>
-        </ToggleButtonGroup>
-      </Stack>
+      <Stack direction='column' spacing={1} sx={{ alignItems: 'center', pt: 1.5, px: 1.5 }}></Stack>
 
       <Dialog open={showModeChangeDialog} onClose={cancelModeChange} maxWidth='sm' fullWidth>
         <DialogTitle>{t('Change Robot Generation Mode?')}</DialogTitle>
@@ -187,6 +162,22 @@ const GaragePage = (): React.JSX.Element => {
           inputGarageKey={inputGarageKey}
           setInputGarageKey={setInputGarageKey}
         />
+      ) : null}
+
+      {/* Roblosats: Garage Key only; an old token can still be imported (Legacy mode). */}
+      {view !== 'onboarding' ? (
+        <Stack sx={{ alignItems: 'center', pb: 1 }}>
+          <Button
+            size='small'
+            color='inherit'
+            sx={{ opacity: 0.6, textTransform: 'none' }}
+            onClick={() => {
+              handleModeChange('legacy');
+            }}
+          >
+            {t('Import an old robot token')}
+          </Button>
+        </Stack>
       ) : null}
     </Paper>
   );

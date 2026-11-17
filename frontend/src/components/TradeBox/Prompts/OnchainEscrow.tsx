@@ -28,9 +28,12 @@ import {
   signBondReturn,
   signDeposit,
   signDisputeRelease,
+  owedInRelease,
+  depositSpendLimit,
   type EscrowKeys,
   type EscrowOrderData,
 } from '../../../utils/escrow/client';
+import { saveRescue } from '../../../utils/escrow/rescue';
 import { Transaction, addressToScript, bytesToHex } from '../../../utils/escrow/taproot';
 
 export type EscrowAction =
@@ -201,6 +204,20 @@ export const OnchainEscrowPrompt = ({
   const keys: EscrowKeys | null =
     token && data.escrow_alias ? escrowKeys(token, data.escrow_alias, order.id) : null;
 
+  // Keep on this device what a rescue without the coordinator needs (public data only).
+  useEffect(() => {
+    if (!token || !data.escrow_alias) return;
+    void saveRescue(systemClient, token, data, order.shortAlias).catch(() => {});
+  }, [
+    token,
+    data.escrow_address,
+    data.escrow_funding_txid,
+    data.escrow_output_sats,
+    data.escrow_funding_address,
+    data.bond_address,
+    data.bond_txid,
+  ]);
+
   const once = (key: string, fn: () => void): void => {
     if (sent.current.has(key)) return;
     sent.current.add(key);
@@ -235,7 +252,7 @@ export const OnchainEscrowPrompt = ({
         onAction(
           'escrow_funding_signatures',
           signDeposit(data, keys, data, {
-            maxSpendSats: (data.escrow_funding_recommended ?? 0) + (data.bond_value ?? 0),
+            maxSpendSats: depositSpendLimit(data),
             maxFeeRate: 100,
           }),
         ),
@@ -260,8 +277,19 @@ export const OnchainEscrowPrompt = ({
             ? Math.floor((data.escrow_sats ?? 0) * 0.98)
             : Math.floor((data.bond_value ?? 0) * 0.98)
         : Math.floor((data.escrow_sats ?? 0) * 0.98);
-      const check = { myScript, minToMe };
-      if (cooperative) {
+      // rl31-beta12: a cooperative release (trade or collaborative cancel) is checked to the sat.
+      let owed: { due: number; paysFee: boolean } | undefined;
+      let refused = false;
+      try {
+        owed = owedInRelease(data) ?? undefined;
+      } catch (e) {
+        refused = true;
+        setError(e instanceof EscrowCheckError ? t(e.message) : String(e));
+      }
+      const check = { myScript, minToMe, owed };
+      if (refused) {
+        // never sign a release whose amounts do not add up
+      } else if (cooperative) {
         if (!data.escrow_release_my_nonce)
           once(`nonce-${data.escrow_release_tx}`, () => {
             const n = releaseNonce(data, keys, check);

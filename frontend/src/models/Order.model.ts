@@ -296,7 +296,8 @@ class Order {
 
     const coordinator = federation.getCoordinator(this.shortAlias);
     if (!coordinator || !coordinator.url) return this;
-    const authHeaders = slot.getRobot()?.getAuthHeaders();
+    // Roblosats: the robot of this order's coordinator, not whatever robot comes first.
+    const authHeaders = (slot.getRobot(this.shortAlias) ?? slot.getRobot())?.getAuthHeaders();
     if (!authHeaders) return this;
     const data = await apiClient
       .get(coordinator.url, `/api/order/?order_id=${this.id}`, authHeaders)

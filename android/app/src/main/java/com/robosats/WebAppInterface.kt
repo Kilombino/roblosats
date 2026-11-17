@@ -333,6 +333,56 @@ class WebAppInterface(private val context: MainActivity, private val webView: We
         }
     }
 
+    /**
+     * Plain-text HTTP request for the onchain rescue screen (an explorer, no coordinator):
+     * resolves {"status": code, "body": base64}. Through Tor when the app uses it.
+     */
+    @JavascriptInterface
+    fun sendText(uuid: String, method: String, url: String, contentType: String, body: String) {
+        if (!isValidUuid(uuid)) {
+            rejectPromise(uuid, "Invalid UUID")
+            return
+        }
+        // The user picks this explorer, and it may well be their own node at home (a LAN
+        // address): only http(s) is checked here, not the private-address rule of isValidUrl.
+        val scheme = url.trim().substringBefore("://").lowercase()
+        if ((scheme != "http" && scheme != "https") || (method != "GET" && method != "POST")) {
+            rejectPromise(uuid, "Invalid request")
+            return
+        }
+        try {
+            var builder = Builder()
+                .connectTimeout(60, TimeUnit.SECONDS)
+                .readTimeout(120, TimeUnit.SECONDS)
+            if (context.useProxy) {
+                builder = builder.proxy(getTorKmpObject().proxy)
+            }
+            val client = builder.build()
+            val requestBuilder = RequestBuilder().url(url)
+            if (method == "POST") {
+                val type = (if (contentType.isBlank()) "text/plain" else contentType).toMediaType()
+                requestBuilder.post(body.toRequestBody(type))
+            }
+            client.newCall(requestBuilder.build()).enqueue(object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    rejectPromise(uuid, "Request failed: ${e.message}")
+                }
+
+                override fun onResponse(call: Call, response: Response) {
+                    try {
+                        val bytes = response.body.bytes()
+                        val b64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+                        resolvePromise(uuid, "{\"status\":${response.code},\"body\":\"$b64\"}")
+                    } catch (e: Exception) {
+                        rejectPromise(uuid, "Error reading response: ${e.message}")
+                    }
+                }
+            })
+        } catch (e: Exception) {
+            rejectPromise(uuid, "Error sending request: ${e.message}")
+        }
+    }
+
     @JavascriptInterface
     fun getBinary(uuid: String, url: String) {
         // Validate inputs

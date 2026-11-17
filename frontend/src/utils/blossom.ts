@@ -1,9 +1,11 @@
+import { sha256 } from '@noble/hashes/sha2.js';
 import { finalizeEvent, type EventTemplate } from 'nostr-tools';
 import { apiClient } from '../services/api';
 
 export async function computeSha256(data: Uint8Array): Promise<string> {
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data.slice().buffer);
-  return Array.from(new Uint8Array(hashBuffer))
+  // Pure JS: crypto.subtle is missing outside a secure context (http .onion).
+  const hashBuffer = sha256(data);
+  return Array.from(hashBuffer)
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
 }

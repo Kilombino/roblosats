@@ -1,6 +1,15 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Typography, Select, MenuItem, Box, SelectChangeEvent } from '@mui/material';
+import {
+  Typography,
+  Select,
+  MenuItem,
+  Box,
+  SelectChangeEvent,
+  IconButton,
+  Tooltip,
+} from '@mui/material';
+import Refresh from '@mui/icons-material/Refresh';
 import currencyDict from '../../utils/currencies';
 import { useTheme } from '@mui/material';
 import { AutocompletePayments } from '../MakerForm';
@@ -443,6 +452,16 @@ const BookControl = ({
               </MenuItem>
             ))}
         </Select>
+        <Tooltip title={t('Refresh orders')} enterTouchDelay={0}>
+          <IconButton
+            aria-label='refresh orders'
+            onClick={() => {
+              federation.refreshAll(fav.coordinator !== 'any');
+            }}
+          >
+            <Refresh />
+          </IconButton>
+        </Tooltip>
       </div>
     </Box>
   );

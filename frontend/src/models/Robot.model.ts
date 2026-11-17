@@ -67,6 +67,8 @@ class Robot {
   public webhookApiKey: string = '';
   // Set by the coordinator when this robot may make and take onchain escrow orders
   public onchainEscrow: { minSats: number; maxSats: number; minBondSats?: number } | null = null;
+  // Roblosats: the coordinator did not answer the last /api/robot/ (offline, gone).
+  public unreachable: boolean = false;
 
   update = (attributes: object): void => {
     Object.assign(this, attributes);
@@ -121,6 +123,11 @@ class Robot {
           console.error(data?.bad_request);
           return;
         }
+        if (!data || typeof data !== 'object') {
+          this.unreachable = true;
+          return;
+        }
+        this.unreachable = false;
 
         this.update({
           nickname: data.nickname,
@@ -149,6 +156,7 @@ class Robot {
         });
       })
       .catch((e) => {
+        this.unreachable = true;
         console.log(e);
       })
       .finally(() => (this.loading = false));

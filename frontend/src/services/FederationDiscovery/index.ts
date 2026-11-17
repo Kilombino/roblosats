@@ -1,3 +1,4 @@
+import { sha256 } from '@noble/hashes/sha2.js';
 /**
  * FederationDiscovery — hash-first design with seniority-weighted voting.
  * See /development/federation-discovery.md for the full spec.
@@ -53,8 +54,10 @@ function stableStringify(val: unknown): string {
 }
 
 export async function canonicalHash(obj: Record<string, unknown>): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(stableStringify(obj)));
-  return Array.from(new Uint8Array(buf))
+  // Pure-JS SHA-256 (Roblosats, 17 nov 2026): crypto.subtle does not exist outside a secure
+  // context (plain Firefox on an http .onion), which broke the whole app there.
+  const buf = sha256(new TextEncoder().encode(stableStringify(obj)));
+  return Array.from(buf)
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
 }

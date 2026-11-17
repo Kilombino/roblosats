@@ -281,11 +281,14 @@ const OrderDetails = ({
     if (paidInSpamcoin && order.spamcoin_sats != null && order.spamcoin_sats > 0) {
       note = ` = ${pn(order.spamcoin_sats)} ${t('Spamcoin sats')}`;
     } else if (paidInSpamcoin && btcRatio > 0 && rate > 0) {
-      const spamSats = (fiat: number): string => pn(Math.round((fiat / rate) * btcRatio * 1e8));
+      // The same rounding everywhere (17 nov 2026: the phone showed 157-315, the PC 158-315):
+      // the low end down, the high end up, a single amount to the nearest sat.
+      const spamSats = (fiat: number, round: (x: number) => number = Math.round): string =>
+        pn(round((fiat / rate) * btcRatio * 1e8));
       const fiatAmounts =
         order.amount && order.amount > 0
           ? spamSats(Number(order.amount))
-          : `${spamSats(Number(order.min_amount))}-${spamSats(Number(order.max_amount))}`;
+          : `${spamSats(Number(order.min_amount), Math.floor)}-${spamSats(Number(order.max_amount), Math.ceil)}`;
       note = ` ≈ ${fiatAmounts} ${t('Spamcoin sats')}`;
     }
     if (isBuyer) send += note;

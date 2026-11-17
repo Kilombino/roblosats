@@ -30,6 +30,8 @@ interface AndroidAppRobosats {
   ) => void;
   sendBinary: (uuid: string, url: string, headers: string, base64Data: string) => void;
   getBinary: (uuid: string, url: string) => void;
+  // rl31-beta12: plain-text request (rescue explorer); resolves {status, body (base64)}
+  sendText?: (uuid: string, method: string, url: string, contentType: string, body: string) => void;
   restart: () => void;
 }
 
