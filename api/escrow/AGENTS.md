@@ -9,7 +9,9 @@ phase 2). No Django imports; everything is bytes in, bytes out.
 - Leaves (no `OP_IF`: RDTS forbids it in tapscript; control blocks ≤ 7 nodes):
   0 `<seller> CHECKSIGVERIFY <coordinator> CHECKSIG` (dispute won by the seller / refund),
   1 `<buyer> CHECKSIGVERIFY <coordinator> CHECKSIG` (dispute won by the buyer),
-  2 `<seller> CHECKSIGVERIFY <csv> CHECKSEQUENCEVERIFY` (seller rescue after ~4 weeks).
+  2 rescue plan 1 (escrows up to rl31-beta15): `<seller> CHECKSIGVERIFY <csv> CHECKSEQUENCEVERIFY`
+    (the seller alone takes everything); rescue plan 2 (rl31-beta16):
+    `<seller> CHECKSIGVERIFY <buyer> CHECKSIGVERIFY <csv> CHECKSEQUENCEVERIFY` (fair rescue, below).
 - Witness for a leaf: signatures in reverse key order (`leaf_witness(c, i, [sig_second_key, sig_first_key])`),
   then the script and the control block.
 
@@ -56,7 +58,7 @@ server secret. The JS client must produce the same keys: see the vectors in
 ## Service (`service.py`, Django glue)
 - Off unless `ONCHAIN_ESCROW=True` and `ESCROW_SECRET` (the coordinator's escrow keys are
   HKDF of it per order; losing it loses the ability to sign dispute leaves, so back it up with
-  the coordinator's other secrets). `ESCROW_RESCUE_CSV` (default 4480 blocks ≈ 4 weeks at 9 min),
+  the coordinator's other secrets). `ESCROW_RESCUE_CSV` (default 2016 blocks ≈ 2 weeks; it was 4480 before rl31-beta16, new escrows only),
   `ESCROW_WATCH_WALLET` (default `roblosats-escrow`, a watch-only descriptor wallet created on
   first use in the coordinator's bitcoind), `ESCROW_DEPOSIT_TARGET_BLOCKS`, `ESCROW_FALLBACK_FEE_RATE`.
 - Flow: `create_escrow` → `submit_keys` (each trader: escrow key + funding key; when both are
@@ -204,3 +206,28 @@ server secret. The JS client must produce the same keys: see the vectors in
   of trade, collaborative cancel, dispute won, return everything) and
   `EscrowHybridRegtest.test_case_a_small_order_one_minimum_in_total`; client
   `owed.test.ts`, e2e trade + cancel.
+
+## Fair rescue (rescue plan 2, rl31-beta16)
+- `funding_signatures["rescue_plan"]` = 2 from `service.create_escrow` (`service.RESCUE_PLAN`);
+  escrows without it keep plan 1 (`service.rescue_plan`, `EscrowContract(rescue_plan=...)`, JS
+  `new EscrowContract(..., rescuePlan)`): their address and the seller-alone rescue are unchanged.
+- Right after `build_deposit` (deposit txid known, nothing signed), `flow.advance` calls
+  `service.build_rescue(escrow, *_returns(escrow))`: one input (escrow outpoint, sequence =
+  rescue_csv), seller output = trade + its bond + its held fee, buyer output = its bond + its
+  held fee (none in hybrid A), each paying half the mining fee at `rescue_fee_rate()`
+  (estimate clamped to ESCROW_RESCUE_MIN/MAX_FEE_RATE, 2–20 sat/vB). A buyer output that would
+  fall below dust is dropped (to the miners, never to the seller).
+- Each trader signs it (leaf 2, 0x21) with `escrow_rescue_signature`; `submit_funding_signatures`
+  refuses deposit signatures until both rescue signatures are in, and the client keeps the
+  complete rescue (`completeRescue`, both signatures checked) in its encrypted rescue record
+  before it signs the deposit. Whoever withholds its rescue signature is at fault on expiry.
+- Without the coordinator, after rescue_csv blocks either side broadcasts the stored rescue
+  ("Recover without the coordinator" → "Your part of the escrow"). No key path or leaf lets one
+  side take the other's part; the coordinator is not needed and cannot change it.
+- Limits: the fee is fixed at deposit time (CPFP from one's own output if it falls short); the
+  rescue returns the pre-trade split, so a buyer who already paid fiat gets only its bond back
+  if the coordinator vanishes before the release (as with plan 1, but now it keeps its bond);
+  the coordinator does not notice a mined rescue (the escrow stays LOCKED in its database).
+- Tests: api/tests/test_escrow_rescue_plan2.py (unit), EscrowOrderFlowRegtest
+  `test_fair_rescue_without_the_coordinator` / `test_rescue_plan_1_kept_for_old_escrows`, JS
+  e2e `fair rescue without the coordinator`.

@@ -52,7 +52,10 @@ def _faucet(method, *params):
 
 
 def _mine(n=1):
-    service.rpc("generatetoaddress", [n, _faucet("getnewaddress")])
+    addr = _faucet("getnewaddress")
+    while n > 0:  # in steps: one long generatetoaddress outlives the 30 s RPC timeout
+        service.rpc("generatetoaddress", [min(n, 200), addr])
+        n -= 200
 
 
 def _spk(addr):
@@ -64,7 +67,10 @@ class EscrowServiceRegtest(TransactionTestCase):
     def _trade(self, dispute):
         buyer, seller = _user(), _user()
         order = _order(buyer, seller)
-        escrow = service.create_escrow(order)
+        from unittest.mock import patch
+
+        with patch.object(service, "RESCUE_PLAN", 1):  # low-level service test: no payout addresses
+            escrow = service.create_escrow(order)
         alias = service.coordinator_alias()
         keys = {
             r: (derive_secret(f"tok-{r}-{order.id}".encode(), alias, order.id, r),
@@ -244,6 +250,7 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
         _mine()
         flow.advance(order)
         self.assertEqual(flow.escrow_of(order).status, OnchainEscrow.Status.FUNDING)
+        self._sign_rescue(order, {"seller": seller, "buyer": buyer}, keys)
         for r, u in (("seller", seller), ("buyer", buyer)):
             d = flow.order_data(order, u)
             tx = Transaction.parse(bytes.fromhex(d["escrow_deposit_tx"]))
@@ -272,6 +279,32 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
         self.assertFalse([o for o in deposit["vout"] if o["scriptPubKey"]["hex"] == coord])
         self.assertEqual(escrow.coordinator_fee_sats, 0)
         return order, buyer, seller, keys
+
+    def _sign_rescue(self, order, users, keys):
+        """rl31-beta16 (rescue plan 2): both sign the rescue before the deposit, as the client
+        does, and each keeps the complete rescue (here: self.rescue_hex)."""
+        from api.escrow import flow
+        from api.escrow.taproot import Transaction, TxOut
+
+        escrow = flow.escrow_of(order)
+        if service.rescue_plan(escrow) < 2:
+            return
+        # the deposit signatures are refused until both rescue signatures are in
+        with self.assertRaises(service.EscrowError):
+            flow.action(order, users["seller"], "escrow_funding_signatures", {"signatures": []})
+        for r in ("seller", "buyer"):
+            d = flow.order_data(order, users[r])
+            self.assertFalse(d["escrow_rescue_my_sig"])
+            c = service.contract_for(escrow)
+            tx = Transaction.parse(bytes.fromhex(d["escrow_rescue_tx"]))
+            self.assertEqual(tx.inputs[0].txid, d["escrow_deposit_txid"])
+            self.assertEqual(tx.inputs[0].sequence, escrow.rescue_csv)
+            msg = tx.sighash_unified(0, [TxOut(escrow.escrow_sats, c.script_pubkey)], 0x21, c.leaf_hash(c.RESCUE))
+            flow.action(order, users[r], "escrow_rescue_signature",
+                        {"signature": with_hashtype(schnorr_sign(keys[r]["escrow"], msg)).hex()})
+        escrow.refresh_from_db()
+        self.rescue_hex = service.signed_rescue(escrow).serialize().hex()
+        self.rescue_plan_data = escrow.funding_signatures["rescue"]
 
     def _release_outputs(self, escrow):
         """{'buyer'|'seller'|'coordinator'|other spk: sats} of the mined release, and its mining fee."""
@@ -328,6 +361,70 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
             "coordinator": self.seller_fee + self.buyer_fee,
         })
         self.assertEqual(order.proceeds, self.seller_fee + self.buyer_fee)
+
+    def _mined_outputs(self, escrow, txid):
+        info = service.rpc("getrawtransaction", [txid, True])
+        self.assertGreaterEqual(info["confirmations"], 1)
+        names = {escrow.funding_signatures["buyer_payout_spk"]: "buyer",
+                 escrow.funding_signatures["seller_payout_spk"]: "seller"}
+        outs = {}
+        for o in info["vout"]:
+            k = names.get(o["scriptPubKey"]["hex"], o["scriptPubKey"]["hex"])
+            outs[k] = outs.get(k, 0) + round(o["value"] * 1e8)
+        return outs
+
+    def test_fair_rescue_without_the_coordinator(self):
+        """rl31-beta16: the coordinator never answers again after the deposit. Before the CSV
+        the pre-signed rescue is refused; after it, either trader broadcasts it straight to a
+        node and each one gets its own: seller trade + its bond + its fee, buyer its bond + its
+        fee (each paying half the mining fee)."""
+        from api.escrow import flow
+
+        order, buyer, seller, keys = self._to_chat()
+        escrow = flow.escrow_of(order)
+        self.assertEqual(service.rescue_plan(escrow), 2)
+        self.assertEqual(escrow.rescue_csv, int(os.environ.get("ESCROW_RESCUE_CSV", 2016)))
+        with self.assertRaises(service.EscrowError) as e:
+            service.rpc("sendrawtransaction", [self.rescue_hex])
+        self.assertIn("non-BIP68-final", str(e.exception))
+        conf = service.rpc("getrawtransaction", [escrow.funding_txid, True])["confirmations"]
+        _mine(escrow.rescue_csv - conf - 1)
+        with self.assertRaises(service.EscrowError):  # one block short
+            service.rpc("sendrawtransaction", [self.rescue_hex])
+        _mine(1)
+        txid = service.rpc("sendrawtransaction", [self.rescue_hex])
+        _mine(1)
+        outs = self._mined_outputs(escrow, txid)
+        to_seller = 1_000_000 + 30_000 + self.seller_fee
+        to_buyer = self.buyer_in + self.buyer_fee
+        self.assertEqual((self.rescue_plan_data["to_seller"], self.rescue_plan_data["to_buyer"]), (to_seller, to_buyer))
+        fee = to_seller + to_buyer - outs["seller"] - outs["buyer"]
+        self.assertEqual(outs, {"seller": to_seller - (fee - fee // 2), "buyer": to_buyer - fee // 2})
+        self.assertLessEqual(fee, 5000)  # the client refuses more (MAX_RESCUE_FEE_SATS)
+
+    def test_rescue_plan_1_kept_for_old_escrows(self):
+        """An escrow created with the old rules (no rescue_plan): the seller alone, whole escrow."""
+        from unittest.mock import patch
+
+        from api.escrow import flow
+        from api.escrow.taproot import Transaction, TxIn, TxOut, leaf_witness
+
+        with patch.object(service, "RESCUE_PLAN", 1):
+            order, buyer, seller, keys = self._to_chat()
+        escrow = flow.escrow_of(order)
+        self.assertEqual(service.rescue_plan(escrow), 1)
+        self.assertNotIn("rescue", escrow.funding_signatures)
+        c = service.contract_for(escrow)
+        conf = service.rpc("getrawtransaction", [escrow.funding_txid, True])["confirmations"]
+        _mine(escrow.rescue_csv - conf)
+        dest = bytes.fromhex(escrow.funding_signatures["seller_payout_spk"])
+        tx = Transaction([TxIn(escrow.funding_txid, escrow.funding_vout, escrow.rescue_csv)],
+                         [TxOut(escrow.escrow_sats - 500, dest)])
+        msg = tx.sighash_unified(0, [TxOut(escrow.escrow_sats, c.script_pubkey)], 0x21, c.leaf_hash(c.SELLER_RESCUE))
+        tx.inputs[0].witness = leaf_witness(c, c.SELLER_RESCUE, [schnorr_sign(keys["seller"]["escrow"], msg)])
+        txid = service.rpc("sendrawtransaction", [tx.serialize().hex()])
+        _mine(1)
+        self.assertEqual(self._mined_outputs(escrow, txid), {"seller": escrow.escrow_sats - 500})
 
     def test_collaborative_cancel(self):
         from api.escrow import flow
@@ -520,6 +617,9 @@ class EscrowHybridRegtest(EscrowOrderFlowRegtest):
         seller_fee, buyer_fee = flow.fees(order)
         self.case_a_fees = (seller_fee, buyer_fee)
         self.assertEqual(plan["buyer_fee_at_release"], buyer_fee)
+        self._sign_rescue(order, {"seller": seller, "buyer": buyer}, keys)
+        self.assertEqual(self.rescue_plan_data["to_buyer"], 0)  # Lightning bond: nothing inside
+        self.assertEqual(len(Transaction.parse(bytes.fromhex(self.rescue_hex)).outputs), 1)
         for r, u in (("buyer", buyer), ("seller", seller)):  # the buyer's app sends no signature
             d = flow.order_data(order, u)
             tx = Transaction.parse(bytes.fromhex(d["escrow_deposit_tx"]))

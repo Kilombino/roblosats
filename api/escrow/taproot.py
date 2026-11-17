@@ -142,6 +142,10 @@ class EscrowContract:
     coordinator_pk: bytes
     seller_rescue_csv: int
     hrp: str = "bc"
+    # 1: leaf 2 = <seller> CSV (the seller alone takes the whole escrow after the timelock);
+    # 2 (rl31-beta16): leaf 2 = <seller> <buyer> CSV, spent only by the rescue transaction both
+    # traders pre-sign before the deposit, which gives each one its own (fair rescue).
+    rescue_plan: int = 1
     leaves: list[bytes] = field(init=False)
     internal_key: bytes = field(init=False)
     merkle_root: bytes = field(init=False)
@@ -152,6 +156,7 @@ class EscrowContract:
     SELLER_COORDINATOR = 0
     BUYER_COORDINATOR = 1
     SELLER_RESCUE = 2
+    RESCUE = 2
 
     def __post_init__(self):
         if not 0 < self.seller_rescue_csv < 0xFFFF:
@@ -162,7 +167,10 @@ class EscrowContract:
         self.leaves = [
             push(s) + OP_CHECKSIGVERIFY + push(c) + OP_CHECKSIG,
             push(b) + OP_CHECKSIGVERIFY + push(c) + OP_CHECKSIG,
-            push(s) + OP_CHECKSIGVERIFY + script_num(self.seller_rescue_csv) + OP_CSV,
+            push(s) + OP_CHECKSIGVERIFY + script_num(self.seller_rescue_csv) + OP_CSV
+            if self.rescue_plan < 2
+            else push(s) + OP_CHECKSIGVERIFY + push(b) + OP_CHECKSIGVERIFY
+            + script_num(self.seller_rescue_csv) + OP_CSV,
         ]
         h = [tapleaf_hash(leaf) for leaf in self.leaves]
         b01 = tapbranch_hash(h[0], h[1])

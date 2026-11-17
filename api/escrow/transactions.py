@@ -268,3 +268,42 @@ def bond_spend_tx(bond_txid: str, bond_vout: int, bond_sats: int, payout_spk: by
     txin = TxIn(bond_txid, bond_vout, csv if refund else SEQUENCE_RBF)
     return Transaction([txin], [TxOut(value, payout_spk)])
 
+
+
+# Fair rescue (rescue plan 2, rl31-beta16): leaf <seller> CHECKSIGVERIFY <buyer> CHECKSIGVERIFY
+# <csv> CSV, two signatures, a 75-byte script and a one-step control block.
+VB_LEAF_FAIR_RESCUE = 41 + (1 + 2 * 66 + 76 + 66) / 4
+
+
+def rescue_tx(
+    contract: EscrowContract,
+    escrow_txid: str,
+    escrow_vout: int,
+    escrow_sats: int,
+    to_seller: int,
+    seller_spk: bytes,
+    to_buyer: int,
+    buyer_spk: bytes,
+    fee_rate: float,
+) -> Transaction:
+    """The rescue both traders pre-sign before the deposit (rescue plan 2): valid only after
+    the contract's CSV (input sequence), it gives the seller the trade amount, its bond and its
+    held fee, and the buyer its bond and its held fee. Each output pays half the mining fee (the
+    seller all of it when the buyer has nothing in the escrow); a buyer output that would end
+    below dust is dropped (its few sats go to the miners, never to the other side)."""
+    if to_seller + to_buyer != escrow_sats:
+        raise ValueError("the rescue must give back the whole escrow")
+    outs_spk = [seller_spk] + ([buyer_spk] if to_buyer else [])
+    vb = math.ceil(VB_OVERHEAD + VB_LEAF_FAIR_RESCUE + sum(output_vbytes(s) for s in outs_spk))
+    fee = math.ceil(vb * fee_rate)
+    if to_buyer:
+        buyer_part = fee // 2
+        seller_part = fee - buyer_part
+    else:
+        buyer_part, seller_part = 0, fee
+    outs = [TxOut(to_seller - seller_part, seller_spk)]
+    if to_buyer and to_buyer - buyer_part >= DUST_P2TR:
+        outs.append(TxOut(to_buyer - buyer_part, buyer_spk))
+    if outs[0].value < DUST_P2TR:
+        raise ValueError("the rescue fee leaves the seller below dust")
+    return Transaction([TxIn(escrow_txid, escrow_vout, contract.seller_rescue_csv)], outs)

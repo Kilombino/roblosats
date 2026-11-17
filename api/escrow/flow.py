@@ -332,6 +332,9 @@ def advance(order):
                     data["plan"] = {**data["plan"], "buyer_fee": buyer_fee, "buyer_fee_at_release": buyer_fee}
                     escrow.funding_signatures = data
                     escrow.save(update_fields=["funding_signatures"])
+                escrow.refresh_from_db()
+                if service.rescue_plan(escrow) >= 2:
+                    service.build_rescue(escrow, *_returns(escrow))
                 order.log(
                     "Onchain deposit **built** (trade amount + "
                     + ("the onchain bond" if any(role_is_ln(order, r) for r in service.ROLES) else "both bonds")
@@ -597,6 +600,8 @@ def action(order, user, name, data):
         service.submit_keys(order, user, data["escrow_pubkey"], data["funding_pubkey"])
     elif name == "escrow_address":
         set_payout_address(order, user, data["address"])
+    elif name == "escrow_rescue_signature":
+        service.submit_rescue_signature(escrow, role, data["signature"])
     elif name == "escrow_funding_signatures":
         service.submit_funding_signatures(escrow, role, data["signatures"], data.get("bond_signature"))
     elif name == "escrow_nonce":
@@ -700,6 +705,27 @@ def order_data(order, user):
         data["escrow_deposit_my_inputs"] = plan[f"{role}_inputs"]
         data["escrow_deposit_my_bond_input"] = plan.get("bond_inputs", {}).get(role)
         data["escrow_deposit_signed"] = bool(escrow.funding_signatures.get(f"{role}_sigs"))
+    # Rescue plan 2 (rl31-beta16): the rescue both traders pre-sign before the deposit. The
+    # client stores the complete rescue on the device and only then signs the deposit.
+    data["escrow_rescue_plan"] = service.rescue_plan(escrow)
+    rescue = escrow.funding_signatures.get("rescue")
+    if rescue:
+        data["escrow_rescue_tx"] = rescue["tx"]
+        data["escrow_rescue_to_seller"] = rescue["to_seller"]
+        data["escrow_rescue_to_buyer"] = rescue["to_buyer"]
+        data["escrow_rescue_sigs"] = {
+            r: escrow.funding_signatures.get(f"{r}_rescue_sig", "") for r in service.ROLES
+        }
+        data["escrow_rescue_my_sig"] = bool(escrow.funding_signatures.get(f"{role}_rescue_sig"))
+        if escrow.funding_tx:
+            data["escrow_deposit_txid"] = service.Transaction.parse(bytes.fromhex(escrow.funding_tx)).txid()
+            if "escrow_deposit_tx" not in data:
+                # later on (or on another device) the client can still check and keep the rescue
+                plan = escrow.funding_signatures.get("plan", {})
+                data["escrow_deposit_tx"] = escrow.funding_tx
+                data["escrow_deposit_spent"] = plan.get("spent", [])
+                data["escrow_deposit_my_inputs"] = plan.get(f"{role}_inputs", [])
+                data["escrow_deposit_my_bond_input"] = plan.get("bond_inputs", {}).get(role)
     if escrow.funding_txid:
         data["escrow_funding_txid"] = escrow.funding_txid
     if escrow.status == escrow.Status.RELEASING:
@@ -833,6 +859,11 @@ def waiting_for(order, escrow, role):
         plan = data.get("plan", {})
         signed = lambda r: (data.get(f"{r}_sigs") or not plan.get(f"{r}_inputs")) and (
             plan.get("bond_inputs", {}).get(r) is None or data.get(f"{r}_bond_sig"))
+        if service.rescue_plan(escrow) >= 2:
+            if not data.get(f"{role}_rescue_sig"):
+                return "you", "rescue_signature"
+            if not data.get(f"{peer}_rescue_sig"):
+                return "peer", "rescue_signature"
         if not signed(role):
             return "you", "deposit_signature"
         if not signed(peer):
@@ -909,6 +940,10 @@ def funding_fault(order):
     if not escrow.buyer_pubkey or not escrow.funding_signatures.get("buyer_payout_spk"):
         return "buyer"
     if escrow.status == S.FUNDING:
+        if service.rescue_plan(escrow) >= 2:
+            for r in service.ROLES:  # the rescue is signed before the deposit
+                if not escrow.funding_signatures.get(f"{r}_rescue_sig"):
+                    return r
         if not escrow.funding_signatures.get("seller_sigs"):
             return "seller"
         return "buyer"

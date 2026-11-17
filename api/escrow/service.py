@@ -24,6 +24,7 @@ from api.escrow.transactions import (
     VB_KEYPATH,
     VB_LEAF_2SIG,
     Utxo,
+    rescue_tx,
     funding_descriptor,
     funding_script_pubkey,
     plan_deposit,
@@ -99,7 +100,17 @@ def contract_for(escrow):
         bytes.fromhex(escrow.coordinator_pubkey),
         escrow.rescue_csv,
         hrp=network_hrp(),
+        rescue_plan=rescue_plan(escrow),
     )
+
+
+RESCUE_PLAN = 2
+
+
+def rescue_plan(escrow):
+    """1: the seller alone takes the whole escrow after the timelock (escrows up to
+    rl31-beta15); 2: both pre-sign a rescue that gives each one its own (rl31-beta16)."""
+    return int((escrow.funding_signatures or {}).get("rescue_plan") or 1)
 
 
 def _pub(hex33):
@@ -119,9 +130,9 @@ def create_escrow(order):
         order=order,
         defaults={
             "coordinator_pubkey": pubkey(coordinator_key(order.id)).hex(),
-            "rescue_csv": config("ESCROW_RESCUE_CSV", cast=int, default=4480),
-            # fixed for the life of the escrow (api/escrow/flow.py FEE_PLAN)
-            "funding_signatures": {"fee_plan": 2},
+            "rescue_csv": config("ESCROW_RESCUE_CSV", cast=int, default=2016),
+            # fixed for the life of the escrow (api/escrow/flow.py FEE_PLAN, RESCUE_PLAN)
+            "funding_signatures": {"fee_plan": 2, "rescue_plan": RESCUE_PLAN},
         },
     )
     return escrow
@@ -256,6 +267,12 @@ def submit_funding_signatures(escrow, role, sigs_hex, bond_sig_hex=None):
         escrow = OnchainEscrow.objects.select_for_update().get(pk=escrow.pk)
         if escrow.status != OnchainEscrow.Status.FUNDING:
             raise EscrowError("the deposit is not waiting for signatures")
+        if rescue_plan(escrow) >= 2 and not all(
+            escrow.funding_signatures.get(f"{r}_rescue_sig") for r in ROLES
+        ):
+            # Nobody signs the deposit before holding the other's rescue signature: a deposit
+            # without the complete rescue would leave its funds to the coordinator's goodwill.
+            raise EscrowError("both rescue signatures are needed before the deposit signatures")
         tx, spent, plan = stored_deposit(escrow)
         idx = plan[f"{role}_inputs"]
         if len(sigs_hex) != len(idx):
@@ -304,6 +321,75 @@ def submit_funding_signatures(escrow, role, sigs_hex, bond_sig_hex=None):
         OnchainBond.objects.filter(pk__in=list(plan.get("bond_ids", {}).values())).update(
             status=OnchainBond.Status.IN_DEPOSIT, spend_txid=escrow.funding_txid
         )
+    return escrow
+
+
+def rescue_fee_rate():
+    """Fee rate of the pre-signed rescue, fixed weeks before it can be broadcast: today's rate,
+    never below ESCROW_RESCUE_MIN_FEE_RATE (default 2) nor above ESCROW_RESCUE_MAX_FEE_RATE
+    (default 20, so the fee stays under the client's MAX_RESCUE_FEE_SATS). Each side can CPFP
+    its own output if it is not enough then."""
+    low = config("ESCROW_RESCUE_MIN_FEE_RATE", cast=float, default=2.0)
+    high = config("ESCROW_RESCUE_MAX_FEE_RATE", cast=float, default=20.0)
+    return min(high, max(low, fee_rate(2)))
+
+
+def build_rescue(escrow, to_seller, to_buyer):
+    """Rescue plan 2: fix the rescue transaction right after the deposit is planned (its txid
+    is known before any signature). Both traders sign it (leaf 2) before the deposit."""
+    tx = Transaction.parse(bytes.fromhex(escrow.funding_tx))
+    c = contract_for(escrow)
+    data = dict(escrow.funding_signatures)
+    rtx = rescue_tx(
+        c, tx.txid(), 0, escrow.escrow_sats, to_seller, bytes.fromhex(data["seller_payout_spk"]),
+        to_buyer, bytes.fromhex(data["buyer_payout_spk"]), rescue_fee_rate(),
+    )
+    data["rescue"] = {"tx": rtx.serialize().hex(), "to_seller": to_seller, "to_buyer": to_buyer}
+    for r in ROLES:
+        data.pop(f"{r}_rescue_sig", None)
+    escrow.funding_signatures = data
+    escrow.save(update_fields=["funding_signatures", "updated_at"])
+    return rtx
+
+
+def rescue_message(escrow):
+    c = contract_for(escrow)
+    tx = Transaction.parse(bytes.fromhex(escrow.funding_signatures["rescue"]["tx"]))
+    msg = tx.sighash_unified(0, [TxOut(escrow.escrow_sats, c.script_pubkey)], SIGHASH_ALL_UNIFIED,
+                             c.leaf_hash(c.RESCUE))
+    return c, tx, msg
+
+
+def signed_rescue(escrow):
+    """The complete rescue (both signatures in the witness), or None."""
+    data = escrow.funding_signatures or {}
+    if not data.get("rescue") or not all(data.get(f"{r}_rescue_sig") for r in ROLES):
+        return None
+    c, tx, _ = rescue_message(escrow)
+    sigs = [bytes.fromhex(data[f"{r}_rescue_sig"])[:64] for r in ("buyer", "seller")]
+    tx.inputs[0].witness = leaf_witness(c, c.RESCUE, sigs)
+    return tx
+
+
+def submit_rescue_signature(escrow, role, sig_hex):
+    """A trader's signature (0x21, leaf 2) on the pre-signed rescue."""
+    from api.models import OnchainEscrow
+
+    with transaction.atomic():
+        escrow = OnchainEscrow.objects.select_for_update().get(pk=escrow.pk)
+        if rescue_plan(escrow) < 2 or escrow.status != OnchainEscrow.Status.FUNDING:
+            raise EscrowError("the rescue is not waiting for signatures")
+        if not escrow.funding_signatures.get("rescue"):
+            raise EscrowError("the rescue is not ready yet")
+        _, _, msg = rescue_message(escrow)
+        sig = bytes.fromhex(sig_hex)
+        pk = xonly(bytes.fromhex(getattr(escrow, f"{role}_pubkey")))
+        if len(sig) != 65 or sig[64] != SIGHASH_ALL_UNIFIED or not schnorr_verify(msg, pk, sig[:64]):
+            raise EscrowError("the rescue signature does not verify")
+        data = dict(escrow.funding_signatures)
+        data[f"{role}_rescue_sig"] = sig_hex
+        escrow.funding_signatures = data
+        escrow.save(update_fields=["funding_signatures", "updated_at"])
     return escrow
 
 

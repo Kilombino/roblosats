@@ -692,6 +692,7 @@ class UpdateOrderSerializer(serializers.Serializer):
             "escrow_keys",
             "escrow_address",
             "escrow_funding_signatures",
+            "escrow_rescue_signature",
             "escrow_nonce",
             "escrow_partial",
             "escrow_leaf_signature",
@@ -707,7 +708,7 @@ class UpdateOrderSerializer(serializers.Serializer):
     escrow = serializers.JSONField(
         required=False,
         default=None,
-        help_text="Onchain escrow action data: escrow_keys {escrow_pubkey, funding_pubkey}, escrow_funding_signatures {signatures}, escrow_nonce {nonce}, escrow_partial {partial}, escrow_leaf_signature {signature}; bond_key {bond_pubkey}, bond_penalty_signature {signature}, bond_return {address}, bond_return_signature {signature}. escrow_address uses `address` (PGP signed).",
+        help_text="Onchain escrow action data: escrow_keys {escrow_pubkey, funding_pubkey}, escrow_funding_signatures {signatures}, escrow_rescue_signature {signature}, escrow_nonce {nonce}, escrow_partial {partial}, escrow_leaf_signature {signature}; bond_key {bond_pubkey}, bond_penalty_signature {signature}, bond_return {address}, bond_return_signature {signature}. escrow_address uses `address` (PGP signed).",
     )
     rating = serializers.ChoiceField(
         choices=("1", "2", "3", "4", "5"),
