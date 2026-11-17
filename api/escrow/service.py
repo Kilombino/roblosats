@@ -411,7 +411,9 @@ def submit_release_partial(escrow, role, psig_hex):
         escrow.save()
     if done:
         rpc("sendrawtransaction", [escrow.release_tx])
-        escrow.status = OnchainEscrow.Status.RELEASED
+        # A collaborative cancel gives the escrow back to the seller: say so (rl31-beta12).
+        cancel = bool(escrow.funding_signatures.get("cancel"))
+        escrow.status = OnchainEscrow.Status.REFUNDED if cancel else OnchainEscrow.Status.RELEASED
         escrow.save(update_fields=["status", "updated_at"])
     return escrow
 

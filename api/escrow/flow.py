@@ -1,5 +1,7 @@
 import logging
 import math
+
+from django.db import transaction
 from datetime import timedelta
 
 from decouple import config
@@ -71,13 +73,32 @@ def recommended_funding(order, escrow, role, from_bond=False):
     out of its bond instead (no funding input nor change of its own, only its bond input)."""
     seller_fee, buyer_fee = fees(order)
     owed = order.last_satoshis + seller_fee if role == "seller" else buyer_fee
+    # Frozen the first time it is shown (rl31-beta12): recomputed from the live fee rate it
+    # drifted after the trader paid and the client refused the deposit by 1 sat (order #21).
+    key = f"recommended_{role}{'_bond' if from_bond else ''}"
+    frozen = (escrow.funding_signatures or {}).get(key) if escrow is not None else None
+    if frozen:
+        return owed, int(frozen)
     rate = max(service.fee_rate(2) * 2, 2.0)
     shared = VB_OVERHEAD + 3 * output_vbytes(b"\x00" * 34)
     if from_bond:
         vb = VB_BOND_COOP + shared / 2
     else:
         vb = VB_TAPROOT_KEY_INPUT + output_vbytes(b"\x00" * 34) + shared / 2
-    return owed, owed + math.ceil(vb * rate)
+    recommended = owed + math.ceil(vb * rate)
+    if escrow is not None and getattr(escrow, "pk", None):
+        from api.models import OnchainEscrow
+
+        with transaction.atomic():
+            row = OnchainEscrow.objects.select_for_update().get(pk=escrow.pk)
+            data = dict(row.funding_signatures or {})
+            if key in data:
+                return owed, int(data[key])
+            data[key] = recommended
+            row.funding_signatures = data
+            row.save(update_fields=["funding_signatures"])
+            escrow.funding_signatures = data
+    return owed, recommended
 
 
 def buyer_fee_from_bond(order, escrow=None):
@@ -237,7 +258,7 @@ def advance(order):
     if escrow.status == S.RELEASED and order.status == Order.Status.PAY:
         order.log(f"Onchain escrow **released** to the buyer in {escrow.release_txid}")
         Logics.complete_order(order)
-    if escrow.status == S.RELEASED and order.status == Order.Status.CHA and escrow.funding_signatures.get("cancel"):
+    if escrow.status in (S.RELEASED, S.REFUNDED) and order.status == Order.Status.CHA and escrow.funding_signatures.get("cancel"):
         order.log(f"Onchain escrow **returned** after the collaborative cancellation in {escrow.release_txid}")
         order.update_status(Order.Status.CCA)
 
@@ -525,6 +546,12 @@ def order_data(order, user):
         # A cooperative release that returns the escrow (collaborative cancel): the client
         # checks it against what a return owes it, not against a trade release.
         data["escrow_release_cancel"] = bool(escrow.funding_signatures.get("cancel"))
+        # What each side is owed, so a client checks the release to the sat (rl31-beta12): the
+        # trade amount, what each bond left in the escrow and the coordinator fee taken at release.
+        bonds_in, trade_in = _bond_values(escrow)
+        data["escrow_trade_sats"] = trade_in
+        data["escrow_bond_in_escrow"] = bonds_in
+        data["escrow_release_coordinator_sats"] = int(escrow.funding_signatures.get("release_coordinator_sats") or 0)
         data["escrow_release_fee_rate"] = escrow.release_fee_rate
         data["escrow_release_my_nonce"] = escrow.release_nonces.get(role, "")
         data["escrow_release_aggnonce"] = service.aggregate_nonce(escrow) or ""
@@ -676,7 +703,7 @@ def trade_summary(order, user):
     received = sum(o.value for o in tx.outputs if o.script_pubkey.hex() == my_spk)
     release_mining = escrow.escrow_sats - sum(o.value for o in tx.outputs)
     # payouts[0] paid the release's mining fee: the buyer when released, the seller when returned
-    payer = "buyer" if escrow.status == escrow.Status.RELEASED and not escrow.funding_signatures.get("cancel") else "seller"
+    payer = "buyer" if escrow.status == escrow.Status.RELEASED and not escrow.funding_signatures.get("cancel") else "seller"  # REFUNDED/cancel: the seller paid
     from api.models import OnchainBond
 
     bond_ids = plan.get("bond_ids", {})

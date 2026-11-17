@@ -26,12 +26,37 @@ class Command(BaseCommand):
     help = "Follows all active hold invoices, sends out payments"
     rest = 5  # seconds between consecutive checks for invoice updates
 
+    def announce_onchain_orders(self, was_restricted):
+        from api.escrow import flow
+        from api.escrow import service as escrow_service
+        from api.tasks import nostr_send_order_event
+
+        if not escrow_service.enabled():
+            return was_restricted
+        now = flow.restricted()
+        if not now and was_restricted is not False:
+            for order in Order.objects.filter(
+                escrow_type=Order.EscrowTypes.ONCHAIN, status=Order.Status.PUB
+            ):
+                nostr_send_order_event.delay(order_id=order.id)
+                self.stdout.write(f"Onchain order {order.id} announced on Nostr")
+        return now
+
     def handle(self, *args, **options):
         """Infinite loop to check invoices and retry payments.
         ever mind database locked error, keep going, print out"""
 
+        onchain_was_restricted = None
         while True:
             time.sleep(self.rest)
+
+            # Roblosats (rl31-beta12): public onchain orders made while onchain escrow was open
+            # to some robots only were never announced on Nostr; announce them at start-up and
+            # whenever it opens to everybody.
+            try:
+                onchain_was_restricted = self.announce_onchain_orders(onchain_was_restricted)
+            except Exception as e:
+                self.stderr.write(str(e))
 
             try:
                 self.follow_hold_invoices()

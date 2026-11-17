@@ -311,7 +311,7 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
         flow.advance(order)
         order.refresh_from_db()
         self.assertEqual(order.status, Order.Status.CCA)
-        self.assertEqual(escrow.status, OnchainEscrow.Status.RELEASED)
+        self.assertEqual(escrow.status, OnchainEscrow.Status.REFUNDED)
 
     def test_dispute_for_the_buyer_from_the_admin(self):
         from unittest.mock import MagicMock, patch
