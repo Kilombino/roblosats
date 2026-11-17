@@ -82,6 +82,7 @@ def plan_deposit(
     seller_bond: "BondInput | None" = None,
     buyer_bond: "BondInput | None" = None,
     buyer_fee_from_bond: bool = False,
+    fees_in_escrow: bool = False,
 ) -> DepositPlan:
     """Joint deposit: escrow output, coordinator fee, dev fee and each side's change.
 
@@ -91,6 +92,9 @@ def plan_deposit(
 
     buyer_fee_from_bond: the buyer sends nothing; its fee and its share of the mining fee come
     out of its bond (already an input), which leaves the rest in the escrow output.
+
+    fees_in_escrow (fee plan 2, rl31-beta15): no coordinator nor dev output; both fees are added
+    to the escrow output and the release of a completed trade pays them (a cancel returns them).
     """
     if not seller_utxos:
         raise DepositError("the seller has not funded yet")
@@ -102,14 +106,15 @@ def plan_deposit(
         raise DepositError("the buyer has not funded yet")
     if escrow_sats < DUST_P2TR or seller_fee_sats < 0 or buyer_fee_sats < 0:
         raise DepositError("bad amounts")
-    if dev_sats < DUST_P2TR or dev_spk is None:
+    if dev_sats < DUST_P2TR or dev_spk is None or fees_in_escrow:
         dev_sats = 0
-    coordinator_sats = seller_fee_sats + buyer_fee_sats - dev_sats
+    held = seller_fee_sats + buyer_fee_sats if fees_in_escrow else 0
+    coordinator_sats = 0 if fees_in_escrow else seller_fee_sats + buyer_fee_sats - dev_sats
     if coordinator_sats < 0:
         raise DepositError("the dev share is larger than the fees")
 
     bond_in_escrow = {r: b.utxo.value for r, b in (("seller", seller_bond), ("buyer", buyer_bond)) if b}
-    outputs = [TxOut(escrow_sats + sum(bond_in_escrow.values()), contract.script_pubkey)]
+    outputs = [TxOut(escrow_sats + held + sum(bond_in_escrow.values()), contract.script_pubkey)]
     if coordinator_sats >= DUST_P2TR:
         outputs.append(TxOut(coordinator_sats, coordinator_spk))
     if dev_sats:
@@ -146,7 +151,7 @@ def plan_deposit(
         if buyer_bond.utxo.value - cost < DUST_P2TR:
             raise DepositError(f"the buyer's bond is too small for its fee ({cost} sats)")
         bond_in_escrow["buyer"] = buyer_bond.utxo.value - cost
-        outputs[0] = TxOut(escrow_sats + sum(bond_in_escrow.values()), contract.script_pubkey)
+        outputs[0] = TxOut(escrow_sats + held + sum(bond_in_escrow.values()), contract.script_pubkey)
     elif buyer_utxos:
         buyer_change, buyer_mining = change_for(
             buyer_in, buyer_fee_sats, len(buyer_utxos), buyer_change_spk, buyer_bond

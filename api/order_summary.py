@@ -176,6 +176,7 @@ def _base(order, user, role, former_taker):
         "fee_from_bond": False,
         "fee_at_release": False,
         "coordinator_fee_sats": 0,
+        "fee_refunded_sats": 0,
         "dev_fee_sats": 0,
         "mining_fee_sats": 0,
         "routing_fee_sats": 0,
@@ -305,15 +306,25 @@ def _apply_onchain_trade(s, order, user, role_in_order):
         return sum(int(spent[i][0]) for i in plan.get(f"{role}_inputs", []) if i < len(spent))
 
     at_release = erole == "buyer" and bool(plan.get("buyer_fee_at_release"))
-    fee = seller_fee if erole == "seller" else buyer_fee
-    if at_release:
-        fee = int(escrow.funding_signatures.get("release_coordinator_sats") or 0)
+    plan2 = flow.fee_plan(escrow) >= 2
+    charged = flow.charged_fees(escrow, order)
+    fee = charged[erole]
+    if at_release and (fee or not plan2):
         s["fee_at_release"] = True
-    s["fee_from_bond"] = erole == "buyer" and bool(plan.get("buyer_fee_from_bond"))
+    s["fee_from_bond"] = erole == "buyer" and bool(plan.get("buyer_fee_from_bond")) and (fee > 0 or not plan2)
     s["coordinator_fee_sats"] = int(fee)
-    in_deposit = seller_fee + (0 if plan.get("buyer_fee_at_release") else buyer_fee)
-    if escrow.dev_fee_sats and in_deposit and not at_release:
-        s["dev_fee_sats"] = int(round(escrow.dev_fee_sats * fee / in_deposit))
+    if plan2:
+        # fee plan 2 (rl31-beta15): the fees rode in the escrow; a cancel gave them back
+        total = charged["seller"] + charged["buyer"]
+        dev = flow.dev_paid(escrow)
+        if dev and total and fee:
+            s["dev_fee_sats"] = int(round(dev * fee / total))
+        if escrow.funding_signatures.get("cancel"):
+            s["fee_refunded_sats"] = flow.fees_held(escrow)[erole]
+    else:
+        in_deposit = seller_fee + (0 if plan.get("buyer_fee_at_release") else buyer_fee)
+        if escrow.dev_fee_sats and in_deposit and not at_release:
+            s["dev_fee_sats"] = int(round(escrow.dev_fee_sats * fee / in_deposit))
     if f"{erole}_mining" in plan:
         s["mining_fee_sats"] += int(plan.get(f"{erole}_mining") or 0)
     elif erole == "seller":
@@ -365,7 +376,8 @@ def _apply_onchain_trade(s, order, user, role_in_order):
         if lost_in_release == 0 and s["bond_kind"] == "onchain":
             s["bond_returned_sats"] += min(my_bond_in, received)
             if received - my_bond_in > 0:
-                s["returned_sats"] = int(received - my_bond_in)
+                # the seller's refunded fee (plan 2) has a line of its own
+                s["returned_sats"] = int(received - my_bond_in - s.get("fee_refunded_sats", 0))
         if kind == K.COOPERATIVE and not cancel:
             s["returned_sats"] = 0
     if lost_in_release and s["bond_kind"] == "onchain":

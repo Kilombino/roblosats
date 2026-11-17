@@ -69,21 +69,82 @@ def min_coordinator_fee():
     return max(0, config("ESCROW_MIN_COORDINATOR_FEE_SATS", cast=int, default=1000))
 
 
-def fees(order):
-    """(seller_fee, buyer_fee) for the onchain escrow, raised so that every coordinator fee
-    output reaches the minimum (charged on the same sides, in the same proportion)."""
+# Fee plans of an onchain escrow, fixed when the escrow is created (the order's contract):
+# 1 (up to rl31-beta14): the coordinator fee is an output of the deposit, kept on a cancel;
+#   hybrid A pays a second fee output in the release, each output at least the minimum.
+# 2 (rl31-beta15, Kilombino 17 nov 2026: a collaborative cancel refunds the fee, as with
+#   Lightning): the fees stay inside the escrow output and the coordinator (and the optional
+#   dev share) is paid only by the release of a completed trade, in ONE output of at least the
+#   minimum for the whole order (hybrid A included). A cancel or a "return everything" dispute
+#   gives each trader its fee back; a dispute with a winner pays the coordinator as before.
+FEE_PLAN = 2
+
+
+def fee_plan(escrow):
+    if escrow is None:
+        return FEE_PLAN
+    return int((escrow.funding_signatures or {}).get("fee_plan") or 1)
+
+
+def _order_fee_plan(order):
+    if not getattr(order, "pk", None):
+        return FEE_PLAN
+    return fee_plan(escrow_of(order))
+
+
+def fees(order, version=None):
+    """(seller_fee, buyer_fee) for the onchain escrow, raised so that the coordinator gets at
+    least the minimum (charged on the same sides, in the same proportion). Once the deposit is
+    planned, the plan's amounts."""
+    escrow = escrow_of(order) if getattr(order, "pk", None) else None
+    plan = (escrow.funding_signatures or {}).get("plan") if escrow is not None else None
+    if plan and "seller_fee" in plan and "buyer_fee" in plan:
+        return int(plan["seller_fee"]), int(plan["buyer_fee"])
+    version = version or (fee_plan(escrow) if escrow is not None else FEE_PLAN)
     seller_fee, buyer_fee = service.fee_split(order)
     floor = min_coordinator_fee()
-    if floor <= 0 or seller_fee + buyer_fee <= 0:
+    if seller_fee + buyer_fee <= 0:
         return seller_fee, buyer_fee
-    if buyer_fee_at_release(order):
-        # Two outputs: the seller's fee in the deposit, the buyer's in the release.
+    if version < 2 and floor > 0 and buyer_fee_at_release(order):
+        # Plan 1, hybrid A: two outputs, the seller's fee in the deposit, the buyer's in the release.
         return (max(seller_fee, floor) if seller_fee else 0, max(buyer_fee, floor) if buyer_fee else 0)
     total = seller_fee + buyer_fee
-    if total >= floor:
-        return seller_fee, buyer_fee
-    raised_seller = math.ceil(seller_fee * floor / total)
-    return raised_seller, max(0, floor - raised_seller)
+    if floor > 0 and total < floor:
+        raised_seller = math.ceil(seller_fee * floor / total)
+        seller_fee, buyer_fee = raised_seller, max(0, floor - raised_seller)
+    if version >= 2 and seller_fee + buyer_fee < DUST_P2TR:
+        return 0, 0  # (only with the minimum off) one output below dust cannot exist: not charged
+    return seller_fee, buyer_fee
+
+
+def fees_held(escrow):
+    """Plan 2: the fees each trader left inside the escrow output (given back on a cancel)."""
+    held = ((escrow.funding_signatures or {}).get("plan") or {}).get("fees_in_escrow") or {}
+    return {"seller": int(held.get("seller") or 0), "buyer": int(held.get("buyer") or 0)}
+
+
+def charged_fees(escrow, order=None):
+    """{'seller': sats, 'buyer': sats}: the coordinator fee each trader really paid."""
+    plan = (escrow.funding_signatures or {}).get("plan") or {}
+    data = escrow.funding_signatures or {}
+    if "seller_fee" in plan:
+        seller_fee, buyer_fee = int(plan.get("seller_fee") or 0), int(plan.get("buyer_fee") or 0)
+    else:  # plans before rl31-beta9 kept no fees: what the split asked for then
+        seller_fee, buyer_fee = service.fee_split(order or escrow.order)
+    if fee_plan(escrow) < 2:
+        if plan.get("buyer_fee_at_release"):
+            buyer_fee = int(data.get("release_coordinator_sats") or 0)
+        return {"seller": seller_fee, "buyer": buyer_fee}
+    if not escrow.release_txid or data.get("cancel") or escrow.release_kind == escrow.ReleaseKind.RESCUE:
+        return {"seller": 0, "buyer": 0}
+    return {"seller": seller_fee, "buyer": buyer_fee}
+
+
+def dev_paid(escrow):
+    """Dev share actually paid: in the deposit (plan 1) or in the release (plan 2)."""
+    if fee_plan(escrow) < 2:
+        return int(escrow.dev_fee_sats or 0)
+    return int((escrow.funding_signatures or {}).get("release_dev_sats") or 0)
 
 
 def recommended_funding(order, escrow, role, from_bond=False):
@@ -255,11 +316,15 @@ def advance(order):
             buyer_owed, _ = recommended_funding(order, escrow, "buyer")
             buyer_ready = sum(u.value for u in service.funding_utxos(escrow, "buyer")) >= buyer_owed
         if bonds_ready and have_s >= seller_owed and buyer_ready:
-            dev_sats, dev_spk = dev_fee(order, seller_fee + (0 if at_release else buyer_fee))
+            in_escrow = fee_plan(escrow) >= 2
+            if in_escrow:  # plan 2: no fee output in the deposit, the release pays them
+                dev_sats, dev_spk = 0, None
+            else:
+                dev_sats, dev_spk = dev_fee(order, seller_fee + (0 if at_release else buyer_fee))
             try:
                 service.build_deposit(
                     escrow, order.last_satoshis, seller_fee, 0 if at_release else buyer_fee, coordinator_fee_spk(),
-                    dev_sats, dev_spk, tb, buyer_fee_from_bond=from_bond,
+                    dev_sats, dev_spk, tb, buyer_fee_from_bond=from_bond, fees_in_escrow=in_escrow,
                 )
                 if at_release:
                     escrow.refresh_from_db()
@@ -272,6 +337,7 @@ def advance(order):
                     + ("the onchain bond" if any(role_is_ln(order, r) for r in service.ROLES) else "both bonds")
                     + (", the buyer's fee out of its bond" if from_bond else "")
                     + (", the buyer's fee out of its payout (Lightning bond)" if at_release else "")
+                    + (", the fees kept in the escrow until the trade completes" if in_escrow else "")
                     + "), waiting for the traders' signatures"
                 )
             except Exception as e:
@@ -312,9 +378,35 @@ def _spk(escrow, role):
     return bytes.fromhex(hex_)
 
 
+def _fee_outputs(order, escrow, coordinator_sats):
+    """Plan 2: the coordinator's output of a release and the dev share out of it."""
+    from api.escrow.taproot import TxOut
+
+    if coordinator_sats <= 0:
+        return [], 0, 0
+    dev_sats, dev_spk = dev_fee(order, coordinator_sats)
+    outs = [TxOut(coordinator_sats - dev_sats, coordinator_fee_spk())]
+    if dev_sats:
+        outs.append(TxOut(dev_sats, dev_spk))
+    return outs, coordinator_sats - dev_sats, dev_sats
+
+
+def _paid_to_coordinator(tx):
+    """Sats a release transaction really pays to the coordinator's fee address."""
+    spk = coordinator_fee_spk()
+    return sum(o.value for o in tx.outputs if o.script_pubkey == spk)
+
+
+def _record_release(escrow, **values):
+    data = dict(escrow.funding_signatures)
+    data.update(values)
+    escrow.funding_signatures = data
+    escrow.save(update_fields=["funding_signatures"])
+
+
 def seller_confirms(order):
     """Seller confirmed the fiat: fix the cooperative release (buyer: amount + its bond;
-    seller: its bond)."""
+    seller: its bond; plan 2: the coordinator its fees, out of the escrow)."""
     from api.escrow.taproot import TxOut
     from api.models import OnchainEscrow, Order
 
@@ -323,54 +415,70 @@ def seller_confirms(order):
         raise EscrowError("the onchain escrow is not locked")
     bonds, trade = _bond_values(escrow)
     fee_later = int(escrow.funding_signatures.get("plan", {}).get("buyer_fee_at_release") or 0)
-    if fee_later < DUST_P2TR:  # too small to be an output of its own: not charged
-        fee_later = 0
-    payouts = [TxOut(trade + bonds["buyer"] - fee_later, _spk(escrow, "buyer"))]
-    if bonds["seller"]:
-        payouts.append(TxOut(bonds["seller"], _spk(escrow, "seller")))
-    if fee_later:
-        payouts.append(TxOut(fee_later, coordinator_fee_spk()))
-    service.start_release(escrow, payouts, OnchainEscrow.ReleaseKind.COOPERATIVE, 0)
-    if fee_later:
-        data = dict(escrow.funding_signatures)
-        data["release_coordinator_sats"] = fee_later
-        escrow.funding_signatures = data
-        escrow.save(update_fields=["funding_signatures"])
+    if fee_plan(escrow) >= 2:
+        held = fees_held(escrow)
+        fee_outs, coord_sats, dev_sats = _fee_outputs(order, escrow, held["seller"] + held["buyer"] + fee_later)
+        payouts = [TxOut(trade + bonds["buyer"] - fee_later, _spk(escrow, "buyer"))]
+        if bonds["seller"]:
+            payouts.append(TxOut(bonds["seller"], _spk(escrow, "seller")))
+        payouts += fee_outs
+        tx = service.start_release(escrow, payouts, OnchainEscrow.ReleaseKind.COOPERATIVE, 0)
+        _record_release(escrow, release_coordinator_sats=fee_later, release_fee_sats=_paid_to_coordinator(tx),
+                        release_dev_sats=dev_sats)
+    else:
+        if fee_later < DUST_P2TR:  # too small to be an output of its own: not charged
+            fee_later = 0
+        payouts = [TxOut(trade + bonds["buyer"] - fee_later, _spk(escrow, "buyer"))]
+        if bonds["seller"]:
+            payouts.append(TxOut(bonds["seller"], _spk(escrow, "seller")))
+        if fee_later:
+            payouts.append(TxOut(fee_later, coordinator_fee_spk()))
+        service.start_release(escrow, payouts, OnchainEscrow.ReleaseKind.COOPERATIVE, 0)
+        if fee_later:
+            _record_release(escrow, release_coordinator_sats=fee_later)
     order.update_status(Order.Status.PAY)
     order.contract_finalization_time = timezone.now()
     order.save(update_fields=["contract_finalization_time"])
     order.log("Seller confirmed the fiat: **cooperative onchain release** started")
 
 
+def _returns(escrow):
+    """What a cancel gives back: the seller the trade amount, its bond and (plan 2) its fee; the
+    buyer its bond and (plan 2) its fee."""
+    bonds, trade = _bond_values(escrow)
+    held = fees_held(escrow)
+    return trade + bonds["seller"] + held["seller"], bonds["buyer"] + held["buyer"]
+
+
 def collaborative_cancel(order):
-    """Both asked to cancel after the escrow: seller gets amount + its bond, buyer its bond."""
+    """Both asked to cancel after the escrow: seller gets amount + its bond, buyer its bond
+    (plan 2: each one its coordinator fee too, nothing is charged)."""
     from api.escrow.taproot import TxOut
     from api.models import OnchainEscrow
 
     escrow = escrow_of(order)
     if escrow is None or escrow.status != OnchainEscrow.Status.LOCKED:
         raise EscrowError("the onchain escrow is not locked")
-    bonds, trade = _bond_values(escrow)
-    payouts = [TxOut(trade + bonds["seller"], _spk(escrow, "seller"))]
-    if bonds["buyer"]:
-        payouts.append(TxOut(bonds["buyer"], _spk(escrow, "buyer")))
+    to_seller, to_buyer = _returns(escrow)
+    payouts = [TxOut(to_seller, _spk(escrow, "seller"))]
+    if to_buyer:
+        payouts.append(TxOut(to_buyer, _spk(escrow, "buyer")))
     service.start_release(escrow, payouts, OnchainEscrow.ReleaseKind.COOPERATIVE, 0)
     if order.taker_lightning:
         from api.logics import Logics
 
         Logics.return_bond(order.taker_bond)
         order.log("Lightning taker bond **unlocked** (collaborative cancellation)")
-    data = dict(escrow.funding_signatures)
-    data["cancel"] = True
-    escrow.funding_signatures = data
-    escrow.save(update_fields=["funding_signatures"])
-    order.log("Collaborative cancellation: **onchain return to the seller** started")
+    _record_release(escrow, cancel=True, release_coordinator_sats=0, release_fee_sats=0, release_dev_sats=0)
+    order.log("Collaborative cancellation: **onchain return to the seller** started"
+              + (" (coordinator fees refunded)" if fee_plan(escrow) >= 2 else ""))
 
 
 def return_everything(order):
     """Dispute solved with no winner: the seller gets the trade amount and its bond back, the
-    buyer its bond (what is left of it in the escrow), through the seller's leaf with the
-    coordinator, so it works even if the buyer is gone. A Lightning taker bond is unlocked."""
+    buyer its bond (what is left of it in the escrow), plan 2: each its fee too, as a
+    collaborative cancel; through the seller's leaf with the coordinator, so it works even if
+    the buyer is gone. A Lightning taker bond is unlocked."""
     from api.escrow.taproot import TxOut
     from api.models import OnchainEscrow
 
@@ -378,17 +486,14 @@ def return_everything(order):
     if escrow.status == OnchainEscrow.Status.RELEASING:
         escrow.status = OnchainEscrow.Status.LOCKED
         escrow.save(update_fields=["status"])
-    bonds, trade = _bond_values(escrow)
-    payouts = [TxOut(trade + bonds["seller"], _spk(escrow, "seller"))]
-    if bonds["buyer"] >= DUST_P2TR:
-        payouts.append(TxOut(bonds["buyer"], _spk(escrow, "buyer")))
-    elif bonds["buyer"]:
-        payouts[0].value += bonds["buyer"]
+    to_seller, to_buyer = _returns(escrow)
+    payouts = [TxOut(to_seller, _spk(escrow, "seller"))]
+    if to_buyer >= DUST_P2TR:
+        payouts.append(TxOut(to_buyer, _spk(escrow, "buyer")))
+    elif to_buyer:
+        payouts[0].value += to_buyer
     service.start_release(escrow, payouts, OnchainEscrow.ReleaseKind.SELLER_WINS, 0)
-    data = dict(escrow.funding_signatures)
-    data["cancel"] = True
-    escrow.funding_signatures = data
-    escrow.save(update_fields=["funding_signatures"])
+    _record_release(escrow, cancel=True, release_coordinator_sats=0, release_fee_sats=0, release_dev_sats=0)
     if order.taker_lightning and order.taker_bond is not None:
         from api.logics import Logics
 
@@ -398,7 +503,8 @@ def return_everything(order):
 
 def resolve_dispute(order, buyer_wins):
     """Winner: amount (if buyer) or amount back (if seller) + its own bond + a reward share of
-    the loser's bond; the rest of the loser's bond goes to the coordinator."""
+    the loser's bond; the rest of the loser's bond goes to the coordinator (plan 2: with the
+    fees held in the escrow, as when they were paid in the deposit)."""
     from api.escrow.taproot import TxOut
     from api.models import OnchainEscrow
 
@@ -411,23 +517,40 @@ def resolve_dispute(order, buyer_wins):
     bonds, trade = _bond_values(escrow)
     reward = int(bonds[loser] * config("SLASHED_BOND_REWARD_SPLIT", cast=float, default=0.5))
     payouts = [TxOut(trade + bonds[winner] + reward, _spk(escrow, winner))]
-    if bonds[loser] - reward:
-        payouts.append(TxOut(bonds[loser] - reward, coordinator_fee_spk()))
+    penalty = bonds[loser] - reward
+    held = fees_held(escrow)
+    fee_sats = held["seller"] + held["buyer"]
+    dev_sats = 0
+    if fee_plan(escrow) >= 2 and fee_sats:
+        dev_sats, dev_spk = dev_fee(order, fee_sats)
+        if penalty + fee_sats - dev_sats:
+            payouts.append(TxOut(penalty + fee_sats - dev_sats, coordinator_fee_spk()))
+        if dev_sats:
+            payouts.append(TxOut(dev_sats, dev_spk))
+    elif penalty:
+        payouts.append(TxOut(penalty, coordinator_fee_spk()))
     kind = OnchainEscrow.ReleaseKind.BUYER_WINS if buyer_wins else OnchainEscrow.ReleaseKind.SELLER_WINS
     service.start_release(escrow, payouts, kind, 0)
-    data = dict(escrow.funding_signatures)
-    data["dispute_coordinator_sats"] = bonds[loser] - reward
-    escrow.funding_signatures = data
-    escrow.save(update_fields=["funding_signatures"])
+    extra = {"dispute_coordinator_sats": penalty}
+    if fee_plan(escrow) >= 2:
+        extra.update(release_coordinator_sats=0, release_fee_sats=fee_sats - dev_sats, release_dev_sats=dev_sats)
+    _record_release(escrow, **extra)
     ln_bond_dispute_credit(order, buyer_wins)
     order.log(f"Dispute resolved onchain for the {winner}: waiting for its signature on the release")
 
 
 def proceeds(order):
+    """Coordinator fees really paid on chain by a completed trade: the deposit's fee output
+    (plan 1) plus the release's (hybrid A in plan 1; every fee in plan 2)."""
     escrow = escrow_of(order)
     if escrow is None:
         return 0
-    return escrow.coordinator_fee_sats + int(escrow.funding_signatures.get("release_coordinator_sats") or 0)
+    data = escrow.funding_signatures or {}
+    if fee_plan(escrow) >= 2:
+        if data.get("cancel") or not escrow.release_tx:
+            return 0
+        return int(data.get("release_fee_sats") or 0)
+    return escrow.coordinator_fee_sats + int(data.get("release_coordinator_sats") or 0)
 
 
 def bond_role(order, user):
@@ -532,7 +655,12 @@ def order_data(order, user):
         "escrow_my_keys_set": bool(getattr(escrow, f"{role}_pubkey")),
         "escrow_peer_keys_set": bool(getattr(escrow, ("buyer" if role == "seller" else "seller") + "_pubkey")),
         "escrow_my_payout_address": escrow.funding_signatures.get(f"{role}_payout_address", ""),
+        # rl31-beta15: 2 = the coordinator fee stays in the escrow and is paid by the release
+        # of a completed trade only (a cancel returns it); 1 = paid in the deposit.
+        "escrow_fee_plan": fee_plan(escrow),
     }
+    if escrow.funding_signatures.get("plan"):
+        data["escrow_fees_in_escrow"] = fees_held(escrow)
     fpk = escrow.funding_signatures.get(f"{role}_funding_pubkey")
     at_release = role == "buyer" and bool(fees(order)[1]) and buyer_fee_at_release(order)
     from_bond = role == "buyer" and bool(fees(order)[1]) and not at_release and buyer_fee_from_bond(order, escrow)
@@ -733,7 +861,6 @@ def trade_summary(order, user):
     role = service.role_of(order, user)
     plan = escrow.funding_signatures.get("plan", {})
     bonds, trade = _bond_values(escrow)
-    seller_fee, buyer_fee = (plan["seller_fee"], plan["buyer_fee"]) if "seller_fee" in plan else fees(order)
     tx = Transaction.parse(bytes.fromhex(escrow.release_tx))
     my_spk = escrow.funding_signatures.get(f"{role}_payout_spk", "")
     received = sum(o.value for o in tx.outputs if o.script_pubkey.hex() == my_spk)
@@ -750,13 +877,14 @@ def trade_summary(order, user):
     return {
         "lightning_bond": ln_bond,
         "fee_at_release": role == "buyer" and bool(escrow.funding_signatures.get("release_coordinator_sats")),
+        "fee_refunded_sats": fees_held(escrow)[role] if escrow.funding_signatures.get("cancel") else 0,
         "role": role,
         "is_buyer": role == "buyer",
         "trade_sats": trade,
         "received_sats": received,
         "bond_sats": bond_sats,
         "bond_back_sats": bond_sats if ln_bond else bonds.get(role, 0),
-        "coordinator_fee_sats": seller_fee if role == "seller" else buyer_fee,
+        "coordinator_fee_sats": charged_fees(escrow, order)[role],
         "fee_from_bond": role == "buyer" and bool(plan.get("buyer_fee_from_bond")),
         "deposit_mining_sats": plan.get(f"{role}_mining"),
         "release_mining_sats": release_mining if role == payer else 0,

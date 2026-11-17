@@ -178,3 +178,29 @@ server secret. The JS client must produce the same keys: see the vectors in
 - Case C (buyer of an onchain escrow paid by Lightning through the coordinator) is NOT
   implemented: `ln_payout_enabled()` is hard-wired False.
 - Tests: `api/tests/test_roblosats_hybrid.py` (mocked) and `EscrowHybridRegtest` (regtest).
+
+## Coordinator fee plans (rl31-beta15)
+- `funding_signatures["fee_plan"]` is set to 2 by `service.create_escrow` and never changes;
+  escrows without it (created up to rl31-beta14) are plan 1 and keep the old rules everywhere
+  (`flow.fee_plan`).
+- Plan 1: the fees are an output of the deposit (kept by the coordinator even on a cancel);
+  hybrid A adds the buyer's fee as a second output in the release, each output at least the
+  minimum.
+- Plan 2 (Kilombino, 17 nov 2026: a collaborative cancel refunds the fee, as with Lightning):
+  the deposit has no fee nor dev output; both fees ride in the escrow output
+  (`plan.fees_in_escrow`, `flow.fees_held`). `seller_confirms` pays them (plus hybrid A's
+  `buyer_fee_at_release`, out of the buyer's payout) in ONE coordinator output of at least
+  `ESCROW_MIN_COORDINATOR_FEE_SATS` for the whole order, with the optional dev share split off
+  in the release (`release_fee_sats`, `release_dev_sats`). `collaborative_cancel` and
+  `return_everything` give each trader its fee back (no coordinator output); `resolve_dispute`
+  pays the winner as before and the coordinator the penalty plus the fees.
+- `proceeds` counts only what reaches the coordinator on chain: plan 2 `release_fee_sats` (0 on
+  a cancel); plan 1 the deposit's fee output plus `release_coordinator_sats`.
+- Client data: `escrow_fee_plan`, `escrow_fees_in_escrow` (`owedInRelease` adds them to the
+  escrow total and to a cancel's refunds, and checks ours against `escrow_funding_owed`);
+  `escrow_release_coordinator_sats` stays the buyer's fee taken out of its payout (hybrid A).
+- Summary: `charged_fees` (0 for both after a plan-2 cancel), `fee_refunded_sats`.
+- Tests: `api/tests/test_escrow_fee_plan2.py`, regtest `EscrowOrderFlowRegtest` (exact outputs
+  of trade, collaborative cancel, dispute won, return everything) and
+  `EscrowHybridRegtest.test_case_a_small_order_one_minimum_in_total`; client
+  `owed.test.ts`, e2e trade + cancel.

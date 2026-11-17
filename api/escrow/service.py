@@ -120,6 +120,8 @@ def create_escrow(order):
         defaults={
             "coordinator_pubkey": pubkey(coordinator_key(order.id)).hex(),
             "rescue_csv": config("ESCROW_RESCUE_CSV", cast=int, default=4480),
+            # fixed for the life of the escrow (api/escrow/flow.py FEE_PLAN)
+            "funding_signatures": {"fee_plan": 2},
         },
     )
     return escrow
@@ -183,7 +185,7 @@ def fee_rate(blocks=1):
 
 
 def build_deposit(escrow, escrow_sats, seller_fee, buyer_fee, coordinator_spk, dev_sats, dev_spk, bonds=None,
-                  buyer_fee_from_bond=False):
+                  buyer_fee_from_bond=False, fees_in_escrow=False):
     """Plan the deposit from the confirmed funding of both traders and store it unsigned.
     bonds: {"seller": OnchainBond, "buyer": OnchainBond} (onchain bonds become inputs).
     buyer_fee_from_bond: the buyer funds nothing, its fee comes out of its bond."""
@@ -200,7 +202,7 @@ def build_deposit(escrow, escrow_sats, seller_fee, buyer_fee, coordinator_spk, d
         fee_rate(int(config("ESCROW_DEPOSIT_TARGET_BLOCKS", default=2))),
         bond_service.bond_input(bonds["seller"]) if bonds.get("seller") else None,
         bond_service.bond_input(bonds["buyer"]) if bonds.get("buyer") else None,
-        buyer_fee_from_bond=buyer_fee_from_bond,
+        buyer_fee_from_bond=buyer_fee_from_bond, fees_in_escrow=fees_in_escrow,
     )
     escrow.escrow_sats = plan.tx.outputs[0].value
     dev_paid = sum(o.value for o in plan.tx.outputs[1:] if dev_spk and o.script_pubkey == dev_spk)
@@ -227,6 +229,8 @@ def build_deposit(escrow, escrow_sats, seller_fee, buyer_fee, coordinator_spk, d
         "buyer_fee": buyer_fee,
         "mining_fee": plan.mining_fee,
     }
+    if fees_in_escrow:  # plan 2: the fees ride in the escrow output until the release
+        sigs["plan"]["fees_in_escrow"] = {"seller": seller_fee, "buyer": buyer_fee}
     escrow.funding_signatures = sigs
     escrow.status = OnchainEscrow.Status.FUNDING
     escrow.save()

@@ -27,11 +27,11 @@ class FeeFloor(SimpleTestCase):
     def test_big_fees_untouched(self):
         self.assertEqual(self._fees((1700, 200)), (1700, 200))
 
-    def test_hybrid_two_outputs_each_raised(self):
-        self.assertEqual(self._fees((17, 136), at_release=True), (1000, 1000))
+    def test_hybrid_one_floor_for_the_order(self):  # rl31-beta15 (fee plan 2)
+        self.assertEqual(sum(self._fees((17, 136), at_release=True)), 1000)
 
     def test_floor_off(self):
-        self.assertEqual(self._fees((17, 136), floor="0"), (17, 136))
+        self.assertEqual(self._fees((170, 1360), floor="0"), (170, 1360))
 
     def test_dev_off_by_default_and_never_starves_the_coordinator(self):
         self.assertEqual(flow.dev_fee(None, 5000), (0, None))
