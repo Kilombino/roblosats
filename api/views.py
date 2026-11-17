@@ -24,6 +24,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from api.errors import new_error
+from api import order_summary
 from api.escrow import flow as escrow_flow
 from api.logics import Logics, order_lock, rewards_wait, withdrawable_rewards
 from api.tasks import cache_market
@@ -611,6 +612,22 @@ class OrderView(viewsets.ViewSet):
                 data["bond_role"] = "maker"
         data["taker_lightning"] = bool(order.taker_lightning)
 
+        # Roblosats rl31-beta14: one final summary for every way an order ends (both escrows,
+        # both roles). An onchain release still waiting for signatures is not final yet.
+        if data.get("is_participant") and order.status in order_summary.FINISHED:
+            show = True
+            if order.status == Order.Status.PAY:
+                if escrow_flow.is_onchain(order):
+                    esc = escrow_flow.escrow_of(order)
+                    show = bool(esc and esc.release_txid)
+                else:
+                    show = not data.get("is_buyer")
+            if show:
+                try:
+                    data["final_summary"] = order_summary.final_summary(order, request.user)
+                except Exception as e:
+                    logger.error(f"final summary of order {order.id}: {e}")
+
         return Response(data, status.HTTP_200_OK)
 
     @extend_schema(**OrderViewSchema.take_update_confirm_dispute_cancel)
@@ -836,6 +853,19 @@ class OrderView(viewsets.ViewSet):
             return Response(new_error(1049), status.HTTP_501_NOT_IMPLEMENTED)
 
         return self.get(request)
+
+
+class PastOrdersView(APIView):
+    """Roblosats rl31-beta14: the robot's finished orders (successful, cancelled, expired,
+    disputes, and orders it took and left losing its bond), each with its final summary."""
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        return Response(
+            {"orders": order_summary.past_orders(request.user)}, status.HTTP_200_OK
+        )
 
 
 class RobotView(APIView):

@@ -368,11 +368,21 @@ def submit_release_nonce(escrow, role, pubnonce_hex):
         if len(nonce) != 66:
             raise EscrowError("a MuSig2 public nonce is 66 bytes")
         nonces = dict(escrow.release_nonces)
-        if role in nonces and nonces[role] != pubnonce_hex and escrow.release_partial_sigs:
-            raise EscrowError("the nonce can no longer change: a partial signature was already given")
+        if role in nonces and nonces[role] != pubnonce_hex:
+            if role in escrow.release_partial_sigs:
+                raise EscrowError("the nonce can no longer change: your partial signature was already given")
+            # This trader lost its secret nonce (the app restarted between its nonce and its
+            # partial signature). Whatever the other gave was made for the old aggregate nonce:
+            # a new signing round for both (17 nov 2026 QA: the peer had already signed, the
+            # new nonce was refused and the release could never finish).
+            nonces = {}
+            escrow.release_partial_sigs = {}
+            data = dict(escrow.funding_signatures)
+            data["release_round"] = int(data.get("release_round") or 0) + 1
+            escrow.funding_signatures = data
         nonces[role] = pubnonce_hex
         escrow.release_nonces = nonces
-        escrow.save(update_fields=["release_nonces", "updated_at"])
+        escrow.save(update_fields=["release_nonces", "release_partial_sigs", "funding_signatures", "updated_at"])
     return escrow
 
 

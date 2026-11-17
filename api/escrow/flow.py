@@ -536,10 +536,15 @@ def order_data(order, user):
     fpk = escrow.funding_signatures.get(f"{role}_funding_pubkey")
     at_release = role == "buyer" and bool(fees(order)[1]) and buyer_fee_at_release(order)
     from_bond = role == "buyer" and bool(fees(order)[1]) and not at_release and buyer_fee_from_bond(order, escrow)
+    # Hybrid A: the buyer's fee is an output of the release. Both clients check the release to
+    # the sat, so both need it (17 nov 2026 QA: the seller's app refused to sign the release,
+    # "the release charges a fee we did not agree", because only the buyer was told).
+    if bool(fees(order)[1]) and buyer_fee_at_release(order):
+        planned = int(escrow.funding_signatures.get("plan", {}).get("buyer_fee_at_release") or 0)
+        data["escrow_fee_at_release_sats"] = planned or fees(order)[1]
     if at_release:
         # Hybrid A: Lightning bond, nothing to send onchain; the fee comes out of the payout.
         data["escrow_fee_at_release"] = True
-        data["escrow_fee_at_release_sats"] = fees(order)[1]
     elif from_bond:
         # Nothing to send: the buyer's fee and mining share come out of its bond. The client
         # still needs the most the deposit may take from it to check the deposit.
@@ -585,6 +590,8 @@ def order_data(order, user):
         data["escrow_release_my_nonce"] = escrow.release_nonces.get(role, "")
         data["escrow_release_aggnonce"] = service.aggregate_nonce(escrow) or ""
         data["escrow_release_my_partial"] = bool(escrow.release_partial_sigs.get(role))
+        # signing round: a new one starts when a trader had to send a new nonce
+        data["escrow_release_round"] = int(escrow.funding_signatures.get("release_round") or 0)
     if escrow.release_txid:
         data["escrow_release_txid"] = escrow.release_txid
         summary = trade_summary(order, user)
@@ -810,7 +817,9 @@ def expire_funding(order):
         order.log(f"Onchain penalty could not be broadcast: {e}", level="ERROR")
     free_side(order, "taker" if at_fault_is_maker else "maker")
     order.update_status(Order.Status.EXP)
-    order.expiry_reason = Order.ExpiryReasons.NESCRO
+    # The buyer is at fault when it did not give its keys / payout address (17 nov 2026 QA:
+    # the buyer's app said "Escrow not locked" while the seller had done its part).
+    order.expiry_reason = Order.ExpiryReasons.NESCRO if fault == "seller" else Order.ExpiryReasons.NINVOI
     order.save(update_fields=["expiry_reason"])
     order.log(f"Onchain escrow not completed in time by the {fault}: their bond was **penalized**, the other is free to return")
     return True
