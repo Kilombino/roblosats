@@ -1340,7 +1340,7 @@ const MakerForm = ({
         <Tooltip
           enterTouchDelay={0}
           title={t(
-            'Bonds and escrow on chain, without Lightning: nobody can move them alone, the trade takes longer (1 confirmation for each bond and for the deposit) and the fees are paid in the deposit.',
+            'Bonds and escrow on chain, without Lightning: nobody can move them alone, the trade takes longer (1 confirmation for each bond and for the deposit) and the coordinator fee is only paid when the trade is completed (a cancellation gives it back).',
           )}
         >
           <FormControlLabel

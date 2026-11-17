@@ -93,6 +93,10 @@ export interface EscrowOrderData {
   escrow_trade_sats?: number;
   escrow_bond_in_escrow?: { seller: number; buyer: number };
   escrow_release_coordinator_sats?: number;
+  /** 2 (rl31-beta15): the coordinator fees ride in the escrow output and only the release of
+   * a completed trade pays them; a collaborative cancel gives each trader its fee back. */
+  escrow_fee_plan?: number;
+  escrow_fees_in_escrow?: { seller: number; buyer: number };
 }
 
 export interface OnchainSummary {
@@ -310,7 +314,25 @@ export const owedInRelease = (data: EscrowOrderData): { due: number; paysFee: bo
   )
     return null;
   const role = data.escrow_role;
-  if (trade + bonds.seller + bonds.buyer !== data.escrow_output_sats)
+  // fee plan 2: each trader's fee is inside the escrow output until the release
+  const held =
+    (data.escrow_fee_plan ?? 1) >= 2
+      ? (data.escrow_fees_in_escrow ?? { seller: 0, buyer: 0 })
+      : { seller: 0, buyer: 0 };
+  if (held.seller < 0 || held.buyer < 0)
+    fail('the amounts of the release do not add up to the escrow');
+  if (trade + bonds.seller + bonds.buyer + held.seller + held.buyer !== data.escrow_output_sats)
+    fail('the amounts of the release do not add up to the escrow');
+  const myHeld = role === 'seller' ? held.seller : held.buyer;
+  // our fee inside the escrow is what we agreed to pay: what we owed beyond the trade amount
+  if ((data.escrow_fee_plan ?? 1) >= 2 && data.escrow_funding_owed !== undefined) {
+    const agreed =
+      role === 'seller'
+        ? data.escrow_funding_owed - (data.escrow_sats ?? trade)
+        : data.escrow_funding_owed;
+    if (myHeld !== agreed) fail('the release does not give our fee back');
+  }
+  if (role === 'buyer' && data.escrow_fee_at_release && held.buyer !== 0)
     fail('the amounts of the release do not add up to the escrow');
   if (data.escrow_sats !== undefined && trade !== data.escrow_sats)
     fail('the release does not keep the trade amount');
@@ -319,14 +341,16 @@ export const owedInRelease = (data: EscrowOrderData): { due: number; paysFee: bo
     if (myBond > data.bond_value) fail('the release counts more bond than we posted');
     const mayLose = data.escrow_fee_from_bond ? (data.escrow_funding_recommended ?? 0) : 0;
     if (myBond < data.bond_value - mayLose) fail('the release does not give our bond back');
+    if (data.escrow_fee_from_bond && myBond + myHeld > data.bond_value)
+      fail('the release counts more bond than we posted');
   }
   const atRelease = data.escrow_release_coordinator_sats ?? 0;
   if (atRelease && atRelease !== (data.escrow_fee_at_release_sats ?? -1))
     fail('the release charges a fee we did not agree');
   if (data.escrow_release_cancel)
     return role === 'seller'
-      ? { due: trade + bonds.seller, paysFee: true }
-      : { due: bonds.buyer, paysFee: false };
+      ? { due: trade + bonds.seller + held.seller, paysFee: true }
+      : { due: bonds.buyer + held.buyer, paysFee: false };
   return role === 'buyer'
     ? { due: trade + bonds.buyer - atRelease, paysFee: true }
     : { due: bonds.seller, paysFee: false };

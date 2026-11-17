@@ -37,6 +37,7 @@ export interface FinalSummaryData {
   fee_from_bond?: boolean;
   fee_at_release?: boolean;
   coordinator_fee_sats?: number;
+  fee_refunded_sats?: number;
   dev_fee_sats?: number;
   mining_fee_sats?: number;
   routing_fee_sats?: number;
@@ -286,6 +287,9 @@ const FinalSummary = ({
       ) : null}
       {(s.dev_fee_sats ?? 0) > 0 ? (
         <Row label={t('of which to the development fund')} value={sats(s.dev_fee_sats)} />
+      ) : null}
+      {(s.fee_refunded_sats ?? 0) > 0 ? (
+        <Row label={t('Coordinator fee (returned)')} value={sats(s.fee_refunded_sats)} />
       ) : null}
       {(s.mining_fee_sats ?? 0) > 0 ? (
         <Row label={t('Mining fees you paid')} value={sats(s.mining_fee_sats)} />
