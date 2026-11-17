@@ -34,6 +34,7 @@ import AutocompletePayments from './AutocompletePayments';
 import AmountRange from './AmountRange';
 import currencyDict from '../../utils/currencies';
 import { amountToString, computeSats, pn } from '../../utils';
+import { onchainFees } from '../../utils/escrow/fees';
 import { useBondEstimate } from '../../hooks/useBondEstimate';
 import useLegacyMode from '../../hooks/useLegacyMode';
 
@@ -163,6 +164,9 @@ const MakerForm = ({
     premium: number,
   ): void {
     const index = currency === 0 ? 1 : currency;
+    // A coordinator whose limits did not load (offline, slow over Tor) has no entry: keep the
+    // current limits instead of throwing (17 nov 2026 QA: the form picked such a coordinator).
+    if (!limitList?.[index]) return;
     let minAmountLimit: number = limitList[index].min_amount * (1 + premium / 100);
     let maxAmountLimit: number = limitList[index].max_amount * (1 + premium / 100);
 
@@ -189,6 +193,7 @@ const MakerForm = ({
     premium: number,
   ): void {
     const index = currency === 0 ? 1 : currency;
+    if (!limitsList?.[index]) return;
     const price = limitsList[index].price * (1 + premium / 100);
 
     setCurrentPrice(parseFloat(Number(price).toPrecision(5)));
@@ -600,6 +605,22 @@ const MakerForm = ({
     amountRangeEnabled,
   });
 
+  // rl31-beta14: the maker's onchain fee as the coordinator will charge it (minimum included),
+  // from the trade amount behind the bond estimate (the largest amount of a range).
+  const makerOnchainFee = ((): number | null => {
+    const info = federation.getCoordinator(maker.coordinator)?.info;
+    const bondPct = maker.bondSize ?? info?.bond_size ?? 3;
+    if (!info || bondAmount === null || !bondPct || !(Number(bondAmount) > 0)) return null;
+    const tradeSats = Math.round((Number(bondAmount) * 100) / bondPct);
+    return onchainFees({
+      tradeSats,
+      makerFeeRate: info.maker_fee ?? 0,
+      takerFeeRate: info.taker_fee ?? 0,
+      makerIsSeller: fav.type === 0, // the order type is the opposite of the book tab (line ~285)
+      minFeeSats: onchainMinFee,
+    }).makerSats;
+  })();
+
   const SummaryText = (): React.JSX.Element => {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -655,7 +676,15 @@ const MakerForm = ({
         )}
         {maker.onchainEscrow && onchainMinFee ? (
           <Typography variant='caption' color='text.secondary'>
-            {t('Onchain coordinator fee: at least {{sats}} Sats', { sats: pn(onchainMinFee) })}
+            {makerOnchainFee !== null
+              ? t(
+                  'Your onchain coordinator fee: {{fee}} Sats (the order pays at least {{min}} Sats in total, shared by both traders)',
+                  {
+                    fee: pn(makerOnchainFee),
+                    min: pn(onchainMinFee),
+                  },
+                )
+              : t('Onchain coordinator fee: at least {{sats}} Sats', { sats: pn(onchainMinFee) })}
           </Typography>
         ) : null}
       </Box>

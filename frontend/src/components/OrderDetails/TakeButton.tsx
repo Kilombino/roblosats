@@ -20,7 +20,8 @@ import currencies from '../../utils/currencies';
 import { type Order, type Info } from '../../models';
 import { ConfirmationDialog, OrderDescriptionDialog, UsedRobotDialog } from '../Dialogs';
 import { LoadingButton } from '@mui/lab';
-import { computeSats } from '../../utils';
+import { computeSats, pn } from '../../utils';
+import { onchainFees } from '../../utils/escrow/fees';
 import { GarageContext, type UseGarageStoreType } from '../../contexts/GarageContext';
 import { type UseFederationStoreType, FederationContext } from '../../contexts/FederationContext';
 import { useNavigate } from 'react-router-dom';
@@ -74,6 +75,43 @@ const TakeButton = ({
   // The maker's order type: 0 = the maker buys (the taker sells), 1 = the maker sells.
   const takerSells = currentOrder?.type === 0;
 
+  // rl31-beta14: what this robot will pay the coordinator, for the way it takes the order
+  // (onchain: at least the coordinator's minimum; Lightning seller: a Lightning order, plain %).
+  const takeFeeText = (): string => {
+    if (!isOnchainOrder || !currentOrder || !info) return '';
+    let tradeSats = currentOrder.satoshis_now;
+    if (currentOrder.has_range && Number(takeAmount) > 0 && currentOrder.max_amount > 0) {
+      tradeSats = Math.round((tradeSats * Number(takeAmount)) / Number(currentOrder.max_amount));
+    }
+    if (!tradeSats) return '';
+    // /api/info has it when onchain is open to everybody, /api/robot/ for an allowed robot
+    const minFee =
+      info.onchain_min_fee_sats ??
+      garage.getSlot()?.getRobot(currentOrder.shortAlias)?.onchainEscrow?.minFeeSats ??
+      0;
+    const fees = onchainFees({
+      tradeSats,
+      makerFeeRate: info.maker_fee ?? 0,
+      takerFeeRate: info.taker_fee ?? 0,
+      makerIsSeller: currentOrder.type === 1,
+      minFeeSats: minFee,
+      takerLightning: takeWith === 'lightning',
+    });
+    const fee = pn(fees.takerSats);
+    if (takeWith === 'lightning' && takerSells) {
+      return t('Your coordinator fee: {{fee}} Sats', { fee });
+    }
+    return minFee > 0
+      ? t(
+          'Your onchain coordinator fee: {{fee}} Sats (the order pays at least {{min}} Sats in total, shared by both traders)',
+          {
+            fee,
+            min: pn(minFee),
+          },
+        )
+      : t('Your onchain coordinator fee: {{fee}} Sats', { fee });
+  };
+
   const takeWithChoice = (): React.JSX.Element | null => {
     if (!isOnchainOrder) return null;
     return (
@@ -90,6 +128,11 @@ const TakeButton = ({
           <ToggleButton value='onchain'>{t('⛓️ Onchain')}</ToggleButton>
           <ToggleButton value='lightning'>{t('⚡ Lightning')}</ToggleButton>
         </ToggleButtonGroup>
+        {takeFeeText() ? (
+          <Typography variant='caption' color='text.secondary' align='center'>
+            {takeFeeText()}
+          </Typography>
+        ) : null}
         {takeWith === 'lightning' ? (
           <Alert severity='warning' sx={{ maxWidth: '30em' }}>
             {takerSells

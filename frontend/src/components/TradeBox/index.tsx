@@ -37,6 +37,7 @@ import { defaultLightning, type LightningForm, defaultOnchain, type OnchainForm 
 import { type Order } from '../../models';
 import { type EncryptedChatMessage } from './EncryptedChat';
 import CollabCancelAlert from './CollabCancelAlert';
+import FinalSummary, { type FinalSummaryData } from '../FinalSummary';
 import { Bolt } from '@mui/icons-material';
 import { signCleartextMessage } from '../../pgp';
 import OnchainEscrowPrompt, { type EscrowAction } from './Prompts/OnchainEscrow';
@@ -638,8 +639,16 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
         }
         break;
 
+      // 4: 'Cancelled' (an onchain order stays visible to its traders: bonds to take back)
+      case 4:
+        baseContract.title = 'Cancelled';
+        baseContract.prompt = () => <></>;
+        break;
+
       // 12: 'Collaboratively cancelled'
       case 12:
+        baseContract.title = 'Collaboratively cancelled';
+        baseContract.prompt = () => <></>;
         break;
       // 13: 'Sending satoshis to buyer'
       case 13:
@@ -846,6 +855,19 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
         <Divider />
 
         <Grid>{contract?.prompt()}</Grid>
+
+        {(() => {
+          // rl31-beta14: the final summary of a finished order, below whatever prompt it has
+          // (ratings, a bond or leftover still to recover...)
+          const fs = (currentOrder as unknown as { final_summary?: FinalSummaryData } | undefined)
+            ?.final_summary;
+          const st = currentOrder?.status ?? -1;
+          return fs && st >= 0 ? (
+            <Grid sx={{ width: '100%', mt: 1 }}>
+              <FinalSummary summary={fs} />
+            </Grid>
+          ) : null;
+        })()}
 
         {contract?.bondStatus !== 'hide' ? (
           <Grid sx={{ width: '100%', mt: 1 }}>

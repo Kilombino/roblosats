@@ -21,6 +21,7 @@ import { GarageContext, type UseGarageStoreType } from '../../contexts/GarageCon
 import { type UseFederationStoreType, FederationContext } from '../../contexts/FederationContext';
 import { DeleteGarageKeyConfirmationDialog } from '../../components/Dialogs';
 import { OnchainRescueButton } from '../../components/Dialogs/OnchainRescue';
+import { PastOrdersButton } from '../../components/Dialogs/PastOrders';
 
 interface GarageKeyProfileProps {
   setView: (state: 'welcome' | 'onboarding' | 'profile') => void;
@@ -249,6 +250,7 @@ const GarageKeyProfile = ({ setView, width, setInputGarageKey }: GarageKeyProfil
             <Grid>{t('No existing orders found')}</Grid>
           ) : null}
           <Grid sx={{ width: '100%', textAlign: 'center' }}>
+            <PastOrdersButton />
             <OnchainRescueButton token={slot?.token ?? undefined} />
           </Grid>
         </Grid>

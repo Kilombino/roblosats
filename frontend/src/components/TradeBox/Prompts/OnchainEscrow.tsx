@@ -290,8 +290,10 @@ export const OnchainEscrowPrompt = ({
       if (refused) {
         // never sign a release whose amounts do not add up
       } else if (cooperative) {
+        // a new signing round when a trader had to send a new nonce (lost secret nonce)
+        const round = (data as { escrow_release_round?: number }).escrow_release_round ?? 0;
         if (!data.escrow_release_my_nonce)
-          once(`nonce-${data.escrow_release_tx}`, () => {
+          once(`nonce-${data.escrow_release_tx}-${round}`, () => {
             const n = releaseNonce(data, keys, check);
             secnonce.current = n.secnonce;
             onAction('escrow_nonce', { nonce: n.pubnonce });
@@ -311,7 +313,7 @@ export const OnchainEscrowPrompt = ({
           !secnonce.current &&
           !data.escrow_release_my_partial
         )
-          once(`renonce-${data.escrow_release_tx}`, () => {
+          once(`renonce-${data.escrow_release_tx}-${round}`, () => {
             const n = releaseNonce(data, keys, check);
             secnonce.current = n.secnonce;
             onAction('escrow_nonce', { nonce: n.pubnonce });
@@ -351,6 +353,8 @@ export const OnchainEscrowPrompt = ({
     data.escrow_deposit_tx,
     data.escrow_release_tx,
     data.escrow_release_aggnonce,
+    data.escrow_release_my_nonce,
+    data.escrow_release_my_partial,
     data.bond_return_tx,
     data.escrow_sweep_tx,
     address,

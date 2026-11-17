@@ -46,9 +46,11 @@ import { pn, amountToString, btcToSatsString, computeSats, statusBadgeColor } fr
 import TakeButton from './TakeButton';
 import { F2fMapDialog, OrderDescriptionDialog } from '../Dialogs';
 import { type UseFederationStoreType, FederationContext } from '../../contexts/FederationContext';
+import { GarageContext, type UseGarageStoreType } from '../../contexts/GarageContext';
 import { Coordinator, type Order } from '../../models';
 import CoordinatorFeeRow from '../CoordinatorFeeRow';
 import { isOnchainEscrow } from '../TradeBox/onchainEscrowSteps';
+import { onchainFees } from '../../utils/escrow/fees';
 
 interface OrderDetailsProps {
   shortAlias: string;
@@ -68,6 +70,7 @@ const OrderDetails = ({
   const { t } = useTranslation();
   const theme = useTheme();
   const { federation } = useContext<UseFederationStoreType>(FederationContext);
+  const { garage } = useContext<UseGarageStoreType>(GarageContext);
   const [coordinator, setCoordinator] = useState<Coordinator | null>(
     federation.getCoordinator(shortAlias) ?? null,
   );
@@ -193,9 +196,13 @@ const OrderDetails = ({
 
     const isBuyer = (order.type === 0 && order.is_maker) || (order.type === 1 && !order.is_maker);
     const onchain = isOnchainEscrow(order);
-    const tradeFee = order.is_maker
-      ? (coordinator?.info?.maker_fee ?? 0)
-      : (coordinator?.info?.taker_fee ?? 0);
+    // Onchain escrow: the coordinator fee is not taken out of the amount, it is paid apart
+    // (and has a minimum): shown on its own line (onchainFeeText).
+    const tradeFee = onchain
+      ? 0
+      : order.is_maker
+        ? (coordinator?.info?.maker_fee ?? 0)
+        : (coordinator?.info?.taker_fee ?? 0);
     const defaultRoutingBudget = 0.001;
     const btc_now = order.satoshis_now / 100000000;
     const rate =
@@ -307,6 +314,56 @@ const OrderDetails = ({
     amountString,
     coordinator?.limits,
   ]);
+
+  // rl31-beta14: the onchain coordinator fee this robot pays, as charged since beta13 (the
+  // coordinator's minimum ESCROW_MIN_COORDINATOR_FEE_SATS raises small fees), before taking.
+  const onchainFeeText = useMemo(() => {
+    const order = currentOrder;
+    const info = coordinator?.info;
+    // before taking, TakeButton shows the fee for the way the robot takes it (onchain/Lightning)
+    if (!order || !info || !isOnchainEscrow(order) || !order.is_participant) return '';
+    const minFee =
+      info.onchain_min_fee_sats ??
+      garage.getSlot()?.getRobot(order.shortAlias)?.onchainEscrow?.minFeeSats ??
+      0;
+    const asMaker = order.is_maker;
+    const feeFor = (tradeSats: number): number => {
+      const f = onchainFees({
+        tradeSats,
+        makerFeeRate: info.maker_fee ?? 0,
+        takerFeeRate: info.taker_fee ?? 0,
+        makerIsSeller: order.type === 1,
+        minFeeSats: minFee,
+        takerLightning: Boolean(
+          (order as unknown as { taker_lightning?: boolean }).taker_lightning,
+        ),
+      });
+      return asMaker ? f.makerSats : f.takerSats;
+    };
+    let fee = '';
+    if (order.trade_satoshis) {
+      fee = pn(feeFor(order.trade_satoshis));
+    } else if (order.amount && Number(order.amount) > 0) {
+      fee = pn(feeFor(order.satoshis_now));
+    } else if (order.max_amount && Number(order.max_amount) > 0) {
+      const max = order.satoshis_now;
+      const min = Math.round((max * Number(order.min_amount)) / Number(order.max_amount));
+      const a = feeFor(min);
+      const b = feeFor(max);
+      fee = a === b ? pn(a) : `${pn(a)}-${pn(b)}`;
+    } else {
+      return '';
+    }
+    return minFee > 0
+      ? t(
+          'Your onchain coordinator fee: {{fee}} Sats (the order pays at least {{min}} Sats in total, shared by both traders)',
+          {
+            fee,
+            min: pn(minFee),
+          },
+        )
+      : t('Your onchain coordinator fee: {{fee}} Sats', { fee });
+  }, [currentOrder, currentOrder?.status, currentOrder?.trade_satoshis, coordinator?.info]);
 
   const revesiblePaymentMethods = useMemo(() => {
     return swapMethods
@@ -425,6 +482,13 @@ const OrderDetails = ({
                 </ListItemIcon>
                 <Typography variant='body2'>{satsSummary.receive}</Typography>
               </ListItem>
+              {onchainFeeText ? (
+                <ListItem>
+                  <Typography variant='caption' color='text.secondary' sx={{ pl: 1 }}>
+                    {onchainFeeText}
+                  </Typography>
+                </ListItem>
+              ) : null}
             </List>
 
             <Divider />

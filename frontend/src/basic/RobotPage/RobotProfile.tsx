@@ -25,6 +25,7 @@ import { GarageContext, type UseGarageStoreType } from '../../contexts/GarageCon
 import { type UseFederationStoreType, FederationContext } from '../../contexts/FederationContext';
 import { DeleteRobotConfirmationDialog } from '../../components/Dialogs';
 import { OnchainRescueButton } from '../../components/Dialogs/OnchainRescue';
+import { PastOrdersButton } from '../../components/Dialogs/PastOrders';
 import useLegacyMode from '../../hooks/useLegacyMode';
 
 interface RobotProfileProps {
@@ -383,6 +384,7 @@ const RobotProfile = ({
       </Grid>
 
       <Grid sx={{ width: '100%', textAlign: 'center' }}>
+        <PastOrdersButton />
         <OnchainRescueButton token={slot?.token ?? undefined} />
       </Grid>
       <DeleteRobotConfirmationDialog

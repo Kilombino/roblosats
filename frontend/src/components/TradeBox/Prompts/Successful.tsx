@@ -15,6 +15,7 @@ import {
 import currencies from '../../../utils/currencies';
 import TradeSummary from '../TradeSummary';
 import OnchainTradeSummary from '../OnchainTradeSummary';
+import { type FinalSummaryData } from '../../FinalSummary';
 import { isOnchainEscrow } from '../onchainEscrowSteps';
 import { type OnchainSummary } from '../../../utils/escrow/client';
 import { Favorite, RocketLaunch, ContentCopy, Refresh } from '@mui/icons-material';
@@ -284,7 +285,8 @@ export const SuccessfulPrompt = ({
         ) : null}
       </Grid>
 
-      {isOnchainEscrow(order) ? (
+      {(order as unknown as { final_summary?: FinalSummaryData })
+        .final_summary ? null : isOnchainEscrow(order) ? (
         (order as unknown as { onchain_summary?: OnchainSummary }).onchain_summary ? (
           <Grid sx={{ marginTop: 0.5, width: '100%' }}>
             <OnchainTradeSummary
