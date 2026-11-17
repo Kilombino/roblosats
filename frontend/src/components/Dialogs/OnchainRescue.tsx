@@ -48,6 +48,7 @@ interface Item {
   kind: Kind;
   sats: number;
   utxos: Utxo[];
+  key?: string; // two items of one kind and order (bond coins ready now and later)
   wait: number | null; // blocks still to wait (0 = now), null = not confirmed yet
   note?: string;
 }
@@ -107,20 +108,31 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
                 wait: 0,
               });
           }
-          // 2) our bond, while still on its own address
-          if (rec.bond?.txid && rec.bond.vout !== undefined) {
-            const spent = await ex.spentBy(rec.bond.txid, rec.bond.vout);
-            if (!spent) {
-              const conf = await ex.confirmedAt(rec.bond.txid);
-              const value = rec.bond.value ?? (await ex.outputValue(rec.bond.txid, rec.bond.vout));
+          // 2) everything at our bond address (rl31-beta18): the bond while it is still
+          //    there, a top-up, and payments that were never the bond (short, extra or late).
+          //    Each coin has its own timelock: the ready ones go together, the rest wait.
+          if (rec.bond?.address) {
+            const us = (await ex.utxos(rec.bond.address)).filter((u) => u.height !== null);
+            const csv = rec.bond.refundCsv;
+            const ready = us.filter((u) => blocksLeft(u.height, csv, height) === 0);
+            const later = us.filter((u) => (blocksLeft(u.height, csv, height) ?? 1) > 0);
+            if (ready.length)
               found.push({
                 rec,
                 kind: 'bond',
-                sats: value,
-                utxos: [{ txid: rec.bond.txid, vout: rec.bond.vout, value }],
-                wait: blocksLeft(conf, rec.bond.refundCsv, height),
+                sats: ready.reduce((a, u) => a + u.value, 0),
+                utxos: ready,
+                wait: 0,
               });
-            }
+            if (later.length)
+              found.push({
+                rec,
+                kind: 'bond',
+                key: 'later',
+                sats: later.reduce((a, u) => a + u.value, 0),
+                utxos: later,
+                wait: Math.min(...later.map((u) => blocksLeft(u.height, csv, height) ?? 0)),
+              });
           }
           // 3) the escrow: plan 2 (rl31-beta16), the rescue both pre-signed gives each one its
           //    own after rescue_csv blocks; plan 1, the seller alone takes it all
@@ -194,7 +206,7 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
         // nothing to sign: the rescue was fixed and signed by both before the deposit
         const built = storedFairRescue(it.rec);
         await ex.broadcast(built.hex);
-        setDone((d) => ({ ...d, [`${it.rec.orderId}-${it.kind}`]: built }));
+        setDone((d) => ({ ...d, [`${it.rec.orderId}-${it.kind}${it.key ?? ''}`]: built }));
         return;
       }
       let script: Uint8Array;
@@ -209,10 +221,10 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
         it.kind === 'funding'
           ? buildFundingSweep(it.rec, keys, it.utxos, script, rate)
           : it.kind === 'bond'
-            ? buildBondRefund(it.rec, keys, it.utxos[0], script, rate)
+            ? buildBondRefund(it.rec, keys, it.utxos, script, rate)
             : buildEscrowRescue(it.rec, keys, it.utxos[0], script, rate);
       await ex.broadcast(built.hex);
-      setDone((d) => ({ ...d, [`${it.rec.orderId}-${it.kind}`]: built }));
+      setDone((d) => ({ ...d, [`${it.rec.orderId}-${it.kind}${it.key ?? ''}`]: built }));
     } catch (e) {
       setError(e instanceof RescueError ? t(e.message) : String((e as Error).message ?? e));
     } finally {
@@ -224,7 +236,7 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
     k === 'funding'
       ? t('Sats left on your funding address')
       : k === 'bond'
-        ? t('Your bond')
+        ? t('Your bond address (the bond and any other sats sent to it)')
         : k === 'fair'
           ? t('Your part of the escrow (pre-signed rescue)')
           : t('The escrow (seller rescue)');
@@ -299,7 +311,7 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
               </Alert>
             ) : null}
             {items.map((it) => {
-              const key = `${it.rec.orderId}-${it.kind}`;
+              const key = `${it.rec.orderId}-${it.kind}${it.key ?? ''}`;
               const ok = done[key];
               return (
                 <Box key={key} sx={{ mt: 1 }}>

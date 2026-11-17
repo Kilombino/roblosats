@@ -32,6 +32,9 @@ export interface FinalSummaryData {
   bond_sats?: number;
   bond_state?: string;
   bond_returned_sats?: number;
+  /** rl31-beta18: sats at the bond address that were not the bond, still there / sent back */
+  bond_extra_sats?: number;
+  bond_extra_returned_sats?: number;
   bond_lost_sats?: number;
   bond_lost_reason?: string;
   fee_from_bond?: boolean;
@@ -115,6 +118,8 @@ const txLabel = (label: string, t: (k: string) => string): string => {
       return t('Your bond payment');
     case 'bond_return':
       return t('Your bond returned');
+    case 'bond_leftover_return':
+      return t('Return of the sats that were not the bond');
     case 'bond_penalty':
       return t('Your bond penalized');
     case 'payout':
@@ -263,6 +268,21 @@ const FinalSummary = ({
           value={bondState}
           color={lost ? 'error.main' : s.bond_state === 'recoverable' ? 'warning.main' : undefined}
         />
+      ) : null}
+      {(s.bond_extra_sats ?? 0) > 0 ? (
+        <Row
+          label={t('Recover your sats')}
+          value={t(
+            '{{amount}} at your bond address that were not the bond: get them back from the order page',
+            {
+              amount: sats(s.bond_extra_sats),
+            },
+          )}
+          color='warning.main'
+        />
+      ) : null}
+      {(s.bond_extra_returned_sats ?? 0) > 0 ? (
+        <Row label={t('Not the bond, returned')} value={sats(s.bond_extra_returned_sats)} />
       ) : null}
       {lost ? (
         <Typography variant='caption' color='error.main' sx={{ display: 'block' }}>

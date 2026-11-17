@@ -1113,5 +1113,18 @@
   " at a fixed price of {{price}}": " a un preu fix de {{price}}",
   "Sats at your price: {{sats}}": "Sats al teu preu: {{sats}}",
   "Your fixed price. It does not move with the market.": "El teu preu fix. No es mou amb el mercat.",
-  "vs market": "respecte al mercat"
+  "vs market": "respecte al mercat",
+  "You sent {{sent}} Sats, less than the bond ({{bond}}). Send the {{missing}} Sats missing to the same address and they add up (at least {{min}} Sats per payment). If you send more, the extra comes back to you.": "Has enviat {{sent}} Sats, menys que la fiança ({{bond}}). Envia els {{missing}} Sats que falten a la mateixa adreça i se sumen (mínim {{min}} Sats per pagament). Si n'envies de més, el que sobri torna a tu.",
+  "Send exactly {{amount}} Sats. If you send less by mistake, send the rest to the same address (up to {{n}} payments in total): they add up. Anything that is not needed comes back to you.": "Envia exactament {{amount}} Sats. Si per error n'envies menys, envia la resta a la mateixa adreça (fins a {{n}} pagaments en total): se sumen. El que no calgui torna a tu.",
+  "A payment of {{amount}} Sats is in the mempool. Together with what you already sent it does not reach the bond yet: {{missing}} Sats missing.": "Hi ha un pagament de {{amount}} Sats a la mempool. Amb el que ja vas enviar encara no arriba a la fiança: en falten {{missing}} Sats.",
+  "The other {{amount}} Sats at your bond address that were not the bond go back with it.": "Els altres {{amount}} Sats de l'adreça de la teva fiança que no eren la fiança tornen amb ella.",
+  "Recover your sats": "Recupera els teus sats",
+  "There are {{amount}} Sats at your bond address that are not part of the bond (a payment that was short, extra or late). They are yours: get them back to an address of yours now. If the coordinator disappears, \"Recover without the coordinator\" takes them back after the bond timelock.": "Hi ha {{amount}} Sats a l'adreça de la teva fiança que no formen part de la fiança (un pagament curt, de més o tardà). Són teus: recupera'ls ara a una adreça teva. Si el coordinador desapareix, \"Recuperar sense el coordinador\" els recupera quan passi el bloqueig de temps de la fiança.",
+  "{{amount}} Sats that were not the bond are on their way back to you.": "{{amount}} Sats que no eren la fiança ja tornen a tu.",
+  "Return of the sats that were not the bond": "Devolució dels sats que no eren la fiança",
+  "{{amount}} at your bond address that were not the bond: get them back from the order page": "{{amount}} a l'adreça de la teva fiança que no eren la fiança: recupera'ls des de la pàgina de l'ordre",
+  "Not the bond, returned": "Retornat (no era la fiança)",
+  "Your bond address (the bond and any other sats sent to it)": "L'adreça de la teva fiança (la fiança i qualsevol altre pagament que li arribés)",
+  "the transaction must have a single output": "la transacció ha de tenir una sola sortida",
+  "this transaction spends our bond": "aquesta transacció gasta la nostra fiança"
 }

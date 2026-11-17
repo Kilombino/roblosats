@@ -18,6 +18,8 @@ export interface SubmitActionProps {
     | 'bond_penalty_signature'
     | 'bond_return'
     | 'bond_return_signature'
+    | 'bond_leftover_return'
+    | 'bond_leftover_signatures'
     | 'escrow_keys'
     | 'escrow_address'
     | 'escrow_funding_signatures'

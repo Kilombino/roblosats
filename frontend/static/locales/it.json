@@ -1016,5 +1016,18 @@
   " at a fixed price of {{price}}": " at a fixed price of {{price}}",
   "Sats at your price: {{sats}}": "Sats at your price: {{sats}}",
   "Your fixed price. It does not move with the market.": "Your fixed price. It does not move with the market.",
-  "vs market": "vs market"
+  "vs market": "vs market",
+  "You sent {{sent}} Sats, less than the bond ({{bond}}). Send the {{missing}} Sats missing to the same address and they add up (at least {{min}} Sats per payment). If you send more, the extra comes back to you.": "You sent {{sent}} Sats, less than the bond ({{bond}}). Send the {{missing}} Sats missing to the same address and they add up (at least {{min}} Sats per payment). If you send more, the extra comes back to you.",
+  "Send exactly {{amount}} Sats. If you send less by mistake, send the rest to the same address (up to {{n}} payments in total): they add up. Anything that is not needed comes back to you.": "Send exactly {{amount}} Sats. If you send less by mistake, send the rest to the same address (up to {{n}} payments in total): they add up. Anything that is not needed comes back to you.",
+  "A payment of {{amount}} Sats is in the mempool. Together with what you already sent it does not reach the bond yet: {{missing}} Sats missing.": "A payment of {{amount}} Sats is in the mempool. Together with what you already sent it does not reach the bond yet: {{missing}} Sats missing.",
+  "The other {{amount}} Sats at your bond address that were not the bond go back with it.": "The other {{amount}} Sats at your bond address that were not the bond go back with it.",
+  "Recover your sats": "Recover your sats",
+  "There are {{amount}} Sats at your bond address that are not part of the bond (a payment that was short, extra or late). They are yours: get them back to an address of yours now. If the coordinator disappears, \"Recover without the coordinator\" takes them back after the bond timelock.": "There are {{amount}} Sats at your bond address that are not part of the bond (a payment that was short, extra or late). They are yours: get them back to an address of yours now. If the coordinator disappears, \"Recover without the coordinator\" takes them back after the bond timelock.",
+  "{{amount}} Sats that were not the bond are on their way back to you.": "{{amount}} Sats that were not the bond are on their way back to you.",
+  "Return of the sats that were not the bond": "Return of the sats that were not the bond",
+  "{{amount}} at your bond address that were not the bond: get them back from the order page": "{{amount}} at your bond address that were not the bond: get them back from the order page",
+  "Not the bond, returned": "Not the bond, returned",
+  "Your bond address (the bond and any other sats sent to it)": "Your bond address (the bond and any other sats sent to it)",
+  "the transaction must have a single output": "the transaction must have a single output",
+  "this transaction spends our bond": "this transaction spends our bond"
 }

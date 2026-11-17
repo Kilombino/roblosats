@@ -299,28 +299,32 @@ export const storedFairRescue = (rec: RescueRecord): BuiltRescue => {
   };
 };
 
-/** Our bond back alone through its refund leaf once refund_csv blocks passed. */
+/** Our bond back alone through its refund leaf once refund_csv blocks passed: every coin at
+ * the bond address we pass (the bond, a top-up, or sats that were never the bond, rl31-beta18),
+ * each with its own timelock already passed. */
 export const buildBondRefund = (
   rec: RescueRecord,
   keys: EscrowKeys,
-  utxo: Utxo,
+  utxos: Utxo | Utxo[],
   dest: Uint8Array,
   feeRate: number,
 ): BuiltRescue => {
   check(Boolean(rec.bond), 'no bond stored for this order');
+  const coins = Array.isArray(utxos) ? utxos : [utxos];
+  check(coins.length > 0, 'nothing at the bond address');
   const c = bondContractOfRecord(rec, keys);
-  const fee = feeFor(VB_BASE + VB_LEAF_CSV_IN + VB_OUT, feeRate);
-  const value = BigInt(utxo.value) - fee;
+  const total = coins.reduce((a, u) => a + BigInt(u.value), BigInt(0));
+  const fee = feeFor(VB_BASE + VB_LEAF_CSV_IN * coins.length + VB_OUT, feeRate);
+  const value = total - fee;
   check(value > BigInt(330), 'the bond does not cover the mining fee');
-  const tx = singleOutput([utxo], c.refundCsv, dest, value);
-  const spent: TxOut[] = [{ value: BigInt(utxo.value), script: c.scriptPubkey }];
-  const sig = signSchnorr(
-    keys.bond,
-    tx.sighashUnified(0, spent, c.leafHashes[BondContract.REFUND]),
-  );
-  const hex = bytesToHex(
-    tx.serialize([[sig, c.leaves[BondContract.REFUND], c.controlBlock(BondContract.REFUND)]]),
-  );
+  const tx = singleOutput(coins, c.refundCsv, dest, value);
+  const spent: TxOut[] = coins.map((u) => ({ value: BigInt(u.value), script: c.scriptPubkey }));
+  const witnesses = coins.map((_, i) => [
+    signSchnorr(keys.bond, tx.sighashUnified(i, spent, c.leafHashes[BondContract.REFUND])),
+    c.leaves[BondContract.REFUND],
+    c.controlBlock(BondContract.REFUND),
+  ]);
+  const hex = bytesToHex(tx.serialize(witnesses));
   return { hex, txid: tx.txid(), fee: Number(fee), sent: Number(value) };
 };
 

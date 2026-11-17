@@ -2,7 +2,14 @@ import { schnorr } from '@noble/curves/secp256k1.js';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import { execSync } from 'child_process';
 
-import { escrowKeys, owedInRelease, type EscrowOrderData } from '../client';
+import {
+  escrowKeys,
+  myBondIndexes,
+  owedInRelease,
+  signBondLeftover,
+  signBondPenalties,
+  type EscrowOrderData,
+} from '../client';
 import {
   buildBondRefund,
   buildEscrowRescue,
@@ -313,3 +320,197 @@ describe('deposit spend limit (17 nov 2026, order #21)', () => {
     );
   });
 });
+
+describe('bond top-ups and coins at the bond address (rl31-beta18)', () => {
+  const bondData = (keys: typeof buyer, extra: Partial<EscrowOrderData> = {}): EscrowOrderData => {
+    const b = new BondContract(pubkey(keys.bond), hexToBytes(coordPk), 540, 'bcrt');
+    return {
+      id: 42,
+      escrow_alias: 'kilobot',
+      bond_address: b.address,
+      bond_coordinator_pubkey: coordPk,
+      bond_refund_csv: 540,
+      bond_hrp: 'bcrt',
+      ...extra,
+    };
+  };
+  const coins = [
+    { txid: 'a1'.repeat(32), vout: 0, value: 3300 },
+    { txid: 'a2'.repeat(32), vout: 3, value: 330 },
+  ];
+
+  it('signs the penalty of a two-coin bond, one signature per coin', () => {
+    const b = new BondContract(pubkey(buyer.bond), hexToBytes(coordPk), 540, 'bcrt');
+    const pen = new Transaction(
+      coins.map((c) => ({ txid: c.txid, vout: c.vout, sequence: 0xfffffffd })),
+      [{ value: BigInt(3000), script: dest }],
+      2,
+      0,
+    );
+    const d = bondData(buyer, {
+      bond_txid: coins[0].txid,
+      bond_vout: 0,
+      bond_value: 3630,
+      bond_coins: coins,
+      bond_penalty_tx: bytesToHex(pen.serialize()),
+      bond_status_code: 1,
+    });
+    const sigs = signBondPenalties(d, buyer);
+    expect(sigs).toHaveLength(2);
+    const spent = coins.map((c) => ({ value: BigInt(c.value), script: b.scriptPubkey }));
+    sigs.forEach((s, i) =>
+      expect(
+        schnorr.verify(
+          hexToBytes(s).slice(0, 64),
+          pen.sighashUnified(i, spent, b.leafHashes[BondContract.COOPERATIVE]),
+          xonly(pubkey(buyer.bond)),
+        ),
+      ).toBe(true),
+    );
+    // a penalty that spends something else is refused
+    const other = new Transaction(
+      [{ txid: 'ff'.repeat(32), vout: 0, sequence: 0xfffffffd }, ...pen.inputs.slice(1)],
+      pen.outputs,
+      2,
+      0,
+    );
+    expect(() =>
+      signBondPenalties({ ...d, bond_penalty_tx: bytesToHex(other.serialize()) }, buyer),
+    ).toThrow();
+  });
+
+  it('signs the leftover return only to our address and never with the bond coin', () => {
+    const b = new BondContract(pubkey(buyer.bond), hexToBytes(coordPk), 540, 'bcrt');
+    const left = { txid: 'b1'.repeat(32), vout: 1, value: 3300 };
+    const ret = new Transaction(
+      [{ txid: left.txid, vout: left.vout, sequence: 0xfffffffd }],
+      [{ value: BigInt(3000), script: dest }],
+      2,
+      0,
+    );
+    const d = bondData(buyer, {
+      bond_txid: 'c1'.repeat(32),
+      bond_vout: 0,
+      bond_value: 3330,
+      bond_status_code: 2,
+      bond_leftover_tx: bytesToHex(ret.serialize()),
+      bond_leftover_coins: [left],
+    });
+    const [sig] = signBondLeftover(d, buyer, dest, 20000);
+    expect(
+      schnorr.verify(
+        hexToBytes(sig).slice(0, 64),
+        ret.sighashUnified(
+          0,
+          [{ value: BigInt(3300), script: b.scriptPubkey }],
+          b.leafHashes[BondContract.COOPERATIVE],
+        ),
+        xonly(pubkey(buyer.bond)),
+      ),
+    ).toBe(true);
+    expect(() => signBondLeftover(d, buyer, hexToBytes('0014' + '44'.repeat(20)), 20000)).toThrow();
+    const withBond = {
+      ...d,
+      bond_leftover_coins: [{ txid: 'c1'.repeat(32), vout: 0, value: 3300 }],
+      bond_leftover_tx: bytesToHex(
+        new Transaction(
+          [{ txid: 'c1'.repeat(32), vout: 0, sequence: 0xfffffffd }],
+          [{ value: BigInt(3000), script: dest }],
+          2,
+          0,
+        ).serialize(),
+      ),
+    };
+    expect(() => signBondLeftover(withBond, buyer, dest, 20000)).toThrow();
+  });
+
+  it('refunds several coins of the bond address alone, each with the refund leaf', () => {
+    const rec = {
+      ...record('buyer'),
+      bond: { coordinatorPk: coordPk, refundCsv: 540, address: '' },
+    };
+    const b = new BondContract(pubkey(buyer.bond), hexToBytes(coordPk), 540, 'bcrt');
+    rec.bond.address = b.address;
+    const built = buildBondRefund(rec, buyer, coins, dest, 2);
+    const tx = Transaction.parse(built.hex);
+    expect(tx.inputs.map((i) => i.sequence)).toEqual([540, 540]);
+    expect(built.sent + built.fee).toBe(3630);
+    const spent = coins.map((c) => ({ value: BigInt(c.value), script: b.scriptPubkey }));
+    witnesses(built.hex).forEach(([sig, script], i) => {
+      expect(script).toBe(bytesToHex(b.leaves[BondContract.REFUND]));
+      expect(
+        schnorr.verify(
+          hexToBytes(sig).slice(0, 64),
+          tx.sighashUnified(i, spent, b.leafHashes[BondContract.REFUND]),
+          xonly(pubkey(buyer.bond)),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  it('signs every bond input of the deposit', () => {
+    expect(myBondIndexes({ id: 1, escrow_deposit_my_bond_input: 2 })).toEqual([2]);
+    expect(
+      myBondIndexes({
+        id: 1,
+        escrow_deposit_my_bond_input: 2,
+        escrow_deposit_my_bond_inputs: [2, 3],
+      }),
+    ).toEqual([2, 3]);
+    expect(myBondIndexes({ id: 1 })).toEqual([]);
+  });
+});
+
+maybe(
+  'a short payment and a top-up at the bond address come back alone after 540 blocks (rl31-beta18)',
+  () => {
+    const cli = (a: string): string => execSync(`${BCLI} ${a}`, { encoding: 'utf8' }).trim();
+    const mine = (n: number): void => {
+      while (n > 0) {
+        cli(`generatetoaddress ${Math.min(n, 200)} ${cli('-rpcwallet=miner getnewaddress')}`);
+        n -= 200;
+      }
+    };
+    const b = new BondContract(pubkey(buyer.bond), hexToBytes(coordPk), 540, 'bcrt');
+    const fund = (sats: number): { txid: string; vout: number; value: number } => {
+      const txid = cli(
+        `-rpcwallet=miner -named sendtoaddress address=${b.address} amount=${(sats / 1e8).toFixed(8)} fee_rate=2`,
+      );
+      const t = JSON.parse(cli(`getrawtransaction ${txid} true`));
+      const vout = t.vout.findIndex(
+        (o: { scriptPubKey: { address: string } }) => o.scriptPubKey.address === b.address,
+      );
+      return { txid, vout, value: sats };
+    };
+    const destAddr = cli('-rpcwallet=miner getnewaddress refund bech32m');
+    const destScript = hexToBytes(
+      JSON.parse(cli(`-rpcwallet=miner getaddressinfo ${destAddr}`)).scriptPubKey,
+    );
+    const rec = {
+      ...record('buyer'),
+      bond: { coordinatorPk: coordPk, refundCsv: 540, address: b.address },
+    };
+    const us = [fund(3300), fund(330)];
+    mine(1);
+    const built = buildBondRefund(rec, buyer, us, destScript, 2);
+    const accept = (hex: string): { allowed: boolean; 'reject-reason'?: string } =>
+      JSON.parse(cli(`testmempoolaccept '["${hex}"]'`))[0];
+    mine(538); // 539 confirmations: one short
+    expect(accept(built.hex)['reject-reason']).toMatch(/non-BIP68-final|sequence/i);
+    mine(1);
+    expect(accept(built.hex)).toMatchObject({ allowed: true });
+    const txid = cli(`sendrawtransaction ${built.hex}`);
+    mine(1);
+    const t = JSON.parse(cli(`getrawtransaction ${txid} true`));
+    expect(t.confirmations).toBeGreaterThanOrEqual(1);
+    const got = t.vout
+      .filter(
+        (o: { scriptPubKey: { hex: string } }) => o.scriptPubKey.hex === bytesToHex(destScript),
+      )
+      .reduce((a: number, o: { value: number }) => a + Math.round(o.value * 1e8), 0);
+    expect(got).toBe(3630 - built.fee);
+    expect(got).toBe(built.sent);
+    expect(Math.ceil(t.vsize * 2)).toBeLessThanOrEqual(built.fee);
+  },
+  300000,
+);

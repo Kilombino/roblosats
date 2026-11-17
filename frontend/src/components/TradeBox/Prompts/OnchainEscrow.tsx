@@ -24,8 +24,8 @@ import {
   publicKeys,
   releaseNonce,
   releasePartial,
-  signBondPenalty,
-  signBondReturn,
+  signBondPenalties,
+  signBondReturns,
   signDeposit,
   signRescue,
   completeRescue,
@@ -43,6 +43,8 @@ export type EscrowAction =
   | 'bond_penalty_signature'
   | 'bond_return'
   | 'bond_return_signature'
+  | 'bond_leftover_return'
+  | 'bond_leftover_signatures'
   | 'escrow_keys'
   | 'escrow_address'
   | 'escrow_funding_signatures'
@@ -257,9 +259,11 @@ export const OnchainEscrowPrompt = ({
     if ((order.status === 0 || order.status === 3) && data.bond_status_code === undefined)
       once('bond_key', () => onAction('bond_key', { bond_pubkey: pk.bond }));
     if (data.bond_status_code === BOND.SIGN && data.bond_penalty_tx)
-      once(`penalty-${data.bond_txid}`, () =>
-        onAction('bond_penalty_signature', { signature: signBondPenalty(data, keys) }),
-      );
+      once(`penalty-${data.bond_penalty_tx}`, () => {
+        // one signature per coin (a topped-up bond has several, rl31-beta18)
+        const signatures = signBondPenalties(data, keys);
+        onAction('bond_penalty_signature', { signature: signatures[0], signatures });
+      });
     if (data.escrow_status_code === ESCROW.KEYS && data.escrow_my_keys_set === false)
       once('escrow_keys', () =>
         onAction('escrow_keys', { escrow_pubkey: pk.escrow, funding_pubkey: pk.funding }),
@@ -388,15 +392,15 @@ export const OnchainEscrowPrompt = ({
     if (data.bond_status_code === BOND.RETURNABLE && data.bond_return_tx) {
       const target = address || data.escrow_my_payout_address;
       if (target && data.bond_return_tx.includes(bytesToHex(addressToScript(target))))
-        once(`return-${data.bond_return_tx}`, () =>
-          onAction('bond_return_signature', {
-            signature: signBondReturn(data, keys, addressToScript(target), 20_000),
-          }),
-        );
+        once(`return-${data.bond_return_tx}`, () => {
+          const signatures = signBondReturns(data, keys, addressToScript(target), 20_000);
+          onAction('bond_return_signature', { signature: signatures[0], signatures });
+        });
     }
   }, [
     order.status,
     data.bond_status_code,
+    data.bond_penalty_tx,
     data.escrow_status_code,
     data.escrow_deposit_tx,
     data.escrow_rescue_tx,
@@ -487,11 +491,18 @@ export const OnchainEscrowPrompt = ({
   const bondDeadline = deadlineRaw ? new Date(deadlineRaw) : null;
   let body: React.JSX.Element = waiting(waitingText());
 
+  // rl31-beta18: the bond can come in more than one payment (up to bond_max_coins); what is
+  // already confirmed at its address counts.
+  const bondRequired = data.bond_required_sats ?? 0;
+  const bondConfirmed = data.bond_confirmed_sats ?? 0;
+  const bondPending = data.bond_mempool_sats ?? 0;
+  const bondMissing = Math.max(0, bondRequired - bondConfirmed);
+  const bondTopUps = (data.bond_max_coins ?? 0) > 1;
   if ((order.status === 0 || order.status === 3) && data.bond_status_code !== undefined) {
     if (
       data.bond_status_code === BOND.FUNDING &&
       data.bond_mempool_txid &&
-      (data.bond_mempool_sats ?? 0) >= (data.bond_required_sats ?? 0)
+      (bondPending >= bondRequired || (bondTopUps && bondPending + bondConfirmed >= bondRequired))
     )
       body = waiting(
         t('Bond seen in the mempool, waiting for 1 confirmation…'),
@@ -501,17 +512,37 @@ export const OnchainEscrowPrompt = ({
       body = (
         <Grid container spacing={1} sx={{ flexDirection: 'column', alignItems: 'center' }}>
           <Grid>
+            {bondTopUps && bondConfirmed > 0 ? (
+              <Alert severity='warning' sx={{ mb: 1 }}>
+                {t(
+                  'You sent {{sent}} Sats, less than the bond ({{bond}}). Send the {{missing}} Sats missing to the same address and they add up (at least {{min}} Sats per payment). If you send more, the extra comes back to you.',
+                  {
+                    sent: pn(bondConfirmed),
+                    bond: pn(bondRequired),
+                    missing: pn(bondMissing),
+                    min: pn(330),
+                  },
+                )}
+              </Alert>
+            ) : null}
             <PayBox
               address={data.bond_address}
-              sats={data.bond_required_sats ?? 0}
+              sats={bondTopUps && bondConfirmed > 0 ? Math.max(bondMissing, 330) : bondRequired}
               label={t(
                 'Send exactly this amount from any wallet. It is your bond: nobody can move it alone, it comes back to you after the trade (or after about {{days}} days in any case), and you lose it only if you cancel or do not complete your part in time.',
                 { days: Math.max(1, Math.round(((data.bond_refund_csv ?? 432) * 10) / 1440)) },
               )}
-              note={t(
-                'Send exactly {{amount}} Sats in one payment. Less than that is not taken as your bond.',
-                { amount: pn(data.bond_required_sats ?? 0) },
-              )}
+              note={
+                bondTopUps
+                  ? t(
+                      'Send exactly {{amount}} Sats. If you send less by mistake, send the rest to the same address (up to {{n}} payments in total): they add up. Anything that is not needed comes back to you.',
+                      { amount: pn(bondRequired), n: data.bond_max_coins ?? 3 },
+                    )
+                  : t(
+                      'Send exactly {{amount}} Sats in one payment. Less than that is not taken as your bond.',
+                      { amount: pn(bondRequired) },
+                    )
+              }
             />
           </Grid>
           {bondDeadline ? (
@@ -534,12 +565,20 @@ export const OnchainEscrowPrompt = ({
           {data.bond_mempool_txid ? (
             <Grid>
               <Alert severity='warning'>
-                {t(
-                  'A payment of {{amount}} Sats is in the mempool, but it is less than the bond.',
-                  {
-                    amount: pn(data.bond_mempool_sats ?? 0),
-                  },
-                )}
+                {bondTopUps
+                  ? t(
+                      'A payment of {{amount}} Sats is in the mempool. Together with what you already sent it does not reach the bond yet: {{missing}} Sats missing.',
+                      {
+                        amount: pn(bondPending),
+                        missing: pn(Math.max(0, bondRequired - bondConfirmed - bondPending)),
+                      },
+                    )
+                  : t(
+                      'A payment of {{amount}} Sats is in the mempool, but it is less than the bond.',
+                      {
+                        amount: pn(data.bond_mempool_sats ?? 0),
+                      },
+                    )}
               </Alert>
             </Grid>
           ) : null}
@@ -702,6 +741,14 @@ export const OnchainEscrowPrompt = ({
           <Typography variant='body2' align='center'>
             {t('Your bond is free. Get it back to an address of yours.')}
           </Typography>
+          {(data.bond_extra_sats ?? 0) > 0 ? (
+            <Typography variant='caption' align='center' sx={{ display: 'block' }}>
+              {t(
+                'The other {{amount}} Sats at your bond address that were not the bond go back with it.',
+                { amount: pn(data.bond_extra_sats ?? 0) },
+              )}
+            </Typography>
+          ) : null}
         </Grid>
         <Grid>
           <TextField

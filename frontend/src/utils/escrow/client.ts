@@ -57,6 +57,8 @@ export interface EscrowOrderData {
   escrow_deposit_spent?: Array<[number, string]>;
   escrow_deposit_my_inputs?: number[];
   escrow_deposit_my_bond_input?: number | null;
+  /** rl31-beta18: every input of our bond in the deposit (a topped-up bond has several). */
+  escrow_deposit_my_bond_inputs?: number[];
   escrow_release_tx?: string;
   escrow_release_kind?: string;
   escrow_release_aggnonce?: string;
@@ -75,6 +77,21 @@ export interface EscrowOrderData {
   bond_spend_txid?: string;
   bond_mempool_txid?: string;
   bond_mempool_sats?: number;
+  /** rl31-beta18: the coins of the bond (several when it was topped up). */
+  bond_coins?: BondCoin[];
+  bond_return_coins?: BondCoin[];
+  /** Waiting for the bond: what is already confirmed at its address and in how many payments it may come. */
+  bond_confirmed_sats?: number;
+  bond_max_coins?: number;
+  /** Coins at the bond address that are not the bond (ours, back with the coordinator's signature). */
+  bond_leftovers?: BondCoin[];
+  bond_leftover_sats?: number;
+  bond_leftover_tx?: string;
+  bond_leftover_coins?: BondCoin[];
+  bond_leftover_txid?: string;
+  bond_leftover_returned_sats?: number;
+  /** A freed bond: sats at its address beyond the bond that go back with it. */
+  bond_extra_sats?: number;
   escrow_fee_from_bond?: boolean;
   escrow_fee_at_release?: boolean;
   escrow_fee_at_release_sats?: number;
@@ -109,6 +126,12 @@ export interface EscrowOrderData {
   escrow_rescue_sigs?: { seller: string; buyer: string };
   escrow_rescue_my_sig?: boolean;
   escrow_deposit_txid?: string;
+}
+
+export interface BondCoin {
+  txid: string;
+  vout: number;
+  value: number;
 }
 
 export interface OnchainSummary {
@@ -193,45 +216,107 @@ export const bondContractOf = (data: EscrowOrderData, keys: EscrowKeys): BondCon
   return c;
 };
 
-const spendsOnly = (tx: Transaction, txid: string, vout: number): void => {
-  if (tx.inputs.length !== 1 || tx.inputs[0].txid !== txid || tx.inputs[0].vout !== vout)
-    fail('this transaction does not spend our bond');
-};
+/** The coins of our bond (one, or several when it was topped up). */
+export const bondCoinsOf = (data: EscrowOrderData): BondCoin[] =>
+  data.bond_coins?.length
+    ? data.bond_coins
+    : data.bond_txid
+      ? [{ txid: data.bond_txid, vout: data.bond_vout!, value: data.bond_value! }]
+      : [];
 
-/** Signature of the penalty given in advance: it only ever spends this bond. */
-export const signBondPenalty = (data: EscrowOrderData, keys: EscrowKeys): string => {
+/** Signs, through the cooperative leaf, a transaction that spends exactly [coins] (all at our
+ * bond address, in any order) to a single output; one signature per input. */
+const signBondCoins = (
+  data: EscrowOrderData,
+  keys: EscrowKeys,
+  txHex: string,
+  coins: BondCoin[],
+  check: (tx: Transaction, total: bigint) => void,
+): string[] => {
   const c = bondContractOf(data, keys);
-  const tx = Transaction.parse(data.bond_penalty_tx!);
-  spendsOnly(tx, data.bond_txid!, data.bond_vout!);
-  if (tx.outputs.length !== 1) fail('the penalty must have a single output');
-  const msg = tx.sighashUnified(
-    0,
-    [{ value: BigInt(data.bond_value!), script: c.scriptPubkey }],
-    c.leafHashes[BondContract.COOPERATIVE],
+  const tx = Transaction.parse(txHex);
+  const byOutpoint = new Map(coins.map((u) => [`${u.txid}:${u.vout}`, u.value]));
+  if (tx.inputs.length !== coins.length || tx.inputs.length === 0)
+    fail('this transaction does not spend our bond');
+  const spent: TxOut[] = tx.inputs.map((i) => {
+    const v = byOutpoint.get(`${i.txid}:${i.vout}`);
+    if (v === undefined) fail('this transaction does not spend our bond');
+    return { value: BigInt(v!), script: c.scriptPubkey };
+  });
+  if (new Set(tx.inputs.map((i) => `${i.txid}:${i.vout}`)).size !== tx.inputs.length)
+    fail('this transaction does not spend our bond');
+  if (tx.outputs.length !== 1) fail('the transaction must have a single output');
+  check(
+    tx,
+    spent.reduce((a, s) => a + s.value, BigInt(0)),
   );
-  return bytesToHex(signSchnorr(keys.bond, msg));
+  return tx.inputs.map((_, i) =>
+    bytesToHex(
+      signSchnorr(keys.bond, tx.sighashUnified(i, spent, c.leafHashes[BondContract.COOPERATIVE])),
+    ),
+  );
 };
 
-/** Return of a freed bond: everything (minus the fee) to our own address. */
+/** Signature(s) of the penalty given in advance: it only ever spends this bond's coins. */
+export const signBondPenalties = (data: EscrowOrderData, keys: EscrowKeys): string[] =>
+  signBondCoins(data, keys, data.bond_penalty_tx!, bondCoinsOf(data), () => {});
+
+export const signBondPenalty = (data: EscrowOrderData, keys: EscrowKeys): string =>
+  signBondPenalties(data, keys)[0];
+
+const paysOnlyUs =
+  (myScript: Uint8Array, maxFeeSats: number, what: string) =>
+  (tx: Transaction, total: bigint): void => {
+    if (bytesToHex(tx.outputs[0].script) !== bytesToHex(myScript))
+      fail(`the ${what} does not pay our address`);
+    if (total - tx.outputs[0].value > BigInt(maxFeeSats)) fail(`the ${what} fee is too high`);
+  };
+
+/** Return of a freed bond (and anything else at its address): everything (minus the fee) to
+ * our own address. One signature per coin. */
+export const signBondReturns = (
+  data: EscrowOrderData,
+  keys: EscrowKeys,
+  myScript: Uint8Array,
+  maxFeeSats: number,
+): string[] =>
+  signBondCoins(
+    data,
+    keys,
+    data.bond_return_tx!,
+    data.bond_return_coins?.length ? data.bond_return_coins : bondCoinsOf(data),
+    paysOnlyUs(myScript, maxFeeSats, 'return'),
+  );
+
 export const signBondReturn = (
   data: EscrowOrderData,
   keys: EscrowKeys,
   myScript: Uint8Array,
   maxFeeSats: number,
-): string => {
-  const c = bondContractOf(data, keys);
-  const tx = Transaction.parse(data.bond_return_tx!);
-  spendsOnly(tx, data.bond_txid!, data.bond_vout!);
-  if (tx.outputs.length !== 1 || bytesToHex(tx.outputs[0].script) !== bytesToHex(myScript))
-    fail('the return does not pay our address');
-  if (BigInt(data.bond_value!) - tx.outputs[0].value > BigInt(maxFeeSats))
-    fail('the return fee is too high');
-  const msg = tx.sighashUnified(
-    0,
-    [{ value: BigInt(data.bond_value!), script: c.scriptPubkey }],
-    c.leafHashes[BondContract.COOPERATIVE],
+): string => signBondReturns(data, keys, myScript, maxFeeSats)[0];
+
+/** rl31-beta18: coins at our bond address that are not the bond, back to our address. */
+export const signBondLeftover = (
+  data: EscrowOrderData,
+  keys: EscrowKeys,
+  myScript: Uint8Array,
+  maxFeeSats: number,
+): string[] => {
+  const coins = data.bond_leftover_coins ?? [];
+  const bond = new Set(bondCoinsOf(data).map((u) => `${u.txid}:${u.vout}`));
+  // never sign away the bond itself through this path
+  if (
+    [1, 2].includes(data.bond_status_code ?? -1) &&
+    coins.some((u) => bond.has(`${u.txid}:${u.vout}`))
+  )
+    fail('this transaction spends our bond');
+  return signBondCoins(
+    data,
+    keys,
+    data.bond_leftover_tx!,
+    coins,
+    paysOnlyUs(myScript, maxFeeSats, 'return'),
   );
-  return bytesToHex(signSchnorr(keys.bond, msg));
 };
 
 /** Most the deposit may take from us: the recommended funding (which the coordinator
@@ -254,22 +339,26 @@ export const signDeposit = (
   keys: EscrowKeys,
   bondData: EscrowOrderData | null,
   limits: DepositLimits,
-): { signatures: string[]; bond_signature?: string } => {
+): { signatures: string[]; bond_signature?: string; bond_signatures?: string[] } => {
   const c = checkEscrowAddress(data, keys);
   const tx = Transaction.parse(data.escrow_deposit_tx!);
   const spent = spentOf(data);
   if (spent.length !== tx.inputs.length) fail('inputs and spent outputs do not match');
   const myFunding = fundingScript(pubkey(keys.funding));
   const mine = data.escrow_deposit_my_inputs ?? [];
-  const bondIndex = data.escrow_deposit_my_bond_input;
+  const bondIndexes = myBondIndexes(data);
   let bondValue = BigInt(0);
   let bond: BondContract | null = null;
-  if (bondIndex !== null && bondIndex !== undefined) {
+  if (bondIndexes.length) {
     if (!bondData) fail('missing our bond');
     bond = bondContractOf(bondData!, keys);
-    if (bytesToHex(spent[bondIndex].script) !== bytesToHex(bond.scriptPubkey))
-      fail('the bond input is not our bond');
-    bondValue = spent[bondIndex].value;
+    for (const bi of bondIndexes) {
+      if (bi < 0 || bi >= spent.length || mine.includes(bi)) fail('the bond input is not our bond');
+      if (bytesToHex(spent[bi].script) !== bytesToHex(bond.scriptPubkey))
+        fail('the bond input is not our bond');
+      bondValue += spent[bi].value;
+    }
+    if (new Set(bondIndexes).size !== bondIndexes.length) fail('the bond input is not our bond');
   }
   for (const i of mine)
     if (bytesToHex(spent[i].script) !== bytesToHex(myFunding))
@@ -293,15 +382,28 @@ export const signDeposit = (
   const signatures = mine.map((i) =>
     bytesToHex(signSchnorr(keys.funding, tx.sighashUnified(i, spent))),
   );
-  const out: { signatures: string[]; bond_signature?: string } = { signatures };
-  if (bond && bondIndex !== null && bondIndex !== undefined)
-    out.bond_signature = bytesToHex(
-      signSchnorr(
-        keys.bond,
-        tx.sighashUnified(bondIndex, spent, bond.leafHashes[BondContract.COOPERATIVE]),
+  const out: { signatures: string[]; bond_signature?: string; bond_signatures?: string[] } = {
+    signatures,
+  };
+  if (bond && bondIndexes.length) {
+    out.bond_signatures = bondIndexes.map((bi) =>
+      bytesToHex(
+        signSchnorr(
+          keys.bond,
+          tx.sighashUnified(bi, spent, bond!.leafHashes[BondContract.COOPERATIVE]),
+        ),
       ),
     );
+    out.bond_signature = out.bond_signatures[0];
+  }
   return out;
+};
+
+/** Our bond's input indexes in the deposit (several when the bond was topped up). */
+export const myBondIndexes = (data: EscrowOrderData): number[] => {
+  if (data.escrow_deposit_my_bond_inputs?.length) return data.escrow_deposit_my_bond_inputs;
+  const bi = data.escrow_deposit_my_bond_input;
+  return bi !== null && bi !== undefined ? [bi] : [];
 };
 
 /** Most the pre-signed rescue may spend on mining (it pays a margin over today's rate). */
@@ -344,12 +446,14 @@ export const checkRescue = (
   const spent = spentOf(data);
   const myFunding = bytesToHex(fundingScript(pubkey(keys.funding)));
   let myIn = (data.escrow_deposit_my_inputs ?? []).reduce((a, i) => a + spent[i].value, BigInt(0));
-  const bi = data.escrow_deposit_my_bond_input;
-  if (bi !== null && bi !== undefined) {
+  const bis = myBondIndexes(data);
+  if (bis.length) {
     const bond = bondContractOf(bondData ?? data, keys);
-    if (bytesToHex(spent[bi].script) !== bytesToHex(bond.scriptPubkey))
-      fail('the bond input is not our bond');
-    myIn += spent[bi].value;
+    for (const bi of bis) {
+      if (bytesToHex(spent[bi].script) !== bytesToHex(bond.scriptPubkey))
+        fail('the bond input is not our bond');
+      myIn += spent[bi].value;
+    }
   }
   const myBack = deposit.outputs
     .filter((o) => bytesToHex(o.script) === myFunding)

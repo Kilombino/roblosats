@@ -41,6 +41,7 @@ import FinalSummary, { type FinalSummaryData } from '../FinalSummary';
 import { Bolt } from '@mui/icons-material';
 import { signCleartextMessage } from '../../pgp';
 import OnchainEscrowPrompt, { type EscrowAction } from './Prompts/OnchainEscrow';
+import BondLeftoverBox, { hasBondLeftover } from './Prompts/BondLeftover';
 import {
   hybridBondStep,
   isOnchainEscrow,
@@ -856,6 +857,16 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
         <Divider />
 
         <Grid>{contract?.prompt()}</Grid>
+
+        {currentOrder && hasBondLeftover(currentOrder) ? (
+          <Grid sx={{ width: '100%' }}>
+            <BondLeftoverBox
+              order={currentOrder}
+              token={garage.getSlot()?.token ?? undefined}
+              onAction={escrowAction}
+            />
+          </Grid>
+        ) : null}
 
         {(() => {
           // rl31-beta14: the final summary of a finished order, below whatever prompt it has
