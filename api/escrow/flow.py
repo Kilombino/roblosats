@@ -645,10 +645,16 @@ def order_data(order, user):
         bond_data.update(bonds.bond_data(my_bond))
         bond_data["bond_role"] = brole
         if my_bond is not None and my_bond.status == OnchainBond.Status.FUNDING:
+            hint = fee_hint()
+            if hint:
+                bond_data["onchain_fee_hint"] = hint
             pending = _unconfirmed(my_bond.address)
             if pending:
                 bond_data["bond_mempool_txid"] = pending[0][0]
                 bond_data["bond_mempool_sats"] = sum(v for _, v in pending)
+                rate = _min_fee_rate(pending)
+                if rate is not None:
+                    bond_data["bond_mempool_fee_rate"] = rate
     except EscrowError:
         pass
     escrow = escrow_of(order)
@@ -703,10 +709,16 @@ def order_data(order, user):
         data["escrow_funding_owed"] = owed
         data["escrow_funding_recommended"] = recommended
         if escrow.status == escrow.Status.KEYS:
+            hint = fee_hint()
+            if hint:
+                data["onchain_fee_hint"] = hint
             pending = _unconfirmed(data["escrow_funding_address"])
             if pending:
                 data["escrow_funding_mempool_txid"] = pending[0][0]
                 data["escrow_funding_mempool_sats"] = sum(v for _, v in pending)
+                rate = _min_fee_rate(pending)
+                if rate is not None:
+                    data["escrow_funding_mempool_fee_rate"] = rate
     who, what = waiting_for(order, escrow, role)
     data["escrow_waiting_for"] = who or ""
     data["escrow_waiting_what"] = what or ""
@@ -782,6 +794,99 @@ def order_data(order, user):
     return data
 
 
+FEE_HINT_CACHE = "onchain-fee-hint"
+NEXT_BLOCK_TARGET = 2  # bitcoind treats a target of 1 as 2
+HOUR_TARGET = 6
+
+
+def _sat_vb(btc_per_kvb):
+    return float(btc_per_kvb) * 1e5
+
+
+def _round_up(rate):
+    """Fee rates go up to the next tenth of a sat/vB (this chain relays below 1 sat/vB)."""
+    return math.ceil(round(float(rate), 6) * 10) / 10
+
+
+def _node_fee_rates():
+    floor = 0.0
+    try:
+        info = service.rpc("getmempoolinfo")
+        floor = max(_sat_vb(info.get("mempoolminfee") or 0), _sat_vb(info.get("minrelaytxfee") or 0))
+    except Exception:
+        pass
+    rates = []
+    for target in (NEXT_BLOCK_TARGET, HOUR_TARGET):
+        est = service.rpc("estimatesmartfee", [target])
+        if not est.get("feerate"):
+            raise EscrowError("estimatesmartfee: no estimate")
+        rates.append(max(_sat_vb(est["feerate"]), floor))
+    return rates
+
+
+def _mempool_fee_rates():
+    from api.mempool import _mempool_fees_with_hard_timeout
+
+    data = _mempool_fees_with_hard_timeout()
+    return [float(data["fastestFee"]), float(data.get("hourFee") or data["fastestFee"])]
+
+
+def fee_hint():
+    """What a payment from the trader's own wallet should pay, in sat/vB: {"next_block": X,
+    "hour": Y} (Kilombino, 17 nov 2026). From the coordinator's node (estimatesmartfee), else
+    from the mempool instance of this chain; None when neither answers (the app hides the hint).
+    Cached for a minute, failures too, so a slow mempool never slows the order page."""
+    from django.core.cache import cache
+
+    cached = cache.get(FEE_HINT_CACHE)
+    if cached is not None:
+        return cached or None
+    hint = {}
+    for source in (_node_fee_rates, _mempool_fee_rates):
+        try:
+            nxt, hour = source()
+            if nxt > 0 and hour > 0:
+                nxt, hour = _round_up(nxt), _round_up(hour)
+                hint = {"next_block": nxt, "hour": min(hour, nxt)}
+                break
+        except Exception:
+            continue
+    cache.set(FEE_HINT_CACHE, hint, timeout=60)
+    return hint or None
+
+
+def tx_fee_rate(txid):
+    """The fee rate a transaction in the node's mempool pays, in sat/vB, counting its unconfirmed
+    parents (they drag it down) and children (a CPFP bumps it). None if the node does not have it."""
+    try:
+        e = service.rpc("getmempoolentry", [txid])
+    except Exception:
+        return None
+    try:
+        f = e["fees"]
+        rate = float(f["base"]) * 1e8 / int(e["vsize"])
+        if e.get("ancestorsize"):
+            rate = min(rate, float(f["ancestor"]) * 1e8 / int(e["ancestorsize"]))
+        if int(e.get("descendantsize") or 0) > int(e["vsize"]):
+            rate = max(rate, float(f["descendant"]) * 1e8 / int(e["descendantsize"]))
+        return math.floor(rate * 10) / 10
+    except (KeyError, TypeError, ValueError, ZeroDivisionError):
+        return None
+
+
+def low_fee(rate, hint=None):
+    """The rate needed for about an hour when a payment pays less than it, else None."""
+    hint = hint if hint is not None else fee_hint()
+    if rate is None or not hint:
+        return None
+    return hint["hour"] if rate < hint["hour"] else None
+
+
+def _min_fee_rate(pending):
+    rates = [r for r in (tx_fee_rate(txid) for txid, _ in pending) if r is not None]
+    return min(rates) if rates else None
+
+
 def _unconfirmed(address):
     """Unconfirmed outputs paying an address the watch-only wallet follows: [(txid, sats)]."""
     found = service.rpc("listunspent", [0, 0, [address]], wallet=service.watch_wallet())
@@ -813,7 +918,8 @@ def mempool_seen(order, escrow=None):
             have = None
         for txid, sats in pending:
             seen.append({"what": "bond", "role": bond.role, "owner": bond.owner_id, "txid": txid, "sats": sats,
-                         "short": None if have is None else max(0, bond.required_sats - have)})
+                         "short": None if have is None else max(0, bond.required_sats - have),
+                         "fee_rate": tx_fee_rate(txid)})
     escrow = escrow or escrow_of(order)
     if escrow is not None and escrow.status == OnchainEscrow.Status.KEYS and escrow.address:
         for role in service.ROLES:
@@ -821,7 +927,8 @@ def mempool_seen(order, escrow=None):
                 continue
             user = order.maker if role_user_is_maker(order, role) else order.taker
             for txid, sats in _unconfirmed(_funding_address(escrow, role)):
-                seen.append({"what": "funding", "role": role, "owner": user.id if user else None, "txid": txid, "sats": sats})
+                seen.append({"what": "funding", "role": role, "owner": user.id if user else None, "txid": txid, "sats": sats,
+                             "fee_rate": tx_fee_rate(txid)})
     return seen
 
 
@@ -844,12 +951,19 @@ def notify_mempool(order, escrow=None):
             continue
         order.log(f"Onchain {item['role']} {item['what']} of {item['sats']} Sats **seen in the mempool** ({item['txid']})")
         if item["owner"]:
-            short = item.get("short")
-            send_notification.delay(
-                order_id=order.id,
-                message=f"onchain_mempool:{item['owner']}:{item['what']}:{item['sats']}"
-                + ("" if short is None else f":{short}"),
-            )
+            send_notification.delay(order_id=order.id, message=mempool_message(item))
+
+
+def mempool_message(item, hint=None):
+    """onchain_mempool:<user id>:<bond|funding>:<sats>[:<sats missing for the bond, or empty>
+    [:<fee rate it pays>:<fee rate needed for about an hour>]] (the last two only when it pays
+    less than that, rl31-beta19)."""
+    short = item.get("short")
+    msg = f"onchain_mempool:{item['owner']}:{item['what']}:{item['sats']}"
+    needed = low_fee(item.get("fee_rate"), hint)
+    if needed is not None:
+        return msg + f":{'' if short is None else short}:{item['fee_rate']:g}:{needed:g}"
+    return msg + ("" if short is None else f":{short}")
 
 
 def waiting_for(order, escrow, role):

@@ -190,7 +190,7 @@ class Notifications:
         user.robot.save(update_fields=["telegram_welcomed"])
         return
 
-    def onchain_seen_mempool(self, order, user_id, what, sats, short=None):
+    def onchain_seen_mempool(self, order, user_id, what, sats, short=None, low=None):
         """Roblosats onchain escrow: a payment of this robot (its bond or its funding) is in
         the mempool, waiting for 1 confirmation."""
         user = order.maker if order.maker_id == user_id else order.taker
@@ -219,6 +219,15 @@ class Notifications:
                 else:
                     title = (f"📥 Payment of {amount} Sats seen in the mempool for your bond (order {order.id}). "
                              f"Together with what you already sent it reaches the bond; waiting for 1 confirmation.")
+        if low:
+            # rl31-beta19: it pays less than the mempool needs for about an hour
+            paid, needed = (f"{r:g}".replace(".", ",") if lang == "es" else f"{r:g}" for r in low)
+            if lang == "es":
+                title += (f" ⚠️ Tu pago paga {paid} sat/vB y ahora la mempool pide {needed}: "
+                          f"acelera la transacción (RBF o CPFP) o puede tardar mucho en confirmarse.")
+            else:
+                title += (f" ⚠️ Your payment pays {paid} sat/vB and the mempool currently needs {needed}: "
+                          f"speed it up (RBF or CPFP) or it may take a long time to confirm.")
         self.send_message(order, user.robot, title)
 
     def order_taken_confirmed(self, order):
