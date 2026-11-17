@@ -28,6 +28,7 @@ import {
   fundingAddressOf,
   keysOf,
   loadRescues,
+  storedFairRescue,
   type BuiltRescue,
   type RescueRecord,
   type Utxo,
@@ -40,7 +41,7 @@ interface Props {
   token: string | undefined;
 }
 
-type Kind = 'funding' | 'bond' | 'escrow';
+type Kind = 'funding' | 'bond' | 'escrow' | 'fair';
 
 interface Item {
   rec: RescueRecord;
@@ -89,59 +90,89 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
       const found: Item[] = [];
       const info: string[] = [];
       for (const rec of recs) {
-        const keys = keysOf(token, rec);
-        // 1) the funding address: ours alone, no timelock
-        const faddr = fundingAddressOf(rec, keys);
-        if (rec.fundingAddress === faddr || rec.escrow) {
-          const us = await ex.utxos(faddr);
-          if (us.length)
-            found.push({
-              rec,
-              kind: 'funding',
-              sats: us.reduce((a, u) => a + u.value, 0),
-              utxos: us,
-              wait: 0,
-            });
-        }
-        // 2) our bond, while still on its own address
-        if (rec.bond?.txid && rec.bond.vout !== undefined) {
-          const spent = await ex.spentBy(rec.bond.txid, rec.bond.vout);
-          if (!spent) {
-            const conf = await ex.confirmedAt(rec.bond.txid);
-            const value = rec.bond.value ?? (await ex.outputValue(rec.bond.txid, rec.bond.vout));
-            found.push({
-              rec,
-              kind: 'bond',
-              sats: value,
-              utxos: [{ txid: rec.bond.txid, vout: rec.bond.vout, value }],
-              wait: blocksLeft(conf, rec.bond.refundCsv, height),
-            });
-          }
-        }
-        // 3) the escrow: the seller alone after rescue_csv blocks
-        if (rec.escrow?.depositTxid) {
-          const spent = await ex.spentBy(rec.escrow.depositTxid, 0);
-          if (!spent) {
-            if (rec.role === 'seller') {
-              const conf = await ex.confirmedAt(rec.escrow.depositTxid);
-              const value =
-                rec.escrow.outputSats ?? (await ex.outputValue(rec.escrow.depositTxid, 0));
+        // One order the explorer cannot answer for (a transaction it does not know, a network
+        // hiccup) must not hide the others (rl31-beta16 QA: one stale order emptied the list).
+        try {
+          const keys = keysOf(token, rec);
+          // 1) the funding address: ours alone, no timelock
+          const faddr = fundingAddressOf(rec, keys);
+          if (rec.fundingAddress === faddr || rec.escrow) {
+            const us = await ex.utxos(faddr);
+            if (us.length)
               found.push({
                 rec,
-                kind: 'escrow',
-                sats: value,
-                utxos: [{ txid: rec.escrow.depositTxid, vout: 0, value }],
-                wait: blocksLeft(conf, rec.escrow.rescueCsv, height),
+                kind: 'funding',
+                sats: us.reduce((a, u) => a + u.value, 0),
+                utxos: us,
+                wait: 0,
               });
-            } else {
-              info.push(
-                t(
-                  'Order #{{id}}: the escrow is still locked. Only the seller can take it back alone (after the timelock); as the buyer you get it through the release with the seller, or a dispute while the coordinator is up.',
-                  { id: rec.orderId },
-                ),
-              );
+          }
+          // 2) our bond, while still on its own address
+          if (rec.bond?.txid && rec.bond.vout !== undefined) {
+            const spent = await ex.spentBy(rec.bond.txid, rec.bond.vout);
+            if (!spent) {
+              const conf = await ex.confirmedAt(rec.bond.txid);
+              const value = rec.bond.value ?? (await ex.outputValue(rec.bond.txid, rec.bond.vout));
+              found.push({
+                rec,
+                kind: 'bond',
+                sats: value,
+                utxos: [{ txid: rec.bond.txid, vout: rec.bond.vout, value }],
+                wait: blocksLeft(conf, rec.bond.refundCsv, height),
+              });
             }
           }
+          // 3) the escrow: plan 2 (rl31-beta16), the rescue both pre-signed gives each one its
+          //    own after rescue_csv blocks; plan 1, the seller alone takes it all
+          if (rec.escrow?.depositTxid) {
+            const spent = await ex.spentBy(rec.escrow.depositTxid, 0);
+            if (!spent && (rec.escrow.rescuePlan ?? 1) >= 2) {
+              if (rec.escrow.rescueTx) {
+                const conf = await ex.confirmedAt(rec.escrow.depositTxid);
+                found.push({
+                  rec,
+                  kind: 'fair',
+                  sats: rec.escrow.rescueToMe ?? 0,
+                  utxos: [],
+                  wait: blocksLeft(conf, rec.escrow.rescueCsv, height),
+                });
+              } else {
+                info.push(
+                  t(
+                    'Order #{{id}}: the signed rescue is not saved on this device. Open the order on the device you traded with, or while the coordinator is up.',
+                    { id: rec.orderId },
+                  ),
+                );
+              }
+            } else if (!spent) {
+              if (rec.role === 'seller') {
+                const conf = await ex.confirmedAt(rec.escrow.depositTxid);
+                const value =
+                  rec.escrow.outputSats ?? (await ex.outputValue(rec.escrow.depositTxid, 0));
+                found.push({
+                  rec,
+                  kind: 'escrow',
+                  sats: value,
+                  utxos: [{ txid: rec.escrow.depositTxid, vout: 0, value }],
+                  wait: blocksLeft(conf, rec.escrow.rescueCsv, height),
+                });
+              } else {
+                info.push(
+                  t(
+                    'Order #{{id}}: the escrow is still locked. Only the seller can take it back alone (after the timelock); as the buyer you get it through the release with the seller, or a dispute while the coordinator is up.',
+                    { id: rec.orderId },
+                  ),
+                );
+              }
+            }
+          }
+        } catch (e) {
+          info.push(
+            t('Order #{{id}}: could not be checked ({{e}}).', {
+              id: rec.orderId,
+              e: String((e as Error).message ?? e),
+            }),
+          );
         }
       }
       setItems(found);
@@ -158,13 +189,20 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
     setBusy(true);
     setError('');
     try {
+      const ex = explorer();
+      if (it.kind === 'fair') {
+        // nothing to sign: the rescue was fixed and signed by both before the deposit
+        const built = storedFairRescue(it.rec);
+        await ex.broadcast(built.hex);
+        setDone((d) => ({ ...d, [`${it.rec.orderId}-${it.kind}`]: built }));
+        return;
+      }
       let script: Uint8Array;
       try {
         script = addressToScript(dest.trim());
       } catch {
         throw new RescueError('Write a valid Bitcoin address of yours first');
       }
-      const ex = explorer();
       const rate = await ex.feeRate();
       const keys = keysOf(token, it.rec);
       const built =
@@ -187,7 +225,9 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
       ? t('Sats left on your funding address')
       : k === 'bond'
         ? t('Your bond')
-        : t('The escrow (seller rescue)');
+        : k === 'fair'
+          ? t('Your part of the escrow (pre-signed rescue)')
+          : t('The escrow (seller rescue)');
 
   const waitText = (w: number | null): string =>
     w === null
@@ -205,7 +245,7 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
       <DialogContent>
         <Typography variant='body2' sx={{ mb: 1 }}>
           {t(
-            'If the coordinator disappears, this robot can take its onchain sats back alone: what is left on its funding address at any time, its bond after its timelock, and, as the seller, the whole escrow after the rescue timelock. The app uses the data it kept on this device and your robot token; nothing goes to the coordinator.',
+            'If the coordinator disappears, this robot can take its onchain sats back alone: what is left on its funding address at any time, its bond after its timelock, and its part of the escrow after the rescue timelock (seller: the trade amount, its bond and its fee; buyer: its bond and its fee; orders before this version: the seller takes the whole escrow). The app uses the data it kept on this device and your robot token; nothing goes to the coordinator.',
           )}
         </Typography>
         {recs.length === 0 ? (
@@ -294,7 +334,7 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
                         variant='contained'
                         size='small'
                         sx={{ mt: 0.5 }}
-                        disabled={busy || it.wait !== 0 || !dest.trim()}
+                        disabled={busy || it.wait !== 0 || (it.kind !== 'fair' && !dest.trim())}
                         onClick={() => {
                           void recover(it);
                         }}

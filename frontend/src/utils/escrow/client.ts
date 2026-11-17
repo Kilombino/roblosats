@@ -5,10 +5,13 @@ import {
   sign as musigSign,
   type Session,
 } from './musig2';
+import { schnorr } from '@noble/curves/secp256k1.js';
+
 import {
   BondContract,
   EscrowContract,
   Transaction,
+  addressToScript,
   bytesToHex,
   fundingScript,
   hexToBytes,
@@ -97,6 +100,15 @@ export interface EscrowOrderData {
    * a completed trade pays them; a collaborative cancel gives each trader its fee back. */
   escrow_fee_plan?: number;
   escrow_fees_in_escrow?: { seller: number; buyer: number };
+  /** 2 (rl31-beta16): fair rescue. Both traders pre-sign, before the deposit, a rescue valid
+   * after the timelock that gives each one its own; 1: the seller alone takes everything. */
+  escrow_rescue_plan?: number;
+  escrow_rescue_tx?: string;
+  escrow_rescue_to_seller?: number;
+  escrow_rescue_to_buyer?: number;
+  escrow_rescue_sigs?: { seller: string; buyer: string };
+  escrow_rescue_my_sig?: boolean;
+  escrow_deposit_txid?: string;
 }
 
 export interface OnchainSummary {
@@ -149,6 +161,7 @@ export const contractOf = (data: EscrowOrderData): EscrowContract => {
     hexToBytes(data.escrow_coordinator_pubkey!),
     data.escrow_rescue_csv!,
     data.escrow_hrp ?? 'bc',
+    data.escrow_rescue_plan ?? 1,
   );
 };
 
@@ -289,6 +302,96 @@ export const signDeposit = (
       ),
     );
   return out;
+};
+
+/** Most the pre-signed rescue may spend on mining (it pays a margin over today's rate). */
+export const MAX_RESCUE_FEE_SATS = 5000;
+
+/** The fair rescue (plan 2): spends exactly the escrow output of this deposit, only after the
+ * timelock, and pays us at least what we put into the escrow less our share of the deposit
+ * and rescue mining fees. Checked before signing it and again before keeping it. */
+export const checkRescue = (
+  data: EscrowOrderData,
+  keys: EscrowKeys,
+  bondData: EscrowOrderData | null,
+): { tx: Transaction; c: EscrowContract; msg: Uint8Array; spent: TxOut[] } => {
+  if ((data.escrow_rescue_plan ?? 1) < 2 || !data.escrow_rescue_tx)
+    fail('there is no rescue to sign');
+  const c = checkEscrowAddress(data, keys);
+  const deposit = Transaction.parse(data.escrow_deposit_tx!);
+  if (bytesToHex(deposit.outputs[0].script) !== bytesToHex(c.scriptPubkey))
+    fail('the first output is not the escrow');
+  const escrowValue = deposit.outputs[0].value;
+  const tx = Transaction.parse(data.escrow_rescue_tx!);
+  if (
+    tx.inputs.length !== 1 ||
+    tx.inputs[0].txid !== deposit.txid() ||
+    tx.inputs[0].vout !== 0 ||
+    tx.inputs[0].sequence !== c.rescueCsv ||
+    tx.version !== 2 ||
+    tx.locktime !== 0
+  )
+    fail('the rescue does not spend this escrow after the timelock');
+  const out = tx.outputs.reduce((a, o) => a + o.value, BigInt(0));
+  if (out > escrowValue || escrowValue - out > BigInt(MAX_RESCUE_FEE_SATS))
+    fail('the rescue mining fee is too high');
+  if (!data.escrow_my_payout_address) fail('we have no payout address yet');
+  const mine = bytesToHex(addressToScript(data.escrow_my_payout_address!));
+  const toMe = tx.outputs
+    .filter((o) => bytesToHex(o.script) === mine)
+    .reduce((a, o) => a + o.value, BigInt(0));
+  // What we put into the escrow: our funding inputs and our bond, less our change.
+  const spent = spentOf(data);
+  const myFunding = bytesToHex(fundingScript(pubkey(keys.funding)));
+  let myIn = (data.escrow_deposit_my_inputs ?? []).reduce((a, i) => a + spent[i].value, BigInt(0));
+  const bi = data.escrow_deposit_my_bond_input;
+  if (bi !== null && bi !== undefined) {
+    const bond = bondContractOf(bondData ?? data, keys);
+    if (bytesToHex(spent[bi].script) !== bytesToHex(bond.scriptPubkey))
+      fail('the bond input is not our bond');
+    myIn += spent[bi].value;
+  }
+  const myBack = deposit.outputs
+    .filter((o) => bytesToHex(o.script) === myFunding)
+    .reduce((a, o) => a + o.value, BigInt(0));
+  const totalIn = spent.reduce((a, x) => a + x.value, BigInt(0));
+  const depositFee = totalIn - deposit.outputs.reduce((a, o) => a + o.value, BigInt(0));
+  const owed = myIn - myBack - depositFee - (escrowValue - out);
+  if (owed > BigInt(0) && toMe < owed) fail('the rescue does not give us back what we put in');
+  const escrowSpentOut: TxOut[] = [{ value: escrowValue, script: c.scriptPubkey }];
+  const msg = tx.sighashUnified(0, escrowSpentOut, c.leafHashes[EscrowContract.RESCUE]);
+  return { tx, c, msg, spent: escrowSpentOut };
+};
+
+export const signRescue = (
+  data: EscrowOrderData,
+  keys: EscrowKeys,
+  bondData: EscrowOrderData | null,
+): string => bytesToHex(signSchnorr(keys.escrow, checkRescue(data, keys, bondData).msg));
+
+/** The complete rescue (both signatures, both checked), ready to broadcast after the
+ * timelock without the coordinator. */
+export const completeRescue = (
+  data: EscrowOrderData,
+  keys: EscrowKeys,
+  bondData: EscrowOrderData | null,
+): { hex: string; txid: string; toMe: number } => {
+  const { tx, c, msg } = checkRescue(data, keys, bondData);
+  const sigs = data.escrow_rescue_sigs;
+  if (!sigs?.seller || !sigs?.buyer) fail('the rescue is not signed by both yet');
+  const sig = (role: 'seller' | 'buyer'): Uint8Array => {
+    const raw = hexToBytes(sigs![role]);
+    const pk = role === 'seller' ? c.sellerPk : c.buyerPk;
+    if (raw.length !== 65 || raw[64] !== 0x21 || !schnorr.verify(raw.slice(0, 64), msg, xonly(pk)))
+      fail('a rescue signature does not verify');
+    return raw;
+  };
+  const witness = [sig('buyer'), sig('seller'), c.leaves[EscrowContract.RESCUE], c.controlBlock(2)];
+  const mine = bytesToHex(addressToScript(data.escrow_my_payout_address!));
+  const toMe = tx.outputs
+    .filter((o) => bytesToHex(o.script) === mine)
+    .reduce((a, o) => a + Number(o.value), 0);
+  return { hex: bytesToHex(tx.serialize([witness])), txid: tx.txid(), toMe };
 };
 
 export interface ReleaseCheck {

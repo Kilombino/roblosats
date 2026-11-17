@@ -95,10 +95,23 @@ const leafPair = (a: Uint8Array, b: Uint8Array): Uint8Array =>
 const leafCsv = (a: Uint8Array, csv: number): Uint8Array =>
   concat(push(xonly(a)), Uint8Array.of(OP_CHECKSIGVERIFY), scriptNum(csv), Uint8Array.of(OP_CSV));
 
+// Rescue plan 2 (rl31-beta16): <seller> CHECKSIGVERIFY <buyer> CHECKSIGVERIFY <csv> CSV. Spent
+// only by the rescue both traders pre-sign before the deposit (each one gets its own).
+const leafFairRescue = (s: Uint8Array, b: Uint8Array, csv: number): Uint8Array =>
+  concat(
+    push(xonly(s)),
+    Uint8Array.of(OP_CHECKSIGVERIFY),
+    push(xonly(b)),
+    Uint8Array.of(OP_CHECKSIGVERIFY),
+    scriptNum(csv),
+    Uint8Array.of(OP_CSV),
+  );
+
 export class EscrowContract {
   static SELLER_COORDINATOR = 0;
   static BUYER_COORDINATOR = 1;
   static SELLER_RESCUE = 2;
+  static RESCUE = 2;
   leaves: Uint8Array[];
   leafHashes: Uint8Array[];
   merkleRoot: Uint8Array;
@@ -113,11 +126,13 @@ export class EscrowContract {
     public coordinatorPk: Uint8Array,
     public rescueCsv: number,
     public hrp = 'bc',
+    /** 1: the seller alone after the timelock (escrows up to rl31-beta15); 2: fair rescue. */
+    public rescuePlan = 1,
   ) {
     this.leaves = [
       leafPair(sellerPk, coordinatorPk),
       leafPair(buyerPk, coordinatorPk),
-      leafCsv(sellerPk, rescueCsv),
+      rescuePlan >= 2 ? leafFairRescue(sellerPk, buyerPk, rescueCsv) : leafCsv(sellerPk, rescueCsv),
     ];
     this.leafHashes = this.leaves.map(tapleaf);
     this.merkleRoot = tapbranch(

@@ -27,6 +27,8 @@ import {
   signBondPenalty,
   signBondReturn,
   signDeposit,
+  signRescue,
+  completeRescue,
   signDisputeRelease,
   owedInRelease,
   depositSpendLimit,
@@ -44,6 +46,7 @@ export type EscrowAction =
   | 'escrow_keys'
   | 'escrow_address'
   | 'escrow_funding_signatures'
+  | 'escrow_rescue_signature'
   | 'escrow_nonce'
   | 'escrow_partial'
   | 'escrow_leaf_signature'
@@ -207,15 +210,33 @@ export const OnchainEscrowPrompt = ({
   // Keep on this device what a rescue without the coordinator needs (public data only).
   useEffect(() => {
     if (!token || !data.escrow_alias) return;
-    void saveRescue(systemClient, token, data, order.shortAlias).catch(() => {});
+    // Fair rescue: once both signed, the complete rescue goes with it (also on a device that
+    // joins later: the coordinator still hands the signed parts out while it is up).
+    let rescue: ReturnType<typeof completeRescue> | undefined;
+    if (
+      keys &&
+      (data.escrow_rescue_plan ?? 1) >= 2 &&
+      data.escrow_rescue_sigs?.seller &&
+      data.escrow_rescue_sigs?.buyer
+    ) {
+      try {
+        rescue = completeRescue(data, keys, data);
+      } catch {
+        rescue = undefined;
+      }
+    }
+    void saveRescue(systemClient, token, data, order.shortAlias, rescue).catch(() => {});
   }, [
     token,
+    data.escrow_rescue_plan,
     data.escrow_address,
     data.escrow_funding_txid,
     data.escrow_output_sats,
     data.escrow_funding_address,
     data.bond_address,
     data.bond_txid,
+    data.escrow_rescue_sigs?.seller,
+    data.escrow_rescue_sigs?.buyer,
   ]);
 
   const once = (key: string, fn: () => void): void => {
@@ -243,20 +264,47 @@ export const OnchainEscrowPrompt = ({
       once('escrow_keys', () =>
         onAction('escrow_keys', { escrow_pubkey: pk.escrow, funding_pubkey: pk.funding }),
       );
+    const fairRescue = (data.escrow_rescue_plan ?? 1) >= 2;
+    if (
+      fairRescue &&
+      data.escrow_status_code === ESCROW.FUNDING &&
+      data.escrow_rescue_tx &&
+      !data.escrow_rescue_my_sig
+    )
+      // rl31-beta16: first the pre-signed rescue (each one gets its own after the timelock)
+      once(`rescue-${data.escrow_rescue_tx}`, () =>
+        onAction('escrow_rescue_signature', { signature: signRescue(data, keys, data) }),
+      );
+    const rescueReady =
+      !fairRescue || Boolean(data.escrow_rescue_sigs?.seller && data.escrow_rescue_sigs?.buyer);
     if (
       data.escrow_status_code === ESCROW.FUNDING &&
       data.escrow_deposit_tx &&
-      !data.escrow_deposit_signed
+      !data.escrow_deposit_signed &&
+      rescueReady &&
+      token
     )
-      once(`deposit-${data.escrow_deposit_tx}`, () =>
-        onAction(
-          'escrow_funding_signatures',
-          signDeposit(data, keys, data, {
-            maxSpendSats: depositSpendLimit(data),
-            maxFeeRate: 100,
-          }),
-        ),
-      );
+      once(`deposit-${data.escrow_deposit_tx}`, () => {
+        const deposit = signDeposit(data, keys, data, {
+          maxSpendSats: depositSpendLimit(data),
+          maxFeeRate: 100,
+        });
+        if (!fairRescue) {
+          onAction('escrow_funding_signatures', deposit);
+          return;
+        }
+        // Never sign the deposit before the complete rescue (both signatures, checked) is
+        // saved on this device: without it our sats would depend on the coordinator.
+        const rescue = completeRescue(data, keys, data);
+        void saveRescue(systemClient, token, data, order.shortAlias, rescue)
+          .then(() => {
+            onAction('escrow_funding_signatures', deposit);
+          })
+          .catch((e) => {
+            sent.current.delete(`deposit-${data.escrow_deposit_tx}`);
+            setError(String(e));
+          });
+      });
     if (
       data.escrow_status_code === ESCROW.RELEASING &&
       data.escrow_release_tx &&
@@ -351,6 +399,10 @@ export const OnchainEscrowPrompt = ({
     data.bond_status_code,
     data.escrow_status_code,
     data.escrow_deposit_tx,
+    data.escrow_rescue_tx,
+    data.escrow_rescue_my_sig,
+    data.escrow_rescue_sigs?.seller,
+    data.escrow_rescue_sigs?.buyer,
     data.escrow_release_tx,
     data.escrow_release_aggnonce,
     data.escrow_release_my_nonce,
@@ -402,6 +454,8 @@ export const OnchainEscrowPrompt = ({
       if (what === 'funding') return t('Waiting for the deposit of {{peer}}…', { peer });
       if (what === 'deposit_signature')
         return t('Waiting for {{peer}} to sign the deposit…', { peer });
+      if (what === 'rescue_signature')
+        return t('Waiting for {{peer}} to sign the rescue without the coordinator…', { peer });
       if (what === 'release_signature')
         return t('Waiting for {{peer}} to sign the release…', { peer });
     }

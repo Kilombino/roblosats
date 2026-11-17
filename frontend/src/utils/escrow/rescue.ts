@@ -6,7 +6,11 @@
 // What can be recovered alone:
 //  - the funding address (rawtr of our funding key): at any time;
 //  - our bond while it is not inside the deposit: leaf <owner> CSV after refund_csv blocks;
-//  - the escrow, by the seller only: leaf <seller> CSV after rescue_csv blocks from the deposit.
+//  - the escrow, by the seller only: leaf <seller> CSV after rescue_csv blocks from the deposit
+//    (rescue plan 1, escrows up to rl31-beta15);
+//  - rescue plan 2 (rl31-beta16): the rescue both traders pre-signed before the deposit, kept
+//    here complete (both signatures): after rescue_csv blocks either side broadcasts it and
+//    each one gets its own (seller: trade + its bond + its fee; buyer: its bond + its fee).
 import { xchacha20poly1305 } from '@noble/ciphers/chacha.js';
 import { hkdf } from '@noble/hashes/hkdf.js';
 import { sha256 } from '@noble/hashes/sha2.js';
@@ -42,6 +46,11 @@ export interface RescueRecord {
     address: string;
     outputSats?: number;
     depositTxid?: string;
+    rescuePlan?: number;
+    /** Plan 2: the complete pre-signed rescue (hex), its txid and what it pays us. */
+    rescueTx?: string;
+    rescueTxid?: string;
+    rescueToMe?: number;
   };
   bond?: {
     coordinatorPk: string;
@@ -89,10 +98,17 @@ export const decryptRecords = (token: string, blob?: string): Record<string, Res
 };
 
 /** What the order data tells us that a rescue needs (null when there is nothing yet). */
+export interface SignedRescue {
+  hex: string;
+  txid: string;
+  toMe: number;
+}
+
 export const recordFromOrder = (
   data: EscrowOrderData,
   shortAlias: string,
   prev?: RescueRecord,
+  rescue?: SignedRescue,
 ): RescueRecord | null => {
   const coordinator = data.escrow_alias;
   if (!coordinator) return null;
@@ -117,6 +133,13 @@ export const recordFromOrder = (
     };
     if (data.escrow_output_sats) rec.escrow.outputSats = data.escrow_output_sats;
     if (data.escrow_funding_txid) rec.escrow.depositTxid = data.escrow_funding_txid;
+    if (data.escrow_rescue_plan) rec.escrow.rescuePlan = data.escrow_rescue_plan;
+    if (rescue) {
+      rec.escrow.rescueTx = rescue.hex;
+      rec.escrow.rescueTxid = rescue.txid;
+      rec.escrow.rescueToMe = rescue.toMe;
+      if (data.escrow_deposit_txid) rec.escrow.depositTxid = data.escrow_deposit_txid;
+    }
   }
   if (data.bond_address && data.bond_coordinator_pubkey && data.bond_refund_csv) {
     rec.bond = {
@@ -150,11 +173,12 @@ export const saveRescue = async (
   token: string,
   data: EscrowOrderData,
   shortAlias: string,
+  rescue?: SignedRescue,
 ): Promise<boolean> => {
   const key = storageKey(token);
   const recs = decryptRecords(token, await storage.getItem(key));
   const k = recordKey(shortAlias, data.id);
-  const rec = recordFromOrder(data, shortAlias, recs[k]);
+  const rec = recordFromOrder(data, shortAlias, recs[k], rescue);
   if (!rec) return false;
   const strip = (r?: RescueRecord): string => JSON.stringify({ ...(r ?? {}), savedAt: 0 });
   if (strip(rec) === strip(recs[k])) return false;
@@ -183,6 +207,7 @@ export const escrowContractOf = (rec: RescueRecord): EscrowContract => {
     hexToBytes(e.coordinatorPk),
     e.rescueCsv,
     rec.hrp,
+    e.rescuePlan ?? 1,
   );
   check(!e.address || c.address === e.address, 'the stored escrow does not match its keys');
   return c;
@@ -236,6 +261,7 @@ export const buildEscrowRescue = (
     bytesToHex(pubkey(keys.escrow)) === rec.escrow!.sellerPk,
     'only the seller can rescue the escrow alone',
   );
+  check((rec.escrow!.rescuePlan ?? 1) < 2, 'this escrow is rescued with the pre-signed rescue');
   const fee = feeFor(VB_BASE + VB_ESCROW_LEAF_IN + VB_OUT, feeRate);
   const value = BigInt(utxo.value) - fee;
   check(value > BigInt(330), 'the escrow does not cover the mining fee');
@@ -249,6 +275,28 @@ export const buildEscrowRescue = (
     tx.serialize([[sig, c.leaves[EscrowContract.SELLER_RESCUE], c.controlBlock(2)]]),
   );
   return { hex, txid: tx.txid(), fee: Number(fee), sent: Number(value) };
+};
+
+/** Plan 2: the complete pre-signed rescue kept on this device (nothing to sign, no fee to
+ * choose: it was fixed before the deposit). */
+export const storedFairRescue = (rec: RescueRecord): BuiltRescue => {
+  const e = rec.escrow;
+  check(Boolean(e?.rescueTx), 'the complete rescue is not saved on this device');
+  const c = escrowContractOf(rec);
+  const tx = Transaction.parse(e!.rescueTx!);
+  check(
+    tx.inputs.length === 1 &&
+      (!e!.depositTxid || tx.inputs[0].txid === e!.depositTxid) &&
+      tx.inputs[0].sequence === c.rescueCsv,
+    'the saved rescue does not spend this escrow',
+  );
+  const out = tx.outputs.reduce((a, o) => a + Number(o.value), 0);
+  return {
+    hex: e!.rescueTx!,
+    txid: tx.txid(),
+    fee: e!.outputSats ? e!.outputSats - out : 0,
+    sent: e!.rescueToMe ?? 0,
+  };
 };
 
 /** Our bond back alone through its refund leaf once refund_csv blocks passed. */

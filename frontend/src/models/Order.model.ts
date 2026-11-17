@@ -21,6 +21,7 @@ export interface SubmitActionProps {
     | 'escrow_keys'
     | 'escrow_address'
     | 'escrow_funding_signatures'
+    | 'escrow_rescue_signature'
     | 'escrow_nonce'
     | 'escrow_partial'
     | 'escrow_leaf_signature'

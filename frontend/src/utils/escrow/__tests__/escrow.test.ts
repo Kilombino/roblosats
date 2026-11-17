@@ -141,6 +141,18 @@ describe('same keys, contracts and sighash as the coordinator (api/tests/test_es
     );
   });
 
+  test('escrow contract, fair rescue (plan 2, rl31-beta16)', () => {
+    const c = new EscrowContract(S, B, C, 2016, 'bc', 2);
+    // same value as api/tests/test_escrow_rescue_plan2.py
+    expect(c.address).toBe('bc1pu9kcewkmrtdex8uhx7f9d665wcv8xr8yefl36ae3zr8z8afavqpsvghja6');
+    expect(bytesToHex(c.leaves[2])).toBe(
+      '20' + bytesToHex(S.slice(1)) + 'ad20' + bytesToHex(B.slice(1)) + 'ad02e007b2',
+    );
+    expect(new EscrowContract(S, B, C, 4480, 'bc', 1).address).toBe(
+      'bc1p9jhzqnjypwjcwvleg862n460lgdmqrvkh98rzefgedum6yrk7z8qp8xsxd',
+    );
+  });
+
   test('bond contract', () => {
     const b = new BondContract(pubkey(sk('token-del-vendedor', 'bond')), C, 432);
     expect(b.address).toBe('bc1puz53mcxycuqjexuzyh3xkgrvlzl2f8tduzmzrjrg75acxvqyptyqd5qfrz');

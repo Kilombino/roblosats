@@ -14,6 +14,8 @@ import {
   releasePartial,
   checkFundingAddress,
   owedInRelease,
+  signRescue,
+  completeRescue,
   type EscrowOrderData,
 } from '../client';
 import { addressToScript } from '../taproot';
@@ -88,6 +90,30 @@ const toChat = async () => {
   await call('pay', { address: s.escrow_funding_address, sats: s.escrow_funding_recommended });
   await call('advance');
 
+  // rl31-beta16 (fair rescue): the deposit signatures are refused before both rescue ones
+  const early = await data('seller');
+  expect(early.escrow_rescue_plan).toBe(2);
+  await expect(
+    call('action', {
+      user: 'seller',
+      name: 'escrow_funding_signatures',
+      data: signDeposit(early, keys.seller, early, { maxSpendSats: 10_000_000, maxFeeRate: 50 }),
+    }),
+  ).rejects.toThrow('both rescue signatures');
+  for (const user of ['seller', 'buyer'] as const) {
+    const d = await data(user);
+    await call('action', {
+      user,
+      name: 'escrow_rescue_signature',
+      data: { signature: signRescue(d, keys[user], d) },
+    });
+  }
+  const rescues: Record<string, { hex: string; txid: string; toMe: number }> = {};
+  for (const user of ['seller', 'buyer'] as const) {
+    const d = await data(user);
+    rescues[user] = completeRescue(d, keys[user], d);
+  }
+  expect(rescues.seller.hex).toBe(rescues.buyer.hex);
   for (const user of ['seller', 'buyer'] as const) {
     const d = await data(user);
     const sig = signDeposit(d, keys[user], d, {
@@ -98,7 +124,7 @@ const toChat = async () => {
   }
   await call('advance', { mine: 1 });
   expect((await data('buyer')).status).toBe(9);
-  return { keys, data, payout };
+  return { keys, data, payout, rescues };
 };
 
 // rl31-beta15 (fee plan 2): the fees ride in the escrow output; the client checks every
@@ -195,4 +221,37 @@ maybe(
     expect(to(payout.buyer)).toBe(bonds.buyer + held.buyer);
   },
   180_000,
+);
+
+maybe(
+  'fair rescue without the coordinator: each one gets its own after the timelock',
+  async () => {
+    const { data, payout, rescues } = await toChat();
+    const d = await data('buyer');
+    const csv = d.escrow_rescue_csv!;
+    const toSeller = d.escrow_rescue_to_seller!;
+    const toBuyer = d.escrow_rescue_to_buyer!;
+    // From here on the coordinator is never asked again: blocks and broadcast go to the node.
+    const early = await call('broadcast', { hex: rescues.buyer.hex });
+    expect(early.error).toContain('non-BIP68-final');
+    const { confirmations } = await call('txheight', { txid: d.escrow_funding_txid });
+    await call('blocks', { n: csv - confirmations });
+    const sent = await call('broadcast', { hex: rescues.buyer.hex }); // the buyer does it
+    expect(sent.txid).toBe(rescues.buyer.txid);
+    await call('blocks', { n: 1 });
+    const tx = await call('rawtx', { txid: sent.txid });
+    const to = (a: string): number =>
+      Math.round(
+        tx.vout
+          .filter((o: { scriptPubKey: { address: string } }) => o.scriptPubKey.address === a)
+          .reduce((x: number, o: { value: number }) => x + o.value, 0) * 1e8,
+      );
+    const fee = toSeller + toBuyer - to(payout.seller) - to(payout.buyer);
+    expect(tx.vout.length).toBe(2);
+    expect(to(payout.seller)).toBe(toSeller - (fee - Math.floor(fee / 2)));
+    expect(to(payout.buyer)).toBe(toBuyer - Math.floor(fee / 2));
+    expect(to(payout.buyer)).toBe(rescues.buyer.toMe);
+    expect(to(payout.seller)).toBe(rescues.seller.toMe);
+  },
+  300_000,
 );
