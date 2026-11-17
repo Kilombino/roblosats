@@ -68,8 +68,14 @@ class MarketTick(models.Model):
         elif order.taker_bond.status == LNPayment.Status.LOCKED:
             volume = order.last_satoshis / 100_000_000
             price = float(order.amount) / volume  # Amount Fiat / Amount BTC
-            market_exchange_rate = float(order.currency.exchange_rate)
-            premium = 100 * (price / market_exchange_rate - 1)
+            # Roblosats: a fixed-price order may be taken while there is no market price;
+            # keep the premium inside the field's 5 digits (a fixed price can be far off).
+            market_exchange_rate = float(order.currency.exchange_rate or 0)
+            if market_exchange_rate > 0:
+                premium = 100 * (price / market_exchange_rate - 1)
+                premium = max(-99.99, min(999, round(premium, 2)))
+            else:
+                premium = None
 
             market_tick = MarketTick.objects.create(
                 price=price,

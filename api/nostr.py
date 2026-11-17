@@ -47,13 +47,14 @@ class Nostr:
         robot_name = await self.get_user_name(order)
         robot_hash_id = await self.get_robot_hash_id(order)
         currency = await self.get_robot_currency(order)
+        pricing = await self.get_pricing(order)
 
         content = order.description if order.description is not None else ""
 
         # Keys implements AsyncNostrSigner directly in nostr-sdk 0.45.0
         event = await (
             EventBuilder(Kind(38383), content)
-            .tags(self.generate_tags(order, robot_name, robot_hash_id, currency))
+            .tags(self.generate_tags(order, robot_name, robot_hash_id, currency, pricing))
             .finalize_async(keys)
         )
         await client.send_event(event)
@@ -113,18 +114,45 @@ class Nostr:
     def get_robot_currency(self, order):
         return str(order.currency)
 
-    def generate_tags(self, order, robot_name, robot_hash_id, currency):
+    @sync_to_async
+    def get_pricing(self, order):
+        return self.pricing_tags(order)
+
+    @staticmethod
+    def pricing_tags(order):
+        """NIP-69 pricing (rl31-beta17). A market order: amt 0 + its premium. A fixed-price
+        order with one amount: amt = its sats (fa + amt fix the price, as the spec reads a
+        non-zero amt); with a range the sats depend on the amount taken, so amt stays 0. In
+        both, premium is the fixed price against the market now (0 without a market price)
+        and an extra ["price", <fixed price per BTC>] tag carries the price itself."""
+        from api.logics import Logics
+
+        if not Logics.is_fixed_price(order):
+            return {"amt": "0", "premium": str(order.premium), "price": None}
+        premium = Logics.fixed_price_premium(order)
+        amt = "0" if order.has_range else str(int(Logics.satoshis_now(order)))
+        return {
+            "amt": amt,
+            "premium": str(premium if premium is not None else 0),
+            "price": format(order.fixed_price.normalize(), "f")
+            if hasattr(order.fixed_price, "normalize")
+            else str(order.fixed_price),
+        }
+
+    def generate_tags(self, order, robot_name, robot_hash_id, currency, pricing=None):
         hashed_id = hashlib.md5(
             f"{config('COORDINATOR_ALIAS', cast=str)}{order.id}".encode("utf-8")
         ).hexdigest()
 
+        if pricing is None:
+            pricing = self.pricing_tags(order)
         tags = [
             Tag.parse(["d", str(uuid.UUID(hashed_id))]),
             Tag.parse(["name", robot_name, robot_hash_id]),
             Tag.parse(["k", "sell" if order.type == Order.Types.SELL else "buy"]),
             Tag.parse(["f", currency]),
             Tag.parse(["s", self.get_status_tag(order)]),
-            Tag.parse(["amt", "0"]),
+            Tag.parse(["amt", pricing["amt"]]),
             Tag.parse(
                 ["fa"]
                 + (
@@ -134,7 +162,7 @@ class Nostr:
                 )
             ),
             Tag.parse(["pm"] + order.payment_method.split(" ")),
-            Tag.parse(["premium", str(order.premium)]),
+            Tag.parse(["premium", pricing["premium"]]),
             Tag.parse(
                 [
                     "source",
@@ -154,6 +182,9 @@ class Nostr:
             Tag.parse(["bond", str(order.bond_size)]),
             Tag.parse(["z", "order"]),
         ]
+
+        if pricing.get("price"):
+            tags.append(Tag.parse(["price", pricing["price"]]))
 
         if order.latitude and order.longitude:
             tags.extend(

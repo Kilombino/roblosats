@@ -6,6 +6,7 @@ import re
 from datetime import datetime, timedelta
 from hmac import compare_digest
 
+from decimal import Decimal
 from decouple import config
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -130,6 +131,7 @@ class MakerView(CreateAPIView):
         premium = serializer.data.get("premium")
         satoshis = serializer.data.get("satoshis")
         is_explicit = serializer.data.get("is_explicit")
+        fixed_price = serializer.data.get("fixed_price")
         public_duration = serializer.data.get("public_duration")
         escrow_duration = serializer.data.get("escrow_duration")
         bond_size = serializer.data.get("bond_size")
@@ -170,6 +172,33 @@ class MakerView(CreateAPIView):
         if len(Currency.objects.all()) == 0:
             cache_market()
 
+        # Roblosats rl31-beta17: fixed price per BTC (in the order's currency). The sats come
+        # from it, never from the exchange rate; the premium is only informative.
+        currency_obj = Currency.objects.filter(id=currency).first()
+        if currency_obj is None:
+            return Response({"bad_request": "Unknown currency"}, status.HTTP_400_BAD_REQUEST)
+        if fixed_price is not None:
+            try:
+                fixed_ok = float(fixed_price) > 0
+            except (TypeError, ValueError):
+                fixed_ok = False
+            if fixed_ok:
+                fixed_price = Decimal(str(fixed_price))
+            if not fixed_ok:
+                return Response(
+                    {"bad_request": "The fixed price must be greater than 0"},
+                    status.HTTP_400_BAD_REQUEST,
+                )
+            is_explicit = False
+            satoshis = None
+        elif not is_explicit and not Logics.market_rate(currency_obj):
+            return Response(
+                {
+                    "bad_request": "There is no market price for this currency right now: use a fixed price"
+                },
+                status.HTTP_400_BAD_REQUEST,
+            )
+
         # Serialize concurrent make/take attempts from the same robot by locking
         # its row for the duration of the check-then-create. This closes the TOCTOU
         # window between validate_already_maker_or_taker (SELECT) and order.save()
@@ -186,7 +215,7 @@ class MakerView(CreateAPIView):
             # Creates a new order
             order = Order(
                 type=type,
-                currency=Currency.objects.get(id=currency),
+                currency=currency_obj,
                 amount=amount,
                 has_range=has_range,
                 min_amount=min_amount,
@@ -195,6 +224,7 @@ class MakerView(CreateAPIView):
                 premium=premium,
                 satoshis=satoshis,
                 is_explicit=is_explicit,
+                fixed_price=fixed_price,
                 expires_at=timezone.now() + timedelta(seconds=EXP_MAKER_BOND_INVOICE),
                 maker=request.user,
                 public_duration=public_duration,
@@ -207,6 +237,9 @@ class MakerView(CreateAPIView):
                 escrow_type=escrow_type,
             )
 
+            if fixed_price is not None:
+                # informative only (and kept inside the field): 0 without a market price
+                order.premium = Logics.fixed_price_premium(order) or 0
             order.last_satoshis = order.t0_satoshis = Logics.satoshis_now(order)
 
             if escrow_type == Order.EscrowTypes.ONCHAIN and not escrow_flow.robot_allowed(request.user):
@@ -1028,7 +1061,8 @@ class BookView(ListAPIView):
         data["satoshis_now"] = Logics.satoshis_now(order)
         # Compute current premium for those orders that are explicitly priced.
         price, premium = Logics.price_and_premium_now(order)
-        data["price"], data["premium"] = price, str(premium)
+        # fixed-price order without a market price: premium unknown, "0" for old clients
+        data["price"], data["premium"] = price, str(premium if premium is not None else 0)
         data["maker_status"] = Logics.user_activity_status(order.maker.last_login)
         for key in (
             "status",
@@ -1404,7 +1438,8 @@ class LimitView(ListAPIView):
 
         for currency in queryset:
             code = Currency.currency_dict[str(currency.currency)]
-            exchange_rate = float(currency.exchange_rate)
+            # 0 while the currency has no market price (fixed-price orders still work)
+            exchange_rate = float(currency.exchange_rate or 0)
             payload[currency.currency] = {
                 "code": code,
                 "price": exchange_rate,

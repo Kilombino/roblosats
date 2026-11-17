@@ -1,4 +1,5 @@
 import math
+from decimal import Decimal
 from contextlib import contextmanager
 from datetime import timedelta
 
@@ -396,12 +397,8 @@ class Logics:
                     },
                 )
         elif order.has_range:
-            min_sats = cls.calc_sats(
-                order.min_amount, order.currency.exchange_rate, order.premium
-            )
-            max_sats = cls.calc_sats(
-                order.max_amount, order.currency.exchange_rate, order.premium
-            )
+            min_sats = cls.sats_for_amount(order, order.min_amount)
+            max_sats = cls.sats_for_amount(order, order.max_amount)
             if min_sats > max_sats / 1.5:
                 return False, new_error(1006)
             elif max_sats > MAX_ORDER_SIZE:
@@ -496,9 +493,52 @@ class Logics:
         )
 
     def calc_sats(amount, exchange_rate, premium):
-        exchange_rate = float(exchange_rate)
-        premium_rate = exchange_rate * (1 + float(premium) / 100)
+        exchange_rate = float(exchange_rate or 0)
+        premium_rate = exchange_rate * (1 + float(premium or 0) / 100)
+        if premium_rate <= 0:
+            # No market price (feed down or currency never priced): no sats at market.
+            # make rejects such relative orders; fixed-price orders never come here.
+            return 0
         return (float(amount) / premium_rate) * 100 * 1000 * 1000
+
+    # --- Fixed price (Roblosats rl31-beta17) ---------------------------------------------
+    # The maker sets the price per BTC (order.fixed_price, in the order's currency: fiat, or
+    # Spamcoin for currency 1000). The sats are amount / fixed_price, so nothing about the
+    # order needs the coordinator's exchange rate; the premium against the market is only
+    # shown, and only when there is a market price.
+    PREMIUM_MIN, PREMIUM_MAX = -99.99, 999  # Order.premium / MarketTick.premium: 5 digits
+
+    @staticmethod
+    def is_fixed_price(order):
+        fp = order.fixed_price
+        return isinstance(fp, (int, float, Decimal)) and fp > 0
+
+    @staticmethod
+    def market_rate(currency):
+        """The coordinator's price for the currency, or 0 when it has none."""
+        try:
+            rate = float(currency.exchange_rate or 0)
+        except (TypeError, ValueError):
+            return 0
+        return rate if rate > 0 and math.isfinite(rate) else 0
+
+    @classmethod
+    def sats_for_amount(cls, order, amount):
+        if cls.is_fixed_price(order):
+            return float(amount) / float(order.fixed_price) * 100_000_000
+        return cls.calc_sats(amount, order.currency.exchange_rate, order.premium)
+
+    @classmethod
+    def clamp_premium(cls, premium):
+        return max(cls.PREMIUM_MIN, min(cls.PREMIUM_MAX, round(float(premium), 2)))
+
+    @classmethod
+    def fixed_price_premium(cls, order):
+        """The fixed price against the market price in %, or None without a market price."""
+        rate = cls.market_rate(order.currency)
+        if not rate:
+            return None
+        return cls.clamp_premium((float(order.fixed_price) / rate - 1) * 100)
 
     SPAMCOIN_CURRENCY = 1000
 
@@ -519,7 +559,13 @@ class Logics:
     @classmethod
     def satoshis_now(cls, order, take_amount=None):
         """checks trade amount in sats"""
-        if order.is_explicit:
+        if cls.is_fixed_price(order):
+            if take_amount is not None:
+                amount = take_amount
+            else:
+                amount = order.amount if order.amount is not None else order.max_amount
+            satoshis_now = cls.sats_for_amount(order, amount)
+        elif order.is_explicit:
             satoshis_now = order.satoshis
         else:
             if take_amount is not None:
@@ -532,19 +578,25 @@ class Logics:
             )
         return int(satoshis_now)
 
-    def price_and_premium_now(order):
+    @classmethod
+    def price_and_premium_now(cls, order):
         """computes order price and premium with current rates"""
-        exchange_rate = float(order.currency.exchange_rate)
+        if cls.is_fixed_price(order):
+            # The maker's price as it is; the premium is None without a market price.
+            return float(order.fixed_price), cls.fixed_price_premium(order)
+        exchange_rate = cls.market_rate(order.currency)
         if not order.is_explicit:
             premium = order.premium
             price = exchange_rate * (1 + float(premium) / 100)
         else:
             amount = order.amount if not order.has_range else order.max_amount
             order_rate = float(amount) / (float(order.satoshis) / 100_000_000)
-            premium = order_rate / exchange_rate - 1
+            premium = (order_rate / exchange_rate - 1) if exchange_rate else 0
             premium = int(premium * 10_000) / 100  # 2 decimals left
             price = order_rate
 
+        if not price or price <= 0:
+            return 0, premium
         significant_digits = 5
         price = round(
             price, significant_digits - int(math.floor(math.log10(abs(price)))) - 1

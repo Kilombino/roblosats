@@ -110,6 +110,17 @@ class Order(models.Model):
         validators=[MinValueValidator(Decimal(-100)), MaxValueValidator(Decimal(999))],
         blank=True,
     )
+    # Roblosats (rl31-beta17): a fixed price per BTC chosen by the maker, in the order's
+    # currency (fiat, or Spamcoin for currency 1000). When set, the sats are amount / fixed_price
+    # and the coordinator's exchange rate is never needed; premium is only informative.
+    fixed_price = models.DecimalField(
+        max_digits=22,
+        decimal_places=8,
+        null=True,
+        blank=True,
+        default=None,
+        validators=[MinValueValidator(Decimal(0))],
+    )
     # explicit
     satoshis = models.PositiveBigIntegerField(
         null=True,

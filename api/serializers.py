@@ -105,6 +105,7 @@ class ListOrderSerializer(serializers.ModelSerializer):
             "latitude",
             "longitude",
             "escrow_type",
+            "fixed_price",
         )
 
 
@@ -597,6 +598,7 @@ class OrderPublicSerializer(serializers.ModelSerializer):
             "bond_size",
             "latitude",
             "longitude",
+            "fixed_price",
         )
 
 
@@ -641,6 +643,7 @@ class MakeOrderSerializer(serializers.ModelSerializer):
             "password",
             "description",
             "escrow_type",
+            "fixed_price",
         )
 
 

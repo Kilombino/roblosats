@@ -1076,8 +1076,8 @@ def onchain_size_error(order):
     low = config("ESCROW_MIN_SATS", cast=int, default=config("MIN_ORDER_SIZE", cast=int, default=20000))
     high = config("ESCROW_MAX_SATS", cast=int, default=0) or config("MAX_ORDER_SIZE", cast=int, default=250000)
     if order.has_range:
-        rate = order.currency.exchange_rate
-        sizes = [Logics.calc_sats(order.min_amount, rate, order.premium), Logics.calc_sats(order.max_amount, rate, order.premium)]
+        # fixed-price orders: from the maker's price, no exchange rate needed (rl31-beta17)
+        sizes = [Logics.sats_for_amount(order, order.min_amount), Logics.sats_for_amount(order, order.max_amount)]
     else:
         sizes = [order.t0_satoshis]
     if min(sizes) < low or max(sizes) > high:

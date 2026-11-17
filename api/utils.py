@@ -742,11 +742,13 @@ def compute_avg_premium(queryset):
 
     # We exclude BTC, as LN <-> BTC swap premiums should not be  mixed with FIAT.
 
+    total_volume = 0
     for tick in queryset.exclude(currency=1000):
+        total_volume += float(tick.volume)
+        if tick.premium is None:  # fixed-price trade made without a market price
+            continue
         premiums.append(float(tick.premium))
         volumes.append(float(tick.volume))
-
-    total_volume = sum(volumes)
 
     # weighted_median_premium is the weighted median of the premiums by volume
     if len(premiums) > 0 and len(volumes) > 0:
