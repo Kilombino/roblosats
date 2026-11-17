@@ -58,3 +58,35 @@ export const onchainFees = ({
     raised,
   };
 };
+
+// rl31-beta19: the fee rates a payment from the trader's own wallet should pay (from the
+// coordinator, onchain_fee_hint), and whether a payment seen in the mempool pays too little.
+export interface FeeHint {
+  next_block: number; // sat/vB to confirm in the next block
+  hour: number; // sat/vB to confirm in about an hour
+}
+
+/** A usable hint, or null (missing or nonsense: the app hides it). */
+export const validHint = (hint?: Partial<FeeHint> | null): FeeHint | null => {
+  if (!hint) return null;
+  const { next_block: next, hour } = hint;
+  if (typeof next !== 'number' || typeof hour !== 'number') return null;
+  if (!(next > 0) || !(hour > 0) || !isFinite(next) || !isFinite(hour)) return null;
+  return { next_block: next, hour: Math.min(hour, next) };
+};
+
+/** 2 → "2", 0.5 → "0.5" (or "0,5" with a comma locale), at most one decimal. */
+export const formatRate = (rate: number, decimal = '.'): string => {
+  const r = Math.round(rate * 10) / 10;
+  return (Number.isInteger(r) ? String(r) : r.toFixed(1)).replace('.', decimal);
+};
+
+/** The rate needed for about an hour when the payment pays less, else null. */
+export const lowFeeNeeded = (
+  rate?: number | null,
+  hint?: Partial<FeeHint> | null,
+): number | null => {
+  const h = validHint(hint);
+  if (h === null || typeof rate !== 'number' || !isFinite(rate)) return null;
+  return rate < h.hour ? h.hour : null;
+};

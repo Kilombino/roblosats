@@ -990,7 +990,6 @@
   "Waiting for {{peer}} to sign the rescue without the coordinator…": "Waiting for {{peer}} to sign the rescue without the coordinator…",
   "Order #{{id}}: the signed rescue is not saved on this device. Open the order on the device you traded with, or while the coordinator is up.": "Order #{{id}}: the signed rescue is not saved on this device. Open the order on the device you traded with, or while the coordinator is up.",
   "Your part of the escrow (pre-signed rescue)": "Your part of the escrow (pre-signed rescue)",
-  "If the coordinator disappears, this robot can take its onchain sats back alone: what is left on its funding address at any time, its bond after its timelock, and its part of the escrow after the rescue timelock (seller: the trade amount, its bond and its fee; buyer: its bond and its fee; orders before this version: the seller takes the whole escrow). The app uses the data it kept on this device and your robot token; nothing goes to the coordinator.": "If the coordinator disappears, this robot can take its onchain sats back alone: what is left on its funding address at any time, its bond after its timelock, and its part of the escrow after the rescue timelock (seller: the trade amount, its bond and its fee; buyer: its bond and its fee; orders before this version: the seller takes the whole escrow). The app uses the data it kept on this device and your robot token; nothing goes to the coordinator.",
   "there is no rescue to sign": "there is no rescue to sign",
   "the rescue does not spend this escrow after the timelock": "the rescue does not spend this escrow after the timelock",
   "the rescue mining fee is too high": "the rescue mining fee is too high",
@@ -1028,5 +1027,15 @@
   "Not the bond, returned": "Not the bond, returned",
   "Your bond address (the bond and any other sats sent to it)": "Your bond address (the bond and any other sats sent to it)",
   "the transaction must have a single output": "the transaction must have a single output",
-  "this transaction spends our bond": "this transaction spends our bond"
+  "this transaction spends our bond": "this transaction spends our bond",
+  "Pay with at least {{next}} sat/vB to confirm in the next block (~{{hour}} sat/vB for ~1 hour).": "Pay with at least {{next}} sat/vB to confirm in the next block (~{{hour}} sat/vB for ~1 hour).",
+  "Your payment pays {{paid}} sat/vB and the mempool currently needs {{needed}}: speed it up (RBF or CPFP) or it may take a long time to confirm.": "Your payment pays {{paid}} sat/vB and the mempool currently needs {{needed}}: speed it up (RBF or CPFP) or it may take a long time to confirm.",
+  "If the coordinator doesn't answer, this robot can take its onchain sats back alone: whatever is left on its funding or bond address at any time, its bond after its timelock, and its part of the escrow after the rescue timelock (seller: the trade amount, its bond and its fee; buyer: its bond and its fee). The app uses the data it kept on this device and your robot token; nothing goes to the coordinator.": "If the coordinator doesn't answer, this robot can take its onchain sats back alone: whatever is left on its funding or bond address at any time, its bond after its timelock, and its part of the escrow after the rescue timelock (seller: the trade amount, its bond and its fee; buyer: its bond and its fee). The app uses the data it kept on this device and your robot token; nothing goes to the coordinator.",
+  "An order from before the fair rescue: as the seller you take the whole escrow back alone after its timelock.": "An order from before the fair rescue: as the seller you take the whole escrow back alone after its timelock.",
+  "A payment of {{sats}} Sats to your bond address, not confirmed yet": "A payment of {{sats}} Sats to your bond address, not confirmed yet",
+  "{{n}} payments to your bond address ({{sats}} Sats), not confirmed yet": "{{n}} payments to your bond address ({{sats}} Sats), not confirmed yet",
+  "A payment of {{sats}} Sats to your funding address, not confirmed yet": "A payment of {{sats}} Sats to your funding address, not confirmed yet",
+  "{{n}} payments to your funding address ({{sats}} Sats), not confirmed yet": "{{n}} payments to your funding address ({{sats}} Sats), not confirmed yet",
+  "Waiting for its confirmation. Then it can be recovered here once the bond timelock passes ({{blocks}} blocks).": "Waiting for its confirmation. Then it can be recovered here once the bond timelock passes ({{blocks}} blocks).",
+  "Waiting for its confirmation. Then it can be recovered here at any time.": "Waiting for its confirmation. Then it can be recovered here at any time."
 }

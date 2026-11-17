@@ -1,3 +1,4 @@
+import { pendingPayments } from '../rescue';
 import { schnorr } from '@noble/curves/secp256k1.js';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import { execSync } from 'child_process';
@@ -514,3 +515,20 @@ maybe(
   },
   300000,
 );
+
+// rl31-beta19: what is still unconfirmed at an address shows as pending in the rescue
+
+describe('pendingPayments', () => {
+  it('counts unconfirmed payments (by transaction) and their sats', () => {
+    // order #22: 3,300 confirmed, 3,330 in the mempool
+    const us = [
+      { txid: 'a'.repeat(64), vout: 0, value: 3300, height: 100 },
+      { txid: 'b'.repeat(64), vout: 1, value: 3330, height: null },
+    ];
+    expect(pendingPayments(us)).toEqual({ count: 1, sats: 3330, utxos: [us[1]] });
+    const two = [...us, { txid: 'c'.repeat(64), vout: 0, value: 500, height: null }];
+    expect(pendingPayments(two).count).toBe(2);
+    expect(pendingPayments(two).sats).toBe(3830);
+    expect(pendingPayments([us[0]])).toEqual({ count: 0, sats: 0, utxos: [] });
+  });
+});

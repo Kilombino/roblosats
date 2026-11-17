@@ -1088,7 +1088,6 @@
   "Waiting for {{peer}} to sign the rescue without the coordinator…": "Esperando a que {{peer}} firme el rescate sin coordinador…",
   "Order #{{id}}: the signed rescue is not saved on this device. Open the order on the device you traded with, or while the coordinator is up.": "Orden #{{id}}: el rescate firmado no está guardado en este dispositivo. Abre la orden en el dispositivo con el que operaste, o mientras el coordinador siga en marcha.",
   "Your part of the escrow (pre-signed rescue)": "Tu parte del depósito (rescate prefirmado)",
-  "If the coordinator disappears, this robot can take its onchain sats back alone: what is left on its funding address at any time, its bond after its timelock, and its part of the escrow after the rescue timelock (seller: the trade amount, its bond and its fee; buyer: its bond and its fee; orders before this version: the seller takes the whole escrow). The app uses the data it kept on this device and your robot token; nothing goes to the coordinator.": "Si el coordinador desaparece, este robot puede recuperar solo sus sats on-chain: lo que quede en su dirección de aportación en cualquier momento, su fianza tras su plazo y su parte del depósito tras el plazo de rescate (vendedor: el importe, su fianza y su comisión; comprador: su fianza y su comisión; en órdenes anteriores a esta versión el vendedor se lleva todo el depósito). La app usa los datos que guardó en este dispositivo y el token de tu robot; nada pasa por el coordinador.",
   "there is no rescue to sign": "no hay rescate que firmar",
   "the rescue does not spend this escrow after the timelock": "el rescate no gasta este depósito tras el plazo",
   "the rescue mining fee is too high": "la comisión de minería del rescate es demasiado alta",
@@ -1126,5 +1125,15 @@
   "Not the bond, returned": "Devuelto (no era la fianza)",
   "Your bond address (the bond and any other sats sent to it)": "La dirección de tu fianza (la fianza y cualquier otro pago que le llegara)",
   "the transaction must have a single output": "la transacción debe tener una sola salida",
-  "this transaction spends our bond": "esta transacción gasta nuestra fianza"
+  "this transaction spends our bond": "esta transacción gasta nuestra fianza",
+  "Pay with at least {{next}} sat/vB to confirm in the next block (~{{hour}} sat/vB for ~1 hour).": "Paga al menos {{next}} sat/vB para que se confirme en el próximo bloque (~{{hour}} sat/vB para ~1 hora).",
+  "Your payment pays {{paid}} sat/vB and the mempool currently needs {{needed}}: speed it up (RBF or CPFP) or it may take a long time to confirm.": "Tu pago paga {{paid}} sat/vB y ahora la mempool pide {{needed}}: acelera la transacción (RBF o CPFP) o puede tardar mucho en confirmarse.",
+  "If the coordinator doesn't answer, this robot can take its onchain sats back alone: whatever is left on its funding or bond address at any time, its bond after its timelock, and its part of the escrow after the rescue timelock (seller: the trade amount, its bond and its fee; buyer: its bond and its fee). The app uses the data it kept on this device and your robot token; nothing goes to the coordinator.": "Si el coordinador no responde, este robot puede recuperar él solo sus sats on-chain: lo que quede en su dirección de aportación o de fianza en cualquier momento, su fianza cuando pase su bloqueo de tiempo y su parte del depósito cuando pase el bloqueo de rescate (vendedor: el importe del intercambio, su fianza y su comisión; comprador: su fianza y su comisión). La app usa los datos que guardó en este dispositivo y el token de tu robot; no se envía nada al coordinador.",
+  "An order from before the fair rescue: as the seller you take the whole escrow back alone after its timelock.": "Una orden de antes del rescate justo: como vendedor recuperas tú solo todo el depósito cuando pase su bloqueo de tiempo.",
+  "A payment of {{sats}} Sats to your bond address, not confirmed yet": "Un pago de {{sats}} Sats a la dirección de tu fianza, todavía sin confirmar",
+  "{{n}} payments to your bond address ({{sats}} Sats), not confirmed yet": "{{n}} pagos a la dirección de tu fianza ({{sats}} Sats), todavía sin confirmar",
+  "A payment of {{sats}} Sats to your funding address, not confirmed yet": "Un pago de {{sats}} Sats a tu dirección de aportación, todavía sin confirmar",
+  "{{n}} payments to your funding address ({{sats}} Sats), not confirmed yet": "{{n}} pagos a tu dirección de aportación ({{sats}} Sats), todavía sin confirmar",
+  "Waiting for its confirmation. Then it can be recovered here once the bond timelock passes ({{blocks}} blocks).": "Esperando su confirmación. Después se podrá recuperar aquí cuando pase el bloqueo de tiempo de la fianza ({{blocks}} bloques).",
+  "Waiting for its confirmation. Then it can be recovered here at any time.": "Esperando su confirmación. Después se podrá recuperar aquí en cualquier momento."
 }

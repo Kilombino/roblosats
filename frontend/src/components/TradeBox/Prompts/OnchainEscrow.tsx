@@ -36,6 +36,7 @@ import {
   type EscrowOrderData,
 } from '../../../utils/escrow/client';
 import { saveRescue } from '../../../utils/escrow/rescue';
+import { type FeeHint, formatRate, lowFeeNeeded, validHint } from '../../../utils/escrow/fees';
 import { Transaction, addressToScript, bytesToHex } from '../../../utils/escrow/taproot';
 
 export type EscrowAction =
@@ -104,16 +105,59 @@ export const TxLine = ({ label, txid }: { label: string; txid: string }): React.
   );
 };
 
+const decimalOf = (lang?: string): string =>
+  lang && /^(es|ca|eu|fr|de|it|pt|pl|ru|cs)/.test(lang) ? ',' : '.';
+
+/** rl31-beta19: what to pay from your own wallet, from the coordinator's node (hidden if unknown). */
+export const FeeHintNote = ({ hint }: { hint?: FeeHint | null }): React.JSX.Element | null => {
+  const { t, i18n } = useTranslation();
+  const h = validHint(hint);
+  if (h === null) return null;
+  const d = decimalOf(i18n.language);
+  return (
+    <Alert severity='info' sx={{ textAlign: 'left' }}>
+      {t(
+        'Pay with at least {{next}} sat/vB to confirm in the next block (~{{hour}} sat/vB for ~1 hour).',
+        { next: formatRate(h.next_block, d), hour: formatRate(h.hour, d) },
+      )}
+    </Alert>
+  );
+};
+
+/** rl31-beta19: the payment seen in the mempool pays less than the mempool needs for ~1 hour. */
+export const LowFeeWarning = ({
+  rate,
+  hint,
+}: {
+  rate?: number;
+  hint?: FeeHint | null;
+}): React.JSX.Element | null => {
+  const { t, i18n } = useTranslation();
+  const needed = lowFeeNeeded(rate, hint);
+  if (needed === null || rate === undefined) return null;
+  const d = decimalOf(i18n.language);
+  return (
+    <Alert severity='warning' sx={{ textAlign: 'left' }}>
+      {t(
+        'Your payment pays {{paid}} sat/vB and the mempool currently needs {{needed}}: speed it up (RBF or CPFP) or it may take a long time to confirm.',
+        { paid: formatRate(rate, d), needed: formatRate(needed, d) },
+      )}
+    </Alert>
+  );
+};
+
 const PayBox = ({
   address,
   sats,
   label,
   note,
+  hint,
 }: {
   address: string;
   sats: number;
   label: string;
   note?: string;
+  hint?: FeeHint | null;
 }): React.JSX.Element => {
   const { t } = useTranslation();
   const btc = (sats / 1e8).toFixed(8);
@@ -169,6 +213,11 @@ const PayBox = ({
           </Button>
         </Tooltip>
       </Grid>
+      {validHint(hint) ? (
+        <Grid>
+          <FeeHintNote hint={hint} />
+        </Grid>
+      ) : null}
       {note ? (
         <Grid>
           <Alert severity='info' sx={{ textAlign: 'left' }}>
@@ -470,7 +519,7 @@ export const OnchainEscrowPrompt = ({
     return t('Waiting for the coordinator…');
   };
 
-  const seenInMempool = (txid?: string): React.JSX.Element | null =>
+  const seenInMempool = (txid?: string, rate?: number): React.JSX.Element | null =>
     txid ? (
       <Grid container spacing={1} sx={{ flexDirection: 'column', alignItems: 'center' }}>
         <Grid>
@@ -481,6 +530,11 @@ export const OnchainEscrowPrompt = ({
         <Grid>
           <TxLine label={t('Your payment')} txid={txid} />
         </Grid>
+        {lowFeeNeeded(rate, data.onchain_fee_hint) !== null ? (
+          <Grid>
+            <LowFeeWarning rate={rate} hint={data.onchain_fee_hint} />
+          </Grid>
+        ) : null}
       </Grid>
     ) : null;
 
@@ -506,7 +560,10 @@ export const OnchainEscrowPrompt = ({
     )
       body = waiting(
         t('Bond seen in the mempool, waiting for 1 confirmation…'),
-        <TxLine label={t('Your bond')} txid={data.bond_mempool_txid} />,
+        <>
+          <TxLine label={t('Your bond')} txid={data.bond_mempool_txid} />
+          <LowFeeWarning rate={data.bond_mempool_fee_rate} hint={data.onchain_fee_hint} />
+        </>,
       );
     else if (data.bond_status_code === BOND.FUNDING && data.bond_address)
       body = (
@@ -526,6 +583,7 @@ export const OnchainEscrowPrompt = ({
               </Alert>
             ) : null}
             <PayBox
+              hint={data.onchain_fee_hint}
               address={data.bond_address}
               sats={bondTopUps && bondConfirmed > 0 ? Math.max(bondMissing, 330) : bondRequired}
               label={t(
@@ -580,6 +638,12 @@ export const OnchainEscrowPrompt = ({
                       },
                     )}
               </Alert>
+            </Grid>
+          ) : null}
+          {data.bond_mempool_txid &&
+          lowFeeNeeded(data.bond_mempool_fee_rate, data.onchain_fee_hint) !== null ? (
+            <Grid>
+              <LowFeeWarning rate={data.bond_mempool_fee_rate} hint={data.onchain_fee_hint} />
             </Grid>
           ) : null}
         </Grid>
@@ -664,11 +728,12 @@ export const OnchainEscrowPrompt = ({
       checkFundingAddress(data, keys);
       body =
         seen && enough ? (
-          waiting(waitingText(), seenInMempool(seen))
+          waiting(waitingText(), seenInMempool(seen, data.escrow_funding_mempool_fee_rate))
         ) : (
           <Grid container spacing={1} sx={{ flexDirection: 'column', alignItems: 'center' }}>
             <Grid>
               <PayBox
+                hint={data.onchain_fee_hint}
                 address={data.escrow_funding_address}
                 sats={data.escrow_funding_recommended ?? 0}
                 label={
@@ -694,6 +759,15 @@ export const OnchainEscrowPrompt = ({
                     { amount: pn(data.escrow_funding_mempool_sats ?? 0) },
                   )}
                 </Alert>
+              </Grid>
+            ) : null}
+            {seen &&
+            lowFeeNeeded(data.escrow_funding_mempool_fee_rate, data.onchain_fee_hint) !== null ? (
+              <Grid>
+                <LowFeeWarning
+                  rate={data.escrow_funding_mempool_fee_rate}
+                  hint={data.onchain_fee_hint}
+                />
               </Grid>
             ) : null}
           </Grid>

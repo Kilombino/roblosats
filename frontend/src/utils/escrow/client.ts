@@ -77,6 +77,10 @@ export interface EscrowOrderData {
   bond_spend_txid?: string;
   bond_mempool_txid?: string;
   bond_mempool_sats?: number;
+  /** rl31-beta19: the fee rate (sat/vB) the bond payment in the mempool pays (the lowest if several). */
+  bond_mempool_fee_rate?: number;
+  /** rl31-beta19: what a payment from our own wallet should pay (sat/vB); missing = no hint. */
+  onchain_fee_hint?: { next_block: number; hour: number };
   /** rl31-beta18: the coins of the bond (several when it was topped up). */
   bond_coins?: BondCoin[];
   bond_return_coins?: BondCoin[];
@@ -100,6 +104,7 @@ export interface EscrowOrderData {
   hybrid_onchain_maker_bond?: boolean;
   escrow_funding_mempool_txid?: string;
   escrow_funding_mempool_sats?: number;
+  escrow_funding_mempool_fee_rate?: number;
   escrow_funding_txid?: string;
   escrow_leftover_sats?: number;
   escrow_sweep_tx?: string;

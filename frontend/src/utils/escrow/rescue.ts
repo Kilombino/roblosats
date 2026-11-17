@@ -358,3 +358,12 @@ export const blocksLeft = (confHeight: number | null, csv: number, tip: number):
   if (!confHeight) return null;
   return Math.max(0, confHeight + csv - 1 - tip);
 };
+
+/** rl31-beta19: payments at an address not confirmed yet (shown as pending in the rescue). */
+export const pendingPayments = (
+  utxos: Array<Utxo & { height: number | null }>,
+): { count: number; sats: number; utxos: Utxo[] } => {
+  const p = utxos.filter((u) => u.height === null);
+  const txids = new Set(p.map((u) => u.txid));
+  return { count: txids.size, sats: p.reduce((a, u) => a + u.value, 0), utxos: p };
+};

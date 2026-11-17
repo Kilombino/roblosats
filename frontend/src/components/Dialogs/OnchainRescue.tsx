@@ -28,6 +28,7 @@ import {
   fundingAddressOf,
   keysOf,
   loadRescues,
+  pendingPayments,
   storedFairRescue,
   type BuiltRescue,
   type RescueRecord,
@@ -53,6 +54,14 @@ interface Item {
   note?: string;
 }
 
+// rl31-beta19: payments at the bond or funding address not confirmed yet (no "Nothing left").
+interface Pending {
+  rec: RescueRecord;
+  where: 'bond' | 'funding';
+  count: number;
+  sats: number;
+}
+
 const MIN_PER_BLOCK = 9;
 
 const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element => {
@@ -62,6 +71,7 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
   const [dest, setDest] = useState<string>('');
   const [items, setItems] = useState<Item[] | null>(null);
   const [notes, setNotes] = useState<string[]>([]);
+  const [pending, setPending] = useState<Pending[]>([]);
   const [tip, setTip] = useState<number | null>(null);
   const [busy, setBusy] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
@@ -90,6 +100,7 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
       setTip(height);
       const found: Item[] = [];
       const info: string[] = [];
+      const waitingConf: Pending[] = [];
       for (const rec of recs) {
         // One order the explorer cannot answer for (a transaction it does not know, a network
         // hiccup) must not hide the others (rl31-beta16 QA: one stale order emptied the list).
@@ -98,7 +109,10 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
           // 1) the funding address: ours alone, no timelock
           const faddr = fundingAddressOf(rec, keys);
           if (rec.fundingAddress === faddr || rec.escrow) {
-            const us = await ex.utxos(faddr);
+            const all = await ex.utxos(faddr);
+            const p = pendingPayments(all);
+            if (p.count) waitingConf.push({ rec, where: 'funding', count: p.count, sats: p.sats });
+            const us = all.filter((u) => u.height !== null);
             if (us.length)
               found.push({
                 rec,
@@ -112,7 +126,10 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
           //    there, a top-up, and payments that were never the bond (short, extra or late).
           //    Each coin has its own timelock: the ready ones go together, the rest wait.
           if (rec.bond?.address) {
-            const us = (await ex.utxos(rec.bond.address)).filter((u) => u.height !== null);
+            const all = await ex.utxos(rec.bond.address);
+            const p = pendingPayments(all);
+            if (p.count) waitingConf.push({ rec, where: 'bond', count: p.count, sats: p.sats });
+            const us = all.filter((u) => u.height !== null);
             const csv = rec.bond.refundCsv;
             const ready = us.filter((u) => blocksLeft(u.height, csv, height) === 0);
             const later = us.filter((u) => (blocksLeft(u.height, csv, height) ?? 1) > 0);
@@ -167,6 +184,9 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
                   sats: value,
                   utxos: [{ txid: rec.escrow.depositTxid, vout: 0, value }],
                   wait: blocksLeft(conf, rec.escrow.rescueCsv, height),
+                  note: t(
+                    'An order from before the fair rescue: as the seller you take the whole escrow back alone after its timelock.',
+                  ),
                 });
               } else {
                 info.push(
@@ -189,6 +209,7 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
       }
       setItems(found);
       setNotes(info);
+      setPending(waitingConf);
     } catch (e) {
       setError(t('Could not read the explorer: {{e}}', { e: String((e as Error).message ?? e) }));
     } finally {
@@ -257,7 +278,7 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
       <DialogContent>
         <Typography variant='body2' sx={{ mb: 1 }}>
           {t(
-            'If the coordinator disappears, this robot can take its onchain sats back alone: what is left on its funding address at any time, its bond after its timelock, and its part of the escrow after the rescue timelock (seller: the trade amount, its bond and its fee; buyer: its bond and its fee; orders before this version: the seller takes the whole escrow). The app uses the data it kept on this device and your robot token; nothing goes to the coordinator.',
+            "If the coordinator doesn't answer, this robot can take its onchain sats back alone: whatever is left on its funding or bond address at any time, its bond after its timelock, and its part of the escrow after the rescue timelock (seller: the trade amount, its bond and its fee; buyer: its bond and its fee). The app uses the data it kept on this device and your robot token; nothing goes to the coordinator.",
           )}
         </Typography>
         {recs.length === 0 ? (
@@ -305,7 +326,7 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
             {tip !== null ? (
               <Typography variant='caption'>{t('Current block: {{h}}', { h: pn(tip) })}</Typography>
             ) : null}
-            {items.length === 0 && notes.length === 0 ? (
+            {items.length === 0 && notes.length === 0 && pending.length === 0 ? (
               <Alert severity='success' sx={{ mt: 1 }}>
                 {t('Nothing left to recover for this robot.')}
               </Alert>
@@ -324,6 +345,11 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
                     {pn(it.sats)} Sats
                   </Typography>
                   <Typography variant='caption'>{waitText(it.wait)}</Typography>
+                  {it.note ? (
+                    <Typography variant='caption' component='div'>
+                      {it.note}
+                    </Typography>
+                  ) : null}
                   {ok ? (
                     <Alert severity='success' sx={{ mt: 0.5, wordBreak: 'break-all' }}>
                       {t('Sent: {{sats}} Sats (mining fee {{fee}}). TXID {{txid}}', {
@@ -358,6 +384,43 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
                 </Box>
               );
             })}
+            {pending.map((p) => (
+              <Box key={`${p.rec.orderId}-pending-${p.where}`} sx={{ mt: 1 }}>
+                <Divider sx={{ mb: 1 }} />
+                <Typography variant='body2'>
+                  <b>{t('Order #{{id}}', { id: p.rec.orderId })}</b>
+                  {' · '}
+                  {p.where === 'bond'
+                    ? p.count === 1
+                      ? t('A payment of {{sats}} Sats to your bond address, not confirmed yet', {
+                          sats: pn(p.sats),
+                        })
+                      : t(
+                          '{{n}} payments to your bond address ({{sats}} Sats), not confirmed yet',
+                          {
+                            n: p.count,
+                            sats: pn(p.sats),
+                          },
+                        )
+                    : p.count === 1
+                      ? t('A payment of {{sats}} Sats to your funding address, not confirmed yet', {
+                          sats: pn(p.sats),
+                        })
+                      : t(
+                          '{{n}} payments to your funding address ({{sats}} Sats), not confirmed yet',
+                          { n: p.count, sats: pn(p.sats) },
+                        )}
+                </Typography>
+                <Typography variant='caption'>
+                  {p.where === 'bond'
+                    ? t(
+                        'Waiting for its confirmation. Then it can be recovered here once the bond timelock passes ({{blocks}} blocks).',
+                        { blocks: pn(p.rec.bond?.refundCsv ?? 0) },
+                      )
+                    : t('Waiting for its confirmation. Then it can be recovered here at any time.')}
+                </Typography>
+              </Box>
+            ))}
             {notes.map((n) => (
               <Alert key={n} severity='info' sx={{ mt: 1 }}>
                 {n}
