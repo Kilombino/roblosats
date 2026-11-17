@@ -21,6 +21,8 @@ import {
   IconButton,
   Skeleton,
   CircularProgress,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 
 import { type LimitList, defaultMaker, type Order } from '../../models';
@@ -50,6 +52,13 @@ import { useNavigate } from 'react-router-dom';
 import { sha256 } from 'js-sha256';
 import AddNewPaymentMethodDialog from '../Dialogs/AddNewPaymentMethodDialog';
 import { currencyOptions, currencyLabel } from '../../utils/currencies';
+import {
+  fixedPricePremium,
+  fixedPriceSats,
+  formatPricePerBtc,
+  fromDisplayPrice,
+  priceUnit,
+} from '../../utils/fixedPrice';
 
 interface MakerFormProps {
   disableRequest?: boolean;
@@ -106,9 +115,63 @@ const MakerForm = ({
     federation.getCoordinator(maker.coordinator)?.info?.onchain_escrow || robotEscrow,
   );
 
+  // Roblosats rl31-beta17: FIXED PRICE. The maker types the price per BTC (the currency, or
+  // Spamsuits for Spamcoin); the order carries it in the order's currency (fixed_price) and
+  // the sats are amount / price: no market price needed. vs market is only informative.
+  const fixedMode = maker.priceMode === 'fixed';
+  const priceCurrency = fav.currency === 0 ? 1 : fav.currency;
+  const fixedPriceUnits =
+    fixedMode && maker.fixedPrice && maker.fixedPrice > 0
+      ? fromDisplayPrice(maker.fixedPrice, priceCurrency)
+      : null;
+  const marketPriceRaw =
+    limits?.[priceCurrency]?.price ??
+    federation.getCoordinator(maker.coordinator)?.limits?.[priceCurrency]?.price;
+  const marketPrice = marketPriceRaw && marketPriceRaw > 0 ? marketPriceRaw : null;
+  const fixedVsMarket =
+    fixedPriceUnits !== null ? fixedPricePremium(fixedPriceUnits, marketPrice) : null;
+  const effectivePrice = fixedMode ? (fixedPriceUnits ?? undefined) : currentPrice;
+
+  // Amount limits of a fixed-price order: the coordinator's limits in sats at the maker's price
+  const fixedAmountLimits = (): number[] | null => {
+    if (fixedPriceUnits === null) return null;
+    const coordinator = federation.getCoordinator(maker.coordinator);
+    const info = coordinator?.info;
+    let minSats = info?.min_order_size ?? 20000;
+    let maxSats = info?.max_order_size ?? 250000;
+    const sizeLimit = coordinator?.size_limit ?? 0;
+    if (sizeLimit > 0) maxSats = Math.min(maxSats, sizeLimit);
+    if (maker.onchainEscrow && robotEscrow) {
+      minSats = robotEscrow.minSats;
+      maxSats = Math.min(maxSats, robotEscrow.maxSats);
+    }
+    return [
+      (minSats / 100000000) * fixedPriceUnits * amountSafeThresholds[0],
+      (maxSats / 100000000) * fixedPriceUnits * amountSafeThresholds[1],
+    ];
+  };
+
   useEffect(() => {
     setCurrencyCode(currencyDict[String(fav.currency === 0 ? 1 : fav.currency)]);
   }, [federationUpdatedAt]);
+
+  useEffect(() => {
+    if (fixedMode) {
+      const fixedLimits = fixedAmountLimits();
+      if (fixedLimits) setAmountLimits(fixedLimits);
+    } else if (Object.keys(limits).length > 0) {
+      updateAmountLimits(limits, fav.currency, maker.premium ?? 0);
+    }
+  }, [
+    maker.priceMode,
+    maker.fixedPrice,
+    fav.currency,
+    maker.coordinator,
+    maker.onchainEscrow,
+    robotEscrow?.minSats,
+    robotEscrow?.maxSats,
+    federationUpdatedAt,
+  ]);
 
   useEffect(() => {
     updateCoordinatorInfo();
@@ -163,6 +226,11 @@ const MakerForm = ({
     currency: number,
     premium: number,
   ): void {
+    if (maker.priceMode === 'fixed') {
+      const fixedLimits = fixedAmountLimits();
+      if (fixedLimits) setAmountLimits(fixedLimits);
+      return;
+    }
     const index = currency === 0 ? 1 : currency;
     // A coordinator whose limits did not load (offline, slow over Tor) has no entry: keep the
     // current limits instead of throwing (17 nov 2026 QA: the form picked such a coordinator).
@@ -209,10 +277,16 @@ const MakerForm = ({
         mode: newCurrency === 1000 ? 'swap' : 'fiat',
       };
     });
+    if (maker.priceMode === 'fixed') {
+      // a price in the old currency means nothing in the new one
+      setMaker((maker) => ({ ...maker, fixedPrice: null }));
+      updateCurrentPrice(limits, newCurrency, maker.premium ?? 0);
+      return;
+    }
     updateAmountLimits(limits, newCurrency, maker.premium ?? 0);
     updateCurrentPrice(limits, newCurrency, maker.premium ?? 0);
 
-    if (makerHasAmountRange) {
+    if (makerHasAmountRange && limits[newCurrency]) {
       const minAmount = parseFloat(Number(limits[newCurrency].min_amount).toPrecision(2));
       const maxAmount = parseFloat(Number(limits[newCurrency].max_amount).toPrecision(2));
       if (
@@ -285,6 +359,20 @@ const MakerForm = ({
       });
     };
 
+  const handlePriceModeChange = (_e: React.MouseEvent<HTMLElement>, mode: string | null): void => {
+    if (mode !== 'market' && mode !== 'fixed') return;
+    setMaker((maker) => ({ ...maker, priceMode: mode }));
+  };
+
+  const handleFixedPriceChange: React.ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement> =
+    function ({ target: { value } }): void {
+      const price = parseFloat(value);
+      setMaker((maker) => ({
+        ...maker,
+        fixedPrice: value === '' || isNaN(price) ? null : price,
+      }));
+    };
+
   const buildOrderAttributes = (): object => ({
     type: fav.type === 0 ? 1 : 0,
     currency: fav.currency === 0 ? 1 : fav.currency,
@@ -293,8 +381,9 @@ const MakerForm = ({
     min_amount: makerHasAmountRange ? maker.minAmount : null,
     max_amount: makerHasAmountRange ? maker.maxAmount : null,
     payment_method: maker.paymentMethodsText === '' ? 'not specified' : maker.paymentMethodsText,
-    premium: !maker.premium ? 0 : maker.premium,
+    premium: fixedMode || !maker.premium ? 0 : maker.premium,
     satoshis: null,
+    fixed_price: fixedMode ? fixedPriceUnits : null,
     public_duration: maker.publicDuration,
     escrow_duration: maker.escrowDuration,
     bond_size: maker.bondSize,
@@ -425,14 +514,17 @@ const MakerForm = ({
 
   const resetRange = function (advancedOptions: boolean): void {
     const index = fav.currency === 0 ? 1 : fav.currency;
+    // fixed price, or no market price: from the form's own limits
+    const maxLimit =
+      fixedMode || !(limits[index]?.max_amount > 0)
+        ? amountLimits[1] / amountSafeThresholds[1]
+        : limits[index].max_amount;
     const minAmount =
       maker.amount !== null
         ? parseFloat((maker.amount / 2).toPrecision(2))
-        : parseFloat(Number(limits[index].max_amount * 0.25).toPrecision(2));
+        : parseFloat(Number(maxLimit * 0.25).toPrecision(2));
     const maxAmount =
-      maker.amount !== null
-        ? maker.amount
-        : parseFloat(Number(limits[index].max_amount * 0.75).toPrecision(2));
+      maker.amount !== null ? maker.amount : parseFloat(Number(maxLimit * 0.75).toPrecision(2));
 
     setMaker({
       ...maker,
@@ -458,10 +550,13 @@ const MakerForm = ({
     let helper = '';
     let swapSats: string | undefined = '0';
     if (fav.mode === 'swap') {
+      const swapRate = fixedMode && fixedPriceUnits ? { rate: fixedPriceUnits } : {};
+      const swapPremium = fixedMode ? 0 : Number(maker.premium);
       if (fav.type === 1) {
         swapSats = computeSats({
+          ...swapRate,
           amount: Number(maker.amount),
-          premium: Number(maker.premium),
+          premium: swapPremium,
           fee: -(info?.maker_fee ?? 0),
           routingBudget: defaultRoutingBudget,
         });
@@ -471,8 +566,9 @@ const MakerForm = ({
         });
       } else if (fav.type === 0) {
         swapSats = computeSats({
+          ...swapRate,
           amount: Number(maker.amount),
-          premium: Number(maker.premium),
+          premium: swapPremium,
           fee: info?.maker_fee ?? 0,
         });
         label = t('Onchain amount to receive (BTC)');
@@ -482,7 +578,7 @@ const MakerForm = ({
       }
     }
     return { label, helper, swapSats };
-  }, [fav, maker.amount, maker.premium, federationUpdatedAt]);
+  }, [fav, maker.amount, maker.premium, maker.priceMode, maker.fixedPrice, federationUpdatedAt]);
 
   const { isLegacyMode, legacyDisabledTooltip } = useLegacyMode();
 
@@ -495,12 +591,16 @@ const MakerForm = ({
         maker.amount &&
         (maker.amount < amountLimits[0] || maker.amount > amountLimits[1])) ||
       maker.badPaymentMethod ||
-      (maker.amount == null && (!makerHasAmountRange || (Object.keys(limits)?.length ?? 0) < 1)) ||
+      (maker.amount == null &&
+        (!makerHasAmountRange || (!fixedMode && (Object.keys(limits)?.length ?? 0) < 1))) ||
       (makerHasAmountRange && hasRangeError) ||
       (!makerHasAmountRange && maker.amount && maker.amount <= 0) ||
-      maker.badPremiumText !== '' ||
-      Object.keys(federation.getCoordinator(maker.coordinator)?.limits ?? {}).length === 0 ||
-      (maker.premium !== null && typeof maker.premium !== 'number') ||
+      (fixedMode && fixedPriceUnits === null) ||
+      (!fixedMode && maker.badPremiumText !== '') ||
+      (!fixedMode &&
+        Object.keys(federation.getCoordinator(maker.coordinator)?.limits ?? {}).length === 0) ||
+      (fixedMode && !federation.getCoordinator(maker.coordinator)?.info) ||
+      (!fixedMode && maker.premium !== null && typeof maker.premium !== 'number') ||
       maker.paymentMethods.length === 0 ||
       maker.badDescription
     );
@@ -553,7 +653,10 @@ const MakerForm = ({
     if (isLegacyMode) {
       return legacyDisabledTooltip;
     }
-    if (currentPrice === undefined) {
+    if (fixedMode && fixedPriceUnits === null) {
+      return t('Please enter your price per BTC.');
+    }
+    if (!fixedMode && currentPrice === undefined) {
       return t('The Bitcoin price is not synchronized.');
     }
     if (fav.type == null) {
@@ -578,13 +681,16 @@ const MakerForm = ({
     if (!makerHasAmountRange && maker.amount && maker.amount <= 0) {
       return t('The amount must be greater than 0.');
     }
-    if (maker.badPremiumText !== '') {
+    if (!fixedMode && maker.badPremiumText !== '') {
       return t('The premium is not valid.');
     }
-    if (Object.keys(federation.getCoordinator(maker.coordinator)?.limits ?? {}).length === 0) {
+    if (
+      !fixedMode &&
+      Object.keys(federation.getCoordinator(maker.coordinator)?.limits ?? {}).length === 0
+    ) {
       return t('The coordinator limits are not available.');
     }
-    if (typeof maker.premium !== 'number') {
+    if (!fixedMode && typeof maker.premium !== 'number') {
       return t('The premium must be a number.');
     }
     if (maker.paymentMethods.length === 0) {
@@ -600,7 +706,7 @@ const MakerForm = ({
     maker,
     fav,
     federation,
-    currentPrice,
+    currentPrice: effectivePrice,
     federationUpdatedAt: federationUpdatedAt ? Date.parse(federationUpdatedAt) : 0,
     amountRangeEnabled,
   });
@@ -655,14 +761,29 @@ const MakerForm = ({
                 (maker.maxAmount ?? 0) * 100000000,
               )}
           {' ' + (fav.mode === 'fiat' ? currencyCode : 'Sats')}
-          {(maker.premium ?? 0) === 0
-            ? fav.mode === 'fiat'
-              ? t(' at market price')
+          {fixedMode
+            ? fixedPriceUnits !== null
+              ? t(' at a fixed price of {{price}}', {
+                  price: formatPricePerBtc(fixedPriceUnits, priceCurrency),
+                })
               : ''
-            : (maker.premium ?? 0) > 0
-              ? t(' at a {{premium}}% premium', { premium: maker.premium })
-              : t(' at a {{discount}}% discount', { discount: -(maker.premium ?? 0) })}
+            : (maker.premium ?? 0) === 0
+              ? fav.mode === 'fiat'
+                ? t(' at market price')
+                : ''
+              : (maker.premium ?? 0) > 0
+                ? t(' at a {{premium}}% premium', { premium: maker.premium })
+                : t(' at a {{discount}}% discount', { discount: -(maker.premium ?? 0) })}
         </Typography>
+        {fixedMode && fixedPriceUnits !== null && (maker.amount || makerHasAmountRange) ? (
+          <Typography variant='caption' color='text.secondary' sx={{ mt: 0.5 }}>
+            {t('Sats at your price: {{sats}}', {
+              sats: makerHasAmountRange
+                ? `${pn(fixedPriceSats(maker.minAmount ?? 0, fixedPriceUnits))}-${pn(fixedPriceSats(maker.maxAmount ?? 0, fixedPriceUnits))}`
+                : pn(fixedPriceSats(maker.amount ?? 0, fixedPriceUnits)),
+            })}
+          </Typography>
+        ) : null}
         {bondAmount !== null && (
           <Typography variant='caption' color='text.secondary' sx={{ mt: 0.5 }}>
             {t('Estimated Bond')}:{' '}
@@ -1094,6 +1215,54 @@ const MakerForm = ({
           )}
 
           <Grid sx={{ width: '100%' }}>
+            <ToggleButtonGroup
+              fullWidth
+              exclusive
+              size='small'
+              color='primary'
+              value={maker.priceMode}
+              onChange={handlePriceModeChange}
+              sx={{ mb: 1, backgroundColor: theme.palette.background.paper }}
+            >
+              <ToggleButton value='market' sx={{ textTransform: 'none' }}>
+                {t('Market price + premium')}
+              </ToggleButton>
+              <ToggleButton value='fixed' sx={{ textTransform: 'none' }}>
+                {t('Fixed price')}
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Grid>
+          <Collapse in={fixedMode} sx={{ width: '100%' }}>
+            <Grid sx={{ width: '100%' }}>
+              <TextField
+                fullWidth
+                label={`${t('Price per BTC ({{unit}})', { unit: priceUnit(priceCurrency) })} *`}
+                type='number'
+                value={maker.fixedPrice ?? ''}
+                helperText={
+                  fixedPriceUnits === null
+                    ? t('Your price does not move with the market: sats = amount / price')
+                    : fixedVsMarket !== null
+                      ? t('{{premium}}% vs market price (only for information)', {
+                          premium: `${fixedVsMarket > 0 ? '+' : ''}${fixedVsMarket}`,
+                        })
+                      : t('No market price to compare right now: your price is used as it is')
+                }
+                slotProps={{
+                  htmlInput: {
+                    min: 0,
+                    style: {
+                      textAlign: 'center',
+                      backgroundColor: theme.palette.background.paper,
+                      borderRadius: '4px',
+                    },
+                  },
+                }}
+                onChange={handleFixedPriceChange}
+              />
+            </Grid>
+          </Collapse>
+          <Grid sx={{ width: '100%', display: fixedMode ? 'none' : undefined }}>
             <TextField
               fullWidth
               error={maker.badPremiumText !== ''}
@@ -1431,9 +1600,22 @@ const MakerForm = ({
           enterTouchDelay={0}
           enterDelay={1000}
           enterNextDelay={2000}
-          title={t("Your order's current exchange rate. Rate will move with the market.")}
+          title={
+            fixedMode
+              ? t('Your fixed price. It does not move with the market.')
+              : t("Your order's current exchange rate. Rate will move with the market.")
+          }
         >
-          {currentPrice ? (
+          {fixedMode ? (
+            <Typography align='center' variant='caption' color='text.secondary'>
+              {`${t('Fixed price')}: ${fixedPriceUnits !== null ? formatPricePerBtc(fixedPriceUnits, priceCurrency) : '-'}`}
+              {fixedVsMarket !== null
+                ? ` (${fixedVsMarket > 0 ? '+' : ''}${fixedVsMarket}% ${t('vs market')})`
+                : marketPrice === null
+                  ? ` (${t('no market price to compare')})`
+                  : ''}
+            </Typography>
+          ) : currentPrice ? (
             <Typography align='center' variant='caption' color='text.secondary'>
               {`${t('Order current rate:')} ${currentPrice ? currencyFormatter.format(currentPrice) : '-'} ${currencyCode}/BTC`}
             </Typography>

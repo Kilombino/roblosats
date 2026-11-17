@@ -180,6 +180,7 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
         is_explicit: newOrder.is_explicit,
         premium: newOrder.is_explicit ? null : newOrder.premium,
         satoshis: newOrder.is_explicit ? newOrder.satoshis : null,
+        fixed_price: newOrder.fixed_price ?? null,
         public_duration: newOrder.public_duration,
         escrow_duration: newOrder.escrow_duration,
         bond_size: newOrder.bond_size,

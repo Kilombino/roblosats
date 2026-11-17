@@ -28,6 +28,7 @@ import currencyDict from '../../../utils/currencies';
 import getNivoScheme from '../NivoScheme';
 import OrderTooltip from '../helpers/OrderTooltip';
 import { type UseAppStoreType, AppContext } from '../../../contexts/AppContext';
+import { fixedPriceOf } from '../../../utils/fixedPrice';
 import {
   FederationContext,
   type UseFederationStoreType,
@@ -77,10 +78,17 @@ const DepthChart: React.FC<DepthChartProps> = ({
         if (order?.currency) {
           const limits = federation.getLimits();
 
+          // fixed-price orders (rl31-beta17): their own price, moved to the chart's currency
+          // with the market prices when there are some
+          const fixed = fixedPriceOf(order);
           const originalPrice =
-            (limits[order.currency]?.price ?? 0) * (1 + parseFloat(order.premium) / 100);
+            fixed ?? (limits[order.currency]?.price ?? 0) * (1 + parseFloat(order.premium) / 100);
           const currencyPrice =
-            (limits[currencyCode || 1]?.price ?? 0) * (1 + parseFloat(order.premium) / 100);
+            fixed !== null
+              ? limits[order.currency]?.price
+                ? (fixed * (limits[currencyCode || 1]?.price ?? 0)) / limits[order.currency].price
+                : 0
+              : (limits[currencyCode || 1]?.price ?? 0) * (1 + parseFloat(order.premium) / 100);
 
           const originalAmount =
             order.has_range && order.max_amount

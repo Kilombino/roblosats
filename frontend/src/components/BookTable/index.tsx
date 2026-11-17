@@ -28,6 +28,7 @@ import {
 import currencyDict from '../../utils/currencies';
 import { type PublicOrder } from '../../models';
 import { filterOrders, hexToRgb, statusBadgeColor, pn, amountToString } from '../../utils';
+import { fixedPriceOf, formatPricePerBtc, orderPremium, orderPrice } from '../../utils/fixedPrice';
 import BookControl from './BookControl';
 
 import { FlagWithProps } from '../Icons';
@@ -477,6 +478,7 @@ const BookTable = ({
         const premium = parseFloat(params.row.premium ?? '0');
         const limitPrice = limits[(params.row.currency ?? 0).toString()]?.price;
         const price = (limitPrice ?? 1) * (1 + premium / 100);
+        const fixed = fixedPriceOf(params.row);
 
         return (
           <div
@@ -485,7 +487,15 @@ const BookTable = ({
               onOrderClicked(params.row.id, params.row.coordinatorShortAlias ?? '');
             }}
           >
-            {limitPrice ? (
+            {fixed !== null ? (
+              // Roblosats rl31-beta17: the maker's own price, no market price needed
+              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
+                <span>{formatPricePerBtc(fixed, params.row.currency)}</span>
+                <Typography variant='caption' color='secondary' sx={{ lineHeight: 1.1 }}>
+                  {`📌 ${t('Fixed price')}`}
+                </Typography>
+              </div>
+            ) : limitPrice ? (
               `${pn(Math.round(price))} ${currencyCode}/BTC`
             ) : (
               <Skeleton variant='rectangular' width={200} height={20} style={{ marginTop: 15 }} />
@@ -513,7 +523,16 @@ const BookTable = ({
         const currencyCode = String(currencyDict[(params.row.currency ?? 0).toString()]);
         let fontColor = `rgb(0,0,0)`;
         let premiumPoint = 0;
-        const premiumFloat = parseFloat(params.row.premium ?? '0');
+        const fixedRowPrice = fixedPriceOf(params.row);
+        const premiumFloat =
+          fixedRowPrice !== null
+            ? (orderPremium(
+                params.row,
+                federation.getLimits(params.row.coordinatorShortAlias ?? '')[
+                  (params.row.currency ?? 0).toString()
+                ]?.price,
+              ) ?? 0)
+            : parseFloat(params.row.premium ?? '0');
         if (params.row.type === 0) {
           premiumPoint = premiumFloat / buyOutstandingPremium;
           premiumPoint = premiumPoint < 0 ? 0 : premiumPoint > 1 ? 1 : premiumPoint;
@@ -541,10 +560,18 @@ const BookTable = ({
         const calculatedPrice = limitPrice
           ? Math.round((limitPrice ?? 1) * (1 + premium / 100))
           : null;
+        // fixed price: the premium is only the difference with the market price, if any
+        const fixedPremium = fixedRowPrice !== null ? orderPremium(params.row, limitPrice) : null;
 
         const tooltipTitle = (
           <span>
-            {calculatedPrice ? `${pn(calculatedPrice)} ${currencyCode}/BTC` : ''}
+            {fixedRowPrice !== null
+              ? `${t('Fixed price')}: ${formatPricePerBtc(fixedRowPrice, params.row.currency)}${
+                  fixedPremium === null ? ` (${t('no market price to compare')})` : ''
+                }`
+              : calculatedPrice
+                ? `${pn(calculatedPrice)} ${currencyCode}/BTC`
+                : ''}
             {!isLargeScreen && isLowBond && (
               <>
                 {calculatedPrice && <br />}
@@ -584,7 +611,11 @@ const BookTable = ({
                   textAlign: 'right',
                 }}
               >
-                {`${parseFloat(parseFloat(params.row.premium ?? '0').toFixed(4))}%`}
+                {fixedRowPrice !== null
+                  ? fixedPremium === null
+                    ? '—'
+                    : `${fixedPremium > 0 ? '+' : ''}${parseFloat(fixedPremium.toFixed(2))}%`
+                  : `${parseFloat(parseFloat(params.row.premium ?? '0').toFixed(4))}%`}
               </Typography>
               {!visibleColumnKeys.has('bond_size') && (
                 <Box
@@ -722,10 +753,9 @@ const BookTable = ({
           params.row.has_range === true
             ? parseFloat(params.row.max_amount ?? '0')
             : parseFloat(params.row.amount ?? '0');
-        const premium = parseFloat(params.row.premium ?? '0');
         const price =
-          (limits[(params.row.currency ?? 0).toString()]?.price ?? 1) * (1 + premium / 100);
-        const satoshisNow = (100000000 * amount) / price;
+          orderPrice(params.row, limits[(params.row.currency ?? 0).toString()]?.price) ?? 0;
+        const satoshisNow = price > 0 ? (100000000 * amount) / price : 0;
 
         return (
           <div

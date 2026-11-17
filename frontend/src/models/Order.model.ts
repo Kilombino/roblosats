@@ -87,6 +87,8 @@ class Order {
   payment_method: string = '';
   is_explicit: boolean = false;
   premium: number = 0;
+  // Roblosats rl31-beta17: fixed price per BTC in the order's currency (null = market + premium)
+  fixed_price: number | string | null = null;
   satoshis: number = 0;
   maker: number = 0;
   taker: number = 0;
@@ -105,7 +107,7 @@ class Order {
   longitude: number = 0;
   password: string | undefined = undefined;
   description: string | undefined = undefined;
-  premium_now: number | undefined = undefined;
+  premium_now: number | null | undefined = undefined; // null: fixed price without a market price
   tg_enabled: boolean = false; // deprecated
   tg_token: string = '';
   tg_bot_name: string = '';
@@ -231,6 +233,7 @@ class Order {
       is_explicit: this.is_explicit,
       premium: this.is_explicit ? null : this.premium,
       satoshis: this.is_explicit ? this.satoshis : null,
+      fixed_price: this.fixed_price ?? null,
       public_duration: this.public_duration,
       escrow_duration: this.escrow_duration,
       bond_size: this.bond_size,

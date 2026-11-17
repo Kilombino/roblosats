@@ -97,6 +97,12 @@ const eventToPublicOrder = (
       case 'premium':
         publicOrder.premium = tag[1];
         break;
+      case 'price': {
+        // Roblosats rl31-beta17: a fixed-price order carries its price per BTC
+        const fixed = parseFloat(tag[1] ?? '');
+        if (Number.isFinite(fixed) && fixed > 0) publicOrder.fixed_price = fixed;
+        break;
+      }
       case 'pm':
         tag.shift();
         publicOrder.payment_method = tag.join(' ');

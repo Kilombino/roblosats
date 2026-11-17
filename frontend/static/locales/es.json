@@ -1099,5 +1099,19 @@
   "this escrow is rescued with the pre-signed rescue": "este depósito se rescata con el rescate prefirmado",
   "the saved rescue does not spend this escrow": "el rescate guardado no gasta este depósito",
   "the complete rescue is not saved on this device": "el rescate completo no está guardado en este dispositivo",
-  "Order #{{id}}: could not be checked ({{e}}).": "Orden #{{id}}: no se pudo comprobar ({{e}})."
+  "Order #{{id}}: could not be checked ({{e}}).": "Orden #{{id}}: no se pudo comprobar ({{e}}).",
+  "Fixed price": "Precio fijo",
+  "no market price to compare": "sin precio de mercado para comparar",
+  "Fixed price - {{premium}}% vs market price": "Precio fijo - {{premium}}% respecto al precio de mercado",
+  "Fixed price - no market price to compare": "Precio fijo - sin precio de mercado para comparar",
+  "Market price + premium": "Precio de mercado + prima",
+  "Price per BTC ({{unit}})": "Precio por BTC ({{unit}})",
+  "Your price does not move with the market: sats = amount / price": "Tu precio no se mueve con el mercado: sats = importe / precio",
+  "{{premium}}% vs market price (only for information)": "{{premium}}% respecto al precio de mercado (solo informativo)",
+  "No market price to compare right now: your price is used as it is": "Ahora no hay precio de mercado para comparar: se usa tu precio tal cual",
+  "Please enter your price per BTC.": "Escribe tu precio por BTC.",
+  " at a fixed price of {{price}}": " a un precio fijo de {{price}}",
+  "Sats at your price: {{sats}}": "Sats a tu precio: {{sats}}",
+  "Your fixed price. It does not move with the market.": "Tu precio fijo. No se mueve con el mercado.",
+  "vs market": "respecto al mercado"
 }

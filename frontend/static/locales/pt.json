@@ -1002,5 +1002,19 @@
   "this escrow is rescued with the pre-signed rescue": "this escrow is rescued with the pre-signed rescue",
   "the saved rescue does not spend this escrow": "the saved rescue does not spend this escrow",
   "the complete rescue is not saved on this device": "the complete rescue is not saved on this device",
-  "Order #{{id}}: could not be checked ({{e}}).": "Order #{{id}}: could not be checked ({{e}})."
+  "Order #{{id}}: could not be checked ({{e}}).": "Order #{{id}}: could not be checked ({{e}}).",
+  "Fixed price": "Fixed price",
+  "no market price to compare": "no market price to compare",
+  "Fixed price - {{premium}}% vs market price": "Fixed price - {{premium}}% vs market price",
+  "Fixed price - no market price to compare": "Fixed price - no market price to compare",
+  "Market price + premium": "Market price + premium",
+  "Price per BTC ({{unit}})": "Price per BTC ({{unit}})",
+  "Your price does not move with the market: sats = amount / price": "Your price does not move with the market: sats = amount / price",
+  "{{premium}}% vs market price (only for information)": "{{premium}}% vs market price (only for information)",
+  "No market price to compare right now: your price is used as it is": "No market price to compare right now: your price is used as it is",
+  "Please enter your price per BTC.": "Please enter your price per BTC.",
+  " at a fixed price of {{price}}": " at a fixed price of {{price}}",
+  "Sats at your price: {{sats}}": "Sats at your price: {{sats}}",
+  "Your fixed price. It does not move with the market.": "Your fixed price. It does not move with the market.",
+  "vs market": "vs market"
 }

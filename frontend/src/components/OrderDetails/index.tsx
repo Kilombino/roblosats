@@ -51,6 +51,7 @@ import { Coordinator, type Order } from '../../models';
 import CoordinatorFeeRow from '../CoordinatorFeeRow';
 import { isOnchainEscrow } from '../TradeBox/onchainEscrowSteps';
 import { onchainFees } from '../../utils/escrow/fees';
+import { fixedPriceOf, formatPricePerBtc, isFixedPrice } from '../../utils/fixedPrice';
 
 interface OrderDetailsProps {
   shortAlias: string;
@@ -568,7 +569,38 @@ const OrderDetails = ({
                 <PriceChange />
               </ListItemIcon>
 
-              {currentOrder?.price_now !== undefined ? (
+              {isFixedPrice(currentOrder) ? (
+                // Roblosats rl31-beta17: the maker's own price; vs market only as information
+                <ListItemText
+                  primary={
+                    <span
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5em',
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      {formatPricePerBtc(fixedPriceOf(currentOrder) ?? 0, currentOrder?.currency)}
+                      <Chip
+                        size='small'
+                        color='secondary'
+                        variant='outlined'
+                        label={t('Fixed price')}
+                      />
+                    </span>
+                  }
+                  secondary={
+                    currentOrder?.premium_now !== undefined && currentOrder?.premium_now !== null
+                      ? t('Fixed price - {{premium}}% vs market price', {
+                          premium: `${Number(currentOrder.premium_now) > 0 ? '+' : ''}${currentOrder.premium_now}`,
+                        })
+                      : t('Fixed price - no market price to compare')
+                  }
+                />
+              ) : null}
+
+              {!isFixedPrice(currentOrder) && currentOrder?.price_now !== undefined ? (
                 <ListItemText
                   primary={t('{{price}} {{currencyCode}}/BTC - Premium: {{premium}}%', {
                     price: pn(currentOrder?.price_now),
@@ -579,14 +611,18 @@ const OrderDetails = ({
                 />
               ) : null}
 
-              {currentOrder?.price_now === undefined && currentOrder?.is_explicit ? (
+              {!isFixedPrice(currentOrder) &&
+              currentOrder?.price_now === undefined &&
+              currentOrder?.is_explicit ? (
                 <ListItemText
                   primary={pn(currentOrder?.satoshis)}
                   secondary={t('Amount of Satoshis')}
                 />
               ) : null}
 
-              {currentOrder?.price_now === undefined && !currentOrder?.is_explicit ? (
+              {!isFixedPrice(currentOrder) &&
+              currentOrder?.price_now === undefined &&
+              !currentOrder?.is_explicit ? (
                 <ListItemText
                   primary={`${parseFloat(Number(currentOrder?.premium).toFixed(2))}%`}
                   secondary={t('Premium over market price')}

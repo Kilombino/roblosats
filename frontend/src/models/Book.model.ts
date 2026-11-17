@@ -23,6 +23,8 @@ export interface PublicOrder {
   maker_nick: string | null;
   maker_hash_id: string | null;
   price: number | null;
+  // Roblosats rl31-beta17: fixed price per BTC in the order's currency (null = market + premium)
+  fixed_price?: number | string | null;
   maker_status?: 'Active' | 'Seen recently' | 'Inactive';
   coordinatorShortAlias?: string;
   link?: string;

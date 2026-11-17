@@ -1099,5 +1099,19 @@
   "this escrow is rescued with the pre-signed rescue": "aquest dipòsit es rescata amb el rescat prefirmat",
   "the saved rescue does not spend this escrow": "el rescat desat no gasta aquest dipòsit",
   "the complete rescue is not saved on this device": "el rescat complet no està desat en aquest dispositiu",
-  "Order #{{id}}: could not be checked ({{e}}).": "Ordre #{{id}}: no s'ha pogut comprovar ({{e}})."
+  "Order #{{id}}: could not be checked ({{e}}).": "Ordre #{{id}}: no s'ha pogut comprovar ({{e}}).",
+  "Fixed price": "Preu fix",
+  "no market price to compare": "sense preu de mercat per comparar",
+  "Fixed price - {{premium}}% vs market price": "Preu fix - {{premium}}% respecte al preu de mercat",
+  "Fixed price - no market price to compare": "Preu fix - sense preu de mercat per comparar",
+  "Market price + premium": "Preu de mercat + prima",
+  "Price per BTC ({{unit}})": "Preu per BTC ({{unit}})",
+  "Your price does not move with the market: sats = amount / price": "El teu preu no es mou amb el mercat: sats = import / preu",
+  "{{premium}}% vs market price (only for information)": "{{premium}}% respecte al preu de mercat (només informatiu)",
+  "No market price to compare right now: your price is used as it is": "Ara no hi ha preu de mercat per comparar: es fa servir el teu preu tal qual",
+  "Please enter your price per BTC.": "Escriu el teu preu per BTC.",
+  " at a fixed price of {{price}}": " a un preu fix de {{price}}",
+  "Sats at your price: {{sats}}": "Sats al teu preu: {{sats}}",
+  "Your fixed price. It does not move with the market.": "El teu preu fix. No es mou amb el mercat.",
+  "vs market": "respecte al mercat"
 }

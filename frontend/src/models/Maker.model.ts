@@ -25,6 +25,10 @@ export interface Maker {
   description: string | null;
   badDescription: boolean;
   onchainEscrow: boolean;
+  // Roblosats rl31-beta17: 'fixed' = the maker sets the price per BTC (fixedPrice, as typed:
+  // the currency, or Spamsuits per BTC for Spamcoin); 'market' = market price + premium
+  priceMode: 'market' | 'fixed';
+  fixedPrice: number | null;
 }
 
 export const defaultMaker: Maker = {
@@ -55,6 +59,8 @@ export const defaultMaker: Maker = {
   description: null,
   badDescription: false,
   onchainEscrow: false,
+  priceMode: 'market',
+  fixedPrice: null,
 };
 
 export default Maker;

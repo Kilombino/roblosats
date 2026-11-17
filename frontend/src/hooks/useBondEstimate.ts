@@ -33,7 +33,8 @@ export const useBondEstimate = ({
       maxAmount: maker.maxAmount,
       isRange: makerHasAmountRange,
       bondSize: bondPercentage,
-      mode: fav.mode as 'fiat' | 'swap',
+      // fixed price (rl31-beta17): sats = amount / price in any currency, Spamcoin too
+      mode: maker.priceMode === 'fixed' ? 'fiat' : (fav.mode as 'fiat' | 'swap'),
       price: currentPrice ?? 0,
       premium: maker.premium ?? 0,
     });
@@ -44,6 +45,7 @@ export const useBondEstimate = ({
     makerHasAmountRange,
     maker.bondSize,
     maker.premium,
+    maker.priceMode,
     currentPrice,
     fav.mode,
     maker.coordinator,
