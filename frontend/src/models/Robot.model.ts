@@ -19,7 +19,12 @@ interface RobotApiResponse {
   webhook_url?: string;
   webhook_enabled?: boolean;
   webhook_api_key?: string;
-  onchain_escrow?: { min_sats: number; max_sats: number; min_bond_sats?: number };
+  onchain_escrow?: {
+    min_sats: number;
+    max_sats: number;
+    min_bond_sats?: number;
+    min_fee_sats?: number;
+  };
 }
 
 interface RewardApiResponse {
@@ -66,7 +71,12 @@ class Robot {
   public webhookEnabled: boolean = false;
   public webhookApiKey: string = '';
   // Set by the coordinator when this robot may make and take onchain escrow orders
-  public onchainEscrow: { minSats: number; maxSats: number; minBondSats?: number } | null = null;
+  public onchainEscrow: {
+    minSats: number;
+    maxSats: number;
+    minBondSats?: number;
+    minFeeSats?: number;
+  } | null = null;
   // Roblosats: the coordinator did not answer the last /api/robot/ (offline, gone).
   public unreachable: boolean = false;
 
@@ -151,6 +161,7 @@ class Robot {
                 minSats: data.onchain_escrow.min_sats,
                 maxSats: data.onchain_escrow.max_sats,
                 minBondSats: data.onchain_escrow.min_bond_sats,
+                minFeeSats: data.onchain_escrow.min_fee_sats,
               }
             : null,
         });

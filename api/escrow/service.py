@@ -205,7 +205,9 @@ def build_deposit(escrow, escrow_sats, seller_fee, buyer_fee, coordinator_spk, d
     escrow.escrow_sats = plan.tx.outputs[0].value
     dev_paid = sum(o.value for o in plan.tx.outputs[1:] if dev_spk and o.script_pubkey == dev_spk)
     escrow.dev_fee_sats = dev_paid
-    escrow.coordinator_fee_sats = seller_fee + buyer_fee - dev_paid
+    # Only what the deposit really pays to the coordinator (rl31-beta13): a fee output below
+    # dust would have been dropped and never reached it.
+    escrow.coordinator_fee_sats = sum(o.value for o in plan.tx.outputs[1:] if o.script_pubkey == coordinator_spk)
     escrow.funding_tx = plan.tx.serialize().hex()
     sigs = dict(escrow.funding_signatures)
     sigs["plan"] = {

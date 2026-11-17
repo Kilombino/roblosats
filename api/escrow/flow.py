@@ -63,8 +63,27 @@ def set_payout_address(order, user, address):
     return escrow
 
 
+def min_coordinator_fee():
+    """Smallest coordinator fee output (rl31-beta13): below dust an output cannot exist, and a
+    dropped fee went to the miners while proceeds still counted it (orders #20/#21)."""
+    return max(0, config("ESCROW_MIN_COORDINATOR_FEE_SATS", cast=int, default=1000))
+
+
 def fees(order):
-    return service.fee_split(order)
+    """(seller_fee, buyer_fee) for the onchain escrow, raised so that every coordinator fee
+    output reaches the minimum (charged on the same sides, in the same proportion)."""
+    seller_fee, buyer_fee = service.fee_split(order)
+    floor = min_coordinator_fee()
+    if floor <= 0 or seller_fee + buyer_fee <= 0:
+        return seller_fee, buyer_fee
+    if buyer_fee_at_release(order):
+        # Two outputs: the seller's fee in the deposit, the buyer's in the release.
+        return (max(seller_fee, floor) if seller_fee else 0, max(buyer_fee, floor) if buyer_fee else 0)
+    total = seller_fee + buyer_fee
+    if total >= floor:
+        return seller_fee, buyer_fee
+    raised_seller = math.ceil(seller_fee * floor / total)
+    return raised_seller, max(0, floor - raised_seller)
 
 
 def recommended_funding(order, escrow, role, from_bond=False):
@@ -128,8 +147,18 @@ def coordinator_fee_spk():
     return _spk_for_address(address)
 
 
-def dev_fee():
-    return 0, None
+def dev_fee(order=None, coordinator_total=0):
+    """Onchain dev fund share, out of the coordinator fees (rl31-beta13): ESCROW_DEV_FEE_PERCENT
+    of them to ESCROW_DEV_ADDRESS. Off unless both are set; never leaves the coordinator below
+    its minimum output (then the coordinator keeps it all)."""
+    pct = config("ESCROW_DEV_FEE_PERCENT", cast=float, default=0.0)
+    address = config("ESCROW_DEV_ADDRESS", default="")
+    if pct <= 0 or not address or coordinator_total <= 0:
+        return 0, None
+    sats = math.floor(coordinator_total * pct / 100)
+    if sats < DUST_P2TR or coordinator_total - sats < min_coordinator_fee():
+        return 0, None
+    return sats, _spk_for_address(address)
 
 
 def bond_of(order, role, owner=None):
@@ -226,7 +255,7 @@ def advance(order):
             buyer_owed, _ = recommended_funding(order, escrow, "buyer")
             buyer_ready = sum(u.value for u in service.funding_utxos(escrow, "buyer")) >= buyer_owed
         if bonds_ready and have_s >= seller_owed and buyer_ready:
-            dev_sats, dev_spk = dev_fee()
+            dev_sats, dev_spk = dev_fee(order, seller_fee + (0 if at_release else buyer_fee))
             try:
                 service.build_deposit(
                     escrow, order.last_satoshis, seller_fee, 0 if at_release else buyer_fee, coordinator_fee_spk(),

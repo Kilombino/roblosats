@@ -1020,5 +1020,6 @@
   "this deposit takes more than agreed from us": "este depósito nos quita más de lo acordado",
   "this transaction does not spend our bond": "esta transacción no gasta nuestra fianza",
   "Import an old robot token": "Importar un token de robot antiguo",
-  "Refresh orders": "Actualizar órdenes"
+  "Refresh orders": "Actualizar órdenes",
+  "Onchain coordinator fee: at least {{sats}} Sats": "Comisión on-chain del coordinador: al menos {{sats}} Sats"
 }

@@ -53,6 +53,7 @@ export interface Info {
   max_order_size: number;
   swap_enabled: boolean;
   onchain_escrow?: boolean;
+  onchain_min_fee_sats?: number;
   max_swap: number;
   current_swap_fee_rate: number;
   blossom_enabled: boolean;

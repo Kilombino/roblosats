@@ -871,6 +871,7 @@ class RobotView(APIView):
                 "min_sats": config("ESCROW_MIN_SATS", cast=int, default=config("MIN_ORDER_SIZE", cast=int, default=20000)),
                 "max_sats": config("ESCROW_MAX_SATS", cast=int, default=0) or config("MAX_ORDER_SIZE", cast=int, default=250000),
                 "min_bond_sats": escrow_flow.min_bond_sats(),
+                "min_fee_sats": escrow_flow.min_coordinator_fee(),
             }
 
         # Adds/generate telegram token and whether it is enabled
@@ -1245,6 +1246,9 @@ class InfoView(viewsets.ViewSet):
         # Announced to everybody only when it is open to everybody; the allowed robots
         # learn it from /api/robot/ while ESCROW_ALLOWED_ROBOTS is set.
         context["onchain_escrow"] = escrow_flow.service.enabled() and not escrow_flow.restricted()
+        if context["onchain_escrow"]:
+            # rl31-beta13: the onchain coordinator fee is at least this many sats (one output)
+            context["onchain_min_fee_sats"] = escrow_flow.min_coordinator_fee()
 
         # federation_hash lets clients vote on the federation list using the hash
         # from each coordinator's /api/info/ response — no separate /api/federation/

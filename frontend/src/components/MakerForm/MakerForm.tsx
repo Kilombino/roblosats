@@ -97,6 +97,10 @@ const MakerForm = ({
   const amountSafeThresholds = [1.03, 0.98];
   // Onchain escrow: offered to everybody by /api/info, or only to this robot by /api/robot/
   const robotEscrow = garage.getSlot()?.getRobot(maker.coordinator)?.onchainEscrow ?? null;
+  const onchainMinFee =
+    robotEscrow?.minFeeSats ??
+    federation.getCoordinator(maker.coordinator)?.info?.onchain_min_fee_sats ??
+    0;
   const onchainAvailable = Boolean(
     federation.getCoordinator(maker.coordinator)?.info?.onchain_escrow || robotEscrow,
   );
@@ -649,6 +653,11 @@ const MakerForm = ({
             Sats
           </Typography>
         )}
+        {maker.onchainEscrow && onchainMinFee ? (
+          <Typography variant='caption' color='text.secondary'>
+            {t('Onchain coordinator fee: at least {{sats}} Sats', { sats: pn(onchainMinFee) })}
+          </Typography>
+        ) : null}
       </Box>
     );
   };

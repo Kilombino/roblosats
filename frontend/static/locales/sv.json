@@ -986,5 +986,6 @@
   "this deposit takes more than agreed from us": "this deposit takes more than agreed from us",
   "this transaction does not spend our bond": "this transaction does not spend our bond",
   "Import an old robot token": "Import an old robot token",
-  "Refresh orders": "Refresh orders"
+  "Refresh orders": "Refresh orders",
+  "Onchain coordinator fee: at least {{sats}} Sats": "Onchain coordinator fee: at least {{sats}} Sats"
 }
