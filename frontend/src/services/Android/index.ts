@@ -93,7 +93,15 @@ class AndroidRobosats {
     this.WSClose[path] = onClose;
   };
 
-  public removeWSConnection: (path: string) => void = (path) => {
+  // Roblosats (17 nov 2026): a late close() of an old connection to the same relay path
+  // (the relays are reconnected several times at start-up) removed the CURRENT connection's
+  // handler: the phone kept sending chat messages but never received any. Only remove the
+  // handler that belongs to the closing connection.
+  public removeWSConnection: (path: string, onMesage?: (message?: string) => void) => void = (
+    path,
+    onMesage,
+  ) => {
+    if (onMesage && this.WSConnections[path] !== onMesage) return;
     delete this.WSConnections[path];
     delete this.WSError[path];
     delete this.WSClose[path];

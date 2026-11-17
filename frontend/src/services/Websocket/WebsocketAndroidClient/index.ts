@@ -5,11 +5,12 @@ import { v4 as uuidv4 } from 'uuid';
 class WebsocketConnectionAndroid implements WebsocketConnection {
   constructor(path: string) {
     this.path = path;
+    this.handler = (message?: string) => {
+      this.wsMessagePromises.forEach((f) => f({ data: message }));
+    };
     window.AndroidRobosats?.registerWSConnection(
       path,
-      (message) => {
-        this.wsMessagePromises.forEach((f) => f({ data: message }));
-      },
+      this.handler,
       () => {
         this.wsClosePromises.forEach((f) => f());
       },
@@ -18,6 +19,7 @@ class WebsocketConnectionAndroid implements WebsocketConnection {
   }
 
   private readonly path: string;
+  private readonly handler: (message?: string) => void;
 
   private readonly wsMessagePromises: Array<(message: object) => void> = [];
   private readonly wsClosePromises: Array<() => void> = [];
@@ -28,7 +30,7 @@ class WebsocketConnectionAndroid implements WebsocketConnection {
   };
 
   public close: () => void = () => {
-    window.AndroidRobosats?.removeWSConnection(this.path);
+    window.AndroidRobosats?.removeWSConnection(this.path, this.handler);
   };
 
   public onMessage: (event: (message: object) => void) => void = (event) => {
