@@ -62,6 +62,16 @@ export const OnchainPayoutForm = ({
           </Typography>
         </ListItem>
 
+        <ListItem>
+          <Typography variant='body2'>
+            <b>
+              {t(
+                'You (the buyer) pay the swap fee and the mining fee: both are deducted from what you receive.',
+              )}
+            </b>
+          </Typography>
+        </ListItem>
+
         <Divider />
 
         <ListItem>

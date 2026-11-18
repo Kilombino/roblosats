@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import { type Order } from '../../../models';
 import currencies from '../../../utils/currencies';
+import { exchangeUnit, toDisplayTotal } from '../../../utils/satOrders';
 import { pn } from '../../../utils';
 import { LoadingButton } from '@mui/lab';
 
@@ -31,9 +32,13 @@ export const ConfirmFiatReceivedDialog = ({
   onConfirmClick,
 }: ConfirmFiatReceivedDialogProps): React.JSX.Element => {
   const { t } = useTranslation();
-  const currencyCode = currencies[(order?.currency ?? 0).toString()];
+  // Roblosats: currency 1000 is Spamcoin, read in Spamsats
+  const spam = order?.currency === 1000;
+  const currencyCode = spam ? exchangeUnit(1000) : currencies[(order?.currency ?? 0).toString()];
   const amount = pn(
-    parseFloat(parseFloat(String(order?.amount ?? 0)).toFixed(order?.currency === 1000 ? 8 : 4)),
+    spam
+      ? Math.round(toDisplayTotal(Number(order?.amount ?? 0), 1000))
+      : parseFloat(parseFloat(String(order?.amount ?? 0)).toFixed(4)),
   );
 
   return (

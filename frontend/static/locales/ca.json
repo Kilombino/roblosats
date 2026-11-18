@@ -1159,5 +1159,7 @@
   "+{{amount}} sats extra returned with your bond": "+{{amount}} sats de més retornats amb la teva fiança",
   "Extra returned with your bond": "De més, retornat amb la teva fiança",
   "Spamcoin payment method(s)": "Mètode(s) de pagament en Spamcoin",
-  "Payment method(s)": "Mètode(s) de pagament"
+  "Payment method(s)": "Mètode(s) de pagament",
+  "Lightning: no swap fee": "Lightning: sense comissió de swap",
+  "You (the buyer) pay the swap fee and the mining fee: both are deducted from what you receive.": "La comissió de swap i la de mineria les pagues tu (el comprador): es descompten del que reps."
 }

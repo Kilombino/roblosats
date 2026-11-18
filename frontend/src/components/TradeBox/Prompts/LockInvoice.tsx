@@ -74,11 +74,8 @@ export const LockInvoicePrompt = ({
       {concept === 'bond' ? (
         <Typography color='secondary' variant='h6' align='center'>
           <b>
-            {order.currency === 1000
-              ? order.is_buyer
-                ? t('SWAPPING INTO Lightning')
-                : t('SWAPPING OUT of Lightning')
-              : order.is_buyer
+            {/* Roblosats: currency 1000 is Spamcoin, not a swap */}
+            {order.is_buyer
                 ? t('You are BUYING BTC')
                 : t('You are SELLING BTC')}
           </b>

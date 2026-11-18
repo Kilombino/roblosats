@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from '@mui/material';
 import currencies from '../../../utils/currencies';
+import { exchangeUnit, toDisplayTotal } from '../../../utils/satOrders';
 
 import { type Order } from '../../../models';
 import { pn, saveAsJson } from '../../../utils';
@@ -78,9 +79,13 @@ export const ChatPrompt = ({
   const [text, setText] = useState<string>('');
   const [openOrderOptions, setOpenOrderOptions] = useState<boolean>(false);
 
-  const currencyCode: string = currencies[`${order.currency}`];
+  // Roblosats: currency 1000 is Spamcoin, read in Spamsats
+  const currencyCode: string =
+    order.currency === 1000 ? exchangeUnit(1000) : currencies[`${order.currency}`];
   const amount: string = pn(
-    Number(parseFloat(String(order.amount ?? 0)).toFixed(order.currency === 1000 ? 8 : 4)),
+    order.currency === 1000
+      ? Math.round(toDisplayTotal(Number(order.amount ?? 0), 1000))
+      : Number(parseFloat(String(order.amount ?? 0)).toFixed(4)),
   );
 
   const disputeCountdownRenderer = function ({

@@ -1159,5 +1159,7 @@
   "+{{amount}} sats extra returned with your bond": "+{{amount}} sats de más devueltos con tu fianza",
   "Extra returned with your bond": "De más, devuelto con tu fianza",
   "Spamcoin payment method(s)": "Método(s) de pago en Spamcoin",
-  "Payment method(s)": "Método(s) de pago"
+  "Payment method(s)": "Método(s) de pago",
+  "Lightning: no swap fee": "Lightning: sin comisión de swap",
+  "You (the buyer) pay the swap fee and the mining fee: both are deducted from what you receive.": "La comisión de swap y la de minería las pagas tú (el comprador): se descuentan de lo que recibes."
 }

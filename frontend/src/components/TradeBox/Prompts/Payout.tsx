@@ -3,10 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { Grid, Typography, ToggleButtonGroup, ToggleButton } from '@mui/material';
 
 import currencies from '../../../utils/currencies';
+import { exchangeUnit, toDisplayTotal } from '../../../utils/satOrders';
 
 import { type Order, type Settings } from '../../../models';
 import { pn } from '../../../utils';
 import { Bolt, Link } from '@mui/icons-material';
+import { defaultPayoutTab, onchainPayoutAllowed } from '../payoutOptions';
 import {
   LightningPayoutForm,
   type LightningForm,
@@ -42,7 +44,9 @@ export const PayoutPrompt = ({
   const { t } = useTranslation();
   const currencyCode: string = currencies[`${order.currency}`];
 
-  const [tab, setTab] = useState<'lightning' | 'onchain'>('lightning');
+  // Roblosats: an onchain order taken with Lightning (hybrid B) pays the buyer onchain by default.
+  const [tab, setTab] = useState<'lightning' | 'onchain'>(defaultPayoutTab(order));
+  const onchainAllowed = onchainPayoutAllowed(order);
 
   return (
     <Grid
@@ -60,15 +64,13 @@ export const PayoutPrompt = ({
           {t(
             'Before letting you send {{amountFiat}} {{currencyCode}}, we want to make sure you are able to receive the BTC.',
             {
+              // Roblosats: currency 1000 is Spamcoin, read in Spamsats
               amountFiat: pn(
-                parseFloat(
-                  (order.currency === 1000
-                    ? Number(order.amount ?? 0) * 100000000
-                    : Number(order.amount ?? 0)
-                  ).toFixed(4),
-                ),
+                order.currency === 1000
+                  ? Math.round(toDisplayTotal(Number(order.amount ?? 0), 1000))
+                  : parseFloat(Number(order.amount ?? 0).toFixed(4)),
               ),
-              currencyCode: order.currency === 1000 ? 'Sats' : currencyCode,
+              currencyCode: order.currency === 1000 ? exchangeUnit(1000) : currencyCode,
             },
           )}
         </Typography>
@@ -95,7 +97,7 @@ export const PayoutPrompt = ({
               <Bolt /> {t('Lightning')}
             </div>
           </ToggleButton>
-          <ToggleButton value='onchain' disabled={!order.swap_allowed || order.currency === 1000}>
+          <ToggleButton value='onchain' disabled={!onchainAllowed}>
             <div
               style={{
                 display: 'flex',
@@ -109,6 +111,14 @@ export const PayoutPrompt = ({
           </ToggleButton>
         </ToggleButtonGroup>
       </Grid>
+
+      {onchainAllowed && tab === 'onchain' ? (
+        <Grid>
+          <Typography variant='caption' color='text.secondary'>
+            {t('Lightning: no swap fee')}
+          </Typography>
+        </Grid>
+      ) : null}
 
       <Grid style={{ display: tab === 'lightning' ? '' : 'none' }}>
         <LightningPayoutForm
