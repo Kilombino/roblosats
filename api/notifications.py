@@ -46,41 +46,64 @@ class Notifications:
         return f"http://{self.site}/order/{get_federation_short_alias()}/{order.id}"
 
     def send_message(
-        self, order, robot, title, description="", event_type="notification"
+        self,
+        order,
+        robot,
+        title,
+        description="",
+        event_type="notification",
+        action=False,
     ):
-        """Save a message for a user and sends it to Telegram, Nostr, and/or Webhook"""
+        """Save a message for a user and sends it to Telegram, Nostr, and/or Webhook.
+        action (0.9.4): the trader must do something now (Nostr tag, webhook field)."""
         self.save_message(order, robot, title, description)
         if robot.nostr_pubkey:
             nostr_send_notification_event.delay(
-                robot_id=robot.id, order_id=order.id, text=title
+                robot_id=robot.id, order_id=order.id, text=title, action=bool(action)
             )
-        if robot.telegram_enabled:
+        if robot.telegram_enabled and robot.telegram_chat_id:
             self.send_telegram_message(robot.telegram_chat_id, title, description)
         if robot.webhook_enabled:
-            self.send_webhook_message(order, robot, title, description, event_type)
+            self.send_webhook_message(
+                order, robot, title, description, event_type, action=action
+            )
 
     def save_message(self, order, robot, title, description=""):
-        """Save a message for a user"""
+        """Save a message for a user (the columns hold 240 characters)"""
         Notification.objects.create(
-            title=title, description=description, robot=robot, order=order
+            title=title[:240],
+            description=(description or "")[:240],
+            robot=robot,
+            order=order,
         )
 
     def send_telegram_message(self, chat_id, title, description=""):
         """sends a message to a user with telegram notifications enabled"""
 
         bot_token = config("TELEGRAM_TOKEN")
-        text = f"{title} {description}"
-        message_url = f"https://api.telegram.org/bot{bot_token}/sendMessage?chat_id={chat_id}&text={text}"
-        # if it fails, it should keep trying
-        while True:
+        text = f"{title} {description}".strip()
+        message_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        # 0.9.4: the text goes URL-encoded (a "&" or "#" cut it before) and a dead Telegram
+        # no longer holds a worker forever.
+        for _ in range(5):
             try:
-                self.session.get(message_url).json()
+                self.session.get(
+                    message_url,
+                    params={"chat_id": chat_id, "text": text},
+                    timeout=60,
+                ).json()
                 return
             except Exception:
                 pass
 
     def send_webhook_message(
-        self, order, robot, title, description="", event_type="notification"
+        self,
+        order,
+        robot,
+        title,
+        description="",
+        event_type="notification",
+        action=False,
     ):
         """Sends a webhook notification to the user's custom HTTP endpoint (Tor .onion only)"""
         from api.models import Robot
@@ -105,6 +128,7 @@ class Notifications:
                 "title": title,
                 "description": description,
             },
+            "action_needed": bool(action),
             "metadata": {
                 "coordinator": config("COORDINATOR_ALIAS", cast=str, default="Unknown"),
                 "platform_version": config("VERSION", cast=str, default="Unknown"),
@@ -196,7 +220,9 @@ class Notifications:
         user = order.maker if order.maker_id == user_id else order.taker
         if user is None or user.id != user_id:
             return
-        lang = user.robot.telegram_lang_code
+        from api.step_alerts import lang_of
+
+        lang = lang_of(user.robot)
         amount = f"{sats:,}".replace(",", ".")
         if lang == "es":
             concept = "tu fianza" if what == "bond" else "tu depósito"
@@ -209,6 +235,17 @@ class Notifications:
                 else:
                     title = (f"📥 Pago de {amount} sats visto en la mempool para tu fianza (orden {order.id}). "
                              f"Con lo que ya enviaste llega a la fianza; esperando 1 confirmación.")
+        elif lang == "ca":
+            concept = "la teva fiança" if what == "bond" else "el teu dipòsit"
+            title = f"📥 Pagament vist a la mempool: {concept} de {amount} sats (ordre {order.id}), esperant 1 confirmació."
+            if what == "bond" and short is not None:
+                if short:
+                    missing = f"{short:,}".replace(",", ".")
+                    title = (f"📥 Pagament de {amount} sats vist a la mempool per a la teva fiança (ordre {order.id}). "
+                             f"Amb el que ja vas enviar NO arriba a la fiança: falten {missing} sats. Envia el que falta a la mateixa adreça.")
+                else:
+                    title = (f"📥 Pagament de {amount} sats vist a la mempool per a la teva fiança (ordre {order.id}). "
+                             f"Amb el que ja vas enviar arriba a la fiança; esperant 1 confirmació.")
         else:
             concept = "your bond" if what == "bond" else "your deposit"
             title = f"📥 Payment seen in the mempool: {concept} of {amount} Sats (order {order.id}), waiting for 1 confirmation."
@@ -221,14 +258,17 @@ class Notifications:
                              f"Together with what you already sent it reaches the bond; waiting for 1 confirmation.")
         if low:
             # rl31-beta19: it pays less than the mempool needs for about an hour
-            paid, needed = (f"{r:g}".replace(".", ",") if lang == "es" else f"{r:g}" for r in low)
+            paid, needed = (f"{r:g}".replace(".", ",") if lang in ("es", "ca") else f"{r:g}" for r in low)
             if lang == "es":
                 title += (f" ⚠️ Tu pago paga {paid} sat/vB y ahora la mempool pide {needed}: "
                           f"acelera la transacción (RBF o CPFP) o puede tardar mucho en confirmarse.")
+            elif lang == "ca":
+                title += (f" ⚠️ El teu pagament paga {paid} sat/vB i ara la mempool demana {needed}: "
+                          f"accelera la transacció (RBF o CPFP) o pot trigar molt a confirmar-se.")
             else:
                 title += (f" ⚠️ Your payment pays {paid} sat/vB and the mempool currently needs {needed}: "
                           f"speed it up (RBF or CPFP) or it may take a long time to confirm.")
-        self.send_message(order, user.robot, title)
+        self.send_message(order, user.robot, title, self.order_url(order), action=bool(low))
 
     SIGN_WHAT = {
         "bond_signature": ("your bond", "tu fianza", "la teva fiança"),
@@ -244,7 +284,9 @@ class Notifications:
         if user is None or user.id != user_id:
             return
         en, es, ca = self.SIGN_WHAT.get(what, ("the next step", "el siguiente paso", "el pas següent"))
-        lang = user.robot.telegram_lang_code
+        from api.step_alerts import lang_of
+
+        lang = lang_of(user.robot)
         if lang == "es":
             title = (f"✍️ Abre la orden {order.id}: tu app tiene que firmar {es}. "
                      "Déjala abierta en primer plano en este dispositivo hasta que termine.")
@@ -254,7 +296,7 @@ class Notifications:
         else:
             title = (f"✍️ Open order {order.id}: your app needs to sign {en}. "
                      "Keep it open in the foreground on this device until it is done.")
-        self.send_message(order, user.robot, title, self.order_url(order))
+        self.send_message(order, user.robot, title, self.order_url(order), action=True)
 
     def order_taken_confirmed(self, order):
         lang = order.maker.robot.telegram_lang_code
@@ -402,10 +444,10 @@ class Notifications:
         else:
             notification_reason = f"(You receive this notification because this was the first in-chat message. You will only be notified again if there is a gap bigger than {TIMEGAP} minutes between messages)"
 
-        user = chat_message.receiver
-        title = f"💬 Hey {user.username}, a new chat message in-app was sent to you by {chat_message.sender.username} for order ID {str(order.id)}."
-        self.send_message(order, user.robot, title, notification_reason)
+        # 0.9.4: in the robot's language, with the order number (step_alerts)
+        from api import step_alerts
 
+        step_alerts.on_chat_message(order, chat_message)
         return
 
     def coordinator_cancelled(self, order):

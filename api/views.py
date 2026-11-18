@@ -965,6 +965,16 @@ class RobotView(APIView):
         Respond with Nickname, pubKey, privKey.
         """
         user = request.user
+        # 0.9.4: the app says its language, so the step notices (Nostr, Telegram, webhook)
+        # come in it. Kept in telegram_lang_code, the robot's notice language.
+        lang = str(request.GET.get("lang", ""))[:5].lower()
+        if (
+            len(lang) >= 2
+            and lang[:2].isalpha()
+            and lang[:2] != (user.robot.telegram_lang_code or "")[:2].lower()
+        ):
+            user.robot.telegram_lang_code = lang[:2]
+            user.robot.save(update_fields=["telegram_lang_code"])
         context = {}
         context["nickname"] = user.username
         context["hash_id"] = user.robot.hash_id

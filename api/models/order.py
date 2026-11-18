@@ -11,7 +11,7 @@ from django.db import models
 from django.db.models.signals import pre_delete
 from django.dispatch import Signal, receiver
 from django.utils import timezone
-from api.tasks import send_notification
+from api.tasks import send_notification  # noqa: F401 (tests patch it here)
 
 if config("TESTING", cast=bool, default=False):
     import random
@@ -417,9 +417,7 @@ class Order(models.Model):
         self.save(update_fields=["status"])
 
         self.log_status_transition(old_status, new_status)
-
-        if new_status == Order.Status.FAI:
-            send_notification.delay(order_id=self.id, message="lightning_failed")
+        # (0.9.4: the notice of a failed payout comes from the status change, step_alerts)
 
     def transition_status(self, new_status, from_statuses):
         """

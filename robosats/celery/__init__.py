@@ -32,6 +32,10 @@ app.conf.beat_scheduler = "django_celery_beat.schedulers:DatabaseScheduler"
 
 # Configure the periodic tasks
 app.conf.beat_schedule = {
+    "step-alert-sweep": {  # 0.9.4: deadline reminders, rewards ready, bonds free
+        "task": "step_alert_sweep",
+        "schedule": timedelta(seconds=60),
+    },
     "users-cleansing": {  # Cleans abandoned users at midnight
         "task": "users_cleansing",
         "schedule": crontab(hour=0, minute=0),

@@ -157,6 +157,17 @@ def ledger_credit(robot, amount, kind, fingerprint, order_id=None, note=""):
         Robot.objects.filter(pk=robot.pk).update(
             earned_rewards=F("earned_rewards") + int(amount)
         )
+        if order_id and int(amount) > 0:  # 0.9.4: the robot is told about its reward
+
+            def tell():
+                try:
+                    from api import step_alerts
+
+                    step_alerts.on_reward(robot, int(amount), order_id, delay)
+                except Exception:
+                    pass
+
+            transaction.on_commit(tell)
     return True
 
 
@@ -473,6 +484,12 @@ class Logics:
             else:
                 take_order.amount = order.amount
             take_order.save(update_fields=["amount"])
+            try:  # 0.9.4: an onchain take gives hours for the bond: tell both robots
+                from api import step_alerts
+
+                step_alerts.on_take_started(order, take_order)
+            except Exception:
+                pass
 
             order.log(
                 f"Pre-Taken by Robot({user.robot.id},{user.username}) for {order.amount} fiat units"
@@ -959,6 +976,14 @@ class Logics:
                 seconds=order.t_to_expire(Order.Status.WFR)
             )
             order.save(update_fields=["status", "expires_at"])
+
+        else:
+            try:  # 0.9.4: the other trader is told to send its statement too
+                from api import step_alerts
+
+                step_alerts.on_statement(order, user)
+            except Exception:
+                pass
 
         order.log(
             f"Dispute statement submitted by Robot({user.robot.id},{user.username}) with length of {len(statement)} chars"
@@ -1672,6 +1697,7 @@ class Logics:
             elif user == order.taker:
                 order.taker_asked_cancel = True
                 order.save(update_fields=["taker_asked_cancel"])
+                cls._tell_collab_asked(order, user)
                 order.log(
                     f"Taker Robot({user.robot.id},{user.username}) asked for collaborative cancellation"
                 )
@@ -1680,6 +1706,7 @@ class Logics:
             elif user == order.maker:
                 order.maker_asked_cancel = True
                 order.save(update_fields=["maker_asked_cancel"])
+                cls._tell_collab_asked(order, user)
                 order.log(
                     f"Maker Robot({user.robot.id},{user.username}) asked for collaborative cancellation"
                 )
@@ -1689,6 +1716,15 @@ class Logics:
             f"Cancel request was sent by Robot({user.robot.id},{user.username}) on an invalid status {order.status}: *{Order.Status(order.status).label}*"
         )
         return False, new_error(1021)
+
+    @staticmethod
+    def _tell_collab_asked(order, user):
+        try:  # 0.9.4: the other trader is told it can accept
+            from api import step_alerts
+
+            step_alerts.on_collab_asked(order, user)
+        except Exception:
+            pass
 
     @classmethod
     def collaborative_cancel(cls, order):
@@ -1728,6 +1764,7 @@ class Logics:
 
         # clear fields in case of re-publishing after expiry
         escrow_flow.to_onchain(order)  # hybrid: a Lightning seller failed, onchain order again
+        order._prev_taker_id = order.taker_id  # 0.9.4: the step notice tells the taker that left
         order.taker = None
         order.taker_bond = None
         order.trade_escrow = None

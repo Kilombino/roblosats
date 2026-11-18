@@ -61,7 +61,7 @@ class Nostr:
         await client.send_event(event)
         print(f"Nostr ORDER event sent: {event.as_json()}")
 
-    async def send_notification_event(self, robot, order, text):
+    async def send_notification_event(self, robot, order, text, action=False):
         """Creates the notification event and sends it to the coordinator relay"""
         if config("NOSTR_NSEC", cast=str, default="") == "":
             return
@@ -80,6 +80,8 @@ class Nostr:
             ),
             Tag.parse(["status", str(order.status)]),
         ]
+        if action:  # 0.9.4: the trader must do something (Android "Order needs you" channel)
+            rumor_extra_tags.append(Tag.parse(["action", "1"]))
 
         # Keys implements AsyncNostrSigner directly in nostr-sdk 0.45.0
         gift_wrap = await nip17_make_private_msg_async(

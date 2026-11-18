@@ -470,7 +470,7 @@ def nostr_send_order_event(order_id=None):
 
 
 @shared_task(name="", ignore_result=True, time_limit=120)
-def nostr_send_notification_event(robot_id=None, order_id=None, text=None):
+def nostr_send_notification_event(robot_id=None, order_id=None, text=None, action=False):
     if order_id:
         from api.models import Robot, Order
         from api.nostr import Nostr
@@ -479,9 +479,52 @@ def nostr_send_notification_event(robot_id=None, order_id=None, text=None):
         order = Order.objects.get(id=order_id)
 
         nostr = Nostr()
-        async_to_sync(nostr.send_notification_event)(robot, order, text)
+        async_to_sync(nostr.send_notification_event)(robot, order, text, action=action)
 
     return
+
+
+LEGACY_STEP_MESSAGES = {
+    "order_expired_untaken",
+    "trade_successful",
+    "public_order_cancelled",
+    "taker_expired_b4bond",
+    "order_published",
+    "order_taken_confirmed",
+    "fiat_exchange_starts",
+    "dispute_opened",
+    "collaborative_cancelled",
+    "dispute_closed",
+    "lightning_failed",
+}
+
+
+@shared_task(name="send_step_alert", ignore_result=True, time_limit=120)
+def send_step_alert(order_id=None, user_id=None, key=None, action=False, dedup=None, values=None):
+    """0.9.4: one step notice (api/step_alerts.py) for one robot."""
+    from django.contrib.auth.models import User
+
+    from api import step_alerts
+    from api.models import Order
+
+    order = Order.objects.filter(id=order_id).first()
+    user = User.objects.filter(id=user_id).select_related("robot").first()
+    if order is None or user is None:
+        return
+    values = {k: tuple(v) if isinstance(v, list) else v for k, v in (values or {}).items()}
+    for k, v in list(values.items()):  # nested texts travel as [key, {values}]
+        if isinstance(v, tuple) and len(v) == 2 and isinstance(v[1], dict):
+            values[k] = (v[0], v[1])
+    step_alerts.tell(order, user, key, action=action, dedup=dedup, **values)
+
+
+@shared_task(name="step_alert_sweep", ignore_result=True, time_limit=110)
+def step_alert_sweep():
+    """0.9.4: reminders 30 and 10 minutes before a deadline a robot must meet, rewards that
+    became withdrawable, bonds free to take back."""
+    from api import step_alerts
+
+    step_alerts.sweep()
 
 
 @shared_task(name="send_notification", ignore_result=True, time_limit=120)
@@ -499,6 +542,25 @@ def send_notification(order_id=None, chat_message_id=None, message=None):
     from api.notifications import Notifications
 
     notifications = Notifications()
+
+    # 0.9.4: the notices of every order status change come from the order_status_changed
+    # signal (api/step_alerts.py), in the robot's language and per role. These old messages
+    # are still queued by the upstream code paths: they would repeat the same step.
+    if message in LEGACY_STEP_MESSAGES:
+        return
+
+    if message and message.startswith("step:"):
+        from api import step_alerts
+
+        _, old, new, taker_id = (message.split(":") + [""])[:4]
+        step_alerts.on_status(order, int(old), int(new), int(taker_id) if taker_id else None)
+        return
+
+    if message == "onchain_end":
+        from api import step_alerts
+
+        step_alerts.onchain_end_check(order)
+        return
 
     if message == "welcome":
         notifications.welcome(order)

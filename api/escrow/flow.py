@@ -298,6 +298,12 @@ def advance(order):
         notify_signatures(order, escrow)
     except Exception as e:
         logger.warning(f"Order {order.id}: onchain signature notice failed: {e}")
+    try:  # 0.9.4: funding owed/confirmed, deposit and release in the mempool
+        from api import step_alerts
+
+        step_alerts.watch_onchain(order, escrow)
+    except Exception as e:
+        logger.warning(f"Order {order.id}: onchain step notice failed: {e}")
     if escrow is None:
         return
     S = OnchainEscrow.Status
