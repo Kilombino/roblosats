@@ -31,6 +31,7 @@ import { sha256 } from 'js-sha256';
 import { UseAppStoreType, AppContext } from '../../contexts/AppContext';
 import useLegacyMode from '../../hooks/useLegacyMode';
 import { SAT_LABEL, formatTotal } from '../../utils/satOrders';
+import { toApiAmount } from '../../utils/spamAmounts';
 
 interface TakeButtonProps {
   currentOrder: Order;
@@ -79,8 +80,9 @@ const TakeButton = ({
   const takerSells = currentOrder?.type === 0;
   // rl31-beta19: a "丰 sat" order is taken in sats
   const satOrder = Boolean(currentOrder?.sats_denominated);
+  // Spamcoin (1000) is taken in Spamsats; the order carries Spamcoin
   const toOrderUnits = (v: string): number =>
-    satOrder ? Number(v) : currentOrder?.currency === 1000 ? Number(v) / 100000000 : Number(v);
+    satOrder ? Number(v) : (toApiAmount(Number(v), currentOrder?.currency) ?? 0);
   const rangeMin = satOrder
     ? Number(currentOrder?.sats_min_amount)
     : Number(currentOrder?.min_amount);
@@ -96,7 +98,10 @@ const TakeButton = ({
     if (satOrder && currentOrder.has_range && Number(takeAmount) > 0) {
       tradeSats = Math.round(Number(takeAmount));
     } else if (currentOrder.has_range && Number(takeAmount) > 0 && currentOrder.max_amount > 0) {
-      tradeSats = Math.round((tradeSats * Number(takeAmount)) / Number(currentOrder.max_amount));
+      // 0.9.1: in the order's units (Spamsats typed for Spamcoin)
+      tradeSats = Math.round(
+        (tradeSats * toOrderUnits(takeAmount)) / Number(currentOrder.max_amount),
+      );
     }
     return tradeSats;
   };
@@ -211,7 +216,7 @@ const TakeButton = ({
   const currencyCode: string = satOrder
     ? SAT_LABEL
     : currentOrder?.currency === 1000
-      ? 'Sats'
+      ? 'Spamsats'
       : currencies[`${Number(currentOrder?.currency)}`];
 
   interface countdownTakeOrderRendererProps {

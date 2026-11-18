@@ -1,6 +1,7 @@
 import { apiClient } from '../services/api';
 import type Federation from './Federation.model';
 import type Slot from './Slot.model';
+import { toApiAmount } from '../utils/spamAmounts';
 
 export interface SubmitActionProps {
   action:
@@ -319,7 +320,7 @@ class Order {
       amount: this.sats_denominated
         ? Math.round(Number(takeAmount))
         : this?.currency === 1000
-          ? Number(takeAmount) / 100000000
+          ? (toApiAmount(Number(takeAmount), 1000) ?? 0) // Spamsats → Spamcoin, 8 decimals
           : Number(takeAmount),
       // Roblosats hybrid: take an onchain order with Lightning
       ...(lightning ? { take_lightning: true } : {}),

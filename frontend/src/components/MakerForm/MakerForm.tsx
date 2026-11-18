@@ -6,7 +6,6 @@ import {
   Switch,
   Tooltip,
   Button,
-  Checkbox,
   Grid,
   Typography,
   TextField,
@@ -38,7 +37,7 @@ import AutocompletePayments from './AutocompletePayments';
 import AmountRange from './AmountRange';
 import { cleanNumberInput, numberFromInput } from '../../utils/numberInput';
 import currencyDict from '../../utils/currencies';
-import { amountToString, computeSats, pn } from '../../utils';
+import { amountToString, pn } from '../../utils';
 import { onchainFees } from '../../utils/escrow/fees';
 import { useBondEstimate } from '../../hooks/useBondEstimate';
 import useLegacyMode from '../../hooks/useLegacyMode';
@@ -75,6 +74,7 @@ import {
   totalForSats,
 } from '../../utils/satOrders';
 import { SPAMCOIN } from '../../utils/currencies';
+import { amountScale, formAmountUnit, toApiAmount } from '../../utils/spamAmounts';
 
 /** rl31-beta19: the "丰 sat" mark in the currency selector. */
 const SatCoin = (): React.JSX.Element => (
@@ -195,6 +195,13 @@ const MakerForm = ({
   const fixedLike = fixedMode || satTotalMode;
   const fixedLikeUnits = satMode ? satPriceUnits : fixedPriceUnits;
 
+  // Roblosats 0.9.1: Spamcoin (1000) is an ordinary currency here, never upstream's swap mode.
+  // Its amounts are typed in whole Spamsats; the API gets Spamcoin with 8 decimals.
+  const spamMode = !satMode && fav.currency === SPAMCOIN;
+  const scale = satMode ? 1 : amountScale(fav.currency);
+  const amountUnit = formAmountUnit(satMode ? null : fav.currency, currencyCode);
+  const formToUnits = (v: number | null | undefined): number => (v ?? 0) / scale;
+
   // Amount limits of a sat order: the coordinator's limits in sats, as they are
   const satAmountLimits = (): number[] => {
     const coordinator = federation.getCoordinator(maker.coordinator);
@@ -224,8 +231,8 @@ const MakerForm = ({
       maxSats = Math.min(maxSats, robotEscrow.maxSats);
     }
     return [
-      (minSats / 100000000) * fixedPriceUnits * amountSafeThresholds[0],
-      (maxSats / 100000000) * fixedPriceUnits * amountSafeThresholds[1],
+      (minSats / 100000000) * fixedPriceUnits * amountSafeThresholds[0] * scale,
+      (maxSats / 100000000) * fixedPriceUnits * amountSafeThresholds[1] * scale,
     ];
   };
 
@@ -343,7 +350,9 @@ const MakerForm = ({
     // apply thresholds to ensure good request
     minAmountLimit = minAmountLimit * amountSafeThresholds[0];
     maxAmountLimit = maxAmountLimit * amountSafeThresholds[1];
-    setAmountLimits([minAmountLimit, maxAmountLimit]);
+    // 0.9.1: Spamcoin limits in Spamsats, as the amount is typed
+    const limitScale = amountScale(index);
+    setAmountLimits([minAmountLimit * limitScale, maxAmountLimit * limitScale]);
   };
 
   const updateCurrentPrice = function (
@@ -380,14 +389,18 @@ const MakerForm = ({
         minAmount: null,
         maxAmount: null,
       }));
+    } else if (amountScale(newCurrency) !== amountScale(fav.currency === 0 ? 1 : fav.currency)) {
+      // 0.9.1: to or from Spamcoin (typed in Spamsats) an amount means something else
+      setMaker((maker) => ({ ...maker, amount: null, minAmount: null, maxAmount: null }));
     }
     const currencyCode: string = currencyDict[String(newCurrency)];
     setCurrencyCode(currencyCode);
     setFav((prev) => {
+      // 0.9.1: Spamcoin keeps the normal form (no swap mode in Roblosats)
       return {
         ...prev,
         currency: newCurrency,
-        mode: newCurrency === 1000 ? 'swap' : 'fiat',
+        mode: 'fiat',
       };
     });
     if (maker.priceMode === 'fixed') {
@@ -400,19 +413,24 @@ const MakerForm = ({
     updateCurrentPrice(limits, newCurrency, maker.premium ?? 0);
 
     if (makerHasAmountRange && limits[newCurrency]) {
-      const minAmount = parseFloat(Number(limits[newCurrency].min_amount).toPrecision(2));
-      const maxAmount = parseFloat(Number(limits[newCurrency].max_amount).toPrecision(2));
+      const newScale = amountScale(newCurrency);
+      const minAmount = parseFloat(
+        Number(limits[newCurrency].min_amount * newScale).toPrecision(2),
+      );
+      const maxAmount = parseFloat(
+        Number(limits[newCurrency].max_amount * newScale).toPrecision(2),
+      );
       if (
         parseFloat(String(maker.minAmount ?? 0)) < minAmount ||
         parseFloat(String(maker.minAmount ?? 0)) > maxAmount ||
         parseFloat(String(maker.maxAmount ?? 0)) > maxAmount ||
         parseFloat(String(maker.maxAmount ?? 0)) < minAmount
       ) {
-        setMaker({
+        setMaker((maker) => ({
           ...maker,
           minAmount: parseFloat((maxAmount * 0.25).toPrecision(2)),
           maxAmount: parseFloat((maxAmount * 0.75).toPrecision(2)),
-        });
+        }));
       }
     }
   };
@@ -422,7 +440,7 @@ const MakerForm = ({
     setFav((prev) => ({
       ...prev,
       currency: newCurrency,
-      mode: newCurrency === 1000 ? 'swap' : 'fiat',
+      mode: 'fiat',
     }));
     setMaker((maker) => ({ ...maker, exchangeTotal: null }));
     updateCurrentPrice(limits, newCurrency, maker.premium ?? 0);
@@ -463,7 +481,7 @@ const MakerForm = ({
   const handlePremiumChange: React.ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement> =
     function ({ target }): void {
       const value = cleanNumberInput(target);
-      const max = fav.mode === 'fiat' ? 999 : 99;
+      const max = 999;
       const min = -100;
       const newPremium = Math.floor(Number(value) * Math.pow(10, 2)) / Math.pow(10, 2);
       let premium: number = isNaN(newPremium) ? 0 : newPremium;
@@ -512,10 +530,11 @@ const MakerForm = ({
   const baseOrderAttributes = (): object => ({
     type: fav.type === 0 ? 1 : 0,
     currency: fav.currency === 0 ? 1 : fav.currency,
-    amount: makerHasAmountRange ? null : maker.amount,
+    // 0.9.1: Spamsats typed → Spamcoin for the API (other currencies as they are)
+    amount: makerHasAmountRange ? null : toApiAmount(maker.amount, fav.currency),
     has_range: makerHasAmountRange,
-    min_amount: makerHasAmountRange ? maker.minAmount : null,
-    max_amount: makerHasAmountRange ? maker.maxAmount : null,
+    min_amount: makerHasAmountRange ? toApiAmount(maker.minAmount, fav.currency) : null,
+    max_amount: makerHasAmountRange ? toApiAmount(maker.maxAmount, fav.currency) : null,
     payment_method: maker.paymentMethodsText === '' ? 'not specified' : maker.paymentMethodsText,
     premium: fixedMode || !maker.premium ? 0 : maker.premium,
     satoshis: null,
@@ -654,7 +673,7 @@ const MakerForm = ({
     const maxLimit =
       fixedMode || !(limits[index]?.max_amount > 0)
         ? amountLimits[1] / amountSafeThresholds[1]
-        : limits[index].max_amount;
+        : limits[index].max_amount * scale;
     const minAmount =
       maker.amount !== null
         ? parseFloat((maker.amount / 2).toPrecision(2))
@@ -676,45 +695,6 @@ const MakerForm = ({
   ): void {
     setAmountRangeEnabled(checked);
   };
-
-  const amountLabel = useMemo(() => {
-    if (!(maker.coordinator != null)) return;
-
-    const info = federation.getCoordinator(maker.coordinator)?.info;
-    const defaultRoutingBudget = 0.001;
-    let label = t('Amount');
-    let helper = '';
-    let swapSats: string | undefined = '0';
-    if (fav.mode === 'swap') {
-      const swapRate = fixedMode && fixedPriceUnits ? { rate: fixedPriceUnits } : {};
-      const swapPremium = fixedMode ? 0 : Number(maker.premium);
-      if (fav.type === 1) {
-        swapSats = computeSats({
-          ...swapRate,
-          amount: Number(maker.amount),
-          premium: swapPremium,
-          fee: -(info?.maker_fee ?? 0),
-          routingBudget: defaultRoutingBudget,
-        });
-        label = t('Onchain amount to send (BTC)');
-        helper = t('You receive approx {{swapSats}} LN Sats (fees might vary)', {
-          swapSats,
-        });
-      } else if (fav.type === 0) {
-        swapSats = computeSats({
-          ...swapRate,
-          amount: Number(maker.amount),
-          premium: swapPremium,
-          fee: info?.maker_fee ?? 0,
-        });
-        label = t('Onchain amount to receive (BTC)');
-        helper = t('You send approx {{swapSats}} LN Sats (fees might vary)', {
-          swapSats,
-        });
-      }
-    }
-    return { label, helper, swapSats };
-  }, [fav, maker.amount, maker.premium, maker.priceMode, maker.fixedPrice, federationUpdatedAt]);
 
   const { isLegacyMode, legacyDisabledTooltip } = useLegacyMode();
 
@@ -844,7 +824,11 @@ const MakerForm = ({
     maker,
     fav,
     federation,
-    currentPrice: satMode ? 100_000_000 : effectivePrice,
+    currentPrice: satMode
+      ? 100_000_000
+      : effectivePrice !== undefined
+        ? effectivePrice * scale
+        : undefined,
     federationUpdatedAt: federationUpdatedAt ? Date.parse(federationUpdatedAt) : 0,
     amountRangeEnabled,
     satMode,
@@ -912,30 +896,17 @@ const MakerForm = ({
           sx={{ display: satMode ? 'none' : undefined }}
         >
           {fav.type == null
-            ? fav.mode === 'fiat'
-              ? t('Order for ')
-              : t('Swap of ')
+            ? t('Order for ')
             : fav.type === 1
-              ? fav.mode === 'fiat'
-                ? t('Buy BTC for ')
-                : t('Swap into LN ')
-              : fav.mode === 'fiat'
-                ? t('Sell BTC for ')
-                : t('Swap out of LN ')}
-          {fav.mode === 'fiat'
-            ? amountToString(
-                String(maker.amount ?? 0),
-                makerHasAmountRange,
-                maker.minAmount ?? 0,
-                maker.maxAmount ?? 0,
-              )
-            : amountToString(
-                String((maker.amount ?? 0) * 100000000),
-                makerHasAmountRange,
-                (maker.minAmount ?? 0) * 100000000,
-                (maker.maxAmount ?? 0) * 100000000,
-              )}
-          {' ' + (fav.mode === 'fiat' ? currencyCode : 'Sats')}
+              ? t('Buy BTC for ')
+              : t('Sell BTC for ')}
+          {amountToString(
+            String(maker.amount ?? 0),
+            makerHasAmountRange,
+            maker.minAmount ?? 0,
+            maker.maxAmount ?? 0,
+          )}
+          {' ' + amountUnit}
           {fixedMode
             ? fixedPriceUnits !== null
               ? t(' at a fixed price of {{price}}', {
@@ -943,9 +914,7 @@ const MakerForm = ({
                 })
               : ''
             : (maker.premium ?? 0) === 0
-              ? fav.mode === 'fiat'
-                ? t(' at market price')
-                : ''
+              ? t(' at market price')
               : (maker.premium ?? 0) > 0
                 ? t(' at a {{premium}}% premium', { premium: maker.premium })
                 : t(' at a {{discount}}% discount', { discount: -(maker.premium ?? 0) })}
@@ -954,8 +923,8 @@ const MakerForm = ({
           <Typography variant='caption' color='text.secondary' sx={{ mt: 0.5 }}>
             {t('Sats at your price: {{sats}}', {
               sats: makerHasAmountRange
-                ? `${pn(fixedPriceSats(maker.minAmount ?? 0, fixedPriceUnits))}-${pn(fixedPriceSats(maker.maxAmount ?? 0, fixedPriceUnits))}`
-                : pn(fixedPriceSats(maker.amount ?? 0, fixedPriceUnits)),
+                ? `${pn(fixedPriceSats(formToUnits(maker.minAmount), fixedPriceUnits))}-${pn(fixedPriceSats(formToUnits(maker.maxAmount), fixedPriceUnits))}`
+                : pn(fixedPriceSats(formToUnits(maker.amount), fixedPriceUnits)),
             })}
           </Typography>
         ) : null}
@@ -1093,26 +1062,11 @@ const MakerForm = ({
               direction='row'
               sx={{ alignItems: 'stretch', justifyContent: 'center' }}
             >
-              <Collapse in={maker.advancedOptions} orientation='horizontal'>
-                <Grid>
-                  <FormControl>
-                    <FormHelperText sx={{ textAlign: 'center' }}>{t('Swap?')}</FormHelperText>
-                    <Checkbox
-                      sx={{ position: 'relative', bottom: '0.3em' }}
-                      checked={fav.mode === 'swap'}
-                      onClick={() => {
-                        handleCurrencyChange(fav.mode === 'swap' ? 1 : 1000);
-                        handlePaymentMethodChange([]);
-                      }}
-                    />
-                  </FormControl>
-                </Grid>
-              </Collapse>
-
+              {/* 0.9.1: no "Swap?" box: currency 1000 is Spamcoin in Roblosats */}
               <Grid>
                 <FormControl component='fieldset'>
                   <FormHelperText sx={{ textAlign: 'center' }}>
-                    {`${fav.mode === 'fiat' || satMode ? t('Buy or Sell Bitcoin?') : t('In or Out of Lightning?')} *`}
+                    {`${t('Buy or Sell Bitcoin?')} *`}
                   </FormHelperText>
                   <div style={{ textAlign: 'center' }}>
                     <ButtonGroup size='large'>
@@ -1147,7 +1101,7 @@ const MakerForm = ({
                             },
                           }}
                         >
-                          {fav.mode === 'fiat' || satMode ? t('Buy') : t('Swap In')}
+                          {t('Buy')}
                         </Button>
                       </Box>
                       <Box
@@ -1181,7 +1135,7 @@ const MakerForm = ({
                             },
                           }}
                         >
-                          {fav.mode === 'fiat' || satMode ? t('Sell') : t('Swap Out')}
+                          {t('Sell')}
                         </Button>
                       </Box>
                     </ButtonGroup>
@@ -1216,7 +1170,8 @@ const MakerForm = ({
                 satMode={satMode}
                 satsAvailable={satsAvailable}
                 currency={fav.currency}
-                currencyCode={satMode ? SAT_LABEL : currencyCode}
+                currencyCode={satMode ? SAT_LABEL : amountUnit}
+                integerAmounts={spamMode}
                 handleCurrencyChange={handleCurrencyChange}
                 amountLimits={amountLimits}
                 amountSafeThresholds={amountSafeThresholds}
@@ -1225,17 +1180,13 @@ const MakerForm = ({
             </Collapse>
             <Collapse in={!makerHasAmountRange}>
               <Grid container>
-                <Grid sx={{ width: fav.mode === 'fiat' || satsAvailable ? '50%' : '100%' }}>
+                <Grid sx={{ width: '50%' }}>
                   <Tooltip
                     placement='top'
                     enterTouchDelay={500}
                     enterDelay={700}
                     enterNextDelay={2000}
-                    title={
-                      fav.mode === 'fiat'
-                        ? t('Amount of fiat to exchange for bitcoin')
-                        : t('Amount of BTC to swap for LN Sats')
-                    }
+                    title={t('Amount of fiat to exchange for bitcoin')}
                   >
                     <TextField
                       fullWidth
@@ -1257,66 +1208,78 @@ const MakerForm = ({
                             : null
                       }
                       label={
-                        satMode
-                          ? t('Amount ({{unit}})', { unit: SAT_LABEL })
-                          : (amountLabel?.label ?? t('Amount'))
+                        satMode ? t('Amount ({{unit}})', { unit: SAT_LABEL }) : t('Amount') // 0.9.1: Spamcoin's unit (Spamsats) is in the selector
                       }
                       required={true}
                       value={maker.amount ?? ''}
                       type='number'
-                      slotProps={{ htmlInput: { inputMode: satMode ? 'numeric' : 'decimal' } }}
+                      slotProps={{
+                        htmlInput: { inputMode: satMode || spamMode ? 'numeric' : 'decimal' },
+                      }}
                       onChange={(e) => {
-                        const amount = numberFromInput(e.target);
+                        const value = numberFromInput(e.target);
+                        // whole Spamsats only
+                        const amount = spamMode && value !== null ? Math.round(value) : value;
                         setMaker({ ...maker, amount });
                       }}
                     />
                   </Tooltip>
-                  {fav.mode === 'swap' && !satMode && maker.amount ? (
-                    <FormHelperText sx={{ textAlign: 'center' }}>
-                      {amountLabel?.helper}
-                    </FormHelperText>
-                  ) : null}
                 </Grid>
 
-                {fav.mode === 'fiat' || satsAvailable ? (
-                  <Grid sx={{ width: '50%' }}>
-                    <Select
-                      fullWidth
-                      sx={{
-                        backgroundColor: theme.palette.background.paper,
-                        borderRadius: '4px',
-                      }}
-                      required={true}
-                      inputProps={{
-                        style: { textAlign: 'center' },
-                      }}
-                      value={satMode ? SAT_OPTION : fav.currency === 0 ? 1 : fav.currency}
-                      onChange={(e) => {
-                        handleCurrencyChange(Number(e.target.value));
-                      }}
-                    >
-                      {satsAvailable ? (
-                        <MenuItem key='sat' value={SAT_OPTION}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3em' }}>
-                            <SatCoin /> {SAT_LABEL}
+                <Grid sx={{ width: '50%' }}>
+                  <Select
+                    fullWidth
+                    sx={{
+                      backgroundColor: theme.palette.background.paper,
+                      borderRadius: '4px',
+                    }}
+                    required={true}
+                    inputProps={{
+                      style: { textAlign: 'center' },
+                    }}
+                    value={satMode ? SAT_OPTION : fav.currency === 0 ? 1 : fav.currency}
+                    // 0.9.1: Spamcoin shows the unit the amount is typed in (Spamsats)
+                    renderValue={
+                      spamMode
+                        ? () => (
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              <FlagWithProps code={currencyDict[String(SPAMCOIN)]} />
+                              <span style={{ marginLeft: '0.15em', fontSize: '0.88em' }}>
+                                Spamsats
+                              </span>
+                            </div>
+                          )
+                        : undefined
+                    }
+                    onChange={(e) => {
+                      handleCurrencyChange(Number(e.target.value));
+                    }}
+                  >
+                    {satsAvailable ? (
+                      <MenuItem key='sat' value={SAT_OPTION}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3em' }}>
+                          <SatCoin /> {SAT_LABEL}
+                        </div>
+                      </MenuItem>
+                    ) : null}
+                    {(satsAvailable ? makerCurrencyOptions : currencyOptions)(currencyDict).map(
+                      ([key, value]) => (
+                        <MenuItem key={key} value={parseInt(key)}>
+                          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <FlagWithProps code={value} />
+                            {' ' + currencyLabel(value)}
                           </div>
                         </MenuItem>
-                      ) : null}
-                      {(satsAvailable ? makerCurrencyOptions : currencyOptions)(currencyDict).map(
-                        ([key, value]) => (
-                          <MenuItem key={key} value={parseInt(key)}>
-                            <div
-                              style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}
-                            >
-                              <FlagWithProps code={value} />
-                              {' ' + currencyLabel(value)}
-                            </div>
-                          </MenuItem>
-                        ),
-                      )}
-                    </Select>
-                  </Grid>
-                ) : null}
+                      ),
+                    )}
+                  </Select>
+                </Grid>
               </Grid>
             </Collapse>
           </Grid>
@@ -1328,21 +1291,19 @@ const MakerForm = ({
                   paymentMethodsText={maker.paymentMethodsText}
                   setHasCustomPaymentMethod={setHasCustomPaymentMethod}
                   onAutocompleteChange={handlePaymentMethodChange}
-                  optionsType={fav.mode}
+                  optionsType='fiat'
                   error={maker.badPaymentMethod}
                   label={`${
                     satMode
                       ? payCurrency === SPAMCOIN
                         ? t('Spamcoin payment method(s)')
                         : t('Payment method(s)')
-                      : fav.mode === 'swap'
-                        ? t('Swap Destination(s)')
+                      : spamMode
+                        ? t('Spamcoin payment method(s)')
                         : t('Fiat Payment Method(s)')
                   } *`}
                   tooltipTitle={t(
-                    fav.mode === 'swap'
-                      ? t('Enter the destination of the Lightning swap')
-                      : 'Enter your preferred fiat payment methods. Fast methods are highly recommended.',
+                    'Enter your preferred fiat payment methods. Fast methods are highly recommended.',
                   )}
                   addNewButtonText={t('Add New')}
                   isFilter={false}
@@ -1389,7 +1350,7 @@ const MakerForm = ({
             )}
           </Grid>
 
-          {fav.mode === 'fiat' && (
+          {!spamMode && (
             <Grid sx={{ width: '100%' }}>
               <Tooltip enterTouchDelay={0} title={t('Add geolocation for a face to face trade')}>
                 <Button
@@ -1989,7 +1950,13 @@ const MakerForm = ({
             </Typography>
           ) : currentPrice ? (
             <Typography align='center' variant='caption' color='text.secondary'>
-              {`${t('Order current rate:')} ${currentPrice ? currencyFormatter.format(currentPrice) : '-'} ${currencyCode}/BTC`}
+              {spamMode
+                ? `${t('Order current rate:')} ${
+                    marketPrice !== null
+                      ? formatPricePerBtc(marketPrice * (1 + (maker.premium ?? 0) / 100), SPAMCOIN)
+                      : '-'
+                  }`
+                : `${t('Order current rate:')} ${currentPrice ? currencyFormatter.format(currentPrice) : '-'} ${currencyCode}/BTC`}
             </Typography>
           ) : (
             <Typography
@@ -2000,7 +1967,7 @@ const MakerForm = ({
             >
               {t('Order current rate:')}
               <Skeleton width='4.5em' />
-              {`${currencyCode}/BTC`}
+              {`${spamMode ? 'Spamsats' : currencyCode}/BTC`}
             </Typography>
           )}
         </Tooltip>

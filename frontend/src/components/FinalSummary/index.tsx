@@ -8,6 +8,7 @@ import { ContentCopy } from '@mui/icons-material';
 
 import { pn } from '../../utils';
 import currencies from '../../utils/currencies';
+import { summaryAmountText } from '../../utils/spamAmounts';
 import { systemClient } from '../../services/System';
 import { TxLine } from '../TradeBox/Prompts/OnchainEscrow';
 
@@ -176,9 +177,11 @@ const sats = (n: number | undefined): string => `${pn(Math.round(n ?? 0))} Sats`
 const FinalSummary = ({
   summary,
   title = true,
+  satsDenominated,
 }: {
   summary: FinalSummaryData;
   title?: boolean;
+  satsDenominated?: boolean; // 0.9.1: a "丰 sat" order (known on the order page)
 }): React.JSX.Element => {
   const { t } = useTranslation();
   const s = summary;
@@ -255,7 +258,7 @@ const FinalSummary = ({
       {s.amount && Number(s.amount) > 0 ? (
         <Row
           label={t('Amount')}
-          value={`${pn(Number(s.amount))} ${currencyCode}${s.payment_method ? ` · ${s.payment_method}` : ''}`}
+          value={`${summaryAmountText(s, currencyCode, satsDenominated, pn)}${s.payment_method ? ` · ${s.payment_method}` : ''}`}
         />
       ) : null}
       {s.contract && (s.trade_sats ?? 0) > 0 ? (
@@ -344,7 +347,10 @@ const FinalSummary = ({
         <Row label={t("Buyer's swap to onchain you paid")} value={sats(s.swap_for_buyer_sats)} />
       ) : null}
       {(s.swap_paid_by_seller_sats ?? 0) > 0 ? (
-        <Row label={t('Swap to onchain paid by the seller')} value={sats(s.swap_paid_by_seller_sats)} />
+        <Row
+          label={t('Swap to onchain paid by the seller')}
+          value={sats(s.swap_paid_by_seller_sats)}
+        />
       ) : null}
       {(s.txs ?? []).map((tx) => (
         <Box key={tx.txid} sx={{ mt: 1 }}>

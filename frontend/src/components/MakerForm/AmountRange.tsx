@@ -17,7 +17,6 @@ import RangeSlider from './RangeSlider';
 import currencyDict from '../../utils/currencies';
 import { pn } from '../../utils';
 import { GarageContext, UseGarageStoreType } from '../../contexts/GarageContext';
-import { UseAppStoreType, AppContext } from '../../contexts/AppContext';
 import { currencyOptions, currencyLabel } from '../../utils/currencies';
 import { SAT_LABEL, SAT_OPTION, makerCurrencyOptions } from '../../utils/satOrders';
 
@@ -42,6 +41,7 @@ interface AmountRangeProps {
   amountLimits: number[];
   satMode?: boolean; // rl31-beta19: the range is in sats ("丰 sat")
   satsAvailable?: boolean;
+  integerAmounts?: boolean; // 0.9.1: Spamcoin, typed in whole Spamsats
 }
 
 const AmountRange: React.FC<AmountRangeProps> = ({
@@ -53,8 +53,9 @@ const AmountRange: React.FC<AmountRangeProps> = ({
   amountLimits,
   satMode = false,
   satsAvailable = false,
+  integerAmounts = false,
 }) => {
-  const { fav } = useContext<UseAppStoreType>(AppContext);
+  const whole = satMode || integerAmounts;
   const { setMaker, maker } = useContext<UseGarageStoreType>(GarageContext);
   const theme = useTheme();
   const { t } = useTranslation();
@@ -118,10 +119,10 @@ const AmountRange: React.FC<AmountRangeProps> = ({
 
     setMaker({
       ...maker,
-      minAmount: satMode
+      minAmount: whole
         ? Math.round(minAmount)
         : parseFloat(minAmount.toPrecision(minAmount < 100 ? 2 : 3)),
-      maxAmount: satMode
+      maxAmount: whole
         ? Math.round(maxAmount)
         : parseFloat(maxAmount.toPrecision(maxAmount < 100 ? 2 : 3)),
     });
@@ -162,7 +163,7 @@ const AmountRange: React.FC<AmountRangeProps> = ({
               type='number'
               size='small'
               value={maker.minAmount?.toString() ?? ''}
-              slotProps={{ htmlInput: { inputMode: satMode ? 'numeric' : 'decimal' } }}
+              slotProps={{ htmlInput: { inputMode: whole ? 'numeric' : 'decimal' } }}
               onChange={(e) => {
                 const value = numberFromInput(e.target);
                 setMaker((maker) => ({
@@ -170,7 +171,7 @@ const AmountRange: React.FC<AmountRangeProps> = ({
                   minAmount:
                     value === null
                       ? null
-                      : satMode
+                      : whole
                         ? Math.round(value)
                         : parseFloat(value.toPrecision(value < 100 ? 2 : 3)),
                 }));
@@ -179,7 +180,7 @@ const AmountRange: React.FC<AmountRangeProps> = ({
               sx={{
                 width: `${(maker.minAmount?.toString().length ?? 0) * 0.56}em`,
                 minWidth: '0.56em',
-                maxWidth: satMode ? '4.5em' : '2.8em',
+                maxWidth: whole ? '4.5em' : '2.8em',
               }}
             />
             <Typography
@@ -197,7 +198,7 @@ const AmountRange: React.FC<AmountRangeProps> = ({
               size='small'
               type='number'
               value={maker.maxAmount?.toString() ?? ''}
-              slotProps={{ htmlInput: { inputMode: satMode ? 'numeric' : 'decimal' } }}
+              slotProps={{ htmlInput: { inputMode: whole ? 'numeric' : 'decimal' } }}
               onChange={(e) => {
                 const value = numberFromInput(e.target);
                 setMaker((maker) => ({
@@ -205,7 +206,7 @@ const AmountRange: React.FC<AmountRangeProps> = ({
                   maxAmount:
                     value === null
                       ? null
-                      : satMode
+                      : whole
                         ? Math.round(value)
                         : parseFloat(value.toPrecision(value < 100 ? 2 : 3)),
                 }));
@@ -214,19 +215,18 @@ const AmountRange: React.FC<AmountRangeProps> = ({
               sx={{
                 width: `${(maker.maxAmount?.toString().length ?? 0) * 0.56}em`,
                 minWidth: '0.56em',
-                maxWidth: satMode ? '4.5em' : '3.36em',
+                maxWidth: whole ? '4.5em' : '3.36em',
               }}
             />
             <div style={{ width: '0.5em' }} />
             <Select
-              sx={{ width: satMode ? '4.6em' : '3.8em' }}
+              sx={{ width: whole ? '4.6em' : '3.8em' }}
               variant='standard'
               size='small'
               required={true}
               inputProps={{
                 style: { textAlign: 'center' },
               }}
-              disabled={fav.mode !== 'fiat' && !satsAvailable}
               value={satMode ? SAT_OPTION : currency === 0 ? 1 : currency}
               renderValue={() => currencyCode}
               onChange={(e) => {

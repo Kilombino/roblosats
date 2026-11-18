@@ -14,7 +14,6 @@ interface UseBondEstimateProps {
 
 export const useBondEstimate = ({
   maker,
-  fav,
   federation,
   currentPrice,
   federationUpdatedAt,
@@ -35,8 +34,9 @@ export const useBondEstimate = ({
       maxAmount: maker.maxAmount,
       isRange: makerHasAmountRange,
       bondSize: bondPercentage,
-      // fixed price (rl31-beta17): sats = amount / price in any currency, Spamcoin too
-      mode: satMode || maker.priceMode === 'fixed' ? 'fiat' : (fav.mode as 'fiat' | 'swap'),
+      // fixed price (rl31-beta17): sats = amount / price in any currency, Spamcoin too.
+      // 0.9.1: never upstream's swap mode (Spamcoin passes its price in Spamsats per BTC)
+      mode: 'fiat',
       price: currentPrice ?? 0,
       premium: maker.premium ?? 0,
     });
@@ -50,7 +50,6 @@ export const useBondEstimate = ({
     maker.priceMode,
     satMode,
     currentPrice,
-    fav.mode,
     maker.coordinator,
     federationUpdatedAt,
   ]);

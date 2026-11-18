@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Grid, Paper, Collapse, Typography } from '@mui/material';
 import { filterOrders } from '../../utils';
+import { toApiAmount } from '../../utils/spamAmounts';
 
 import MakerForm from '../../components/MakerForm';
 import BookTable from '../../components/BookTable';
@@ -36,15 +37,20 @@ const MakerPage = (): React.JSX.Element => {
       baseFilter: {
         currency: fav.currency === 0 ? 1 : fav.currency,
         type: fav.type,
-        mode: fav.mode,
+        mode: 'fiat',
         coordinator: 'robosats',
       },
       premium: maker.premium ?? null,
       paymentMethods: maker.paymentMethods,
+      // 0.9.1: Spamcoin is typed in Spamsats, the book carries Spamcoin
       amountFilter: {
-        amount: maker.amount ?? null,
-        minAmount: maker.minAmount ?? null,
-        maxAmount: maker.maxAmount ?? null,
+        amount: maker.satsMode ? (maker.amount ?? null) : toApiAmount(maker.amount, fav.currency),
+        minAmount: maker.satsMode
+          ? (maker.minAmount ?? null)
+          : toApiAmount(maker.minAmount, fav.currency),
+        maxAmount: maker.satsMode
+          ? (maker.maxAmount ?? null)
+          : toApiAmount(maker.maxAmount, fav.currency),
         threshold: 0.7,
       },
     });

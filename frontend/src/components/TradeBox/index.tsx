@@ -882,7 +882,10 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
           const st = currentOrder?.status ?? -1;
           return fs && st >= 0 ? (
             <Grid sx={{ width: '100%', mt: 1 }}>
-              <FinalSummary summary={fs} />
+              <FinalSummary
+                summary={fs}
+                satsDenominated={Boolean(currentOrder?.sats_denominated)}
+              />
             </Grid>
           ) : null;
         })()}
