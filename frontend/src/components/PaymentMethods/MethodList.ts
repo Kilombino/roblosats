@@ -116,3 +116,23 @@ export const swapMethods: PaymentMethod[] = [
   { name: 'LBTC', icon: 'lbtc', reversible: false },
   { name: 'WBTC', icon: 'wbtc', reversible: false },
 ];
+
+/**
+ * Roblosats 0.9.2: the payment methods named in an order's payment_method string, in the same
+ * order the icons show them, plus whatever custom text is left ("Spamcoin Lightning Spamcoin
+ * On-Chain" → ["Spamcoin On-Chain", "Spamcoin Lightning"]).
+ */
+export const paymentMethodNames = (text: string | null | undefined): string[] => {
+  let rest = text ?? '';
+  const found: string[] = [];
+  for (const method of [...swapMethods, ...fiatMethods]) {
+    if (found.includes(method.name)) continue;
+    const escaped = method.name.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (new RegExp(`\\b${escaped}\\b`).test(rest.toLowerCase())) {
+      found.push(method.name);
+      rest = rest.replace(method.name, '');
+    }
+  }
+  const custom = rest.replace(/\s+/g, ' ').trim();
+  return custom ? [...found, custom] : found;
+};

@@ -18,7 +18,6 @@ import {
   MenuItem,
 } from '@mui/material';
 
-import { SwapCalls } from '@mui/icons-material';
 import currencyDict from '../../utils/currencies';
 import { FlagWithProps, SendReceiveIcon } from '../Icons';
 import { UseAppStoreType, AppContext, initialAppContext } from '../../contexts/AppContext';
@@ -108,43 +107,6 @@ const SearchDialog = ({ open = false, onClose }: Props): React.JSX.Element => {
                         >
                           <SendReceiveIcon /> <div style={{ width: '0.5em' }} />
                           {t('Buy')}
-                        </Button>
-                      </ButtonGroup>
-                    </Grid>
-                  </Grid>
-                </Grid>
-                <Grid>
-                  <Typography>
-                    {t('Do you want to swap from on-chain into Lightning or vice versa?')}
-                  </Typography>
-                </Grid>
-                <Grid>
-                  <Grid
-                    container
-                    spacing={1}
-                    sx={{ alignItems: 'center', flexDirection: 'column' }}
-                  >
-                    <Grid>
-                      <ButtonGroup variant='contained'>
-                        <Button
-                          color='primary'
-                          onClick={() => {
-                            setFav({ ...fav, mode: 'swap', type: 1 });
-                            setStep('3');
-                          }}
-                        >
-                          <SwapCalls /> <div style={{ width: '0.5em' }} />
-                          {t('Swap into LN')}
-                        </Button>
-                        <Button
-                          color='secondary'
-                          onClick={() => {
-                            setFav({ ...fav, mode: 'swap', type: 0 });
-                            setStep('3');
-                          }}
-                        >
-                          <SwapCalls /> <div style={{ width: '0.5em' }} />
-                          {t('Swap out of LN')}
                         </Button>
                       </ButtonGroup>
                     </Grid>

@@ -1170,5 +1170,7 @@
   "Mining fee (paid by the seller up to the suggested one)": "Comisión de minería (la paga el vendedor hasta la recomendada)",
   "Includes {{sats}} Sats for the buyer's swap to onchain (you took this onchain order with Lightning). What the swap does not use comes back to you as rewards.": "Incluye {{sats}} sats para el swap a on-chain del comprador (tomaste esta orden on-chain con Lightning). Lo que el swap no use te vuelve como recompensa.",
   "Buyer's swap to onchain you paid": "Swap a on-chain del comprador que pagaste",
-  "Swap to onchain paid by the seller": "Swap a on-chain pagado por el vendedor"
+  "Swap to onchain paid by the seller": "Swap a on-chain pagado por el vendedor",
+  "Paid with: {{amount}} via {{method}}": "Se paga con: {{amount}} por {{method}}",
+  "Trade size in sats at today's price (fixed for 丰 sat and fixed-price orders)": "Tamaño del intercambio en sats al precio de hoy (fijo en órdenes 丰 sat y de precio fijo)"
 }

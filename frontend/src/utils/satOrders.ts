@@ -12,6 +12,7 @@
  * exchange_max_amount in the currency.
  */
 import { pn } from './prettyNumbers';
+import { fixedPriceOf, orderPrice } from './fixedPrice';
 import currencies, { SPAMCOIN, currencyOptions, currencyLabel } from './currencies';
 
 export const SAT_LABEL = '丰 sat';
@@ -90,4 +91,39 @@ export const applySatsTag = <T extends SatFields>(order: T, tag: string[]): T =>
     order.sats_amount = tag[1];
   }
   return order;
+};
+
+export interface BookSatOrder extends SatFields {
+  has_range?: boolean;
+  amount?: number | string | null;
+  min_amount?: number | string | null;
+  max_amount?: number | string | null;
+  currency?: number | null;
+  fixed_price?: number | string | null;
+  premium?: number | string | null;
+}
+
+/**
+ * Roblosats 0.9.2: what is paid in exchange for a "丰 sat" book order, as people read it:
+ * "2,100 Spamsats" / "15 EUR" with a fixed price (the total is fixed), "≈ 2,100 Spamsats"
+ * at market price + premium (the total follows the market: today's estimate, from the
+ * coordinator's market price when known, else the book's own figure). Null if it is not a
+ * sat order or nothing can be said.
+ */
+export const bookExchangeText = (o: BookSatOrder, marketPrice?: number | null): string | null => {
+  const sats = bookSats(o);
+  if (sats === null) return null;
+  const fixed = fixedPriceOf(o) !== null;
+  const price = fixed ? null : orderPrice(o, marketPrice);
+  const fromBook = o.has_range ? [o.min_amount, o.max_amount] : [o.amount];
+  const totals =
+    price !== null && price > 0
+      ? sats.map((s) => totalForSats(s, price))
+      : fromBook.map((v) => Number(v ?? NaN));
+  if (!totals.every((n) => Number.isFinite(n) && n > 0)) return null;
+  const text =
+    totals.length > 1
+      ? `${formatTotal(totals[0], o.currency).split(' ')[0]}-${formatTotal(totals[1], o.currency)}`
+      : formatTotal(totals[0], o.currency);
+  return fixed ? text : `≈ ${text}`;
 };

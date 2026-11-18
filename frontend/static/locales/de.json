@@ -1062,5 +1062,7 @@
   "+{{amount}} sats extra returned with your bond": "+{{amount}} sats extra returned with your bond",
   "Extra returned with your bond": "Extra returned with your bond",
   "Spamcoin payment method(s)": "Spamcoin payment method(s)",
-  "Payment method(s)": "Payment method(s)"
+  "Payment method(s)": "Payment method(s)",
+  "Paid with: {{amount}} via {{method}}": "Bezahlt mit: {{amount}} über {{method}}",
+  "Trade size in sats at today's price (fixed for 丰 sat and fixed-price orders)": "Handelsgröße in Sats zum heutigen Preis (fest bei 丰-sat- und Festpreis-Orders)"
 }

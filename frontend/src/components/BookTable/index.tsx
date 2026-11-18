@@ -29,7 +29,13 @@ import currencyDict from '../../utils/currencies';
 import { type PublicOrder } from '../../models';
 import { filterOrders, hexToRgb, statusBadgeColor, pn, amountToString } from '../../utils';
 import { fixedPriceOf, formatPricePerBtc, orderPremium, orderPrice } from '../../utils/fixedPrice';
-import { bookSats, formatSatRange, formatSats, formatTotal } from '../../utils/satOrders';
+import {
+  bookExchangeText,
+  bookSats,
+  formatSatRange,
+  formatSats,
+  formatTotal,
+} from '../../utils/satOrders';
 import { currencyLabel } from '../../utils/currencies';
 import BookControl from './BookControl';
 
@@ -156,6 +162,12 @@ const BookTable = ({
       ...onchainOrders.filter((o) => !known.has(`${o.coordinatorShortAlias}${o.id}`)),
     ];
   }, [orderList, federation.book, bookSize, onchainOrders]);
+
+  // 0.9.2: with "丰 sat" orders the payment column also shows what they are paid with
+  const hasSatOrders = useMemo(
+    () => orders.some((o) => o != null && bookSats(o) !== null),
+    [orders],
+  );
 
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     pageSize: 0,
@@ -343,23 +355,19 @@ const BookTable = ({
       field: 'amount',
       headerName: t('Amount'),
       type: 'number',
-      flex: 1.5,
+      flex: hasSatOrders ? 1.8 : 1.5,
       renderCell: (params: { row: PublicOrder }) => {
         const sats = bookSats(params.row);
         if (sats !== null) {
-          // rl31-beta19: "丰 sat" order: its sats, and what is paid in exchange below
-          const paid = params.row.has_range
-            ? `${formatTotal(Number(params.row.min_amount), params.row.currency).split(' ')[0]}-${formatTotal(Number(params.row.max_amount), params.row.currency)}`
-            : formatTotal(Number(params.row.amount), params.row.currency);
+          // "丰 sat" order: only its sats; what is paid in exchange goes by the payment method
           return (
             <div
-              style={{ cursor: 'pointer', lineHeight: 1.2 }}
+              style={{ cursor: 'pointer' }}
               onClick={() => {
                 onOrderClicked(params.row.id, params.row.coordinatorShortAlias ?? '');
               }}
             >
-              <div>{sats.length > 1 ? formatSatRange(sats[0], sats[1]) : formatSats(sats[0])}</div>
-              <div style={{ fontSize: '0.8em', opacity: 0.75 }}>↔ {paid}</div>
+              {sats.length > 1 ? formatSatRange(sats[0], sats[1]) : formatSats(sats[0])}
             </div>
           );
         }
@@ -406,7 +414,7 @@ const BookTable = ({
         );
       },
     };
-  }, [fav.mode]);
+  }, [fav.mode, hasSatOrders]);
 
   const currencyObj = useCallback(() => {
     return {
@@ -437,12 +445,20 @@ const BookTable = ({
     };
   }, []);
 
+  const exchangeOf = (row: PublicOrder): string | null =>
+    bookExchangeText(
+      row,
+      federation.getLimits(row.coordinatorShortAlias ?? '')[(row.currency ?? 0).toString()]?.price,
+    );
+
   const paymentObj = useCallback(() => {
     return {
       field: 'payment_method',
-      headerName: fav.mode === 'fiat' ? t('Payment Method') : t('Destination'),
-      flex: 2,
+      headerName: t('Payment Method'),
+      flex: hasSatOrders ? 2.6 : 2,
       renderCell: (params: { row: PublicOrder }) => {
+        // "丰 sat" order: what is paid in exchange, next to how
+        const exchange = exchangeOf(params.row);
         return (
           <div
             style={{ cursor: 'pointer' }}
@@ -464,43 +480,76 @@ const BookTable = ({
                 size={1.7 * fontSize}
                 text={params.row.payment_method}
               />
+              {exchange !== null ? (
+                <Typography
+                  variant='body2'
+                  component='span'
+                  sx={{
+                    marginLeft: '0.4em',
+                    whiteSpace: 'nowrap',
+                    position: 'relative',
+                    top: '0.2em',
+                  }}
+                >
+                  {exchange}
+                </Typography>
+              ) : null}
             </div>
           </div>
         );
       },
     };
-  }, [fav.mode]);
+  }, [fav.mode, hasSatOrders]);
 
   const paymentSmallObj = useCallback(() => {
     return {
       field: 'payment_method',
       headerName: t('Pay'),
-      flex: 1,
+      flex: hasSatOrders ? 1.7 : 1,
       renderCell: (params: { row: PublicOrder }) => {
+        const exchange = exchangeOf(params.row);
         return (
           <div
             style={{
               position: 'relative',
               left: '-0.25em',
-              top: '0.3em',
+              top: exchange !== null ? 0 : '0.3em',
               cursor: 'pointer',
+              lineHeight: 1.2,
             }}
             onClick={() => {
               onOrderClicked(params.row.id, params.row.coordinatorShortAlias ?? '');
             }}
           >
-            {params.row.escrow_type === 1 ? <ChainIcon color='warning' fontSize='small' /> : null}
-            <PaymentStringAsIcons
-              othersText={t('Others')}
-              size={1.3 * fontSize}
-              verbose={false}
-              text={params.row.payment_method}
-            />
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap' }}>
+              {params.row.escrow_type === 1 ? <ChainIcon color='warning' fontSize='small' /> : null}
+              <PaymentStringAsIcons
+                othersText={t('Others')}
+                size={1.3 * fontSize}
+                verbose={false}
+                text={params.row.payment_method}
+                style={{ flexWrap: 'nowrap' }}
+              />
+            </div>
+            {exchange !== null ? (
+              <div
+                title={exchange}
+                style={{
+                  fontSize: '0.8em',
+                  lineHeight: 1.2,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {exchange}
+              </div>
+            ) : null}
           </div>
         );
       },
     };
-  }, []);
+  }, [hasSatOrders]);
 
   const priceObj = useCallback(() => {
     return {
@@ -781,9 +830,43 @@ const BookTable = ({
     return {
       field: 'satoshis_now',
       headerName: t('Sats now'),
+      disableColumnMenu: true,
+      description: t(
+        "Trade size in sats at today's price (fixed for 丰 sat and fixed-price orders)",
+      ),
+      renderHeader: () => (
+        <Tooltip
+          enterTouchDelay={0}
+          title={t("Trade size in sats at today's price (fixed for 丰 sat and fixed-price orders)")}
+        >
+          <span className='MuiDataGrid-columnHeaderTitle' style={{ fontWeight: 500 }}>
+            {t('Sats now')}
+          </span>
+        </Tooltip>
+      ),
       type: 'number',
       flex: 1,
       renderCell: (params: { row: PublicOrder }) => {
+        if (bookSats(params.row) !== null) {
+          // "丰 sat" order: the size is already in sats in Amount
+          return (
+            <Tooltip
+              enterTouchDelay={0}
+              title={t(
+                "Trade size in sats at today's price (fixed for 丰 sat and fixed-price orders)",
+              )}
+            >
+              <div
+                style={{ cursor: 'pointer', opacity: 0.6 }}
+                onClick={() => {
+                  onOrderClicked(params.row.id, params.row.coordinatorShortAlias ?? '');
+                }}
+              >
+                —
+              </div>
+            </Tooltip>
+          );
+        }
         const limits = federation.getLimits(params.row.coordinatorShortAlias ?? '');
         const amount =
           params.row.has_range === true
@@ -791,9 +874,7 @@ const BookTable = ({
             : parseFloat(params.row.amount ?? '0');
         const price =
           orderPrice(params.row, limits[(params.row.currency ?? 0).toString()]?.price) ?? 0;
-        const sats = bookSats(params.row);
-        const satoshisNow =
-          sats !== null ? sats[sats.length - 1] : price > 0 ? (100000000 * amount) / price : 0;
+        const satoshisNow = price > 0 ? (100000000 * amount) / price : 0;
 
         return (
           <div
@@ -897,12 +978,13 @@ const BookTable = ({
       payment_method: {
         priority: 4,
         order: 7,
+        // 0.9.2: room for what a "丰 sat" order is paid with ("≈ 2,100 Spamsats")
         normal: {
-          width: 12.85,
+          width: hasSatOrders ? 15 : 12.85,
           object: paymentObj,
         },
         small: {
-          width: 4.4,
+          width: hasSatOrders ? 8.6 : 4.4,
           object: paymentSmallObj,
         },
       },
@@ -963,7 +1045,7 @@ const BookTable = ({
         },
       },
     };
-  }, [fav.mode]);
+  }, [fav.mode, hasSatOrders]);
 
   const filteredColumns = function (maxWidth: number): {
     columns: Array<GridColDef<GridValidRowModel>>;
@@ -1008,7 +1090,7 @@ const BookTable = ({
 
   const { columns, width, visibleColumnKeys } = useMemo(() => {
     return filteredColumns(fullscreen ? fullWidth : maxWidth);
-  }, [maxWidth, fullscreen, fullWidth, fav.mode]);
+  }, [maxWidth, fullscreen, fullWidth, fav.mode, hasSatOrders]);
 
   const Footer = function (): React.JSX.Element {
     return (

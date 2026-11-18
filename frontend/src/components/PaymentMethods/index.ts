@@ -1,3 +1,3 @@
 export { default as PaymentStringAsIcons } from './StringAsIcons';
-export { fiatMethods, swapMethods } from './MethodList';
+export { fiatMethods, swapMethods, paymentMethodNames } from './MethodList';
 export { default as PaymentIcon } from './Icons';

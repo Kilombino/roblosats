@@ -18,7 +18,6 @@ import { FlagWithProps, SendReceiveIcon } from '../Icons';
 import { AppContext, type UseAppStoreType } from '../../contexts/AppContext';
 
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
-import SwapCalls from '@mui/icons-material/SwapCalls';
 import { FederationContext, type UseFederationStoreType } from '../../contexts/FederationContext';
 import RobotAvatar from '../RobotAvatar';
 import RoboSatsNoText from '../Icons/RoboSatsNoText';
@@ -56,10 +55,8 @@ const BookControl = ({
   useEffect(() => {
     if (fav.type === null) {
       setOrderType('any');
-    } else if (fav.mode === 'fiat') {
-      setOrderType(fav.type === 1 ? 'buy' : 'sell');
     } else {
-      setOrderType(fav.type === 1 ? 'swapin' : 'swapout');
+      setOrderType(fav.type === 1 ? 'buy' : 'sell');
     }
   }, [fav.mode, fav.type]);
 
@@ -82,18 +79,13 @@ const BookControl = ({
     child: React.ReactNode,
   ): void => {
     const select = child as MenuItemWithProps;
+    // Roblosats 0.9.2: no swap book (Spamcoin is an ordinary payment currency)
+    const currency = fav.mode === 'swap' ? 0 : fav.currency;
     if (select.props.value === 'sell') {
-      const currency = fav.mode === 'swap' ? 0 : fav.currency;
       setFav({ ...fav, mode: 'fiat', type: 0, currency });
     } else if (select.props.value === 'buy') {
-      const currency = fav.mode === 'swap' ? 0 : fav.currency;
       setFav({ ...fav, mode: 'fiat', type: 1, currency });
-    } else if (select.props.value === 'swapin') {
-      setFav({ ...fav, mode: 'swap', type: 1, currency: 1000 });
-    } else if (select.props.value === 'swapout') {
-      setFav({ ...fav, mode: 'swap', type: 0, currency: 1000 });
     } else {
-      const currency = fav.mode === 'swap' ? 0 : fav.currency;
       setFav({ ...fav, mode: 'fiat', type: null, currency });
     }
     setOrderType(select.props.value);
@@ -108,12 +100,6 @@ const BookControl = ({
     } else if (value === 'buy') {
       component = <SendReceiveIcon color='primary' />;
       text = t('Buy');
-    } else if (value === 'swapin') {
-      component = <SwapCalls color='primary' />;
-      text = t('Swap In');
-    } else if (value === 'swapout') {
-      component = <SwapCalls color='secondary' />;
-      text = t('Swap Out');
     }
 
     return (
@@ -194,22 +180,6 @@ const BookControl = ({
               <SendReceiveIcon color='secondary' sx={{ transform: 'scaleX(-1)' }} />
               <Typography sx={{ width: '2em' }} align='right' color='text.secondary'>
                 {' ' + t('Sell')}
-              </Typography>
-            </div>
-          </MenuItem>
-          <MenuItem value='swapin' style={{ width: '8em' }}>
-            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-              <SwapCalls color='primary' />
-              <Typography sx={{ width: '2em' }} align='right' color='text.secondary'>
-                {' ' + t('Swap In')}
-              </Typography>
-            </div>
-          </MenuItem>
-          <MenuItem value='swapout' style={{ width: '8em' }}>
-            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-              <SwapCalls color='secondary' />
-              <Typography sx={{ width: '2em' }} align='right' color='text.secondary'>
-                {' ' + t('Swap Out')}
               </Typography>
             </div>
           </MenuItem>

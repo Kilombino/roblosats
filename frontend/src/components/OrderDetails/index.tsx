@@ -38,7 +38,12 @@ import {
   Tag,
   Description,
 } from '@mui/icons-material';
-import { fiatMethods, PaymentStringAsIcons, swapMethods } from '../../components/PaymentMethods';
+import {
+  fiatMethods,
+  PaymentStringAsIcons,
+  paymentMethodNames,
+  swapMethods,
+} from '../../components/PaymentMethods';
 import { FlagWithProps, SendReceiveIcon } from '../Icons';
 import LinearDeterminate from './LinearDeterminate';
 
@@ -95,19 +100,11 @@ const OrderDetails = ({
     if (currentOrder === null) return;
 
     if (currentOrder.sats_denominated) {
-      // rl31-beta19: "丰 sat" order: the sats, and what is paid in exchange in its unit
-      const single = (currentOrder.sats_amount ?? 0) > 0;
-      const sats = single
+      // "丰 sat" order: the amount is its sats; what is paid in exchange goes by the payment
+      // method ("Paid with", 0.9.2)
+      return (currentOrder.sats_amount ?? 0) > 0
         ? formatSats(currentOrder.sats_amount ?? 0)
         : formatSatRange(currentOrder.sats_min_amount ?? 0, currentOrder.sats_max_amount ?? 0);
-      const paid = single
-        ? (currentOrder.amount ?? 0) > 0
-          ? formatTotal(Number(currentOrder.amount), currentOrder.currency)
-          : ''
-        : currentOrder.max_amount > 0
-          ? `${formatTotal(Number(currentOrder.min_amount), currentOrder.currency).split(' ')[0]}-${formatTotal(Number(currentOrder.max_amount), currentOrder.currency)}`
-          : '';
-      return paid ? `${sats} ↔ ${paid}` : sats;
     }
 
     if (currentOrder.currency === 1000) {
@@ -138,6 +135,28 @@ const OrderDetails = ({
       ? `${formatTotal(Number(currentOrder.min_amount), currentOrder.currency).split(' ')[0]}-${formatTotal(Number(currentOrder.max_amount), currentOrder.currency)}`
       : amountString;
   }, [currentOrder, amountString]);
+
+  // 0.9.2: "Paid with: 2,100 Spamsats via Spamcoin Lightning" for a "丰 sat" order; "≈" while
+  // the total follows the market (market price + premium, until the taker bond fixes it)
+  const methodsText = (text: string | undefined): string =>
+    paymentMethodNames(text)
+      .map((m) => t(m))
+      .join(', ') ||
+    (text ?? '');
+  const paidShown = useMemo(() => {
+    const estimate =
+      currentOrder?.sats_denominated === true &&
+      !isFixedPrice(currentOrder) &&
+      (currentOrder.status ?? 0) <= 3;
+    return `${estimate ? '≈ ' : ''}${paidString ?? ''}`;
+  }, [currentOrder, currentOrder?.status, paidString]);
+  const paidWithText = useMemo(() => {
+    if (!currentOrder?.sats_denominated || paidString === amountString) return null;
+    return t('Paid with: {{amount}} via {{method}}', {
+      amount: paidShown,
+      method: methodsText(currentOrder.payment_method),
+    });
+  }, [currentOrder, paidShown, paidString, amountString]);
 
   // Countdown Renderer callback with condition
   const countdownRenderer = function ({
@@ -263,8 +282,8 @@ const OrderDetails = ({
         sats = `${String(min)}-${String(max)}`;
       }
       send = t('You send via {{method}} {{amount}}', {
-        amount: paidString,
-        method: order.payment_method,
+        amount: paidShown,
+        method: methodsText(order.payment_method),
       });
       // Roblosats: in an onchain escrow order the sats move on chain, not over Lightning.
       receive = onchain
@@ -298,8 +317,8 @@ const OrderDetails = ({
         ? t('You send onchain {{amount}} Sats (Approx)', { amount: sats })
         : t('You send via Lightning {{amount}} Sats (Approx)', { amount: sats });
       receive = t('You receive via {{method}} {{amount}}', {
-        amount: paidString,
-        method: order.payment_method,
+        amount: paidShown,
+        method: methodsText(order.payment_method),
       });
     }
 
@@ -341,6 +360,7 @@ const OrderDetails = ({
     currentOrder?.escrow_satoshis,
     amountString,
     paidString,
+    paidShown,
     coordinator?.limits,
   ]);
 
@@ -579,7 +599,11 @@ const OrderDetails = ({
             </ListItem>
             <ListItem sx={{ paddingTop: 0 }}>
               <ListItemIcon />
-              <ListItemText sx={{ marginTop: 0 }} secondary={t('Accepted payment methods')} />
+              <ListItemText
+                sx={{ marginTop: 0 }}
+                primary={paidWithText ?? undefined}
+                secondary={t('Accepted payment methods')}
+              />
             </ListItem>
 
             <Divider />
