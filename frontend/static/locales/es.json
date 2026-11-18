@@ -1161,5 +1161,14 @@
   "Spamcoin payment method(s)": "Método(s) de pago en Spamcoin",
   "Payment method(s)": "Método(s) de pago",
   "Lightning: no swap fee": "Lightning: sin comisión de swap",
-  "You (the buyer) pay the swap fee and the mining fee: both are deducted from what you receive.": "La comisión de swap y la de minería las pagas tú (el comprador): se descuentan de lo que recibes."
+  "You (the buyer) pay the swap fee and the mining fee: both are deducted from what you receive.": "La comisión de swap y la de minería las pagas tú (el comprador): se descuentan de lo que recibes.",
+  "Taking with Lightning: you pay the swap to onchain for the buyer (~{{sats}} Sats: {{percent}}% + mining). What the swap does not use comes back to you as rewards.": "Si tomas con Lightning, pagas tú el swap a on-chain del comprador (~{{sats}} sats: {{percent}} % + minería). Lo que el swap no use te vuelve como recompensa.",
+  "With Lightning your bond and the trade escrow are Lightning hold invoices. The buyer asked for onchain: the coordinator pays it onchain with its swap.": "Con Lightning tu fianza y el depósito del intercambio son facturas retenidas Lightning. El comprador pidió on-chain: el coordinador se lo paga on-chain con su swap.",
+  "No swap fee for you: the seller pays the swap to onchain.": "Sin comisión de swap para ti: el swap a on-chain lo paga el vendedor.",
+  "No swap fee for you: the seller pays the swap to onchain. Only the mining fee above the one the seller paid ({{sats}} Sats) comes out of what you receive.": "Sin comisión de swap para ti: el swap a on-chain lo paga el vendedor. Solo la minería por encima de la que pagó el vendedor ({{sats}} sats) se descuenta de lo que recibes.",
+  "Swap fee (paid by the seller)": "Comisión de swap (la paga el vendedor)",
+  "Mining fee (paid by the seller up to the suggested one)": "Comisión de minería (la paga el vendedor hasta la recomendada)",
+  "Includes {{sats}} Sats for the buyer's swap to onchain (you took this onchain order with Lightning). What the swap does not use comes back to you as rewards.": "Incluye {{sats}} sats para el swap a on-chain del comprador (tomaste esta orden on-chain con Lightning). Lo que el swap no use te vuelve como recompensa.",
+  "Buyer's swap to onchain you paid": "Swap a on-chain del comprador que pagaste",
+  "Swap to onchain paid by the seller": "Swap a on-chain pagado por el vendedor"
 }

@@ -4,6 +4,7 @@ import { Grid, Typography, TextField, List, Divider, ListItemText, ListItem } fr
 import { type Order } from '../../../models';
 import { LoadingButton } from '@mui/lab';
 import { pn } from '../../../utils';
+import { onchainPayout } from '../../../utils/hybridSwap';
 
 export interface OnchainForm {
   address: string;
@@ -48,6 +49,19 @@ export const OnchainPayoutForm = ({
     setOnchain({ ...onchain, miningFee: order.suggested_mining_fee_rate });
   }, []);
 
+  // rl31-beta21, hybrid B: the seller already paid this swap (up to this much)
+  const paidBySeller = Number(
+    (order as unknown as { swap_paid_by_seller_sats?: number }).swap_paid_by_seller_sats ?? 0,
+  );
+  const miningFeeSats = Math.floor(Math.max(minMiningFee, onchain.miningFee) * costPerVByte);
+  const payout = onchainPayout({
+    invoiceAmount: order.invoice_amount,
+    swapFeeRate: Number(order.swap_fee_rate),
+    miningFeeSats,
+    paidBySeller,
+  });
+  const bySeller = paidBySeller > 0;
+
   return (
     <Grid
       container
@@ -65,9 +79,16 @@ export const OnchainPayoutForm = ({
         <ListItem>
           <Typography variant='body2'>
             <b>
-              {t(
-                'You (the buyer) pay the swap fee and the mining fee: both are deducted from what you receive.',
-              )}
+              {bySeller
+                ? payout.covered < payout.cost
+                  ? t(
+                      'No swap fee for you: the seller pays the swap to onchain. Only the mining fee above the one the seller paid ({{sats}} Sats) comes out of what you receive.',
+                      { sats: pn(payout.cost - payout.covered) },
+                    )
+                  : t('No swap fee for you: the seller pays the swap to onchain.')
+                : t(
+                    'You (the buyer) pay the swap fee and the mining fee: both are deducted from what you receive.',
+                  )}
             </b>
           </Typography>
         </ListItem>
@@ -79,7 +100,7 @@ export const OnchainPayoutForm = ({
             primary={`${pn(Math.floor((order.invoice_amount * order.swap_fee_rate) / 100))} Sats (${Number(
               Number(order.swap_fee_rate).toFixed(2),
             )}%)`}
-            secondary={t('Swap fee')}
+            secondary={bySeller ? t('Swap fee (paid by the seller)') : t('Swap fee')}
           />
         </ListItem>
 
@@ -90,7 +111,7 @@ export const OnchainPayoutForm = ({
             primary={`${pn(
               Math.floor(Math.max(minMiningFee, onchain.miningFee) * costPerVByte),
             )} Sats (${Math.max(minMiningFee, onchain.miningFee)} Sats/vByte)`}
-            secondary={t('Mining fee')}
+            secondary={bySeller ? t('Mining fee (paid by the seller up to the suggested one)') : t('Mining fee')}
           />
         </ListItem>
 
@@ -100,13 +121,7 @@ export const OnchainPayoutForm = ({
           <ListItemText
             primary={
               <b>
-                {pn(
-                  Math.floor(
-                    order.invoice_amount -
-                      Math.max(minMiningFee, onchain.miningFee) * costPerVByte -
-                      (order.invoice_amount * order.swap_fee_rate) / 100,
-                  ),
-                ) + ' Sats'}
+                {pn(payout.received) + ' Sats'}
               </b>
             }
             secondary={t('Final amount you will receive')}

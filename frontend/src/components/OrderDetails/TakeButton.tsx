@@ -22,6 +22,7 @@ import { type Order, type Info } from '../../models';
 import { ConfirmationDialog, OrderDescriptionDialog, UsedRobotDialog } from '../Dialogs';
 import { LoadingButton } from '@mui/lab';
 import { computeSats, pn } from '../../utils';
+import { lightningTakeSwapSats, type LightningTakeSwap } from '../../utils/hybridSwap';
 import { onchainFees } from '../../utils/escrow/fees';
 import { GarageContext, type UseGarageStoreType } from '../../contexts/GarageContext';
 import { type UseFederationStoreType, FederationContext } from '../../contexts/FederationContext';
@@ -89,14 +90,32 @@ const TakeButton = ({
 
   // rl31-beta14: what this robot will pay the coordinator, for the way it takes the order
   // (onchain: at least the coordinator's minimum; Lightning seller: a Lightning order, plain %).
-  const takeFeeText = (): string => {
-    if (!isOnchainOrder || !currentOrder || !info) return '';
+  const takeTradeSats = (): number => {
+    if (!currentOrder) return 0;
     let tradeSats = currentOrder.satoshis_now;
     if (satOrder && currentOrder.has_range && Number(takeAmount) > 0) {
       tradeSats = Math.round(Number(takeAmount));
     } else if (currentOrder.has_range && Number(takeAmount) > 0 && currentOrder.max_amount > 0) {
       tradeSats = Math.round((tradeSats * Number(takeAmount)) / Number(currentOrder.max_amount));
     }
+    return tradeSats;
+  };
+
+  // rl31-beta21, hybrid B: taking an onchain BUY with Lightning, the seller pays the swap.
+  const swapQuote = (currentOrder as unknown as { lightning_take_swap?: LightningTakeSwap })
+    ?.lightning_take_swap;
+  const lightningSwapText = (): string => {
+    const sats = lightningTakeSwapSats(swapQuote, takeTradeSats());
+    if (sats == null || !swapQuote) return '';
+    return t(
+      'Taking with Lightning: you pay the swap to onchain for the buyer (~{{sats}} Sats: {{percent}}% + mining). What the swap does not use comes back to you as rewards.',
+      { sats: pn(sats), percent: Number(Number(swapQuote.swap_fee_percent).toFixed(2)) },
+    );
+  };
+
+  const takeFeeText = (): string => {
+    if (!isOnchainOrder || !currentOrder || !info) return '';
+    const tradeSats = takeTradeSats();
     if (!tradeSats) return '';
     // /api/info has it when onchain is open to everybody, /api/robot/ for an allowed robot
     const minFee =
@@ -150,8 +169,9 @@ const TakeButton = ({
         {takeWith === 'lightning' ? (
           <Alert severity='warning' sx={{ maxWidth: '30em' }}>
             {takerSells
-              ? t(
-                  'With Lightning your bond and the trade escrow are Lightning hold invoices. The buyer asked for onchain: the coordinator pays it onchain with its swap (the buyer pays that swap fee and the mining fee).',
+              ? (lightningSwapText() ? `${lightningSwapText()} ` : '') +
+                t(
+                  'With Lightning your bond and the trade escrow are Lightning hold invoices. The buyer asked for onchain: the coordinator pays it onchain with its swap.',
                 )
               : t(
                   'With Lightning your bond is a Lightning hold invoice and you do not need to send anything onchain. The seller still locks the sats onchain and you receive them onchain; your coordinator fee comes out of what you receive.',

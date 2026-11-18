@@ -6,6 +6,7 @@ import QRCode from 'react-qr-code';
 import { type Order } from '../../../models';
 import { systemClient } from '../../../services/System';
 import currencies from '../../../utils/currencies';
+import { pn } from '../../../utils';
 import WalletsButton from '../WalletsButton';
 import { AppContext, type UseAppStoreType } from '../../../contexts/AppContext';
 
@@ -24,6 +25,10 @@ export const LockInvoicePrompt = ({
   const currencyCode: string = currencies[`${order.currency}`];
 
   const invoice = concept === 'bond' ? order.bond_invoice : order.escrow_invoice;
+  // rl31-beta21, hybrid B: the seller's escrow carries the buyer's swap
+  const swapSurcharge = Number(
+    (order as unknown as { swap_surcharge_sats?: number }).swap_surcharge_sats ?? 0,
+  );
 
   const helperText =
     concept === 'bond'
@@ -129,6 +134,17 @@ export const LockInvoicePrompt = ({
           {helperText}
         </Typography>
       </Grid>
+
+      {concept === 'escrow' && swapSurcharge > 0 ? (
+        <Grid size={12} sx={{ display: 'flex', justifyContent: 'center' }}>
+          <Typography variant='body2' align='center' color='warning.main'>
+            {t(
+              'Includes {{sats}} Sats for the buyer\'s swap to onchain (you took this onchain order with Lightning). What the swap does not use comes back to you as rewards.',
+              { sats: pn(swapSurcharge) },
+            )}
+          </Typography>
+        </Grid>
+      ) : null}
     </Grid>
   );
 };

@@ -47,6 +47,9 @@ export const PayoutPrompt = ({
   // Roblosats: an onchain order taken with Lightning (hybrid B) pays the buyer onchain by default.
   const [tab, setTab] = useState<'lightning' | 'onchain'>(defaultPayoutTab(order));
   const onchainAllowed = onchainPayoutAllowed(order);
+  // rl31-beta21, hybrid B: the seller already paid the swap to onchain
+  const paidBySeller =
+    Number((order as unknown as { swap_paid_by_seller_sats?: number }).swap_paid_by_seller_sats ?? 0) > 0;
 
   return (
     <Grid
@@ -112,7 +115,7 @@ export const PayoutPrompt = ({
         </ToggleButtonGroup>
       </Grid>
 
-      {onchainAllowed && tab === 'onchain' ? (
+      {onchainAllowed && tab === 'onchain' && !paidBySeller ? (
         <Grid>
           <Typography variant='caption' color='text.secondary'>
             {t('Lightning: no swap fee')}

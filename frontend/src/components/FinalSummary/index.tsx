@@ -49,6 +49,8 @@ export interface FinalSummaryData {
   mining_fee_sats?: number;
   routing_fee_sats?: number;
   swap_fee_sats?: number;
+  swap_for_buyer_sats?: number;
+  swap_paid_by_seller_sats?: number;
   rewards_sats?: number;
   txs?: Array<{ label: string; txid: string }>;
   hashes?: Array<{ label: string; value: string }>;
@@ -337,6 +339,12 @@ const FinalSummary = ({
       ) : null}
       {(s.swap_fee_sats ?? 0) > 0 ? (
         <Row label={t('Onchain swap fee')} value={sats(s.swap_fee_sats)} />
+      ) : null}
+      {(s.swap_for_buyer_sats ?? 0) > 0 ? (
+        <Row label={t("Buyer's swap to onchain you paid")} value={sats(s.swap_for_buyer_sats)} />
+      ) : null}
+      {(s.swap_paid_by_seller_sats ?? 0) > 0 ? (
+        <Row label={t('Swap to onchain paid by the seller')} value={sats(s.swap_paid_by_seller_sats)} />
       ) : null}
       {(s.txs ?? []).map((tx) => (
         <Box key={tx.txid} sx={{ mt: 1 }}>

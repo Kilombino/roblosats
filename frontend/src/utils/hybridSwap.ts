@@ -1,0 +1,50 @@
+/**
+ * Roblosats rl31-beta21, hybrid B: a seller who takes an onchain BUY order with Lightning pays
+ * the buyer's swap to onchain. The coordinator sends `lightning_take_swap` on the take screen
+ * (swap % with its margin and the mining sats for the payout) and, once the escrow is made,
+ * `swap_surcharge_sats` (seller) / `swap_paid_by_seller_sats` (buyer's payout).
+ */
+export interface LightningTakeSwap {
+  swap_fee_percent: number;
+  mining_fee_sats: number;
+  swap_fee_rate?: number;
+  mining_fee_rate?: number;
+  min_payout_sats?: number;
+  max_payout_sats?: number;
+}
+
+/** The estimated swap the seller would pay for a trade of `tradeSats`, or null if no swap. */
+export const lightningTakeSwapSats = (
+  quote: LightningTakeSwap | null | undefined,
+  tradeSats: number,
+): number | null => {
+  if (!quote || !(tradeSats > 0)) return null;
+  if (quote.min_payout_sats != null && tradeSats < quote.min_payout_sats) return null;
+  if (quote.max_payout_sats != null && tradeSats > quote.max_payout_sats) return null;
+  // (minus a hair so float noise such as 2200.0000000000005 does not add a sat)
+  return Math.ceil(
+    (tradeSats * Number(quote.swap_fee_percent)) / 100 + Number(quote.mining_fee_sats) - 1e-9,
+  );
+};
+
+export interface SwapTx {
+  invoiceAmount: number;
+  swapFeeRate: number;
+  miningFeeSats: number;
+  paidBySeller: number;
+}
+
+/** Onchain payout as the coordinator computes it: the swap fee and mining come out of the
+ * payout except what the seller already paid (hybrid B). */
+export const onchainPayout = ({
+  invoiceAmount,
+  swapFeeRate,
+  miningFeeSats,
+  paidBySeller,
+}: SwapTx): { swapFee: number; cost: number; covered: number; received: number } => {
+  const swapFee = (invoiceAmount * swapFeeRate) / 100;
+  const cost =
+    paidBySeller > 0 ? Math.ceil(swapFee + miningFeeSats - 1e-9) : swapFee + miningFeeSats;
+  const covered = Math.min(Math.max(0, paidBySeller), cost);
+  return { swapFee, cost, covered, received: Math.floor(invoiceAmount - (cost - covered)) };
+};
