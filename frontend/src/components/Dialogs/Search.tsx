@@ -52,7 +52,7 @@ const SearchDialog = ({ open = false, onClose }: Props): React.JSX.Element => {
 
   const handleCurrencyChange = function (e: SelectChangeEvent<number>): void {
     const currency = Number(e.target.value);
-    setFav({ ...fav, currency, mode: currency === 1000 ? 'swap' : 'fiat' });
+    setFav({ ...fav, currency, mode: 'fiat' });
     setStep('3');
   };
 

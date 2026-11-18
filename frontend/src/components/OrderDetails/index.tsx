@@ -42,7 +42,7 @@ import { fiatMethods, PaymentStringAsIcons, swapMethods } from '../../components
 import { FlagWithProps, SendReceiveIcon } from '../Icons';
 import LinearDeterminate from './LinearDeterminate';
 
-import { pn, amountToString, btcToSatsString, computeSats, statusBadgeColor } from '../../utils';
+import { pn, amountToString, computeSats, statusBadgeColor } from '../../utils';
 import { formatSatRange, formatSats, formatTotal } from '../../utils/satOrders';
 import TakeButton from './TakeButton';
 import { F2fMapDialog, OrderDescriptionDialog } from '../Dialogs';
@@ -111,14 +111,10 @@ const OrderDetails = ({
     }
 
     if (currentOrder.currency === 1000) {
-      return (
-        btcToSatsString(
-          currentOrder.amount ?? 0,
-          (currentOrder.amount ?? 0) > 0 ? false : currentOrder.has_range,
-          currentOrder.min_amount ?? 0,
-          currentOrder.max_amount ?? 0,
-        ) + ' Sats'
-      );
+      // Roblosats: Spamcoin amounts read in Spamsats
+      return (currentOrder.amount ?? 0) > 0 || !currentOrder.has_range
+        ? formatTotal(Number(currentOrder.amount ?? 0), 1000)
+        : `${formatTotal(Number(currentOrder.min_amount ?? 0), 1000).split(' ')[0]}-${formatTotal(Number(currentOrder.max_amount ?? 0), 1000)}`;
     } else {
       return (
         amountToString(
@@ -583,14 +579,7 @@ const OrderDetails = ({
             </ListItem>
             <ListItem sx={{ paddingTop: 0 }}>
               <ListItemIcon />
-              <ListItemText
-                sx={{ marginTop: 0 }}
-                secondary={
-                  currentOrder?.currency === 1000
-                    ? t('Swap destination')
-                    : t('Accepted payment methods')
-                }
-              />
+              <ListItemText sx={{ marginTop: 0 }} secondary={t('Accepted payment methods')} />
             </ListItem>
 
             <Divider />

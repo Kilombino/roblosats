@@ -89,7 +89,9 @@ const filterOrders = function ({
       order.coordinatorShortAlias ?? '',
     );
     const typeChecks = order.type === baseFilter.type || baseFilter.type === null;
-    const modeChecks = baseFilter.mode === 'fiat' ? !(order.currency === 1000) : true;
+    // Roblosats: currency 1000 is Spamcoin, an ordinary payment unit (and the unit of many
+    // "丰 sat" orders), not upstream's swap pseudo-currency: never hide it by mode. Picking
+    // Spamcoin in the currency filter still narrows the book to it (currencyChecks).
     const premiumChecks = premium !== null ? filterByPremium(order, premium) : true;
     const currencyChecks = order.currency === baseFilter.currency || baseFilter.currency === 0;
     const paymentMethodChecks =
@@ -99,7 +101,6 @@ const filterOrders = function ({
     return (
       coordinatorCheck &&
       typeChecks &&
-      modeChecks &&
       premiumChecks &&
       currencyChecks &&
       paymentMethodChecks &&

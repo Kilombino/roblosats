@@ -30,6 +30,7 @@ import { type PublicOrder } from '../../models';
 import { filterOrders, hexToRgb, statusBadgeColor, pn, amountToString } from '../../utils';
 import { fixedPriceOf, formatPricePerBtc, orderPremium, orderPrice } from '../../utils/fixedPrice';
 import { bookSats, formatSatRange, formatSats, formatTotal } from '../../utils/satOrders';
+import { currencyLabel } from '../../utils/currencies';
 import BookControl from './BookControl';
 
 import { FlagWithProps } from '../Icons';
@@ -362,6 +363,22 @@ const BookTable = ({
             </div>
           );
         }
+        if (params.row.currency === 1000) {
+          // Roblosats: a Spamcoin order reads in Spamsats, whatever the book mode
+          const total = params.row.has_range
+            ? `${formatTotal(Number(params.row.min_amount), 1000).split(' ')[0]}-${formatTotal(Number(params.row.max_amount), 1000)}`
+            : formatTotal(Number(params.row.amount), 1000);
+          return (
+            <div
+              style={{ cursor: 'pointer' }}
+              onClick={() => {
+                onOrderClicked(params.row.id, params.row.coordinatorShortAlias ?? '');
+              }}
+            >
+              {total}
+            </div>
+          );
+        }
         const amount =
           fav.mode === 'swap'
             ? parseFloat(params.row.amount ?? '0') * 100
@@ -410,7 +427,7 @@ const BookTable = ({
               onOrderClicked(params.row.id, params.row.coordinatorShortAlias ?? '');
             }}
           >
-            {currencyCode}
+            {currencyLabel(currencyCode)}
             <div style={{ position: 'relative', left: '0.3em', bottom: '0.7em' }}>
               <FlagWithProps code={currencyCode} />
             </div>

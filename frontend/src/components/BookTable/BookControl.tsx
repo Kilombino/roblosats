@@ -65,7 +65,8 @@ const BookControl = ({
 
   const handleCurrencyChange = function (e: SelectChangeEvent<number>): void {
     const currency = Number(e.target.value);
-    setFav({ ...fav, currency, mode: currency === 1000 ? 'swap' : 'fiat' });
+    // Roblosats: Spamcoin (1000) is a normal payment currency, keep the fiat-style book
+    setFav({ ...fav, currency, mode: 'fiat' });
   };
 
   const handleHostChange = function (e: SelectChangeEvent<string>): void {
@@ -82,17 +83,17 @@ const BookControl = ({
   ): void => {
     const select = child as MenuItemWithProps;
     if (select.props.value === 'sell') {
-      const currency = fav.currency === 1000 ? 0 : fav.currency;
+      const currency = fav.mode === 'swap' ? 0 : fav.currency;
       setFav({ ...fav, mode: 'fiat', type: 0, currency });
     } else if (select.props.value === 'buy') {
-      const currency = fav.currency === 1000 ? 0 : fav.currency;
+      const currency = fav.mode === 'swap' ? 0 : fav.currency;
       setFav({ ...fav, mode: 'fiat', type: 1, currency });
     } else if (select.props.value === 'swapin') {
       setFav({ ...fav, mode: 'swap', type: 1, currency: 1000 });
     } else if (select.props.value === 'swapout') {
       setFav({ ...fav, mode: 'swap', type: 0, currency: 1000 });
     } else {
-      const currency = fav.currency === 1000 ? 0 : fav.currency;
+      const currency = fav.mode === 'swap' ? 0 : fav.currency;
       setFav({ ...fav, mode: 'fiat', type: null, currency });
     }
     setOrderType(select.props.value);
@@ -271,7 +272,7 @@ const BookControl = ({
       {width > large ? (
         <div style={{ position: 'relative', top: '0.5em' }}>
           <Typography variant='caption' color='text.secondary'>
-            {fav.currency === 1000 ? t(fav.type === 0 ? 'to' : 'from') : t('pay with')}
+            {fav.mode === 'swap' ? t(fav.type === 0 ? 'to' : 'from') : t('pay with')}
           </Typography>
         </div>
       ) : null}
@@ -293,9 +294,9 @@ const BookControl = ({
             onAutocompleteChange={setPaymentMethods}
             paymentMethods={paymentMethod}
             paymentMethodsText={paymentMethod.join(' ')}
-            optionsType={fav.currency === 1000 ? 'swap' : 'fiat'}
+            optionsType={fav.mode === 'swap' ? 'swap' : 'fiat'}
             error={false}
-            label={fav.currency === 1000 ? t('DESTINATION') : t('METHOD')}
+            label={fav.mode === 'swap' ? t('DESTINATION') : t('METHOD')}
             tooltipTitle=''
             addNewButtonText=''
             isFilter={true}
@@ -395,7 +396,7 @@ const BookControl = ({
       {width > large ? (
         <div style={{ position: 'relative', top: '0.5em' }}>
           <Typography variant='caption' color='text.secondary'>
-            {fav.currency === 1000 ? t(fav.type === 0 ? 'to' : 'from') : t('hosted by')}
+            {fav.mode === 'swap' ? t(fav.type === 0 ? 'to' : 'from') : t('hosted by')}
           </Typography>
         </div>
       ) : null}
