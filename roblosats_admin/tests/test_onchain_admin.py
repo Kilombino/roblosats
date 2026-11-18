@@ -78,7 +78,8 @@ class OnchainAdminTest(TestCase):
             funding_signatures={"rescue_plan": 2, "rescue": {"to_seller": 1, "to_buyer": 1}, "seller_rescue_sig": "aa"},
         )
         self.hybrid_b = make_order(self.maker, self.taker, Order.Status.EXP, taker_lightning=True, expiry_reason=3)
-        bond(self.hybrid_b, self.maker, "maker", OnchainBond.Status.PENALIZED, txid=TXID, value=3330, spend_txid=TXID2)
+        bond(self.hybrid_b, self.maker, "maker", OnchainBond.Status.PENALIZED, txid=TXID, value=3330, spend_txid=TXID2,
+             leftover_txids=[{"txid": "ef" * 32, "coins": [[TXID, 1, 3300]], "sats": 2900}])
 
     def test_kinds(self):
         self.assertEqual(onchain.kind(self.ln), onchain.LIGHTNING)
@@ -101,6 +102,8 @@ class OnchainAdminTest(TestCase):
         self.assertIn(f"https://mempool.kilombino.com/tx/{TXID}", body)
         self.assertIn("block 2916", body)  # 900 + 2016
         self.assertIn("1916 blocks left", body)
+        body = self.client.get(reverse("admin:api_order_summary", args=[self.hybrid_b.pk])).content.decode()
+        self.assertIn("https://mempool.kilombino.com/tx/" + "ef" * 32, body)
 
     def test_flags(self):
         flags = onchain.flags(self.hybrid_a, height=1000)

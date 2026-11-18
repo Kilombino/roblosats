@@ -26,6 +26,8 @@ FINAL = {4, 5, 12, 14, 17, 18}
 # Taken and not finished.
 TRADING = {6, 7, 8, 9, 10, 11, 13, 15, 16}
 
+HELD = (2, 3, 4)  # OnchainEscrow MEMPOOL, LOCKED, RELEASING: the escrow output is unspent
+
 LIGHTNING, ONCHAIN, HYBRID_A, HYBRID_B = "ln", "onchain", "hybrid_a", "hybrid_b"
 KIND_LABEL = {
     LIGHTNING: _lazy("Lightning"),
@@ -39,7 +41,19 @@ KIND_ICON = {LIGHTNING: "⚡", ONCHAIN: "⛓️", HYBRID_A: "⛓️⚡", HYBRID_
 # ---------------------------------------------------------------- basics
 
 
+def _txid(value):
+    """A txid from what the models keep: a string, a coin [txid, vout, sats] or a record
+    {"txid": ...} (bond leftovers)."""
+    if isinstance(value, dict):
+        value = value.get("txid")
+    elif isinstance(value, (list, tuple)):
+        value = value[0] if value else None
+    value = str(value or "")
+    return value if len(value) == 64 and all(c in "0123456789abcdef" for c in value.lower()) else ""
+
+
 def tx_link(txid):
+    txid = _txid(txid)
     if not txid:
         return ""
     return format_html(
@@ -52,7 +66,8 @@ def tx_link(txid):
 
 
 def tx_links(txids):
-    txids = [t for t in txids or [] if t]
+    txids = [_txid(t) for t in txids or []]
+    txids = [t for t in txids if t]
     if not txids:
         return ""
     return format_html_join(" ", "{}", ((tx_link(t),) for t in txids))
@@ -113,7 +128,7 @@ def rescue_height(escrow):
 def price_text(order):
     """Fixed price / '丰 sat' order, '' for a market-price order in its currency."""
     parts = []
-    currency = str(order.currency) if order.currency_id else ""
+    currency = ("Spamcoin" if order.currency_id == 1000 else str(order.currency)) if order.currency_id else ""
     if getattr(order, "sats_denominated", False):
         parts.append("丰 sat")
     if getattr(order, "fixed_price", None) is not None:
@@ -207,7 +222,7 @@ def _bond_row(bond):
         "required": fmt_sats(bond.required_sats),
         "value": fmt_sats(bond.value) if bond.value else "",
         "coins": len(coins) or (1 if bond.txid else 0),
-        "funding": tx_links([c[0] for c in coins] or [bond.txid]),
+        "funding": tx_links(coins or [bond.txid]),
         "penalty": tx_link(penalty),
         "penalty_sats": fmt_sats(bond_service.penalty_sats(bond)) if penalty else "",
         "returned": tx_link(returned) if bond.status == OnchainBond.Status.RETURNED else "",
@@ -271,7 +286,8 @@ def order_section(order, now=None):
             "cancelled": bool(data.get("cancel")),
             "rescue_csv": escrow.rescue_csv,
             "rescue_height": due or "",
-            "rescue_left": (due - height) if (due and height) else None,
+            # only while the escrow is still on chain: after a release the rescue no longer exists
+            "rescue_left": (due - height) if (due and height and escrow.status in HELD) else None,
             "rescue_to_seller": fmt_sats(rescue.get("to_seller") or 0) if rescue else "",
             "rescue_to_buyer": fmt_sats(rescue.get("to_buyer") or 0) if rescue else "",
             "sweeps": sweeps,
@@ -458,7 +474,7 @@ class OnchainBondInline(_ReadOnly, admin.TabularInline):
 
     @admin.display(description=_lazy("Funding"))
     def funding_links(self, bond):
-        return tx_links([c[0] for c in bond.coins or [] if c] or [bond.txid])
+        return tx_links([c for c in bond.coins or [] if c] or [bond.txid])
 
     @admin.display(description=_lazy("Penalty / return"))
     def spend_link(self, bond):
@@ -517,7 +533,7 @@ def register(site):
 
             @admin.display(description=_lazy("Funding"))
             def funding(self, bond):
-                return tx_links([c[0] for c in bond.coins or [] if c] or [bond.txid])
+                return tx_links([c for c in bond.coins or [] if c] or [bond.txid])
 
             @admin.display(description=_lazy("Penalty / return"))
             def spend(self, bond):
