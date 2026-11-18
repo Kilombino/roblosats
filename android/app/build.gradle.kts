@@ -1,8 +1,8 @@
 import com.android.build.api.dsl.Packaging
 
-val baseVersionCode = 8731
-// betas of the same release: 8731000 + 10 * betaBuild + abi (the final release uses a higher one)
-val betaBuild = 16
+val baseVersionCode = 9000
+// 0.9.0: 9000000 + abi (betas of 0.8.8-rl31 used 8731000 + 10 * betaBuild + abi)
+val betaBuild = 0
 
 plugins {
     alias(libs.plugins.android.application)
@@ -18,7 +18,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = baseVersionCode
-        versionName = "0.8.8-rl31-beta16"
+        versionName = "0.9.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

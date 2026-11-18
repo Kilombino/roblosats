@@ -7,7 +7,7 @@ export const getClientVersion = function (): { semver: Version; short: string; l
   const ver = packageJson.version.split('.');
   const semver = { major: Number(ver[0]), minor: Number(ver[1]), patch: Number(ver[2]) };
   const short = `v${ver[0]}.${ver[1]}.${ver[2]}`;
-  const long = `v${packageJson.version}-alpha`;
+  const long = `v${packageJson.version}`;
   return { semver, short, long };
 };
 
