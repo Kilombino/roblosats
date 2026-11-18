@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Grid, Typography, ToggleButtonGroup, ToggleButton } from '@mui/material';
 
@@ -49,7 +49,23 @@ export const PayoutPrompt = ({
   const onchainAllowed = onchainPayoutAllowed(order);
   // rl31-beta21, hybrid B: the seller already paid the swap to onchain
   const paidBySeller =
-    Number((order as unknown as { swap_paid_by_seller_sats?: number }).swap_paid_by_seller_sats ?? 0) > 0;
+    Number(
+      (order as unknown as { swap_paid_by_seller_sats?: number }).swap_paid_by_seller_sats ?? 0,
+    ) > 0;
+  // 0.9.7 (#25): the order data can arrive after the prompt is shown; until the buyer picks a
+  // tab, follow the default (onchain for hybrid B)
+  const picked = useRef<boolean>(false);
+  useEffect(() => {
+    if (!picked.current) setTab(defaultPayoutTab(order));
+  }, [
+    order.swap_allowed,
+    (order as unknown as { taker_lightning?: boolean }).taker_lightning,
+    order.is_maker,
+  ]);
+  const hybridB = onchainAllowed && paidBySeller && defaultPayoutTab(order) === 'onchain';
+  const onchainSats = Number(
+    (order as unknown as { invoice_amount?: number }).invoice_amount ?? order.trade_satoshis ?? 0,
+  );
 
   return (
     <Grid
@@ -85,6 +101,7 @@ export const PayoutPrompt = ({
           value={tab}
           exclusive
           onChange={(mouseEvent, value) => {
+            picked.current = true;
             setTab(value == null ? tab : value);
           }}
         >
@@ -114,6 +131,21 @@ export const PayoutPrompt = ({
           </ToggleButton>
         </ToggleButtonGroup>
       </Grid>
+
+      {hybridB ? (
+        // 0.9.7: hybrid B, the buyer asked for onchain and the seller already paid the swap
+        <Grid sx={{ maxWidth: '28em' }}>
+          <Typography variant='body2' align='center'>
+            {t(
+              'You asked for on-chain: the seller pays the swap; you receive ~{{sats}} sats at your address.',
+              { sats: pn(onchainSats) },
+            )}
+          </Typography>
+          <Typography variant='caption' color='text.secondary' component='p' align='center'>
+            {t('If you choose Lightning instead, the seller gets back what it paid for the swap.')}
+          </Typography>
+        </Grid>
+      ) : null}
 
       {onchainAllowed && tab === 'onchain' && !paidBySeller ? (
         <Grid>

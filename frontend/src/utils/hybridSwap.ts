@@ -48,3 +48,32 @@ export const onchainPayout = ({
   const covered = Math.min(Math.max(0, paidBySeller), cost);
   return { swapFee, cost, covered, received: Math.floor(invoiceAmount - (cost - covered)) };
 };
+
+/** 0.9.7: the coordinator refuses an onchain payout that leaves less than this (error 4003). */
+export const MIN_ONCHAIN_PAYOUT_SATS = 20_000;
+/** vbytes the coordinator counts for the payout transaction (tx.mining_fee_sats = rate × 280). */
+export const PAYOUT_VBYTES = 280;
+
+/** 0.9.7: the highest mining fee rate (sat/vB, whole) that still leaves the minimum payout. */
+export const maxFeeRateForMinimum = ({
+  invoiceAmount,
+  swapFeeRate,
+  paidBySeller,
+  minReceived = MIN_ONCHAIN_PAYOUT_SATS,
+}: Omit<SwapTx, 'miningFeeSats'> & { minReceived?: number }): number => {
+  const swapFee = (invoiceAmount * swapFeeRate) / 100;
+  const room = invoiceAmount - minReceived + Math.max(0, paidBySeller) - swapFee;
+  return Math.max(0, Math.floor(room / PAYOUT_VBYTES));
+};
+
+/** 0.9.7 (hybrid B): the mining the seller's payment still covers after the swap fee, in sats
+ * and as a fee rate. */
+export const sellerMiningCover = ({
+  invoiceAmount,
+  swapFeeRate,
+  paidBySeller,
+}: Omit<SwapTx, 'miningFeeSats'>): { sats: number; rate: number } => {
+  const swapFee = (invoiceAmount * swapFeeRate) / 100;
+  const sats = Math.max(0, Math.floor(paidBySeller - swapFee));
+  return { sats, rate: Math.floor((sats / PAYOUT_VBYTES) * 100) / 100 };
+};

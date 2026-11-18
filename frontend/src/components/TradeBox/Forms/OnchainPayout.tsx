@@ -4,11 +4,19 @@ import { Grid, Typography, TextField, List, Divider, ListItemText, ListItem } fr
 import { type Order } from '../../../models';
 import { LoadingButton } from '@mui/lab';
 import { pn } from '../../../utils';
-import { onchainPayout } from '../../../utils/hybridSwap';
+import {
+  MIN_ONCHAIN_PAYOUT_SATS,
+  PAYOUT_VBYTES,
+  maxFeeRateForMinimum,
+  onchainPayout,
+  sellerMiningCover,
+} from '../../../utils/hybridSwap';
+import { numberFromInput } from '../../../utils/numberInput';
 
 export interface OnchainForm {
   address: string;
-  miningFee: number;
+  // 0.9.7: null while the field is empty (it used to keep a "0" that could not be erased)
+  miningFee: number | null;
   badAddress: string;
 }
 
@@ -36,13 +44,10 @@ export const OnchainPayoutForm = ({
   const { t } = useTranslation();
 
   const minMiningFee = 2;
-  const maxMiningFee = 500;
-  const invalidFee = onchain.miningFee < minMiningFee || onchain.miningFee > maxMiningFee;
-  const costPerVByte = 280;
+  const costPerVByte = PAYOUT_VBYTES;
 
   const handleMiningFeeChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    const miningFee = Number(e.target.value);
-    setOnchain({ ...onchain, miningFee });
+    setOnchain({ ...onchain, miningFee: numberFromInput(e.target) });
   };
 
   useEffect(() => {
@@ -53,14 +58,21 @@ export const OnchainPayoutForm = ({
   const paidBySeller = Number(
     (order as unknown as { swap_paid_by_seller_sats?: number }).swap_paid_by_seller_sats ?? 0,
   );
-  const miningFeeSats = Math.floor(Math.max(minMiningFee, onchain.miningFee) * costPerVByte);
-  const payout = onchainPayout({
+  const feeRate = onchain.miningFee ?? 0;
+  const miningFeeSats = Math.floor(Math.max(minMiningFee, feeRate) * costPerVByte);
+  const swapTx = {
     invoiceAmount: order.invoice_amount,
     swapFeeRate: Number(order.swap_fee_rate),
-    miningFeeSats,
     paidBySeller,
-  });
+  };
+  const payout = onchainPayout({ ...swapTx, miningFeeSats });
   const bySeller = paidBySeller > 0;
+  // 0.9.7: the coordinator refuses a payout under 20,000 Sats: cap the fee before that
+  const maxMiningFee = Math.min(500, maxFeeRateForMinimum(swapTx));
+  const cover = sellerMiningCover(swapTx);
+  const emptyFee = onchain.miningFee === null;
+  const belowMinimum = payout.received < MIN_ONCHAIN_PAYOUT_SATS;
+  const invalidFee = emptyFee || feeRate < minMiningFee || feeRate > maxMiningFee || belowMinimum;
 
   return (
     <Grid
@@ -82,8 +94,12 @@ export const OnchainPayoutForm = ({
               {bySeller
                 ? payout.covered < payout.cost
                   ? t(
-                      'No swap fee for you: the seller pays the swap to onchain. Only the mining fee above the one the seller paid ({{sats}} Sats) comes out of what you receive.',
-                      { sats: pn(payout.cost - payout.covered) },
+                      'No swap fee for you: the seller pays the swap to onchain. The seller pays mining up to {{rate}} sat/vB ({{covered}} Sats); anything above that ({{excess}} Sats) comes out of what you receive.',
+                      {
+                        rate: cover.rate,
+                        covered: pn(cover.sats),
+                        excess: pn(payout.cost - payout.covered),
+                      },
                     )
                   : t('No swap fee for you: the seller pays the swap to onchain.')
                 : t(
@@ -108,10 +124,12 @@ export const OnchainPayoutForm = ({
 
         <ListItem>
           <ListItemText
-            primary={`${pn(
-              Math.floor(Math.max(minMiningFee, onchain.miningFee) * costPerVByte),
-            )} Sats (${Math.max(minMiningFee, onchain.miningFee)} Sats/vByte)`}
-            secondary={bySeller ? t('Mining fee (paid by the seller up to the suggested one)') : t('Mining fee')}
+            primary={`${pn(miningFeeSats)} Sats (${Math.max(minMiningFee, feeRate)} Sats/vByte)`}
+            secondary={
+              bySeller
+                ? t('Mining fee (paid by the seller up to {{rate}} sat/vB)', { rate: cover.rate })
+                : t('Mining fee')
+            }
           />
         </ListItem>
 
@@ -119,11 +137,7 @@ export const OnchainPayoutForm = ({
 
         <ListItem>
           <ListItemText
-            primary={
-              <b>
-                {pn(payout.received) + ' Sats'}
-              </b>
-            }
+            primary={<b>{pn(Math.max(0, payout.received)) + ' Sats'}</b>}
             secondary={t('Final amount you will receive')}
           />
         </ListItem>
@@ -153,11 +167,11 @@ export const OnchainPayoutForm = ({
           <Grid size={5}>
             <TextField
               error={invalidFee}
-              helperText={invalidFee ? t('Invalid') : ''}
+              helperText={t('Max {{max}} sat/vB', { max: maxMiningFee })}
               label={t('Mining Fee')}
               required
               fullWidth={true}
-              value={onchain.miningFee}
+              value={onchain.miningFee ?? ''}
               type='number'
               slotProps={{
                 htmlInput: {
@@ -171,6 +185,17 @@ export const OnchainPayoutForm = ({
           </Grid>
         </Grid>
       </Grid>
+
+      {!emptyFee && (belowMinimum || feeRate > maxMiningFee) ? (
+        <Grid sx={{ maxWidth: '26em', mt: 1 }}>
+          <Typography variant='body2' color='error' align='center'>
+            {t(
+              'With this fee you would receive less than {{min}} Sats, the least an onchain payout can be. Use at most {{max}} sat/vB.',
+              { min: pn(MIN_ONCHAIN_PAYOUT_SATS), max: maxMiningFee },
+            )}
+          </Typography>
+        </Grid>
+      ) : null}
 
       <Grid style={{ marginTop: 16 }}>
         <LoadingButton

@@ -1231,5 +1231,11 @@
   "So the phone does not stop the notification service. It uses little battery.": "Perquè el mòbil no aturi el servei d'avisos. Gasta poca bateria.",
   "Not now": "Ara no",
   "Check for updates": "Cercar actualitzacions",
-  "Check now": "Comprovar ara"
+  "Check now": "Comprovar ara",
+  "You asked for on-chain: the seller pays the swap; you receive ~{{sats}} sats at your address.": "Vas demanar on-chain: el venedor paga el swap; reps ~{{sats}} sats a la teva adreça.",
+  "If you choose Lightning instead, the seller gets back what it paid for the swap.": "Si tries Lightning, el venedor recupera el que va pagar pel swap.",
+  "No swap fee for you: the seller pays the swap to onchain. The seller pays mining up to {{rate}} sat/vB ({{covered}} Sats); anything above that ({{excess}} Sats) comes out of what you receive.": "Sense comissió de swap per a tu: el venedor paga el swap a on-chain. El venedor paga la mineria fins a {{rate}} sat/vB ({{covered}} sats); el que passi d'aquí ({{excess}} sats) surt del que reps.",
+  "Mining fee (paid by the seller up to {{rate}} sat/vB)": "Comissió de mineria (la paga el venedor fins a {{rate}} sat/vB)",
+  "Max {{max}} sat/vB": "Màx. {{max}} sat/vB",
+  "With this fee you would receive less than {{min}} Sats, the least an onchain payout can be. Use at most {{max}} sat/vB.": "Amb aquesta comissió rebries menys de {{min}} sats, el mínim d'un pagament on-chain. Fes servir com a molt {{max}} sat/vB."
 }

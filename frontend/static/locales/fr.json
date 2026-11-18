@@ -1109,5 +1109,11 @@
   "Not now": "Not now",
   "Sound when an order needs you": "Sound when an order needs you",
   "Check for updates": "Check for updates",
-  "Check now": "Check now"
+  "Check now": "Check now",
+  "You asked for on-chain: the seller pays the swap; you receive ~{{sats}} sats at your address.": "You asked for on-chain: the seller pays the swap; you receive ~{{sats}} sats at your address.",
+  "If you choose Lightning instead, the seller gets back what it paid for the swap.": "If you choose Lightning instead, the seller gets back what it paid for the swap.",
+  "No swap fee for you: the seller pays the swap to onchain. The seller pays mining up to {{rate}} sat/vB ({{covered}} Sats); anything above that ({{excess}} Sats) comes out of what you receive.": "No swap fee for you: the seller pays the swap to onchain. The seller pays mining up to {{rate}} sat/vB ({{covered}} Sats); anything above that ({{excess}} Sats) comes out of what you receive.",
+  "Mining fee (paid by the seller up to {{rate}} sat/vB)": "Mining fee (paid by the seller up to {{rate}} sat/vB)",
+  "Max {{max}} sat/vB": "Max {{max}} sat/vB",
+  "With this fee you would receive less than {{min}} Sats, the least an onchain payout can be. Use at most {{max}} sat/vB.": "With this fee you would receive less than {{min}} Sats, the least an onchain payout can be. Use at most {{max}} sat/vB."
 }

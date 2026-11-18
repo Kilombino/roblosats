@@ -327,7 +327,7 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
           submitAction({
             action: 'update_address',
             address: signedAddress,
-            mining_fee_rate: onchain.miningFee,
+            mining_fee_rate: onchain.miningFee ?? undefined,
           });
         },
       );

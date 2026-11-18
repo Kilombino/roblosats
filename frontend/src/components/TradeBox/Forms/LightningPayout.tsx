@@ -25,6 +25,7 @@ import { type Order, type Settings } from '../../../models';
 import { decode } from 'light-bolt11-decoder';
 import WalletsButton from '../WalletsButton';
 import { LoadingButton } from '@mui/lab';
+import { cleanNumberInput } from '../../../utils/numberInput';
 import { pn } from '../../../utils';
 
 import { ContentCopy, Help, SelfImprovement } from '@mui/icons-material';
@@ -243,7 +244,8 @@ export const LightningPayoutForm = ({
   };
 
   const onProxyBudgetChange = function (e: React.ChangeEvent<HTMLInputElement>): void {
-    const val = Number(e.target.value);
+    // 0.9.7: no stuck leading zero ("0500")
+    const val = Number(cleanNumberInput(e.target) || 0);
     if (isFinite(val) && val >= 0) {
       let lnproxyBudgetSats;
       let lnproxyBudgetPPM;
@@ -265,7 +267,8 @@ export const LightningPayoutForm = ({
 
   const onRoutingBudgetChange = function (e: React.ChangeEvent<HTMLInputElement>): void {
     const tradeAmount = order.trade_satoshis;
-    const val = Number(e.target.value);
+    // 0.9.7: no stuck leading zero ("0500")
+    const val = Number(cleanNumberInput(e.target) || 0);
     if (isFinite(val) && val >= 0) {
       let routingBudgetSats;
       let routingBudgetPPM;

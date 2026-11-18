@@ -198,6 +198,12 @@ const MakerForm = ({
   // Roblosats 0.9.1: Spamcoin (1000) is an ordinary currency here, never upstream's swap mode.
   // Its amounts are typed in whole Spamsats; the API gets Spamcoin with 8 decimals.
   const spamMode = !satMode && fav.currency === SPAMCOIN;
+  // 0.9.7: a Spamcoin payment method means the order is paid in Spamcoin (Spamsats): the
+  // currency follows the method and is locked (Kilombino, 18 nov 2026: a 丰 sat order with
+  // "Spamcoin Lightning" still offered EUR).
+  const spamcoinMethod = maker.paymentMethods.some((m) => /spamcoin/i.test(m));
+  const onlySpamcoinMethods =
+    maker.paymentMethods.length > 0 && maker.paymentMethods.every((m) => /spamcoin/i.test(m));
   const scale = satMode ? 1 : amountScale(fav.currency);
   const amountUnit = formAmountUnit(satMode ? null : fav.currency, currencyCode);
   const formToUnits = (v: number | null | undefined): number => (v ?? 0) / scale;
@@ -446,6 +452,15 @@ const MakerForm = ({
     updateCurrentPrice(limits, newCurrency, maker.premium ?? 0);
   };
 
+  useEffect(() => {
+    if (!spamcoinMethod) return;
+    if (satMode) {
+      if (payCurrency !== SPAMCOIN) handlePayCurrencyChange(SPAMCOIN);
+    } else if (fav.currency !== SPAMCOIN) {
+      handleCurrencyChange(SPAMCOIN);
+    }
+  }, [spamcoinMethod, satMode, fav.currency]);
+
   const makerHasAmountRange = useMemo(() => {
     return maker.advancedOptions && amountRangeEnabled;
   }, [maker.advancedOptions, amountRangeEnabled]);
@@ -513,7 +528,14 @@ const MakerForm = ({
       setMaker((maker) => ({ ...maker, fixedPrice: price }));
     };
 
-  const buildOrderAttributes = (): object =>
+  // 0.9.7: Spamcoin-only methods are always paid in Spamcoin (currency 1000), whatever a
+  // stale selector says (Kilobot #25: "Spamcoin Lightning" at a 15% premium went out as EUR)
+  const buildOrderAttributes = (): object => {
+    const attrs = buildOrderAttributesRaw() as Record<string, unknown>;
+    return onlySpamcoinMethods ? { ...attrs, currency: SPAMCOIN } : attrs;
+  };
+
+  const buildOrderAttributesRaw = (): object =>
     satMode
       ? {
           ...baseOrderAttributes(),
@@ -1270,7 +1292,11 @@ const MakerForm = ({
                     ) : null}
                     {(satsAvailable ? makerCurrencyOptions : currencyOptions)(currencyDict).map(
                       ([key, value]) => (
-                        <MenuItem key={key} value={parseInt(key)}>
+                        <MenuItem
+                          key={key}
+                          value={parseInt(key)}
+                          disabled={spamcoinMethod && Number(key) !== SPAMCOIN}
+                        >
                           <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
                             <FlagWithProps code={value} />
                             {' ' + currencyLabel(value)}
@@ -1350,7 +1376,8 @@ const MakerForm = ({
             )}
           </Grid>
 
-          {!spamMode && (
+          {/* 0.9.7: no face-to-face location when the only methods are Spamcoin (online) */}
+          {!spamMode && !onlySpamcoinMethods && (
             <Grid sx={{ width: '100%' }}>
               <Tooltip enterTouchDelay={0} title={t('Add geolocation for a face to face trade')}>
                 <Button
@@ -1398,7 +1425,7 @@ const MakerForm = ({
                   {t('Premium over market')}
                 </ToggleButton>
               </ToggleButtonGroup>
-              {!satTotalMode ? (
+              {!satTotalMode && !spamcoinMethod ? (
                 // Premium mode: the payment unit on its own row, labelled, so the premium
                 // field never reads like "100 EUR" (Kilombino, 18 nov 2026)
                 <FormControl fullWidth sx={{ mb: 1.5 }}>
@@ -1515,6 +1542,7 @@ const MakerForm = ({
                   <Grid sx={{ width: '40%' }}>
                     <Select
                       fullWidth
+                      disabled={spamcoinMethod}
                       sx={{ backgroundColor: theme.palette.background.paper, borderRadius: '4px' }}
                       value={payCurrency}
                       renderValue={(v) => exchangeUnit(Number(v))}
