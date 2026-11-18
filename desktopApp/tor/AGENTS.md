@@ -56,6 +56,10 @@ The parent's `session.setProxy({ proxyRules: "socks://localhost:9050" })` target
 that default port. The dependency is implicit — there is no config file linking the two.
 
 ## Provenance
+- 0.9.6: Tor **0.4.9.16**, from the Tor Browser **16.0.1** expert bundles (linux-x86_64,
+  macos-x86_64, windows-x86_64), signatures checked against the Tor Browser signing key
+  EF6E286DDA85EA2A4BA7DE684E2C6E8793298290. The new bundles no longer carry
+  `libstdc++.so.6`, `snowflake-client` or `webtunnel-client` (lyrebird covers them).
 - Binaries are copies from the upstream **Tor Expert Bundle** (one zip per platform,
   published by the Tor Project).
 - Updated **manually** by a maintainer: download the new bundle, extract, replace files,
