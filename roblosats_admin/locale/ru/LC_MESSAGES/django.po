@@ -1514,3 +1514,219 @@ msgstr "Покупателю не доходит выплата"
 msgctxt "roblosats-admin"
 msgid "Failed payouts: %(n)s"
 msgstr "Неудачные выплаты: %(n)s"
+
+msgctxt "roblosats-admin"
+msgid "On-chain"
+msgstr "Ончейн"
+
+msgctxt "roblosats-admin"
+msgid "Price"
+msgstr "Цена"
+
+msgctxt "roblosats-admin"
+msgid "Swap paid by the Lightning seller"
+msgstr "Своп оплачен продавцом Lightning"
+
+msgctxt "roblosats-admin"
+msgid "given back"
+msgstr "возвращено"
+
+msgctxt "roblosats-admin"
+msgid "Escrow"
+msgstr "Эскроу"
+
+msgctxt "roblosats-admin"
+msgid "collaborative cancel"
+msgstr "совместная отмена"
+
+msgctxt "roblosats-admin"
+msgid "Escrow sats"
+msgstr "Сатоши в эскроу"
+
+msgctxt "roblosats-admin"
+msgid "Fee plan / rescue plan"
+msgstr "План комиссии / план спасения"
+
+msgctxt "roblosats-admin"
+msgid "Coordinator fee (seller / buyer)"
+msgstr "Комиссия координатора (продавец / покупатель)"
+
+msgctxt "roblosats-admin"
+msgid "received"
+msgstr "получено"
+
+msgctxt "roblosats-admin"
+msgid "Deposit"
+msgstr "Депозит"
+
+msgctxt "roblosats-admin"
+msgid "block"
+msgstr "блок"
+
+msgctxt "roblosats-admin"
+msgid "Release"
+msgstr "Выпуск"
+
+msgctxt "roblosats-admin"
+msgid "Rescue without the coordinator"
+msgstr "Спасение без координатора"
+
+msgctxt "roblosats-admin"
+msgid "blocks after confirmation"
+msgstr "блоков после подтверждения"
+
+msgctxt "roblosats-admin"
+msgid "blocks left"
+msgstr "блоков осталось"
+
+msgctxt "roblosats-admin"
+msgid "timelock reached"
+msgstr "таймлок наступил"
+
+msgctxt "roblosats-admin"
+msgid "Escrow address"
+msgstr "Адрес эскроу"
+
+msgctxt "roblosats-admin"
+msgid "Funding leftover sent back"
+msgstr "Остаток финансирования возвращён"
+
+msgctxt "roblosats-admin"
+msgid "On-chain bond"
+msgstr "Ончейн-залог"
+
+msgctxt "roblosats-admin"
+msgid "Required / received"
+msgstr "Требуется / получено"
+
+msgctxt "roblosats-admin"
+msgid "Funding"
+msgstr "Финансирование"
+
+msgctxt "roblosats-admin"
+msgid "Penalty / return"
+msgstr "Штраф / возврат"
+
+msgctxt "roblosats-admin"
+msgid "Leftovers"
+msgstr "Остатки"
+
+msgctxt "roblosats-admin"
+msgid "payments"
+msgstr "платежей"
+
+msgctxt "roblosats-admin"
+msgid "penalty"
+msgstr "штраф"
+
+msgctxt "roblosats-admin"
+msgid "inside the deposit"
+msgstr "внутри депозита"
+
+msgctxt "roblosats-admin"
+msgid "pending"
+msgstr "ожидает"
+
+msgctxt "roblosats-admin"
+msgid "trades in progress"
+msgstr "сделок в процессе"
+
+msgctxt "roblosats-admin"
+msgid "open orders"
+msgstr "открытых ордеров"
+
+msgctxt "roblosats-admin"
+msgid "in escrow"
+msgstr "в эскроу"
+
+msgctxt "roblosats-admin"
+msgid "in bonds"
+msgstr "в залогах"
+
+msgctxt "roblosats-admin"
+msgid "Last 24 h"
+msgstr "За 24 ч"
+
+msgctxt "roblosats-admin"
+msgid "penalties"
+msgstr "штрафы"
+
+msgctxt "roblosats-admin"
+msgid "fees"
+msgstr "комиссии"
+
+msgctxt "roblosats-admin"
+msgid "last 30 days"
+msgstr "за 30 дней"
+
+msgctxt "roblosats-admin"
+msgid "Needs attention"
+msgstr "Требует внимания"
+
+msgctxt "roblosats-admin"
+msgid "Lightning"
+msgstr "Lightning"
+
+msgctxt "roblosats-admin"
+msgid "Hybrid A (Lightning buyer)"
+msgstr "Гибрид A (покупатель Lightning)"
+
+msgctxt "roblosats-admin"
+msgid "Hybrid B (Lightning seller)"
+msgstr "Гибрид B (продавец Lightning)"
+
+msgctxt "roblosats-admin"
+msgid "fixed %(p)s %(c)s/BTC"
+msgstr "фикс. %(p)s %(c)s/BTC"
+
+msgctxt "roblosats-admin"
+msgid "%(p)s %(c)s/BTC at contract"
+msgstr "%(p)s %(c)s/BTC при заключении"
+
+msgctxt "roblosats-admin"
+msgid "deposit window ends in %(m)s min"
+msgstr "окно депозита закроется через %(m)s мин"
+
+msgctxt "roblosats-admin"
+msgid "rescue signature missing: %(who)s"
+msgstr "нет подписи спасения: %(who)s"
+
+msgctxt "roblosats-admin"
+msgid "deposit signature missing: %(who)s"
+msgstr "нет подписи депозита: %(who)s"
+
+msgctxt "roblosats-admin"
+msgid "release signature missing: %(who)s"
+msgstr "нет подписи выпуска: %(who)s"
+
+msgctxt "roblosats-admin"
+msgid "release waits for the winner's signature"
+msgstr "выпуск ждёт подписи победителя"
+
+msgctxt "roblosats-admin"
+msgid "rescue timelock reached (block %(h)s)"
+msgstr "таймлок спасения наступил (блок %(h)s)"
+
+msgctxt "roblosats-admin"
+msgid "%(what)s of the %(role)s in the mempool at %(r)s sat/vB (1 hour needs %(n)s)"
+msgstr "%(what)s (%(role)s) в мемпуле по %(r)s sat/vB (для 1 часа нужно %(n)s)"
+
+msgctxt "roblosats-admin"
+msgid "bonds only"
+msgstr "только залоги"
+
+msgctxt "roblosats-admin"
+msgid "escrow"
+msgstr "эскроу"
+
+msgctxt "roblosats-admin"
+msgid "on-chain escrow status"
+msgstr "статус ончейн-эскроу"
+
+msgctxt "roblosats-admin"
+msgid "On-chain bonds"
+msgstr "Ончейн-залоги"
+
+msgctxt "roblosats-admin"
+msgid "On-chain escrow"
+msgstr "Ончейн-эскроу"

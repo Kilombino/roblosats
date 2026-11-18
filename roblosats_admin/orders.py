@@ -6,7 +6,7 @@ from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils import timezone
 
-from roblosats_admin import disputes, payouts
+from roblosats_admin import disputes, onchain, payouts
 from roblosats_admin.i18n import _, _lazy
 from roblosats_admin.messaging import MESSAGE_MAX, message_head
 
@@ -190,6 +190,7 @@ def _context(order_admin, request, order):
         else "",
         "dispute_open": disputes.is_open_dispute(order),
         "buyer_payout": payouts.order_section(order),
+        "onchain": onchain.order_section(order),
         "failed_payouts_url": reverse("admin:api_order_failed_payouts"),
         "type_label": _("BUY") if order.type == Order.Types.BUY else _("SELL"),
         "type_explained": (

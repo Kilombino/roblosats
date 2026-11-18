@@ -54,6 +54,7 @@ class RoblosatsAdminConfig(AppConfig):
             oa.date_hierarchy = "created_at"
 
             _dispute_panel(oa)
+            _onchain_panel(oa, admin.site)
 
         if LNPayment in registry:
             pa = registry[LNPayment]
@@ -176,3 +177,49 @@ def _dispute_panel(oa):
         return original_change_view(request, object_id, form_url, extra_context)
 
     oa.change_view = change_view
+
+
+def _onchain_panel(oa, site):
+    """Roblosats 0.9.0: on-chain escrow, read-only (kind and status column, filters, the
+    bonds and escrow on the order page and the raw form, summary above the list)."""
+    from roblosats_admin import onchain
+
+    if getattr(oa, "_roblosats_onchain_panel", False):
+        return
+    oa._roblosats_onchain_panel = True
+
+    columns = list(oa.list_display)
+    position = columns.index("status") + 1 if "status" in columns else len(columns)
+    columns.insert(position, onchain.escrow_column)
+    position = columns.index("currency_link") + 1 if "currency_link" in columns else len(columns)
+    columns.insert(position, onchain.price_column)
+    oa.list_display = tuple(columns)
+    oa.list_filter = (*oa.list_filter, onchain.EscrowKindFilter, onchain.OnchainStatusFilter)
+    oa.search_fields = [
+        *oa.search_fields,
+        "onchain_escrow__funding_txid",
+        "onchain_escrow__release_txid",
+        "onchain_bonds__txid",
+        "onchain_bonds__spend_txid",
+    ]
+    oa.inlines = [*oa.inlines, onchain.OnchainEscrowInline, onchain.OnchainBondInline]
+
+    original_queryset = oa.get_queryset
+
+    def get_queryset(request):
+        return onchain.annotate(original_queryset(request))
+
+    oa.get_queryset = get_queryset
+
+    original_changelist = oa.changelist_view
+
+    def changelist_view(request, extra_context=None):
+        extra_context = dict(extra_context or {})
+        try:
+            extra_context["onchain_summary"] = onchain.summary()
+        except Exception:  # noqa: BLE001 (never break the order list for the summary)
+            extra_context["onchain_summary"] = None
+        return original_changelist(request, extra_context)
+
+    oa.changelist_view = changelist_view
+    onchain.register(site)

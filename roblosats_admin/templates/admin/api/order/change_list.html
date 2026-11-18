@@ -1,0 +1,18 @@
+{% extends "admin/change_list.html" %}{% load i18n %}
+{% block result_list %}
+{% if onchain_summary %}{% with s=onchain_summary %}
+<div id="onchain-summary" style="margin:0 0 1rem;padding:.8rem 1rem;border-radius:12px;border:1px solid var(--hairline-color,#ccc)">
+  <b>⛓️ {% translate "On-chain" context "roblosats-admin" %}</b>:
+  {% translate "trades in progress" context "roblosats-admin" %} <b>{{ s.trading }}</b> ·
+  {% translate "open orders" context "roblosats-admin" %} <b>{{ s.open }}</b> ·
+  {% translate "in escrow" context "roblosats-admin" %} <b>{{ s.in_escrow }}</b> sats ·
+  {% translate "in bonds" context "roblosats-admin" %} <b>{{ s.in_bonds }}</b> sats
+  {% if s.height %}· {% translate "block" context "roblosats-admin" %} {{ s.height }}{% endif %}
+  <br><small>{% translate "Last 24 h" context "roblosats-admin" %}: {% translate "penalties" context "roblosats-admin" %} {{ s.day.penalties }} · {% translate "fees" context "roblosats-admin" %} {{ s.day.fees }} · dev {{ s.day.dev }}
+  — {% translate "last 30 days" context "roblosats-admin" %}: {% translate "penalties" context "roblosats-admin" %} {{ s.month.penalties }} · {% translate "fees" context "roblosats-admin" %} {{ s.month.fees }} · dev {{ s.month.dev }} (sats)</small>
+  {% if s.attention %}<div style="margin-top:.5rem;color:rgb(234 88 12);font-weight:600">⚠ {% translate "Needs attention" context "roblosats-admin" %}:
+    <ul style="margin:.3rem 0 0 1rem">{% for r in s.rows %}{% if r.flags %}<li><a href="{% url 'admin:api_order_summary' r.id %}">#{{ r.id }}</a> {{ r.kind }} — {{ r.flags|join:"; " }}</li>{% endif %}{% endfor %}</ul></div>{% endif %}
+</div>
+{% endwith %}{% endif %}
+{{ block.super }}
+{% endblock %}

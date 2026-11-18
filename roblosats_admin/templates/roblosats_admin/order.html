@@ -96,6 +96,38 @@
   {% if payout_tx.exists and payout_tx.txid %}<p class="rsd-note" style="margin-top:.4rem">{% translate "Transaction" context "roblosats-admin" %}: <code>{{ payout_tx.txid }}</code>{% if payout_tx.mining_fee %} · {% translate "Mining fee" context "roblosats-admin" %}: {{ payout_tx.mining_fee }} sats{% endif %}</p>{% endif %}
 </section>
 
+{% if onchain %}{% with oc=onchain %}
+<section class="rsd-sec" id="onchain">
+  <h2>{{ oc.icon }} {% translate "On-chain" context "roblosats-admin" %}: {{ oc.kind }}</h2>
+  {% if oc.flags %}<div style="margin:0 0 .75rem;padding:.7rem .9rem;border-radius:10px;border:2px solid rgb(234 88 12);background:rgba(234,88,12,.1);font-weight:600">⚠ {{ oc.flags|join:" · " }}</div>{% endif %}
+  {% if oc.price or oc.swap_extra %}<p class="rsd-note">{% if oc.price %}{% translate "Price" context "roblosats-admin" %}: <b>{{ oc.price }}</b>{% endif %}{% if oc.swap_extra %} · {% translate "Swap paid by the Lightning seller" context "roblosats-admin" %}: {{ oc.swap_extra }} sats{% if oc.swap_extra_back %} ({% translate "given back" context "roblosats-admin" %}: {{ oc.swap_extra_back }}){% endif %}{% endif %}</p>{% endif %}
+  {% if oc.escrow %}{% with e=oc.escrow %}
+  <div class="rsd-grid">
+    <div class="rsd-item"><small>{% translate "Escrow" context "roblosats-admin" %}</small><b>{{ e.status }}</b>{% if e.cancelled %}<small>{% translate "collaborative cancel" context "roblosats-admin" %}</small>{% endif %}</div>
+    <div class="rsd-item"><small>{% translate "Escrow sats" context "roblosats-admin" %}</small><b>{{ e.sats }}</b></div>
+    <div class="rsd-item"><small>{% translate "Fee plan / rescue plan" context "roblosats-admin" %}</small><b>{{ e.fee_plan }} / {{ e.rescue_plan }}</b><small>extra {{ e.extra_plan }}</small></div>
+    <div class="rsd-item"><small>{% translate "Coordinator fee (seller / buyer)" context "roblosats-admin" %}</small><b>{{ e.seller_fee }} / {{ e.buyer_fee }}</b><small>{% translate "received" context "roblosats-admin" %}: {{ e.coordinator_received }} · dev {{ e.dev_paid }}</small></div>
+    <div class="rsd-item"><small>{% translate "Deposit" context "roblosats-admin" %}</small><b>{{ e.deposit|default:"—" }}</b>{% if e.confirmed_height %}<small>{% translate "block" context "roblosats-admin" %} {{ e.confirmed_height }}</small>{% endif %}</div>
+    <div class="rsd-item"><small>{% translate "Release" context "roblosats-admin" %}</small><b>{{ e.release|default:"—" }}</b><small>{{ e.release_kind }}</small></div>
+    <div class="rsd-item"><small>{% translate "Rescue without the coordinator" context "roblosats-admin" %}</small>
+      <b>{% if e.rescue_height %}{% translate "block" context "roblosats-admin" %} {{ e.rescue_height }}{% else %}{{ e.rescue_csv }} {% translate "blocks after confirmation" context "roblosats-admin" %}{% endif %}</b>
+      <small>{% if e.rescue_left is not None %}{% if e.rescue_left > 0 %}{{ e.rescue_left }} {% translate "blocks left" context "roblosats-admin" %}{% else %}{% translate "timelock reached" context "roblosats-admin" %}{% endif %}{% endif %}{% if e.rescue_to_seller %} · {% translate "seller" context "roblosats-admin" %} {{ e.rescue_to_seller }} / {% translate "buyer" context "roblosats-admin" %} {{ e.rescue_to_buyer }}{% endif %}</small></div>
+  </div>
+  <p class="rsd-note" style="margin-top:.4rem">{% translate "Escrow address" context "roblosats-admin" %}: <code>{{ e.address|default:"—" }}</code></p>
+  {% for sw in e.sweeps %}<p class="rsd-note">{% translate "Funding leftover sent back" context "roblosats-admin" %} ({{ sw.role }}): {{ sw.sats }} sats {{ sw.tx }}</p>{% endfor %}
+  {% endwith %}{% endif %}
+  {% if oc.bonds %}<div class="rsd-scroll" style="margin-top:.75rem"><table class="rsd-table">
+    <tr><th>{% translate "On-chain bond" context "roblosats-admin" %}</th><th>{% translate "Status" context "roblosats-admin" %}</th><th>{% translate "Required / received" context "roblosats-admin" %}</th><th>{% translate "Funding" context "roblosats-admin" %}</th><th>{% translate "Penalty / return" context "roblosats-admin" %}</th><th>{% translate "Leftovers" context "roblosats-admin" %}</th></tr>
+    {% for b in oc.bonds %}<tr>
+      <td>{{ b.role }} ({{ b.owner }})</td><td>{{ b.status }}</td><td>{{ b.required }}{% if b.value %} / {{ b.value }}{% endif %}{% if b.coins > 1 %} <small>({{ b.coins }} {% translate "payments" context "roblosats-admin" %})</small>{% endif %}</td>
+      <td>{{ b.funding|default:"—" }}</td>
+      <td>{% if b.penalty %}{% translate "penalty" context "roblosats-admin" %} {{ b.penalty }}{% if b.penalty_sats %} ({{ b.penalty_sats }} sats){% endif %}{% elif b.returned %}{% translate "returned" context "roblosats-admin" %} {{ b.returned }}{% elif b.into_deposit %}{% translate "inside the deposit" context "roblosats-admin" %}{% else %}—{% endif %}</td>
+      <td>{% if b.leftover %}{{ b.leftover }}{% elif b.leftover_pending %}{% translate "pending" context "roblosats-admin" %}{% else %}—{% endif %}</td>
+    </tr>{% endfor %}
+  </table></div>{% endif %}
+</section>
+{% endwith %}{% endif %}
+
 <section class="rsd-sec" id="timeline">
   <h2>{% translate "Timeline" context "roblosats-admin" %} <span class="rsd-note">({{ tz }})</span></h2>
   {% if log %}

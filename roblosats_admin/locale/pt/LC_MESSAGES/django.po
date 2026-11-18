@@ -1514,3 +1514,219 @@ msgstr "O pagamento não chega ao comprador"
 msgctxt "roblosats-admin"
 msgid "Failed payouts: %(n)s"
 msgstr "Pagamentos falhados: %(n)s"
+
+msgctxt "roblosats-admin"
+msgid "On-chain"
+msgstr "On-chain"
+
+msgctxt "roblosats-admin"
+msgid "Price"
+msgstr "Preço"
+
+msgctxt "roblosats-admin"
+msgid "Swap paid by the Lightning seller"
+msgstr "Swap pago pelo vendedor Lightning"
+
+msgctxt "roblosats-admin"
+msgid "given back"
+msgstr "devolvido"
+
+msgctxt "roblosats-admin"
+msgid "Escrow"
+msgstr "Depósito"
+
+msgctxt "roblosats-admin"
+msgid "collaborative cancel"
+msgstr "cancelamento colaborativo"
+
+msgctxt "roblosats-admin"
+msgid "Escrow sats"
+msgstr "Sats em depósito"
+
+msgctxt "roblosats-admin"
+msgid "Fee plan / rescue plan"
+msgstr "Plano de taxa / plano de resgate"
+
+msgctxt "roblosats-admin"
+msgid "Coordinator fee (seller / buyer)"
+msgstr "Taxa do coordenador (vendedor / comprador)"
+
+msgctxt "roblosats-admin"
+msgid "received"
+msgstr "recebido"
+
+msgctxt "roblosats-admin"
+msgid "Deposit"
+msgstr "Depósito (tx)"
+
+msgctxt "roblosats-admin"
+msgid "block"
+msgstr "bloco"
+
+msgctxt "roblosats-admin"
+msgid "Release"
+msgstr "Liberação"
+
+msgctxt "roblosats-admin"
+msgid "Rescue without the coordinator"
+msgstr "Resgate sem o coordenador"
+
+msgctxt "roblosats-admin"
+msgid "blocks after confirmation"
+msgstr "blocos após a confirmação"
+
+msgctxt "roblosats-admin"
+msgid "blocks left"
+msgstr "blocos restantes"
+
+msgctxt "roblosats-admin"
+msgid "timelock reached"
+msgstr "prazo atingido"
+
+msgctxt "roblosats-admin"
+msgid "Escrow address"
+msgstr "Endereço do depósito"
+
+msgctxt "roblosats-admin"
+msgid "Funding leftover sent back"
+msgstr "Sobra do financiamento devolvida"
+
+msgctxt "roblosats-admin"
+msgid "On-chain bond"
+msgstr "Fiança on-chain"
+
+msgctxt "roblosats-admin"
+msgid "Required / received"
+msgstr "Pedida / recebida"
+
+msgctxt "roblosats-admin"
+msgid "Funding"
+msgstr "Financiamento"
+
+msgctxt "roblosats-admin"
+msgid "Penalty / return"
+msgstr "Penalidade / devolução"
+
+msgctxt "roblosats-admin"
+msgid "Leftovers"
+msgstr "Sobras"
+
+msgctxt "roblosats-admin"
+msgid "payments"
+msgstr "pagamentos"
+
+msgctxt "roblosats-admin"
+msgid "penalty"
+msgstr "penalidade"
+
+msgctxt "roblosats-admin"
+msgid "inside the deposit"
+msgstr "dentro do depósito"
+
+msgctxt "roblosats-admin"
+msgid "pending"
+msgstr "pendente"
+
+msgctxt "roblosats-admin"
+msgid "trades in progress"
+msgstr "trocas em andamento"
+
+msgctxt "roblosats-admin"
+msgid "open orders"
+msgstr "ordens abertas"
+
+msgctxt "roblosats-admin"
+msgid "in escrow"
+msgstr "em depósito"
+
+msgctxt "roblosats-admin"
+msgid "in bonds"
+msgstr "em fianças"
+
+msgctxt "roblosats-admin"
+msgid "Last 24 h"
+msgstr "Últimas 24 h"
+
+msgctxt "roblosats-admin"
+msgid "penalties"
+msgstr "penalidades"
+
+msgctxt "roblosats-admin"
+msgid "fees"
+msgstr "taxas"
+
+msgctxt "roblosats-admin"
+msgid "last 30 days"
+msgstr "últimos 30 dias"
+
+msgctxt "roblosats-admin"
+msgid "Needs attention"
+msgstr "Requer atenção"
+
+msgctxt "roblosats-admin"
+msgid "Lightning"
+msgstr "Lightning"
+
+msgctxt "roblosats-admin"
+msgid "Hybrid A (Lightning buyer)"
+msgstr "Híbrida A (comprador Lightning)"
+
+msgctxt "roblosats-admin"
+msgid "Hybrid B (Lightning seller)"
+msgstr "Híbrida B (vendedor Lightning)"
+
+msgctxt "roblosats-admin"
+msgid "fixed %(p)s %(c)s/BTC"
+msgstr "fixo %(p)s %(c)s/BTC"
+
+msgctxt "roblosats-admin"
+msgid "%(p)s %(c)s/BTC at contract"
+msgstr "%(p)s %(c)s/BTC no contrato"
+
+msgctxt "roblosats-admin"
+msgid "deposit window ends in %(m)s min"
+msgstr "o prazo de depósito termina em %(m)s min"
+
+msgctxt "roblosats-admin"
+msgid "rescue signature missing: %(who)s"
+msgstr "falta assinatura de resgate: %(who)s"
+
+msgctxt "roblosats-admin"
+msgid "deposit signature missing: %(who)s"
+msgstr "falta assinatura do depósito: %(who)s"
+
+msgctxt "roblosats-admin"
+msgid "release signature missing: %(who)s"
+msgstr "falta assinatura da liberação: %(who)s"
+
+msgctxt "roblosats-admin"
+msgid "release waits for the winner's signature"
+msgstr "a liberação aguarda a assinatura do vencedor"
+
+msgctxt "roblosats-admin"
+msgid "rescue timelock reached (block %(h)s)"
+msgstr "prazo de resgate atingido (bloco %(h)s)"
+
+msgctxt "roblosats-admin"
+msgid "%(what)s of the %(role)s in the mempool at %(r)s sat/vB (1 hour needs %(n)s)"
+msgstr "%(what)s do %(role)s na mempool a %(r)s sat/vB (1 hora exige %(n)s)"
+
+msgctxt "roblosats-admin"
+msgid "bonds only"
+msgstr "só fianças"
+
+msgctxt "roblosats-admin"
+msgid "escrow"
+msgstr "depósito"
+
+msgctxt "roblosats-admin"
+msgid "on-chain escrow status"
+msgstr "estado do depósito on-chain"
+
+msgctxt "roblosats-admin"
+msgid "On-chain bonds"
+msgstr "Fianças on-chain"
+
+msgctxt "roblosats-admin"
+msgid "On-chain escrow"
+msgstr "Depósito on-chain"

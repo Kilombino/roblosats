@@ -1514,3 +1514,219 @@ msgstr "買い手に支払いが届いていません"
 msgctxt "roblosats-admin"
 msgid "Failed payouts: %(n)s"
 msgstr "失敗した支払い：%(n)s"
+
+msgctxt "roblosats-admin"
+msgid "On-chain"
+msgstr "オンチェーン"
+
+msgctxt "roblosats-admin"
+msgid "Price"
+msgstr "価格"
+
+msgctxt "roblosats-admin"
+msgid "Swap paid by the Lightning seller"
+msgstr "Lightning 売り手が支払ったスワップ"
+
+msgctxt "roblosats-admin"
+msgid "given back"
+msgstr "返却済み"
+
+msgctxt "roblosats-admin"
+msgid "Escrow"
+msgstr "エスクロー"
+
+msgctxt "roblosats-admin"
+msgid "collaborative cancel"
+msgstr "合意キャンセル"
+
+msgctxt "roblosats-admin"
+msgid "Escrow sats"
+msgstr "エスクローの sats"
+
+msgctxt "roblosats-admin"
+msgid "Fee plan / rescue plan"
+msgstr "手数料プラン / 救済プラン"
+
+msgctxt "roblosats-admin"
+msgid "Coordinator fee (seller / buyer)"
+msgstr "コーディネーター手数料（売り手 / 買い手）"
+
+msgctxt "roblosats-admin"
+msgid "received"
+msgstr "受領"
+
+msgctxt "roblosats-admin"
+msgid "Deposit"
+msgstr "デポジット"
+
+msgctxt "roblosats-admin"
+msgid "block"
+msgstr "ブロック"
+
+msgctxt "roblosats-admin"
+msgid "Release"
+msgstr "リリース"
+
+msgctxt "roblosats-admin"
+msgid "Rescue without the coordinator"
+msgstr "コーディネーターなしの救済"
+
+msgctxt "roblosats-admin"
+msgid "blocks after confirmation"
+msgstr "ブロック（承認後）"
+
+msgctxt "roblosats-admin"
+msgid "blocks left"
+msgstr "ブロック残り"
+
+msgctxt "roblosats-admin"
+msgid "timelock reached"
+msgstr "タイムロック到達"
+
+msgctxt "roblosats-admin"
+msgid "Escrow address"
+msgstr "エスクローアドレス"
+
+msgctxt "roblosats-admin"
+msgid "Funding leftover sent back"
+msgstr "余剰資金を返却"
+
+msgctxt "roblosats-admin"
+msgid "On-chain bond"
+msgstr "オンチェーン保証金"
+
+msgctxt "roblosats-admin"
+msgid "Required / received"
+msgstr "必要 / 受領"
+
+msgctxt "roblosats-admin"
+msgid "Funding"
+msgstr "入金"
+
+msgctxt "roblosats-admin"
+msgid "Penalty / return"
+msgstr "ペナルティ / 返却"
+
+msgctxt "roblosats-admin"
+msgid "Leftovers"
+msgstr "余剰"
+
+msgctxt "roblosats-admin"
+msgid "payments"
+msgstr "回の支払い"
+
+msgctxt "roblosats-admin"
+msgid "penalty"
+msgstr "ペナルティ"
+
+msgctxt "roblosats-admin"
+msgid "inside the deposit"
+msgstr "デポジット内"
+
+msgctxt "roblosats-admin"
+msgid "pending"
+msgstr "保留中"
+
+msgctxt "roblosats-admin"
+msgid "trades in progress"
+msgstr "進行中の取引"
+
+msgctxt "roblosats-admin"
+msgid "open orders"
+msgstr "未約定の注文"
+
+msgctxt "roblosats-admin"
+msgid "in escrow"
+msgstr "エスクロー中"
+
+msgctxt "roblosats-admin"
+msgid "in bonds"
+msgstr "保証金中"
+
+msgctxt "roblosats-admin"
+msgid "Last 24 h"
+msgstr "直近 24 時間"
+
+msgctxt "roblosats-admin"
+msgid "penalties"
+msgstr "ペナルティ"
+
+msgctxt "roblosats-admin"
+msgid "fees"
+msgstr "手数料"
+
+msgctxt "roblosats-admin"
+msgid "last 30 days"
+msgstr "直近 30 日"
+
+msgctxt "roblosats-admin"
+msgid "Needs attention"
+msgstr "要確認"
+
+msgctxt "roblosats-admin"
+msgid "Lightning"
+msgstr "Lightning"
+
+msgctxt "roblosats-admin"
+msgid "Hybrid A (Lightning buyer)"
+msgstr "ハイブリッド A（Lightning 買い手）"
+
+msgctxt "roblosats-admin"
+msgid "Hybrid B (Lightning seller)"
+msgstr "ハイブリッド B（Lightning 売り手）"
+
+msgctxt "roblosats-admin"
+msgid "fixed %(p)s %(c)s/BTC"
+msgstr "固定 %(p)s %(c)s/BTC"
+
+msgctxt "roblosats-admin"
+msgid "%(p)s %(c)s/BTC at contract"
+msgstr "契約時 %(p)s %(c)s/BTC"
+
+msgctxt "roblosats-admin"
+msgid "deposit window ends in %(m)s min"
+msgstr "入金期限まで残り %(m)s 分"
+
+msgctxt "roblosats-admin"
+msgid "rescue signature missing: %(who)s"
+msgstr "救済署名なし: %(who)s"
+
+msgctxt "roblosats-admin"
+msgid "deposit signature missing: %(who)s"
+msgstr "デポジット署名なし: %(who)s"
+
+msgctxt "roblosats-admin"
+msgid "release signature missing: %(who)s"
+msgstr "リリース署名なし: %(who)s"
+
+msgctxt "roblosats-admin"
+msgid "release waits for the winner's signature"
+msgstr "リリースは勝者の署名待ち"
+
+msgctxt "roblosats-admin"
+msgid "rescue timelock reached (block %(h)s)"
+msgstr "救済タイムロック到達（ブロック %(h)s）"
+
+msgctxt "roblosats-admin"
+msgid "%(what)s of the %(role)s in the mempool at %(r)s sat/vB (1 hour needs %(n)s)"
+msgstr "%(role)s の %(what)s がメンプールに %(r)s sat/vB（1 時間には %(n)s 必要）"
+
+msgctxt "roblosats-admin"
+msgid "bonds only"
+msgstr "保証金のみ"
+
+msgctxt "roblosats-admin"
+msgid "escrow"
+msgstr "エスクロー"
+
+msgctxt "roblosats-admin"
+msgid "on-chain escrow status"
+msgstr "オンチェーンエスクローの状態"
+
+msgctxt "roblosats-admin"
+msgid "On-chain bonds"
+msgstr "オンチェーン保証金"
+
+msgctxt "roblosats-admin"
+msgid "On-chain escrow"
+msgstr "オンチェーンエスクロー"
