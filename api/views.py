@@ -91,6 +91,20 @@ INFO_CACHE_TTL = 30
 PRICE_CACHE_TTL = 30
 
 
+SPAMCOIN_CURRENCY = 1000
+SPAMCOIN_METHODS = ("Spamcoin Lightning", "Spamcoin On-Chain")
+
+
+def spamcoin_only(payment_method):
+    """0.9.7: True when every method of the order is a Spamcoin one."""
+    text = payment_method or ""
+    if "spamcoin" not in text.lower():
+        return False
+    for name in SPAMCOIN_METHODS:
+        text = text.replace(name, "")
+    return text.strip() == ""
+
+
 class MakerView(CreateAPIView):
     serializer_class = MakeOrderSerializer
     authentication_classes = [TokenAuthentication]
@@ -194,6 +208,23 @@ class MakerView(CreateAPIView):
         currency_obj = Currency.objects.filter(id=currency).first()
         if currency_obj is None:
             return Response({"bad_request": "Unknown currency"}, status.HTTP_400_BAD_REQUEST)
+
+        # Roblosats 0.9.7: a "丰 sat" order whose only methods are Spamcoin is paid in Spamcoin
+        # (currency 1000). Kilobot #25: "Spamcoin Lightning" at a 15% premium arrived as EUR
+        # from an app whose currency selector had not followed the method. A relative price
+        # means the same in any currency, so it is normalized; a fixed price in another
+        # currency cannot be converted without guessing, so it is refused.
+        if sats_denominated and spamcoin_only(payment_method) and currency_obj.currency != SPAMCOIN_CURRENCY:
+            spam_obj = Currency.objects.filter(currency=SPAMCOIN_CURRENCY).first()
+            if fixed_price is None and spam_obj is not None:
+                currency_obj = spam_obj
+                currency = spam_obj.id
+            else:
+                return Response(
+                    {"bad_request": "An order paid only with Spamcoin methods takes its fixed price in Spamsats (Spamcoin, currency 1000)"},
+                    status.HTTP_400_BAD_REQUEST,
+                )
+
         if fixed_price is not None:
             try:
                 fixed_ok = float(fixed_price) > 0
