@@ -23,6 +23,7 @@ from api.escrow.taproot import (
 from api.escrow.transactions import (
     VB_KEYPATH,
     VB_LEAF_2SIG,
+    DepositError,
     Utxo,
     rescue_tx,
     funding_descriptor,
@@ -30,6 +31,10 @@ from api.escrow.transactions import (
     plan_deposit,
     release_tx,
 )
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 ROLES = ("seller", "buyer")
 
@@ -214,15 +219,45 @@ def build_deposit(escrow, escrow_sats, seller_fee, buyer_fee, coordinator_spk, d
 
     seller = funding_utxos(escrow, "seller")
     buyer = funding_utxos(escrow, "buyer") if buyer_fee and not buyer_fee_from_bond else []
-    plan = plan_deposit(
-        seller, buyer, contract_for(escrow), escrow_sats, seller_fee, buyer_fee,
-        coordinator_spk, dev_sats, dev_spk, funding_spk(escrow, "seller"), funding_spk(escrow, "buyer"),
-        fee_rate(int(config("ESCROW_DEPOSIT_TARGET_BLOCKS", default=2))),
-        bond_service.bond_input(bonds["seller"]) if bonds.get("seller") else None,
-        bond_service.bond_input(bonds["buyer"]) if bonds.get("buyer") else None,
-        buyer_fee_from_bond=buyer_fee_from_bond, fees_in_escrow=fees_in_escrow,
-        extra_to_escrow=extra_plan(escrow) >= 1,
-    )
+
+    def _plan(rate):
+        return plan_deposit(
+            seller, buyer, contract_for(escrow), escrow_sats, seller_fee, buyer_fee,
+            coordinator_spk, dev_sats, dev_spk, funding_spk(escrow, "seller"), funding_spk(escrow, "buyer"),
+            rate,
+            bond_service.bond_input(bonds["seller"]) if bonds.get("seller") else None,
+            bond_service.bond_input(bonds["buyer"]) if bonds.get("buyer") else None,
+            buyer_fee_from_bond=buyer_fee_from_bond, fees_in_escrow=fees_in_escrow,
+            extra_to_escrow=extra_plan(escrow) >= 1,
+        )
+
+    rate = fee_rate(int(config("ESCROW_DEPOSIT_TARGET_BLOCKS", default=2)))
+    try:
+        plan = _plan(rate)
+    except DepositError as e:
+        # 0.9.3 (Kilobot #24): a trader that sent what it was told to (the recommended amount,
+        # frozen when shown) must not be asked to pay again because the fee rate moved or the
+        # estimate was a little short: the deposit then pays the highest rate its funding
+        # covers, down to ESCROW_MIN_DEPOSIT_FEE_RATE (sat/vB).
+        if "short by" not in str(e):
+            raise
+        floor = config("ESCROW_MIN_DEPOSIT_FEE_RATE", cast=float, default=1.0)
+        if rate <= floor:
+            raise
+        try:
+            plan = _plan(floor)
+        except DepositError:
+            raise e
+        lo, hi = floor, rate
+        for _ in range(20):
+            mid = (lo + hi) / 2
+            try:
+                plan = _plan(mid)
+                lo = mid
+            except DepositError:
+                hi = mid
+        plan = _plan(lo)
+        logger.warning(f"Order {escrow.order_id}: deposit at {lo:.2f} sat/vB instead of {rate:.2f} ({e})")
     escrow.escrow_sats = plan.tx.outputs[0].value
     dev_paid = sum(o.value for o in plan.tx.outputs[1:] if dev_spk and o.script_pubkey == dev_spk)
     escrow.dev_fee_sats = dev_paid

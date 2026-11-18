@@ -736,6 +736,12 @@ def order_data(order, user):
         data["escrow_funding_owed"] = owed
         data["escrow_funding_recommended"] = recommended
         if escrow.status == escrow.Status.KEYS:
+            # 0.9.3: what already confirmed at the funding address, so the app says "payment
+            # confirmed, building the deposit" instead of asking for the payment again (#24)
+            try:
+                data["escrow_funding_confirmed_sats"] = sum(u.value for u in service.funding_utxos(escrow, role))
+            except Exception:
+                pass
             hint = fee_hint()
             if hint:
                 data["onchain_fee_hint"] = hint
