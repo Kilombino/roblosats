@@ -1063,5 +1063,13 @@
   "Spamcoin payment method(s)": "Spamcoin payment method(s)",
   "Payment method(s)": "Payment method(s)",
   "Paid with: {{amount}} via {{method}}": "Paid with: {{amount}} via {{method}}",
-  "Trade size in sats at today's price (fixed for 丰 sat and fixed-price orders)": "Trade size in sats at today's price (fixed for 丰 sat and fixed-price orders)"
+  "Trade size in sats at today's price (fixed for 丰 sat and fixed-price orders)": "Trade size in sats at today's price (fixed for 丰 sat and fixed-price orders)",
+  "Still missing: the signature of your app.": "Still missing: the signature of your app.",
+  "Still missing: the signature of {{peer}}.": "Still missing: the signature of {{peer}}.",
+  "Keep this order open in the foreground until your bond is signed.": "Keep this order open in the foreground until your bond is signed.",
+  "Keep this order open in the foreground until the release is signed.": "Keep this order open in the foreground until the release is signed.",
+  "Keep this order open in the foreground until the deposit is signed.": "Keep this order open in the foreground until the deposit is signed.",
+  "After paying, keep this order open on this device: your app signs your bond by itself.": "After paying, keep this order open on this device: your app signs your bond by itself.",
+  "After paying, keep this order open on this device: your app signs the rescue and the deposit by itself.": "After paying, keep this order open on this device: your app signs the rescue and the deposit by itself.",
+  "✅ Payment confirmed. Building the deposit… Your app will sign it by itself.": "✅ Payment confirmed. Building the deposit… Your app will sign it by itself."
 }

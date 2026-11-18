@@ -502,6 +502,41 @@ export const OnchainEscrowPrompt = ({
     else onAction(name, { address });
   };
 
+  // 0.9.3: the app signs the onchain steps by itself, but only while this order is open in the
+  // foreground. Which step is pending (or about to be, right after a payment confirms).
+  const fundingConfirmed =
+    order.status === 7 &&
+    data.escrow_status_code === ESCROW.KEYS &&
+    (data.escrow_funding_confirmed_sats ?? 0) > 0 &&
+    (data.escrow_funding_confirmed_sats ?? 0) >= (data.escrow_funding_owed ?? Infinity);
+  const signPhase: 'bond' | 'deposit' | 'release' | null =
+    data.bond_status_code === BOND.SIGN && (order.status === 0 || order.status === 3)
+      ? 'bond'
+      : data.escrow_status_code === ESCROW.FUNDING || fundingConfirmed
+        ? 'deposit'
+        : data.escrow_status_code === ESCROW.RELEASING &&
+            data.escrow_waiting_what === 'release_signature'
+          ? 'release'
+          : null;
+  useEffect(() => {
+    if (!signPhase) return;
+    let lock: { release: () => Promise<void> } | null = null;
+    window.AndroidAppRobosats?.keepScreenOn?.(true);
+    const nav = navigator as unknown as {
+      wakeLock?: { request: (k: 'screen') => Promise<{ release: () => Promise<void> }> };
+    };
+    nav.wakeLock
+      ?.request('screen')
+      .then((l) => {
+        lock = l;
+      })
+      .catch(() => {});
+    return () => {
+      window.AndroidAppRobosats?.keepScreenOn?.(false);
+      void lock?.release().catch(() => {});
+    };
+  }, [signPhase]);
+
   if (!keys) return <CircularProgress />;
 
   const isBuyer = data.escrow_role === 'buyer';
@@ -543,6 +578,45 @@ export const OnchainEscrowPrompt = ({
     }
     return t('Waiting for the coordinator…');
   };
+
+  // 0.9.3: what the trader must do for the automatic signing to happen, and who is missing.
+  const keepOpenNotice = (): React.JSX.Element | null => {
+    if (!signPhase) return null;
+    const who = data.escrow_waiting_for;
+    const what = data.escrow_waiting_what ?? '';
+    const missing =
+      signPhase === 'bond'
+        ? t('Still missing: the signature of your app.')
+        : who === 'you' && what.endsWith('_signature')
+          ? t('Still missing: the signature of your app.')
+          : who === 'peer' && what.endsWith('_signature')
+            ? t('Still missing: the signature of {{peer}}.', { peer })
+            : null;
+    const text =
+      signPhase === 'bond'
+        ? t('Keep this order open in the foreground until your bond is signed.')
+        : signPhase === 'release'
+          ? t('Keep this order open in the foreground until the release is signed.')
+          : t('Keep this order open in the foreground until the deposit is signed.');
+    return (
+      <Alert severity='warning'>
+        {text}
+        {missing ? ` ${missing}` : ''}
+      </Alert>
+    );
+  };
+
+  const afterPayingNotice = (what: 'bond' | 'deposit'): React.JSX.Element => (
+    <Alert severity='info'>
+      {what === 'bond'
+        ? t(
+            'After paying, keep this order open on this device: your app signs your bond by itself.',
+          )
+        : t(
+            'After paying, keep this order open on this device: your app signs the rescue and the deposit by itself.',
+          )}
+    </Alert>
+  );
 
   const seenInMempool = (txid?: string, rate?: number): React.JSX.Element | null =>
     txid ? (
@@ -588,6 +662,7 @@ export const OnchainEscrowPrompt = ({
         <>
           <TxLine label={t('Your bond')} txid={data.bond_mempool_txid} />
           <LowFeeWarning rate={data.bond_mempool_fee_rate} hint={data.onchain_fee_hint} />
+          {afterPayingNotice('bond')}
         </>,
       );
     else if (data.bond_status_code === BOND.FUNDING && data.bond_address)
@@ -645,6 +720,7 @@ export const OnchainEscrowPrompt = ({
               </Alert>
             </Grid>
           ) : null}
+          <Grid>{afterPayingNotice('bond')}</Grid>
           {data.bond_mempool_txid ? (
             <Grid>
               <Alert severity='warning'>
@@ -676,7 +752,10 @@ export const OnchainEscrowPrompt = ({
     else
       body = waiting(
         t('Bond received, waiting for 1 confirmation…'),
-        data.bond_txid ? <TxLine label={t('Your bond')} txid={data.bond_txid} /> : null,
+        <>
+          {data.bond_txid ? <TxLine label={t('Your bond')} txid={data.bond_txid} /> : null}
+          {data.bond_status_code === BOND.SIGN ? null : afterPayingNotice('bond')}
+        </>,
       );
   } else if (
     order.status === 6 &&
@@ -750,53 +829,61 @@ export const OnchainEscrowPrompt = ({
     const seen = data.escrow_funding_mempool_txid;
     const enough = (data.escrow_funding_mempool_sats ?? 0) >= (data.escrow_funding_owed ?? 0);
     try {
-      checkFundingAddress(data, keys);
-      body =
-        seen && enough ? (
-          waiting(waitingText(), seenInMempool(seen, data.escrow_funding_mempool_fee_rate))
-        ) : (
-          <Grid container spacing={1} sx={{ flexDirection: 'column', alignItems: 'center' }}>
+      if (!fundingConfirmed) checkFundingAddress(data, keys);
+      body = fundingConfirmed ? (
+        waiting(t('✅ Payment confirmed. Building the deposit… Your app will sign it by itself.'))
+      ) : seen && enough ? (
+        waiting(
+          waitingText(),
+          <>
+            {seenInMempool(seen, data.escrow_funding_mempool_fee_rate)}
+            {afterPayingNotice('deposit')}
+          </>,
+        )
+      ) : (
+        <Grid container spacing={1} sx={{ flexDirection: 'column', alignItems: 'center' }}>
+          <Grid>
+            <PayBox
+              hint={data.onchain_fee_hint}
+              address={data.escrow_funding_address}
+              sats={data.escrow_funding_recommended ?? 0}
+              label={
+                data.escrow_role === 'seller'
+                  ? t(
+                      'Send this amount to your funding address: the trade amount, your fee and the mining fee. Anything left over comes back to you in the deposit.',
+                    )
+                  : t(
+                      'Send this amount to your funding address: your fee and the mining fee. Anything left over comes back to you.',
+                    )
+              }
+              note={t(
+                'Send exactly {{amount}} Sats. If you send more, the change comes back to you in the deposit; if you send less, send the rest to the same address before the order expires.',
+                { amount: pn(data.escrow_funding_recommended ?? 0) },
+              )}
+            />
+          </Grid>
+          <Grid>{afterPayingNotice('deposit')}</Grid>
+          {seen ? (
             <Grid>
-              <PayBox
-                hint={data.onchain_fee_hint}
-                address={data.escrow_funding_address}
-                sats={data.escrow_funding_recommended ?? 0}
-                label={
-                  data.escrow_role === 'seller'
-                    ? t(
-                        'Send this amount to your funding address: the trade amount, your fee and the mining fee. Anything left over comes back to you in the deposit.',
-                      )
-                    : t(
-                        'Send this amount to your funding address: your fee and the mining fee. Anything left over comes back to you.',
-                      )
-                }
-                note={t(
-                  'Send exactly {{amount}} Sats. If you send more, the change comes back to you in the deposit; if you send less, send the rest to the same address before the order expires.',
-                  { amount: pn(data.escrow_funding_recommended ?? 0) },
+              <Alert severity='warning'>
+                {t(
+                  'Seen in the mempool: {{amount}} Sats. It is not enough yet: send the rest to the same address.',
+                  { amount: pn(data.escrow_funding_mempool_sats ?? 0) },
                 )}
+              </Alert>
+            </Grid>
+          ) : null}
+          {seen &&
+          lowFeeNeeded(data.escrow_funding_mempool_fee_rate, data.onchain_fee_hint) !== null ? (
+            <Grid>
+              <LowFeeWarning
+                rate={data.escrow_funding_mempool_fee_rate}
+                hint={data.onchain_fee_hint}
               />
             </Grid>
-            {seen ? (
-              <Grid>
-                <Alert severity='warning'>
-                  {t(
-                    'Seen in the mempool: {{amount}} Sats. It is not enough yet: send the rest to the same address.',
-                    { amount: pn(data.escrow_funding_mempool_sats ?? 0) },
-                  )}
-                </Alert>
-              </Grid>
-            ) : null}
-            {seen &&
-            lowFeeNeeded(data.escrow_funding_mempool_fee_rate, data.onchain_fee_hint) !== null ? (
-              <Grid>
-                <LowFeeWarning
-                  rate={data.escrow_funding_mempool_fee_rate}
-                  hint={data.onchain_fee_hint}
-                />
-              </Grid>
-            ) : null}
-          </Grid>
-        );
+          ) : null}
+        </Grid>
+      );
     } catch (e) {
       body = <Alert severity='error'>{String(e)}</Alert>;
     }
@@ -943,6 +1030,7 @@ export const OnchainEscrowPrompt = ({
   return (
     <Grid container spacing={1} sx={{ flexDirection: 'column', alignItems: 'center', padding: 1 }}>
       <Grid>{body}</Grid>
+      {signPhase ? <Grid>{keepOpenNotice()}</Grid> : null}
       {myExtraInEscrow(data) > 0 && data.escrow_deposit_txid ? (
         <Grid>
           <Typography variant='caption' align='center' sx={{ display: 'block' }}>

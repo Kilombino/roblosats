@@ -1172,5 +1172,13 @@
   "Buyer's swap to onchain you paid": "Swap a on-chain del comprador que pagaste",
   "Swap to onchain paid by the seller": "Swap a on-chain pagado por el vendedor",
   "Paid with: {{amount}} via {{method}}": "Se paga con: {{amount}} por {{method}}",
-  "Trade size in sats at today's price (fixed for 丰 sat and fixed-price orders)": "Tamaño del intercambio en sats al precio de hoy (fijo en órdenes 丰 sat y de precio fijo)"
+  "Trade size in sats at today's price (fixed for 丰 sat and fixed-price orders)": "Tamaño del intercambio en sats al precio de hoy (fijo en órdenes 丰 sat y de precio fijo)",
+  "Still missing: the signature of your app.": "Falta que firme tu app.",
+  "Still missing: the signature of {{peer}}.": "Falta que firme {{peer}}.",
+  "Keep this order open in the foreground until your bond is signed.": "Mantén esta orden abierta en primer plano hasta que tu fianza quede firmada.",
+  "Keep this order open in the foreground until the release is signed.": "Mantén esta orden abierta en primer plano hasta que la liberación quede firmada.",
+  "Keep this order open in the foreground until the deposit is signed.": "Mantén esta orden abierta en primer plano hasta que el depósito quede firmado.",
+  "After paying, keep this order open on this device: your app signs your bond by itself.": "Después de pagar, deja esta orden abierta en este dispositivo: tu app firma tu fianza ella sola.",
+  "After paying, keep this order open on this device: your app signs the rescue and the deposit by itself.": "Después de pagar, deja esta orden abierta en este dispositivo: tu app firma ella sola el rescate y el depósito.",
+  "✅ Payment confirmed. Building the deposit… Your app will sign it by itself.": "✅ Pago confirmado. Preparando el depósito… Tu app lo firmará ella sola."
 }

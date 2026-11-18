@@ -595,6 +595,23 @@ class WebAppInterface(private val context: MainActivity, private val webView: We
         resolvePromise(uuid, key)
     }
 
+    /** 0.9.3: keep the screen on while the order page waits for an onchain signature of this
+     * app (the signing only runs while the order is open in the foreground). */
+    @JavascriptInterface
+    fun keepScreenOn(on: Boolean) {
+        context.runOnUiThread {
+            try {
+                if (on) {
+                    context.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                } else {
+                    context.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "keepScreenOn", e)
+            }
+        }
+    }
+
     @JavascriptInterface
     fun restart() {
         try {

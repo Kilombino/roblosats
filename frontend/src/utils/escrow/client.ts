@@ -115,6 +115,8 @@ export interface EscrowOrderData {
   hybrid_onchain_maker_bond?: boolean;
   escrow_funding_mempool_txid?: string;
   escrow_funding_mempool_sats?: number;
+  /** 0.9.3: what already confirmed at our funding address (while the deposit is not built). */
+  escrow_funding_confirmed_sats?: number;
   escrow_funding_mempool_fee_rate?: number;
   escrow_funding_txid?: string;
   escrow_leftover_sats?: number;

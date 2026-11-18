@@ -19,6 +19,8 @@ interface AndroidAppRobosats {
   generateRobohash: (uuid: string, initialString: string) => void;
   copyToClipboard: (value: string) => void;
   getTorStatus: (uuid: string) => void;
+  // 0.9.3: FLAG_KEEP_SCREEN_ON while an onchain signature of this app is pending
+  keepScreenOn?: (on: boolean) => void;
   openWS: (uuid: string, path: string) => void;
   sendWsMessage: (uuid: string, path: string, message: string) => void;
   sendRequest: (
