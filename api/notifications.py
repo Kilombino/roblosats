@@ -230,6 +230,32 @@ class Notifications:
                           f"speed it up (RBF or CPFP) or it may take a long time to confirm.")
         self.send_message(order, user.robot, title)
 
+    SIGN_WHAT = {
+        "bond_signature": ("your bond", "tu fianza", "la teva fiança"),
+        "rescue_signature": ("the rescue", "el rescate", "el rescat"),
+        "deposit_signature": ("the deposit", "el depósito", "el dipòsit"),
+        "release_signature": ("the release", "la liberación", "l'alliberament"),
+    }
+
+    def onchain_sign_needed(self, order, user_id, what):
+        """0.9.3: the coordinator waits for this robot's signature; its app signs by itself, but
+        only while the order is open in the foreground."""
+        user = order.maker if order.maker_id == user_id else order.taker
+        if user is None or user.id != user_id:
+            return
+        en, es, ca = self.SIGN_WHAT.get(what, ("the next step", "el siguiente paso", "el pas següent"))
+        lang = user.robot.telegram_lang_code
+        if lang == "es":
+            title = (f"✍️ Abre la orden {order.id}: tu app tiene que firmar {es}. "
+                     "Déjala abierta en primer plano en este dispositivo hasta que termine.")
+        elif lang == "ca":
+            title = (f"✍️ Obre l'ordre {order.id}: la teva app ha de signar {ca}. "
+                     "Deixa-la oberta en primer pla en aquest dispositiu fins que acabi.")
+        else:
+            title = (f"✍️ Open order {order.id}: your app needs to sign {en}. "
+                     "Keep it open in the foreground on this device until it is done.")
+        self.send_message(order, user.robot, title, self.order_url(order))
+
     def order_taken_confirmed(self, order):
         lang = order.maker.robot.telegram_lang_code
         if lang == "es":

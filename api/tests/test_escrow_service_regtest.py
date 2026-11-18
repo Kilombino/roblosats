@@ -224,11 +224,11 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
         buyer, seller = _user(), _user()
         now = timezone.now()
         currency, _ = Currency.objects.get_or_create(currency=2, defaults={"exchange_rate": 100_000})
-        order = Order.objects.create(
+        order = Order.objects.create(**{**dict(
             currency=currency, type=Order.Types.BUY, status=Order.Status.WFB, escrow_type=Order.EscrowTypes.ONCHAIN,
             created_at=now, expires_at=now + timezone.timedelta(hours=24), has_range=False, amount=100,
             satoshis=1_000_000, t0_satoshis=1_000_000, last_satoshis=1_000_000, maker=buyer, bond_size=3, is_explicit=True,
-        )
+        ), **self._order_fields(1_000_000)})
         kb, ks = self._keys(order, "buyer"), self._keys(order, "seller")
         self._pay_bond(order, buyer, kb)
         self.assertEqual(order.status, Order.Status.PUB)
@@ -298,6 +298,16 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
 
     def _funding_amount(self, d, role):
         return d["escrow_funding_recommended"]
+
+    def _order_fields(self, sats):
+        """Extra Order fields (0.9.3: the 丰 sat subclasses)."""
+        return {}
+
+    def _deposit_rate(self):
+        """Context around the advance that builds the deposit (0.9.3: a fee spike)."""
+        import contextlib
+
+        return contextlib.nullcontext()
 
     def _sign_rescue(self, order, users, keys):
         """rl31-beta16 (rescue plan 2): both sign the rescue before the deposit, as the client
@@ -597,12 +607,12 @@ class EscrowHybridRegtest(EscrowOrderFlowRegtest):
         User.objects.get_or_create(username="admin")
         now = timezone.now()
         currency, _ = Currency.objects.get_or_create(currency=2, defaults={"exchange_rate": 100_000})
-        order = Order.objects.create(
+        order = Order.objects.create(**{**dict(
             currency=currency, type=Order.Types.SELL if maker_sells else Order.Types.BUY, status=Order.Status.WFB,
             escrow_type=Order.EscrowTypes.ONCHAIN, created_at=now, expires_at=now + timezone.timedelta(hours=24),
             has_range=False, amount=100, satoshis=sats, t0_satoshis=sats, last_satoshis=sats,
             maker=maker, bond_size=3 if sats >= 1_000_000 else 30, is_explicit=True,
-        )
+        ), **self._order_fields(sats)})
         km = self._keys(order, "seller" if maker_sells else "buyer")
         self._pay_bond(order, maker, km)
         self.assertEqual(order.status, Order.Status.PUB)
@@ -635,7 +645,9 @@ class EscrowHybridRegtest(EscrowOrderFlowRegtest):
         ds = flow.order_data(order, seller)
         _faucet("sendtoaddress", ds["escrow_funding_address"], ds["escrow_funding_recommended"] / 1e8)
         _mine()
-        flow.advance(order)
+        self.assertEqual(flow.order_data(order, seller).get("escrow_funding_confirmed_sats"), ds["escrow_funding_recommended"])
+        with self._deposit_rate():
+            flow.advance(order)
         escrow = flow.escrow_of(order)
         self.assertEqual(escrow.status, OnchainEscrow.Status.FUNDING)
         plan = escrow.funding_signatures["plan"]
@@ -742,3 +754,46 @@ class EscrowHybridRegtest(EscrowOrderFlowRegtest):
         _mine()
         self.assertGreaterEqual(service.rpc("getrawtransaction", [bond.spend_txid, True])["confirmations"], 1)
         self.assertIsNone(Logics.reward_source_problem(order, order.maker_bond, order.taker_bond, 15_000))
+
+
+@skipUnless(REGTEST, "needs the regtest lab (ESCROW_REGTEST=1)")
+class EscrowSatOrderRegtest(EscrowHybridRegtest):
+    """0.9.3 (Kilobot #24): a "丰 sat" order (sats_denominated, paid in Spamcoin at a fixed
+    price) taken onchain and with Lightning, and a fee spike between the recommended funding
+    and the deposit."""
+
+    test_happy_path_to_successful = EscrowOrderFlowRegtest.test_happy_path_to_successful
+    test_case_b_proxy_return_and_penalty_onchain = None
+    test_case_a_small_order_one_minimum_in_total = None
+
+    def _order_fields(self, sats):
+        from decimal import Decimal
+
+        from api.models import Currency
+
+        spam, _ = Currency.objects.get_or_create(currency=1000, defaults={"exchange_rate": 0.0034})
+        return {"currency": spam, "sats_denominated": True, "amount": sats, "fixed_price": Decimal("0.0021"),
+                "is_explicit": False, "satoshis": None, "premium": 0}
+
+    def test_onchain_sat_order_keeps_its_amounts(self):
+        from api.logics import Logics
+
+        order, buyer, seller, keys = self._make_and_take()
+        self.assertTrue(order.sats_denominated)
+        self.assertEqual(order.last_satoshis, 1_000_000)
+        self.assertAlmostEqual(Logics.exchange_total(order, 1_000_000), 0.000021)
+
+
+@skipUnless(REGTEST, "needs the regtest lab (ESCROW_REGTEST=1)")
+class EscrowFeeSpikeRegtest(EscrowSatOrderRegtest):
+    """The fee rate triples between the recommended funding (frozen when shown) and the
+    deposit: the seller paid what it was told and the deposit still gets built (#24)."""
+
+    test_happy_path_to_successful = None
+    test_onchain_sat_order_keeps_its_amounts = None
+
+    def _deposit_rate(self):
+        from unittest.mock import patch
+
+        rate = service.fee_rate(2)
+        return patch("api.escrow.service.fee_rate", return_value=rate * 3)

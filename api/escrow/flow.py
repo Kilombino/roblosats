@@ -171,7 +171,10 @@ def recommended_funding(order, escrow, role, from_bond=False):
         from api.escrow import bonds as _bonds
 
         mine = trade_bonds(order).get(role) if not role_is_ln(order, role) else None
-        vb += VB_BOND_COOP * max(0, len(_bonds.coins_of(mine)) - 1)
+        n = len(_bonds.coins_of(mine)) if mine is not None else 0
+        # 0.9.3: without from_bond the first bond coin was left out too (its input is in the
+        # deposit and its owner pays it): #24 came out 15 sats short at the live rate.
+        vb += VB_BOND_COOP * (max(0, n - 1) if from_bond else n)
     except Exception:
         pass
     recommended = owed + math.ceil(vb * rate)
@@ -291,6 +294,10 @@ def advance(order):
         notify_mempool(order, escrow)
     except Exception as e:  # a notice never holds the order up
         logger.warning(f"Order {order.id}: onchain mempool check failed: {e}")
+    try:
+        notify_signatures(order, escrow)
+    except Exception as e:
+        logger.warning(f"Order {order.id}: onchain signature notice failed: {e}")
     if escrow is None:
         return
     S = OnchainEscrow.Status
@@ -994,6 +1001,55 @@ def notify_mempool(order, escrow=None):
         order.log(f"Onchain {item['role']} {item['what']} of {item['sats']} Sats **seen in the mempool** ({item['txid']})")
         if item["owner"]:
             send_notification.delay(order_id=order.id, message=mempool_message(item))
+
+
+SIGN_NOTICE_AFTER = 90  # seconds a signature may be pending before the robot is told
+
+
+def _trader(order, role):
+    from api.models import Order
+
+    maker_role = "seller" if order.type == Order.Types.SELL else "buyer"
+    return order.maker if role == maker_role else order.taker
+
+
+def pending_signatures(order, escrow=None):
+    """[(user, what)] for every signature the coordinator is waiting for from a robot's app
+    (0.9.3): its bond penalty signature, the rescue, the deposit, the release."""
+    from api.models import OnchainBond
+
+    out = []
+    for bond in OnchainBond.objects.filter(order=order, status=OnchainBond.Status.SIGN):
+        out.append((bond.owner, "bond_signature"))
+    if escrow is not None:
+        for role in service.ROLES:
+            who, what = waiting_for(order, escrow, role)
+            if who == "you" and what and what.endswith("_signature"):
+                user = _trader(order, role)
+                if user is not None:
+                    out.append((user, what))
+    return out
+
+
+def notify_signatures(order, escrow=None):
+    """The apps sign by themselves, but only while the order is open: a robot whose signature
+    is still pending after SIGN_NOTICE_AFTER seconds is told once to open the order (0.9.3)."""
+    import time
+
+    from django.core.cache import cache
+
+    from api.tasks import send_notification
+
+    now = int(time.time())
+    for user, what in pending_signatures(order, escrow):
+        step = f"{order.id}:{user.id}:{what}:{getattr(escrow, 'status', '')}:{(escrow.funding_signatures or {}).get('release_round', 0) if escrow else 0}"
+        cache.add(f"onchain-sign-seen:{step}", now, timeout=24 * 3600)
+        seen = cache.get(f"onchain-sign-seen:{step}") or now
+        if now - int(seen) < SIGN_NOTICE_AFTER:
+            continue
+        if cache.add(f"onchain-sign-told:{step}", 1, timeout=7 * 24 * 3600):
+            order.log(f"Onchain {what} of Robot({user.robot.id}) pending: robot told to open the order")
+            send_notification.delay(order_id=order.id, message=f"onchain_sign:{user.id}:{what}")
 
 
 def mempool_message(item, hint=None):
