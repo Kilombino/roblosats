@@ -19,6 +19,7 @@ const ONCHAIN_KEYS = [
   'escrow_release_aggnonce',
   'escrow_release_my_nonce',
   'escrow_release_my_partial',
+  'escrow_release_leaf_ok',
   'escrow_release_txid',
   'escrow_funding_txid',
   'escrow_waiting_for',

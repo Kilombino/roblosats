@@ -40,6 +40,8 @@ export interface EscrowOrderData {
   escrow_deposit_signed?: boolean;
   escrow_release_my_nonce?: string;
   escrow_release_my_partial?: boolean;
+  /** 0.9.5: we (the seller) can finish the cooperative release alone through our leaf. */
+  escrow_release_leaf_ok?: boolean;
   bond_status_code?: number;
   escrow_role?: 'seller' | 'buyer';
   escrow_coordinator_pubkey?: string;
@@ -692,6 +694,26 @@ export const signDisputeRelease = (
       ? EscrowContract.BUYER_COORDINATOR
       : EscrowContract.SELLER_COORDINATOR;
   const msg = tx.sighashUnified(0, escrowSpent(data, c), c.leafHashes[leaf]);
+  return bytesToHex(signSchnorr(keys.escrow, msg));
+};
+
+/** 0.9.5: the seller signs the cooperative release (trade or collaborative cancel) alone, on
+ * its leaf with the coordinator: one signature, no nonces, the buyer signs nothing. The release
+ * is checked exactly as for the two-round signing. */
+export const signCooperativeLeaf = (
+  data: EscrowOrderData,
+  keys: EscrowKeys,
+  check: ReleaseCheck,
+): string => {
+  if (data.escrow_role !== 'seller') fail('only the seller signs the release through its leaf');
+  if (!(data.escrow_release_kind ?? '').startsWith('Seller and buyer'))
+    fail('this is not a cooperative release');
+  const { tx, c } = checkRelease(data, check);
+  const msg = tx.sighashUnified(
+    0,
+    escrowSpent(data, c),
+    c.leafHashes[EscrowContract.SELLER_COORDINATOR],
+  );
   return bytesToHex(signSchnorr(keys.escrow, msg));
 };
 

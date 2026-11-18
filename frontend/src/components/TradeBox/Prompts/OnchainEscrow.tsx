@@ -25,6 +25,7 @@ import {
   publicKeys,
   releaseNonce,
   releasePartial,
+  signCooperativeLeaf,
   signBondPenalties,
   signBondReturns,
   signDeposit,
@@ -54,6 +55,7 @@ export type EscrowAction =
   | 'escrow_nonce'
   | 'escrow_partial'
   | 'escrow_leaf_signature'
+  | 'escrow_release_leaf'
   | 'escrow_sweep'
   | 'escrow_sweep_signatures';
 
@@ -340,7 +342,12 @@ export const OnchainEscrowPrompt = ({
       });
     if (data.escrow_status_code === ESCROW.KEYS && data.escrow_my_keys_set === false)
       once('escrow_keys', () =>
-        onAction('escrow_keys', { escrow_pubkey: pk.escrow, funding_pubkey: pk.funding }),
+        onAction('escrow_keys', {
+          escrow_pubkey: pk.escrow,
+          funding_pubkey: pk.funding,
+          // 0.9.5: as seller, this app finishes a cooperative release alone (one signature)
+          leaf_release: true,
+        }),
       );
     const fairRescue = (data.escrow_rescue_plan ?? 1) >= 2;
     if (
@@ -415,6 +422,12 @@ export const OnchainEscrowPrompt = ({
       const check = { myScript, minToMe, owed };
       if (refused) {
         // never sign a release whose amounts do not add up
+      } else if (cooperative && !isBuyer && data.escrow_release_leaf_ok) {
+        // 0.9.5: one signature on our leaf with the coordinator finishes the release, also one
+        // started with the two-round signing (any nonce we sent is simply not used).
+        once(`coopleaf-${data.escrow_release_tx}`, () =>
+          onAction('escrow_release_leaf', { signature: signCooperativeLeaf(data, keys, check) }),
+        );
       } else if (cooperative) {
         // a new signing round when a trader had to send a new nonce (lost secret nonce)
         const round = (data as { escrow_release_round?: number }).escrow_release_round ?? 0;
@@ -485,6 +498,7 @@ export const OnchainEscrowPrompt = ({
     data.escrow_release_aggnonce,
     data.escrow_release_my_nonce,
     data.escrow_release_my_partial,
+    data.escrow_release_leaf_ok,
     data.bond_return_tx,
     data.escrow_sweep_tx,
     address,
@@ -907,13 +921,26 @@ export const OnchainEscrowPrompt = ({
     );
   } else if (data.escrow_status_code === ESCROW.RELEASING) {
     const toMe = releaseToMe(data);
+    // Only say "signed" when our signature was really sent: in the two-round signing the first
+    // round is just a nonce, and our app has to sign once more after the peer's nonce (#24).
     body = waiting(
-      data.escrow_release_my_partial || data.escrow_waiting_for === 'peer'
-        ? t(
-            '✍️ Your app checked the release (you receive {{amount}} Sats) and signed it automatically. Waiting for {{peer}}…',
-            { amount: pn(toMe), peer },
-          )
-        : t('Signing the release together with your peer…'),
+      data.escrow_release_leaf_ok
+        ? t('✍️ Your app is checking the release (you receive {{amount}} Sats) and signing it…', {
+            amount: pn(toMe),
+          })
+        : data.escrow_release_my_partial
+          ? t(
+              '✍️ Your app checked the release (you receive {{amount}} Sats) and signed it automatically. Waiting for {{peer}}…',
+              { amount: pn(toMe), peer },
+            )
+          : data.escrow_release_my_nonce && data.escrow_waiting_for === 'peer'
+            ? t(
+                '✍️ Your app checked the release (you receive {{amount}} Sats) and sent its part. When {{peer}} signs, open this order again so your app can sign it too.',
+                { amount: pn(toMe), peer },
+              )
+            : data.escrow_waiting_for === 'peer'
+              ? t('Waiting for {{peer}} to sign the release…', { peer })
+              : t('Signing the release together with your peer…'),
     );
   } else if (data.escrow_release_txid && order.status === 13) {
     body = waiting(

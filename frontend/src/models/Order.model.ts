@@ -28,6 +28,7 @@ export interface SubmitActionProps {
     | 'escrow_nonce'
     | 'escrow_partial'
     | 'escrow_leaf_signature'
+    | 'escrow_release_leaf'
     | 'escrow_sweep'
     | 'escrow_sweep_signatures';
   escrow?: object;

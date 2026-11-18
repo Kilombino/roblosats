@@ -12,6 +12,7 @@ import {
   signDeposit,
   releaseNonce,
   releasePartial,
+  signCooperativeLeaf,
   checkFundingAddress,
   owedInRelease,
   signRescue,
@@ -34,7 +35,7 @@ const call = async (path: string, body: object = {}): Promise<any> => {
   return j;
 };
 
-const toChat = async () => {
+const toChat = async (leaf = false) => {
   const { order_id: id, alias } = await call('setup');
   const tokens = { buyer: 'buyer-token-' + id, seller: 'seller-token-' + id };
   const keys = {
@@ -74,7 +75,12 @@ const toChat = async () => {
     await call('action', {
       user,
       name: 'escrow_keys',
-      data: { escrow_pubkey: pk.escrow, funding_pubkey: pk.funding },
+      // 0.9.5: the seller's app says it signs the cooperative release alone (leaf 0)
+      data: {
+        escrow_pubkey: pk.escrow,
+        funding_pubkey: pk.funding,
+        ...(leaf && user === 'seller' ? { leaf_release: true } : {}),
+      },
     });
     payout[user] = (await call('newaddress')).address;
     await call('action', { user, name: 'escrow_address', data: { address: payout[user] } });
@@ -261,6 +267,64 @@ maybe(
     expect(to(payout.buyer)).toBe(toBuyer - Math.floor(fee / 2));
     expect(to(payout.buyer)).toBe(rescues.buyer.toMe);
     expect(to(payout.seller)).toBe(rescues.seller.toMe);
+  },
+  300_000,
+);
+
+// 0.9.5: the seller alone signs the release through its leaf with the coordinator; the buyer
+// signs nothing. Checked to the sat with the same owedInRelease as the two-round signing.
+const sellerLeaf = async (
+  keys: Record<'buyer' | 'seller', ReturnType<typeof escrowKeys>>,
+  data: (user: string) => Promise<EscrowOrderData & { status: number }>,
+  payout: Record<string, string>,
+): Promise<void> => {
+  const d = await data('seller');
+  expect(d.escrow_release_leaf_ok).toBe(true);
+  expect((await data('buyer')).escrow_release_leaf_ok).toBe(false);
+  const owed = owedInRelease(d);
+  expect(owed).not.toBeNull();
+  const check = { myScript: addressToScript(payout.seller), minToMe: 0, owed: owed! };
+  // the buyer's keys cannot sign it, and a buyer never sends it
+  expect(() => signCooperativeLeaf({ ...d, escrow_role: 'buyer' }, keys.buyer, check)).toThrow();
+  const signature = signCooperativeLeaf(d, keys.seller, check);
+  await call('action', { user: 'seller', name: 'escrow_release_leaf', data: { signature } });
+};
+
+maybe(
+  '0.9.5: the seller alone finishes the release through its leaf',
+  async () => {
+    const { keys, data, payout } = await toChat(true);
+    expect((await call('confirm', { user: 'buyer' })).result[0]).toBe(true);
+    expect((await call('confirm', { user: 'seller' })).result[0]).toBe(true);
+    expect((await data('seller')).escrow_waiting_for).toBe('you');
+    expect((await data('buyer')).escrow_waiting_for).toBe('peer');
+    await sellerLeaf(keys, data, payout);
+    const done = await data('buyer');
+    expect(done.status).toBe(14);
+    const tx = await call('rawtx', { txid: done.escrow_release_txid });
+    expect(tx.vin[0].txinwitness.length).toBe(4); // leaf spend
+    expect(done.onchain_summary!.received_sats).toBe(
+      1_000_000 + done.onchain_summary!.bond_back_sats - done.onchain_summary!.release_mining_sats,
+    );
+  },
+  300_000,
+);
+
+maybe(
+  '0.9.5: a release started with the two-round signing is finished by the seller leaf (#24)',
+  async () => {
+    const { keys, data, payout } = await toChat(false);
+    expect((await call('confirm', { user: 'buyer' })).result[0]).toBe(true);
+    expect((await call('confirm', { user: 'seller' })).result[0]).toBe(true);
+    let d = await data('seller');
+    const owed = owedInRelease(d)!;
+    const check = { myScript: addressToScript(payout.seller), minToMe: 0, owed };
+    const n = releaseNonce(d, keys.seller, check);
+    await call('action', { user: 'seller', name: 'escrow_nonce', data: { nonce: n.pubnonce } });
+    d = await data('seller');
+    expect(d.escrow_waiting_for).toBe('peer');
+    await sellerLeaf(keys, data, payout);
+    expect((await data('buyer')).status).toBe(14);
   },
   300_000,
 );
