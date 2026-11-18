@@ -14,19 +14,41 @@ const Routes: React.FC = () => {
 
   const { isLegacyMode } = useLegacyMode();
 
-  useEffect(() => {
-    if (window.AndroidDataRobosats && garage.currentSlot) {
-      const orderPath = window.AndroidDataRobosats.navigateToPage ?? '';
-      const [coordinator, orderId] = orderPath.split('/');
-      window.AndroidDataRobosats = undefined;
-
-      if (orderId && coordinator) {
-        const slot = garage.getSlotByOrder(coordinator, parseInt(orderId, 10));
-        if (slot?.token) garage.setCurrentSlot(slot.token);
-
-        navigateToPage(`order/${coordinator}/${orderId}`, navigate);
-      }
+  // 0.9.7: an order notification tapped on Android: open that order with its robot. The app
+  // keeps it until the page takes it (cold start: once the garage is read; app already open:
+  // the app calls onNavigationIntent).
+  const openFromNotification = (): void => {
+    const raw = window.AndroidAppRobosats?.takePendingNavigation?.() ?? '';
+    if (!raw) return;
+    let nav: { path?: string; robot?: string } = {};
+    try {
+      nav = JSON.parse(raw) as { path?: string; robot?: string };
+    } catch {
+      return;
     }
+    const [coordinator, orderId] = (nav.path ?? '').split('/');
+    if (!coordinator || !orderId) return;
+    const byRobot = Object.values(garage.slots).find(
+      (s) => nav.robot && s.nostrPubKey === nav.robot,
+    );
+    const slot = byRobot ?? garage.getSlotByOrder(coordinator, parseInt(orderId, 10));
+    if (slot?.token) garage.setCurrentSlot(slot.token);
+    console.info(
+      `notification: open order/${coordinator}/${orderId}${slot ? ' with its robot' : ''}`,
+    );
+    navigateToPage(`order/${coordinator}/${orderId}`, navigate);
+  };
+
+  useEffect(() => {
+    if (window.AndroidRobosats) window.AndroidRobosats.onNavigationIntent = openFromNotification;
+    return () => {
+      if (window.AndroidRobosats) window.AndroidRobosats.onNavigationIntent = undefined;
+    };
+  });
+
+  useEffect(() => {
+    // the garage is read: a notification that started the app can be opened now
+    if (garage.currentSlot) openFromNotification();
   }, [garage.currentSlot]);
 
   useEffect(() => {

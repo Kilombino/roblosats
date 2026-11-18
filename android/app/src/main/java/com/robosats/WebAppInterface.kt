@@ -691,6 +691,15 @@ class WebAppInterface(private val context: MainActivity, private val webView: We
         }
     }
 
+    /** 0.9.7: the order a tapped notification asked to open, once; "" when none. */
+    @JavascriptInterface
+    fun takePendingNavigation(): String {
+        context.pageReady = true
+        val nav = context.pendingNavigation
+        context.pendingNavigation = ""
+        return nav
+    }
+
     // 0.9.6: in-app update (as in Kilowallet). The check goes to GitHub through Tor when the
     // app uses its own Tor; nothing is installed unless the APK's SHA-256 matches the release
     // notes and it carries this app's signing certificate.

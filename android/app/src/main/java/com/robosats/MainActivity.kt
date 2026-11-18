@@ -48,6 +48,21 @@ class MainActivity : AppCompatActivity() {
     private lateinit var loadingContainer: ConstraintLayout
     private lateinit var statusTextView: TextView
     private lateinit var intentData: String
+
+    // 0.9.7: the order a notification asked to open ({"path": "kilobot/24", "robot": hex}),
+    // taken by the page when it is ready (WebAppInterface.takePendingNavigation). Pulled by the
+    // page instead of pushed into it: a push right after loadUrl was lost when the page loaded.
+    @Volatile var pendingNavigation: String = ""
+    @Volatile var pageReady: Boolean = false
+
+    private val ROBOT_PATTERN: Pattern = Pattern.compile("^[0-9a-f]{64}$")
+
+    private fun navigationFrom(intent: Intent): String {
+        val path = extractOrderPath(intent)
+        if (path.isEmpty()) return ""
+        val robot = intent.getStringExtra("robot")?.takeIf { ROBOT_PATTERN.matcher(it).matches() } ?: ""
+        return org.json.JSONObject().put("path", path).put("robot", robot).toString()
+    }
     private lateinit var useOrbotButton: Button
     var useProxy: Boolean = true
 
@@ -154,6 +169,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         intentData = extractOrderPath(intent)
+        pendingNavigation = navigationFrom(intent)
 
 
         val settingProxy = EncryptedStorage.getEncryptedStorage("settings_use_proxy")
@@ -189,6 +205,13 @@ class MainActivity : AppCompatActivity() {
         val newPath = extractOrderPath(intent)
         if (newPath.isNotEmpty()) {
             intentData = newPath
+            pendingNavigation = navigationFrom(intent)
+            // 0.9.7: the app is open: tell the page to take it now
+            if (::webView.isInitialized && pageReady) {
+                webView.post {
+                    webView.evaluateJavascript("javascript:window.AndroidRobosats && window.AndroidRobosats.onNavigationIntent && window.AndroidRobosats.onNavigationIntent()", null)
+                }
+            }
         }
     }
 
@@ -467,20 +490,7 @@ class MainActivity : AppCompatActivity() {
                     val notifications = EncryptedStorage.getEncryptedStorage("settings_notifications")
                     if (notifications != "false") initializeNotifications()
 
-                    if (intentData != "") {
-                        webView.post {
-                            try {
-                                // encodeForJavaScript provides defence-in-depth: even if a
-                                // value somehow bypasses the ORDER_PATH_PATTERN allowlist in
-                                // extractOrderPath(), escaping quotes and control characters
-                                // here ensures it cannot break out of the JS string literal.
-                                val safeIntentData = encodeForJavaScript(intentData)
-                                webView.evaluateJavascript("javascript:window.AndroidDataRobosats = { navigateToPage: '$safeIntentData' }", null)
-                            } catch (e: Exception) {
-                                Log.e("NavigateToPage", "Error evaluating JavaScript: $e")
-                            }
-                        }
-                    }
+                    // 0.9.7: the page takes the order to open itself (takePendingNavigation)
                 }
             } catch (e: Exception) {
                 Log.e("WebViewSetup", "Security error in WebView setup: ${e.message}", e)

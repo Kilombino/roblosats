@@ -48,6 +48,8 @@ interface AndroidAppRobosats {
   backgroundStatus?: (uuid: string) => void;
   requestNotificationPermission?: () => void;
   requestBatteryExemption?: () => void;
+  // 0.9.7: the order a tapped notification asked to open ({path, robot} JSON, or "")
+  takePendingNavigation?: () => string;
 }
 
 class AndroidRobosats {
@@ -133,6 +135,9 @@ class AndroidRobosats {
   public onWsClose: (path: string) => void = (path) => {
     this.WSClose[path]?.();
   };
+
+  // 0.9.7: set by the router; the app calls it when a notification is tapped while open
+  public onNavigationIntent: (() => void) | undefined = undefined;
 
   // 0.9.6: progress of the in-app update ({state, percent?, message?})
   private updateListener: ((state: string) => void) | null = null;

@@ -309,9 +309,24 @@ class NotificationsService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+        // 0.9.7: tapping "Roblosats is running" opens the app
+        val openIntent = Intent(this, MainActivity::class.java).apply {
+            action = Intent.ACTION_MAIN
+            addCategory(Intent.CATEGORY_LAUNCHER)
+            setPackage(packageName)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val openPendingIntent = PendingIntent.getActivity(
+            this,
+            2,
+            openIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+
         val notificationBuilder =
             NotificationCompat.Builder(this, channelRelaysId)
                 .setContentTitle(getString(R.string.robosats_is_running_in_background))
+                .setContentIntent(openPendingIntent)
                 .setPriority(NotificationCompat.PRIORITY_MIN)
                 .setGroup(notificationGroup.id)
                 .setSmallIcon(R.drawable.ic_notification)
@@ -336,6 +351,10 @@ class NotificationsService : Service() {
         val intent = Intent(applicationContext, MainActivity::class.java).apply {
             action = "com.robosats.OPEN_ORDER"
             putExtra("order_id", orderId)
+            // 0.9.7: the robot the notice is for, so the app opens the order with that robot
+            putExtra("robot", hexPubKey)
+            // the open app gets it in onNewIntent instead of a second copy of the activity
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             // Restrict delivery to this app's package to prevent implicit intent interception
             setPackage(applicationContext.packageName)
         }
