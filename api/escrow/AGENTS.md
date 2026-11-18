@@ -118,7 +118,10 @@ server secret. The JS client must produce the same keys: see the vectors in
 - `bond_key` (owner's bond key) → `OnchainBond` FUNDING with its address and `required_sats`
   (bond_size % of the amount); `refund_csv` = the hold-invoice CLTV the LN bond would have had.
   `bonds.refresh` (from `flow.advance`) waits for a confirmed output, fixes the penalty to
-  `ESCROW_COORDINATOR_ADDRESS` (`ESCROW_PENALTY_FEE_RATE`, default 10 sat/vB) → SIGN;
+  `ESCROW_COORDINATOR_ADDRESS` → SIGN. Penalty fee (`bonds.penalty_fee_rate`, rl31-beta22):
+  at most `ESCROW_PENALTY_MAX_FEE_PCT` (10) % of the bond, never above `ESCROW_PENALTY_FEE_RATE`
+  (10 sat/vB) nor below `ESCROW_PENALTY_MIN_FEE_RATE` (1 sat/vB); the coordinator owns the only
+  output, so it can CPFP a slow penalty. `min_bond_sats` still uses `ESCROW_PENALTY_FEE_RATE`;
   `bond_penalty_signature` → LOCKED. Maker LOCKED in WFB → `publish_order`; pretaker LOCKED in
   PUB → `finalize_contract`.
 - The coordinator's key per bond is HKDF of `ESCROW_SECRET` with order, role and the owner's
@@ -128,7 +131,11 @@ server secret. The JS client must produce the same keys: see the vectors in
   inputs (`escrow_funding_signatures` with `bond_signature`); the coordinator adds its own.
 - Penalty (`bonds.penalize`): expiry in WF2/WFE (whoever is missing), unilateral cancel in
   WF2/WFE (`flow.cancel_before_escrow`; taker cancelling sends the order back to the book with the
-  maker's bond still locked). `bonds.release` → RETURNABLE: public order cancelled or expired,
+  maker's bond still locked). Then `flow.credit_penalty` (rl31-beta22): the innocent trader gets
+  `SLASHED_BOND_REWARD_SPLIT` × min(what the penalty paid the coordinator, its own bond) as
+  rewards, proceeds += paid − reward, nothing back to the trader at fault. Hybrid B (proxy
+  maker bond): same rule inside `Logics.add_slashed_rewards` (no upstream "slash_return" for a
+  proxy), and the taker-fault paths reward BEFORE `publish_order` drops the proxy. `bonds.release` → RETURNABLE: public order cancelled or expired,
   pretaker gone, the other party's bond. RETURNABLE bonds come back with `bond_return {address}`
   + `bond_return_signature` (owner + coordinator), or alone after `refund_csv`.
 - After the deposit the bonds are inside the escrow output: cooperative release gives each bond

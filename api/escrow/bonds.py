@@ -130,6 +130,39 @@ def min_bond_sats():
     return 2 * math.ceil(vb * rate) + DUST_P2TR
 
 
+def penalty_fee_rate(value, n_coins, payout_spk):
+    """Fee rate (sat/vB) of a new penalty, fixed when the bond locks (rl31-beta22).
+
+    Until beta21 every penalty paid ESCROW_PENALTY_FEE_RATE (10 sat/vB): 1,500 of the 3,330
+    sats of a minimum bond went to the miners (order #23). Now that rate is a ceiling and the
+    fee is also held to ESCROW_PENALTY_MAX_FEE_PCT of the bond (10 %), never below
+    ESCROW_PENALTY_MIN_FEE_RATE (1 sat/vB, above the node's relay minimum). A penalty that
+    turns out too cheap when it is broadcast is still the coordinator's to speed up: its only
+    output is the coordinator's, so it can be CPFP'd from there."""
+    from api.escrow.transactions import coins_spend_vbytes
+
+    top = service.config("ESCROW_PENALTY_FEE_RATE", cast=float, default=10.0)
+    pct = service.config("ESCROW_PENALTY_MAX_FEE_PCT", cast=float, default=10.0)
+    floor = service.config("ESCROW_PENALTY_MIN_FEE_RATE", cast=float, default=1.0)
+    vb = coins_spend_vbytes(max(1, n_coins), payout_spk)
+    cap_fee = math.floor(value * pct / 100)
+    capped = math.floor(cap_fee * 100 / vb) / 100  # 2 decimals
+    if math.ceil(vb * capped) > cap_fee:  # float rounding: never a sat above the cap
+        capped = round(capped - 0.01, 2)
+    return min(top, max(floor, capped))
+
+
+def penalty_sats(bond):
+    """What the bond's penalty pays the coordinator (its only output), 0 without a penalty."""
+    if bond is None or not bond.penalty_tx:
+        return 0
+    try:
+        tx = Transaction.parse(bytes.fromhex(bond.penalty_tx))
+    except Exception:
+        return 0
+    return int(sum(o.value for o in tx.outputs))
+
+
 def required_sats(order, take_order=None):
     sats = take_order.last_satoshis if take_order is not None and take_order.last_satoshis else order.last_satoshis
     return max(int(sats * order.bond_size / 100), min_bond_sats())
@@ -186,7 +219,7 @@ def refresh(bond, min_conf=1):
     from api.escrow.flow import coordinator_fee_spk
     from api.escrow.transactions import coins_spend_vbytes
 
-    rate = service.config("ESCROW_PENALTY_FEE_RATE", cast=float, default=10.0)
+    rate = penalty_fee_rate(sum(c[2] for c in coins), len(coins), coordinator_fee_spk())
     try:
         tx = coins_spend_tx(coins, coordinator_fee_spk(), rate)
     except ValueError:

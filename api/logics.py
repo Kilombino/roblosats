@@ -793,11 +793,12 @@ class Logics:
                     cls.cancel_escrow(order)
                 except Exception:
                     pass
-                taker_bond = order.taker_bond
+                # Reward maker with part of the taker bond. Before publishing: a hybrid B
+                # order goes back onchain there and loses its maker_bond (the proxy), and the
+                # reward then crashed or was refused (rl31-beta22).
+                cls.add_slashed_rewards(order, order.taker_bond, order.maker_bond)
                 cls.publish_order(order)
                 send_notification.delay(order_id=order.id, message="order_published")
-                # Reward maker with part of the taker bond
-                cls.add_slashed_rewards(order, taker_bond, order.maker_bond)
 
                 order.log("Order expired while waiting for escrow of the taker/seller")
                 order.log("Taker bond was **settled**")
@@ -830,11 +831,10 @@ class Logics:
             else:
                 cls.settle_bond(order.taker_bond)
                 cls.return_escrow(order)
-                taker_bond = order.taker_bond
+                # Reward maker with part of the taker bond (before publishing: see WFE)
+                cls.add_slashed_rewards(order, order.taker_bond, order.maker_bond)
                 cls.publish_order(order)
                 send_notification.delay(order_id=order.id, message="order_published")
-                # Reward maker with part of the taker bond
-                cls.add_slashed_rewards(order, taker_bond, order.maker_bond)
 
                 order.log("Order expired while waiting for invoice of the taker/buyer")
                 order.log("Taker bond was **settled**")
@@ -1619,11 +1619,11 @@ class Logics:
             # Settle the maker bond (Maker loses the bond for canceling an ongoing trade)
             valid = cls.settle_bond(order.taker_bond)
             if valid:
-                taker_bond = order.taker_bond
+                # Reward maker with part of the taker bond (before publishing: a hybrid B
+                # order loses its maker_bond proxy there, rl31-beta22)
+                cls.add_slashed_rewards(order, order.taker_bond, order.maker_bond)
                 cls.publish_order(order)
                 send_notification.delay(order_id=order.id, message="order_published")
-                # Reward maker with part of the taker bond
-                cls.add_slashed_rewards(order, taker_bond, order.maker_bond)
 
                 order.log("Taker cancelled before escrow was locked")
                 order.log("Taker bond was **settled**")
@@ -2419,8 +2419,34 @@ class Logics:
         that was slashed (discounted by the forfeited amount).
         """
         reward_fraction = config("SLASHED_BOND_REWARD_SPLIT", cast=float, default=0.5)
+        if staked_bond is None:
+            order.log(
+                f"Reward for slashed bond {slashed_bond.payment_hash} NOT CREDITED: no staked bond",
+                level="WARN",
+            )
+            return
 
-        if staked_bond.num_satoshis < slashed_bond.num_satoshis:
+        # What the coordinator really gets from the slashed bond: a Lightning bond whole; an
+        # onchain maker bond behind a proxy (hybrid B) only its penalty output, the rest went
+        # to the miners.
+        received = slashed_bond.num_satoshis
+        if escrow_flow.is_bond_proxy(slashed_bond):
+            # rl31-beta22 (order #23): the upstream "return" of a maker bond bigger than the
+            # taker's (range orders) does not apply to an onchain bond: the whole bond was
+            # penalized onchain, nothing is the faulty maker's any more. Upstream credited it
+            # the difference as rewards (1,830 of the 1,830 the coordinator got). Now the
+            # innocent taker gets the reward share of what the penalty paid, at most of its
+            # own bond, and the coordinator keeps the rest.
+            received = escrow_flow.proxy_penalty_sats(slashed_bond)
+            if received <= 0:
+                order.log(
+                    f"Reward for slashed bond {slashed_bond.payment_hash} NOT CREDITED: the penalty pays nothing",
+                    level="WARN",
+                )
+                return
+            slashed_satoshis = min(received, staked_bond.num_satoshis)
+            slashed_return = 0
+        elif staked_bond.num_satoshis < slashed_bond.num_satoshis:
             slashed_satoshis = min(slashed_bond.num_satoshis, staked_bond.num_satoshis)
             slashed_return = int(slashed_bond.num_satoshis - slashed_satoshis)
         else:
@@ -2482,7 +2508,10 @@ class Logics:
             )
             slashed_robot_log = f"Robot({slashed_robot.id},{slashed_robot.user.username}) was returned {slashed_return} Sats)"
 
-        new_proceeds = int(slashed_satoshis * (1 - reward_fraction))
+        if escrow_flow.is_bond_proxy(slashed_bond):
+            new_proceeds = int(received - reward)  # what the penalty really paid, minus the reward
+        else:
+            new_proceeds = int(slashed_satoshis * (1 - reward_fraction))
         Order.objects.filter(pk=order.pk).update(proceeds=F("proceeds") + new_proceeds)
         order.refresh_from_db(fields=["proceeds"])
         transaction.on_commit(

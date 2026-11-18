@@ -2,6 +2,7 @@ import logging
 import math
 
 from django.db import transaction
+from django.db.models import F
 from datetime import timedelta
 
 from decouple import config
@@ -1152,6 +1153,7 @@ def expire_funding(order):
     except EscrowError as e:
         order.log(f"Onchain penalty could not be broadcast: {e}", level="ERROR")
     free_side(order, "taker" if at_fault_is_maker else "maker")
+    credit_penalty(order, "maker" if at_fault_is_maker else "taker")
     order.update_status(Order.Status.EXP)
     # The buyer is at fault when it did not give its keys / payout address (17 nov 2026 QA:
     # the buyer's app said "Escrow not locked" while the seller had done its part).
@@ -1171,6 +1173,7 @@ def cancel_before_escrow(order, canceller):
     escrow = escrow_of(order)
     if escrow and escrow.status in (OnchainEscrow.Status.KEYS, OnchainEscrow.Status.FUNDING):
         escrow.delete()
+    credit_penalty(order, canceller)  # before publishing: that clears the taker
     if canceller == "maker":
         free_side(order, "taker")
         order.update_status(Order.Status.UCA)
@@ -1361,6 +1364,15 @@ def proxy_is_penalized(proxy):
     return bond is not None and bond.status == OnchainBond.Status.PENALIZED
 
 
+def proxy_penalty_sats(proxy):
+    """What the penalty of the onchain bond behind this proxy pays the coordinator."""
+    from api.escrow import bonds
+
+    if not proxy_is_penalized(proxy):
+        return 0
+    return bonds.penalty_sats(proxied_bond(proxy))
+
+
 def to_lightning(order):
     """Case B: the seller took with Lightning. The order goes on as a Lightning order; the
     maker's onchain bond is represented by a proxy LNPayment in order.maker_bond."""
@@ -1441,6 +1453,64 @@ def ln_bond_dispute_credit(order, buyer_wins):
         ledger_credit(order.maker.robot, reward, "slash_reward",
                       f"slash_reward:{order.id}:{order.taker_bond.payment_hash}", order_id=order.id)
         order.log(f"Dispute lost by the Lightning taker: the maker is rewarded {reward} Sats of its bond")
+
+
+def _slash_side(order, side):
+    """The bond of 'maker'/'taker' as {user, staked, received, key}: staked = what it put up,
+    received = what the coordinator got from it if it was slashed (a settled Lightning bond
+    whole; a penalized onchain bond its penalty output, the rest went to the miners)."""
+    from api.escrow import bonds
+    from api.models import LNPayment, OnchainBond
+
+    if side == "taker" and order.taker_lightning:
+        b = order.taker_bond
+        if b is None:
+            return None
+        b.refresh_from_db(fields=["status"])
+        got = b.num_satoshis if b.status == LNPayment.Status.SETLED else 0
+        return {"user": b.sender, "staked": b.num_satoshis, "received": got, "key": b.payment_hash}
+    b = bond_of(order, side)
+    if b is None:
+        return None
+    got = bonds.penalty_sats(b) if b.status == OnchainBond.Status.PENALIZED else 0
+    # same key as the hybrid B proxy, so one onchain bond is never rewarded twice
+    return {"user": b.owner, "staked": b.value, "received": got, "key": f"{PROXY_PREFIX}{b.pk}"}
+
+
+def credit_penalty(order, at_fault):
+    """rl31-beta22: an onchain (or hybrid A) order ended by a fault before the escrow: the
+    trader at fault ('maker'/'taker') lost its bond. Until beta21 nobody was rewarded and the
+    proceeds ignored the penalty. Now, as in a Lightning order: the other trader gets
+    SLASHED_BOND_REWARD_SPLIT of what the coordinator really got (at most of its own bond,
+    as upstream caps it); the coordinator's proceeds are the rest. Nothing goes back to the
+    trader at fault. Must run before the order goes back to the book (the taker is cleared)."""
+    from api.logics import ledger_credit
+    from api.models import Order
+    from api.tasks import send_devfund_donation
+
+    innocent = "taker" if at_fault == "maker" else "maker"
+    fault, other = _slash_side(order, at_fault), _slash_side(order, innocent)
+    if fault is None or fault["received"] <= 0:
+        order.log(f"Reward for the {at_fault}'s slashed bond NOT CREDITED: the bond was not penalized", level="WARN")
+        return False
+    if other is None or other["user"] is None or other["user"].pk == fault["user"].pk:
+        order.log(f"Reward for the {at_fault}'s slashed bond NOT CREDITED: no other trader with a bond", level="WARN")
+        return False
+    split = config("SLASHED_BOND_REWARD_SPLIT", cast=float, default=0.5)
+    reward = int(min(fault["received"], other["staked"]) * split)
+    robot = other["user"].robot
+    if not ledger_credit(robot, reward, "slash_reward", f"slash_reward:{order.id}:{fault['key']}", order_id=order.id):
+        order.log(f"Slashed bond {fault['key']} was already rewarded: DUPLICATE CREDIT REFUSED", level="WARN")
+        return False
+    new_proceeds = int(fault["received"] - reward)
+    Order.objects.filter(pk=order.pk).update(proceeds=F("proceeds") + new_proceeds)
+    order.refresh_from_db(fields=["proceeds"])
+    transaction.on_commit(lambda: send_devfund_donation.delay(order.id, new_proceeds, "slashed bond"))
+    order.log(
+        f"Robot({robot.id},{other['user'].username}) was rewarded {reward} Sats of the {at_fault}'s "
+        f"slashed bond (the coordinator got {fault['received']} Sats from it)"
+    )
+    return True
 
 
 def min_bond_sats():
