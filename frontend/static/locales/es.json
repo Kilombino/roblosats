@@ -1137,7 +1137,6 @@
   "Waiting for its confirmation. Then it can be recovered here once the bond timelock passes ({{blocks}} blocks).": "Esperando su confirmación. Después se podrá recuperar aquí cuando pase el bloqueo de tiempo de la fianza ({{blocks}} bloques).",
   "Waiting for its confirmation. Then it can be recovered here at any time.": "Esperando su confirmación. Después se podrá recuperar aquí en cualquier momento.",
   "Amount ({{unit}})": "Importe ({{unit}})",
-  "Fixed amount in exchange": "Importe fijo a cambio",
   "Premium over market": "Prima sobre el mercado",
   "In exchange for the maximum ({{unit}})": "A cambio del máximo ({{unit}})",
   "In exchange for ({{unit}})": "A cambio de ({{unit}})",
@@ -1147,5 +1146,18 @@
   "Please enter what you want in exchange.": "Escribe lo que quieres a cambio.",
   "Order of {{sats}}": "Orden de {{sats}}",
   "Buy {{sats}}": "Comprar {{sats}}",
-  "Sell {{sats}}": "Vender {{sats}}"
+  "Sell {{sats}}": "Vender {{sats}}",
+  "Not worth it right now: the mining fee (~{{fee}} sats) would eat more than the {{amount}} sats": "Ahora no compensa: la comisión de minería (~{{fee}} sats) se comería más que los {{amount}} sats",
+  "✅ Recovered: {{amount}} sats": "✅ Recuperados: {{amount}} sats",
+  "Confirmed": "Confirmada",
+  "On its way, waiting for its confirmation": "En camino, esperando su confirmación",
+  "Recover anyway: I understand that most of these sats go to the miners": "Recuperar igualmente: entiendo que la mayor parte de estos sats se la llevan los mineros",
+  "Left on your funding address, returned": "Devuelto (quedaba en tu dirección de aportación)",
+  "Return of the sats left on your funding address": "Devolución de los sats que quedaban en tu dirección de aportación",
+  "Fixed": "Fijo",
+  "Paid in": "Pagado en",
+  "+{{amount}} sats extra returned with your bond": "+{{amount}} sats de más devueltos con tu fianza",
+  "Extra returned with your bond": "De más, devuelto con tu fianza",
+  "Spamcoin payment method(s)": "Método(s) de pago en Spamcoin",
+  "Payment method(s)": "Método(s) de pago"
 }

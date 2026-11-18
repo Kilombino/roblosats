@@ -1039,7 +1039,6 @@
   "Waiting for its confirmation. Then it can be recovered here once the bond timelock passes ({{blocks}} blocks).": "Waiting for its confirmation. Then it can be recovered here once the bond timelock passes ({{blocks}} blocks).",
   "Waiting for its confirmation. Then it can be recovered here at any time.": "Waiting for its confirmation. Then it can be recovered here at any time.",
   "Amount ({{unit}})": "Amount ({{unit}})",
-  "Fixed amount in exchange": "Fixed amount in exchange",
   "Premium over market": "Premium over market",
   "In exchange for the maximum ({{unit}})": "In exchange for the maximum ({{unit}})",
   "In exchange for ({{unit}})": "In exchange for ({{unit}})",
@@ -1049,5 +1048,18 @@
   "Please enter what you want in exchange.": "Please enter what you want in exchange.",
   "Order of {{sats}}": "Order of {{sats}}",
   "Buy {{sats}}": "Buy {{sats}}",
-  "Sell {{sats}}": "Sell {{sats}}"
+  "Sell {{sats}}": "Sell {{sats}}",
+  "Not worth it right now: the mining fee (~{{fee}} sats) would eat more than the {{amount}} sats": "Not worth it right now: the mining fee (~{{fee}} sats) would eat more than the {{amount}} sats",
+  "✅ Recovered: {{amount}} sats": "✅ Recovered: {{amount}} sats",
+  "Confirmed": "Confirmed",
+  "On its way, waiting for its confirmation": "On its way, waiting for its confirmation",
+  "Recover anyway: I understand that most of these sats go to the miners": "Recover anyway: I understand that most of these sats go to the miners",
+  "Left on your funding address, returned": "Left on your funding address, returned",
+  "Return of the sats left on your funding address": "Return of the sats left on your funding address",
+  "Fixed": "Fixed",
+  "Paid in": "Paid in",
+  "+{{amount}} sats extra returned with your bond": "+{{amount}} sats extra returned with your bond",
+  "Extra returned with your bond": "Extra returned with your bond",
+  "Spamcoin payment method(s)": "Spamcoin payment method(s)",
+  "Payment method(s)": "Payment method(s)"
 }

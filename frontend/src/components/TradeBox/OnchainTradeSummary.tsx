@@ -41,6 +41,9 @@ const OnchainTradeSummary = ({ summary }: { summary: OnchainSummary }): React.JS
             summary.lightning_bond ? t('Bond unlocked in your wallet') : t('Bond back to you'),
             `${pn(summary.bond_back_sats)} Sats`,
           )}
+          {(summary.extra_back_sats ?? 0) > 0
+            ? row(t('Extra returned with your bond'), `+${pn(summary.extra_back_sats ?? 0)} Sats`)
+            : null}
           {row(
             summary.fee_from_bond
               ? t('Your fee (out of your bond)')

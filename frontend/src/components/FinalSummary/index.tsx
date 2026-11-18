@@ -35,6 +35,10 @@ export interface FinalSummaryData {
   /** rl31-beta18: sats at the bond address that were not the bond, still there / sent back */
   bond_extra_sats?: number;
   bond_extra_returned_sats?: number;
+  /** rl31-beta20: sats left on the funding address and sent back */
+  funding_leftover_returned_sats?: number;
+  /** rl31-beta20: funding excess that rode in the escrow and came back with the bond */
+  escrow_extra_returned_sats?: number;
   bond_lost_sats?: number;
   bond_lost_reason?: string;
   fee_from_bond?: boolean;
@@ -120,6 +124,8 @@ const txLabel = (label: string, t: (k: string) => string): string => {
       return t('Your bond returned');
     case 'bond_leftover_return':
       return t('Return of the sats that were not the bond');
+    case 'funding_leftover_return':
+      return t('Return of the sats left on your funding address');
     case 'bond_penalty':
       return t('Your bond penalized');
     case 'payout':
@@ -283,6 +289,18 @@ const FinalSummary = ({
       ) : null}
       {(s.bond_extra_returned_sats ?? 0) > 0 ? (
         <Row label={t('Not the bond, returned')} value={sats(s.bond_extra_returned_sats)} />
+      ) : null}
+      {(s.escrow_extra_returned_sats ?? 0) > 0 ? (
+        <Row
+          label={t('Extra returned with your bond')}
+          value={`+${sats(s.escrow_extra_returned_sats)}`}
+        />
+      ) : null}
+      {(s.funding_leftover_returned_sats ?? 0) > 0 ? (
+        <Row
+          label={t('Left on your funding address, returned')}
+          value={sats(s.funding_leftover_returned_sats)}
+        />
       ) : null}
       {lost ? (
         <Typography variant='caption' color='error.main' sx={{ display: 'block' }}>

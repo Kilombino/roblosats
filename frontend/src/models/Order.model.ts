@@ -218,9 +218,23 @@ class Order {
   bad_invoice?: string = '';
   bad_statement?: string = '';
 
+  /** Keys the last full order page from the coordinator brought (rl31-beta20). */
+  private serverKeys: string[] = [];
+
   update = (attributes: object): Order => {
-    Object.assign(this, attributes);
     const a = attributes as Record<string, unknown>;
+    // A full order page replaces the previous one: a key the coordinator stopped sending (a
+    // leftover already sent back, a return already signed...) goes away instead of staying with
+    // its old value (18 nov 2026: "Recover your sats" stayed after the leftover went back).
+    // Only keys the coordinator sent before are dropped, never what the app set itself.
+    if (typeof a.id === 'number' && 'status' in a && !a.bad_request) {
+      const self = this as unknown as Record<string, unknown>;
+      for (const k of this.serverKeys) {
+        if (!(k in a) && /^(bond_|escrow_|onchain_)/.test(k)) delete self[k];
+      }
+      this.serverKeys = Object.keys(a);
+    }
+    Object.assign(this, attributes);
     if (
       a.sats_denominated === true &&
       ('exchange_amount' in a || 'exchange_min_amount' in a || 'exchange_max_amount' in a)

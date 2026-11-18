@@ -532,3 +532,19 @@ describe('pendingPayments', () => {
     expect(pendingPayments([us[0]])).toEqual({ count: 0, sats: 0, utxos: [] });
   });
 });
+
+// rl31-beta20 (Kilobot #22: 331 sats at ~4.7 sat/vB): a leftover the miners would eat is not
+// pushed; the coordinator uses the same rule.
+describe('uneconomic leftovers', () => {
+  it('recoveryFee and worthRecovering', () => {
+    const { recoveryFee, worthRecovering } = jest.requireActual('../rescue');
+    const fee = recoveryFee('funding', 1, 4.7);
+    expect(fee).toBe(Math.ceil((11 + 58 + 43) * 4.7));
+    expect(worthRecovering(331, fee)).toBe(false);
+    expect(worthRecovering(3300, fee)).toBe(true);
+    expect(worthRecovering(2 * fee, fee)).toBe(true);
+    expect(worthRecovering(2 * fee - 1, fee)).toBe(false);
+    expect(worthRecovering(339, 10)).toBe(false);
+    expect(recoveryFee('bond', 2, 2)).toBeGreaterThan(recoveryFee('bond', 1, 2));
+  });
+});

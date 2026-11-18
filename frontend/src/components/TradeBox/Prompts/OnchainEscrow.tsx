@@ -17,6 +17,7 @@ import { type Order } from '../../../models';
 import { systemClient } from '../../../services/System';
 import { pn } from '../../../utils';
 import {
+  myExtraInEscrow,
   signSweep,
   EscrowCheckError,
   checkFundingAddress,
@@ -69,6 +70,30 @@ const ESCROW = { KEYS: 0, FUNDING: 1, MEMPOOL: 2, LOCKED: 3, RELEASING: 4 };
 const EXPLORER = 'https://mempool.kilombino.com/tx/';
 
 /** A transaction of the trade: short txid, copy button and a link to the explorer. */
+/** A leftover already sent back (rl31-beta20): done, with its TXID and the explorer. */
+export const RecoveredLine = ({
+  sats,
+  txid,
+  confirmed,
+}: {
+  sats: number;
+  txid: string;
+  confirmed: boolean;
+}): React.JSX.Element => {
+  const { t } = useTranslation();
+  return (
+    <Alert severity='success' icon={false} sx={{ justifyContent: 'center' }}>
+      <Typography variant='body2' align='center'>
+        <b>{t('✅ Recovered: {{amount}} sats', { amount: pn(sats) })}</b>
+      </Typography>
+      <Typography variant='caption' align='center' sx={{ display: 'block' }}>
+        {confirmed ? t('Confirmed') : t('On its way, waiting for its confirmation')}
+      </Typography>
+      <TxLine label={t('Your payment')} txid={txid} />
+    </Alert>
+  );
+};
+
 export const TxLine = ({ label, txid }: { label: string; txid: string }): React.JSX.Element => {
   const { t } = useTranslation();
   return (
@@ -844,6 +869,36 @@ export const OnchainEscrowPrompt = ({
         </Grid>
       </Grid>
     );
+  } else if (
+    (data.escrow_leftover_sats ?? 0) > 0 &&
+    ![9, 10, 11, 13].includes(order.status) &&
+    data.escrow_leftover_worth === false
+  ) {
+    // rl31-beta20: not worth sending back now (the mining fee would eat more than the sats)
+    body = (
+      <Grid container spacing={1} sx={{ flexDirection: 'column', alignItems: 'center' }}>
+        <Grid>
+          <Alert severity='info'>
+            {t(
+              'Not worth it right now: the mining fee (~{{fee}} sats) would eat more than the {{amount}} sats',
+              {
+                fee: pn(data.escrow_leftover_fee_sats ?? 0),
+                amount: pn(data.escrow_leftover_sats ?? 0),
+              },
+            )}
+          </Alert>
+        </Grid>
+        {data.escrow_sweep_txid ? (
+          <Grid sx={{ width: '100%' }}>
+            <RecoveredLine
+              sats={data.escrow_sweep_sats ?? 0}
+              txid={data.escrow_sweep_txid}
+              confirmed={data.escrow_sweep_status === 'confirmed'}
+            />
+          </Grid>
+        ) : null}
+      </Grid>
+    );
   } else if ((data.escrow_leftover_sats ?? 0) > 0 && ![9, 10, 11, 13].includes(order.status)) {
     body = (
       <Grid container spacing={1} sx={{ flexDirection: 'column', alignItems: 'center' }}>
@@ -876,15 +931,27 @@ export const OnchainEscrowPrompt = ({
       </Grid>
     );
   } else if (data.escrow_sweep_txid && data.bond_status_code !== BOND.RETURNABLE) {
-    body = waiting(
-      t('Your leftover sats are on their way back.'),
-      <TxLine label={t('Your payment')} txid={data.escrow_sweep_txid} />,
+    body = (
+      <RecoveredLine
+        sats={data.escrow_sweep_sats ?? 0}
+        txid={data.escrow_sweep_txid}
+        confirmed={data.escrow_sweep_status === 'confirmed'}
+      />
     );
   }
 
   return (
     <Grid container spacing={1} sx={{ flexDirection: 'column', alignItems: 'center', padding: 1 }}>
       <Grid>{body}</Grid>
+      {myExtraInEscrow(data) > 0 && data.escrow_deposit_txid ? (
+        <Grid>
+          <Typography variant='caption' align='center' sx={{ display: 'block' }}>
+            {t('+{{amount}} sats extra returned with your bond', {
+              amount: pn(myExtraInEscrow(data)),
+            })}
+          </Typography>
+        </Grid>
+      ) : null}
       {error ? (
         <Grid>
           <Alert severity='error'>{error}</Alert>

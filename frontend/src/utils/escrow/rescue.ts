@@ -353,6 +353,29 @@ export const buildFundingSweep = (
   };
 };
 
+/** rl31-beta20: the mining fee of taking coins back alone, as the builders above charge it. */
+export const recoveryFee = (
+  kind: 'funding' | 'bond' | 'escrow',
+  inputs: number,
+  feeRate: number,
+): number =>
+  Number(
+    feeFor(
+      VB_BASE +
+        (kind === 'funding' ? VB_KEY_IN : kind === 'bond' ? VB_LEAF_CSV_IN : VB_ESCROW_LEAF_IN) *
+          Math.max(1, inputs) +
+        VB_OUT,
+      feeRate,
+    ),
+  );
+
+export const DUST_SATS = 330;
+
+/** A leftover is worth sending back when what arrives is above the dust limit and at least
+ * what the miners take (the coordinator uses the same rule, api/escrow/bonds.py). */
+export const worthRecovering = (sats: number, fee: number): boolean =>
+  sats - fee >= Math.max(DUST_SATS, fee);
+
 /** Blocks still to wait for a CSV of [csv] on an output confirmed at [confHeight]. */
 export const blocksLeft = (confHeight: number | null, csv: number, tip: number): number | null => {
   if (!confHeight) return null;

@@ -1137,7 +1137,6 @@
   "Waiting for its confirmation. Then it can be recovered here once the bond timelock passes ({{blocks}} blocks).": "Esperant la seva confirmació. Després es podrà recuperar aquí quan passi el bloqueig de temps de la fiança ({{blocks}} blocs).",
   "Waiting for its confirmation. Then it can be recovered here at any time.": "Esperant la seva confirmació. Després es podrà recuperar aquí en qualsevol moment.",
   "Amount ({{unit}})": "Import ({{unit}})",
-  "Fixed amount in exchange": "Import fix a canvi",
   "Premium over market": "Prima sobre el mercat",
   "In exchange for the maximum ({{unit}})": "A canvi del màxim ({{unit}})",
   "In exchange for ({{unit}})": "A canvi de ({{unit}})",
@@ -1147,5 +1146,18 @@
   "Please enter what you want in exchange.": "Escriu el que vols a canvi.",
   "Order of {{sats}}": "Ordre de {{sats}}",
   "Buy {{sats}}": "Comprar {{sats}}",
-  "Sell {{sats}}": "Vendre {{sats}}"
+  "Sell {{sats}}": "Vendre {{sats}}",
+  "Not worth it right now: the mining fee (~{{fee}} sats) would eat more than the {{amount}} sats": "Ara no compensa: la comissió de mineria (~{{fee}} sats) es menjaria més que els {{amount}} sats",
+  "✅ Recovered: {{amount}} sats": "✅ Recuperats: {{amount}} sats",
+  "Confirmed": "Confirmada",
+  "On its way, waiting for its confirmation": "En camí, esperant la seva confirmació",
+  "Recover anyway: I understand that most of these sats go to the miners": "Recuperar igualment: entenc que la major part d'aquests sats se l'emporten els miners",
+  "Left on your funding address, returned": "Retornat (quedava a la teva adreça d'aportació)",
+  "Return of the sats left on your funding address": "Retorn dels sats que quedaven a la teva adreça d'aportació",
+  "Fixed": "Fix",
+  "Paid in": "Pagat en",
+  "+{{amount}} sats extra returned with your bond": "+{{amount}} sats de més retornats amb la teva fiança",
+  "Extra returned with your bond": "De més, retornat amb la teva fiança",
+  "Spamcoin payment method(s)": "Mètode(s) de pagament en Spamcoin",
+  "Payment method(s)": "Mètode(s) de pagament"
 }

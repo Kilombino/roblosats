@@ -1,5 +1,6 @@
 import React, { useContext, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { numberFromInput } from '../../utils/numberInput';
 import {
   SliderThumb,
   Grid,
@@ -160,17 +161,19 @@ const AmountRange: React.FC<AmountRangeProps> = ({
               variant='standard'
               type='number'
               size='small'
-              value={maker.minAmount?.toString()}
+              value={maker.minAmount?.toString() ?? ''}
+              slotProps={{ htmlInput: { inputMode: satMode ? 'numeric' : 'decimal' } }}
               onChange={(e) => {
-                setMaker((maker) => {
-                  const value = Number(e.target.value);
-                  return {
-                    ...maker,
-                    minAmount: satMode
-                      ? Math.round(value)
-                      : parseFloat(value.toPrecision(value < 100 ? 2 : 3)),
-                  };
-                });
+                const value = numberFromInput(e.target);
+                setMaker((maker) => ({
+                  ...maker,
+                  minAmount:
+                    value === null
+                      ? null
+                      : satMode
+                        ? Math.round(value)
+                        : parseFloat(value.toPrecision(value < 100 ? 2 : 3)),
+                }));
               }}
               error={minAmountError}
               sx={{
@@ -193,17 +196,19 @@ const AmountRange: React.FC<AmountRangeProps> = ({
               variant='standard'
               size='small'
               type='number'
-              value={maker.maxAmount?.toString()}
+              value={maker.maxAmount?.toString() ?? ''}
+              slotProps={{ htmlInput: { inputMode: satMode ? 'numeric' : 'decimal' } }}
               onChange={(e) => {
-                setMaker((maker) => {
-                  const value = Number(e.target.value);
-                  return {
-                    ...maker,
-                    maxAmount: satMode
-                      ? Math.round(value)
-                      : parseFloat(value.toPrecision(value < 100 ? 2 : 3)),
-                  };
-                });
+                const value = numberFromInput(e.target);
+                setMaker((maker) => ({
+                  ...maker,
+                  maxAmount:
+                    value === null
+                      ? null
+                      : satMode
+                        ? Math.round(value)
+                        : parseFloat(value.toPrecision(value < 100 ? 2 : 3)),
+                }));
               }}
               error={maxAmountError}
               sx={{

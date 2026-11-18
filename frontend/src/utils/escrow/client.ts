@@ -94,6 +94,17 @@ export interface EscrowOrderData {
   bond_leftover_coins?: BondCoin[];
   bond_leftover_txid?: string;
   bond_leftover_returned_sats?: number;
+  /** rl31-beta20: what sending the leftovers back costs now and whether it is worth it, and
+   * each return already sent with its state. */
+  bond_leftover_fee_sats?: number;
+  bond_leftover_worth?: boolean;
+  bond_leftover_returns?: Array<{
+    txid: string;
+    sats: number;
+    spent_sats?: number;
+    status: 'pending' | 'confirmed';
+  }>;
+  bond_leftover_returned_confirmed?: boolean;
   /** A freed bond: sats at its address beyond the bond that go back with it. */
   bond_extra_sats?: number;
   escrow_fee_from_bond?: boolean;
@@ -110,6 +121,11 @@ export interface EscrowOrderData {
   escrow_sweep_tx?: string;
   escrow_sweep_spent?: Array<[number, string]>;
   escrow_sweep_txid?: string;
+  escrow_sweep_sats?: number;
+  escrow_sweep_spent_sats?: number;
+  escrow_sweep_status?: 'pending' | 'confirmed';
+  escrow_leftover_fee_sats?: number;
+  escrow_leftover_worth?: boolean;
   escrow_release_txid?: string;
   escrow_waiting_for?: '' | 'you' | 'peer' | 'confirmation' | 'coordinator';
   escrow_waiting_what?: string;
@@ -117,6 +133,10 @@ export interface EscrowOrderData {
   escrow_release_cancel?: boolean;
   escrow_trade_sats?: number;
   escrow_bond_in_escrow?: { seller: number; buyer: number };
+  /** rl31-beta20: funding excess too small for a change output, in the escrow output and
+   * back to its owner with its bond (escrows with extra plan 1). */
+  escrow_extra_in_escrow?: { seller: number; buyer: number };
+  escrow_extra_plan?: number;
   escrow_release_coordinator_sats?: number;
   /** 2 (rl31-beta15): the coordinator fees ride in the escrow output and only the release of
    * a completed trade pays them; a collaborative cancel gives each trader its fee back. */
@@ -146,6 +166,7 @@ export interface OnchainSummary {
   received_sats: number;
   bond_sats: number;
   bond_back_sats: number;
+  extra_back_sats?: number;
   coordinator_fee_sats: number;
   fee_from_bond: boolean;
   fee_at_release?: boolean;
@@ -338,6 +359,18 @@ export interface DepositLimits {
   maxFeeRate: number;
 }
 
+/** rl31-beta20: our funding extra in the escrow (0 when none or an older coordinator). */
+export const myExtraInEscrow = (data: EscrowOrderData): number => {
+  const ex = data.escrow_extra_in_escrow;
+  if (!ex) return 0;
+  return (data.escrow_role === 'buyer' ? ex.buyer : ex.seller) ?? 0;
+};
+
+/** The largest extra a deposit can leave in the escrow: below dust plus a change output's cost
+ * it would have been change instead (with rounding room). */
+export const maxExtraSats = (maxFeeRate: number): number =>
+  330 + 2 * Math.ceil(43 * maxFeeRate) + 2;
+
 /** Checks the joint deposit and signs our funding inputs (and our bond input). */
 export const signDeposit = (
   data: EscrowOrderData,
@@ -379,7 +412,15 @@ export const signDeposit = (
   const myBack = tx.outputs
     .filter((o) => bytesToHex(o.script) === bytesToHex(myFunding))
     .reduce((a, o) => a + o.value, BigInt(0));
-  if (myIn - myBack > BigInt(limits.maxSpendSats))
+  // rl31-beta20: our funding excess too small for a change output rides in the escrow and
+  // comes back with our bond (the release and the rescue are checked to give it back). Never
+  // more than a change output would have been worth at the most fee rate we accept.
+  const myExtra = BigInt(myExtraInEscrow(data));
+  if (myExtra < BigInt(0) || myExtra > BigInt(maxExtraSats(limits.maxFeeRate)))
+    fail('this deposit takes more than agreed from us');
+  if (myExtra > BigInt(0) && tx.outputs[0].value < BigInt(data.escrow_sats!) + bondValue + myExtra)
+    fail('the escrow output is too small');
+  if (myIn - myBack - myExtra > BigInt(limits.maxSpendSats))
     fail('this deposit takes more than agreed from us');
   const vbytes =
     11 + tx.inputs.length * 110 + tx.outputs.reduce((a, o) => a + 9 + o.script.length, 0);
@@ -533,7 +574,12 @@ export const owedInRelease = (data: EscrowOrderData): { due: number; paysFee: bo
       : { seller: 0, buyer: 0 };
   if (held.seller < 0 || held.buyer < 0)
     fail('the amounts of the release do not add up to the escrow');
-  if (trade + bonds.seller + bonds.buyer + held.seller + held.buyer !== data.escrow_output_sats)
+  const ex = data.escrow_extra_in_escrow ?? { seller: 0, buyer: 0 };
+  if (ex.seller < 0 || ex.buyer < 0) fail('the amounts of the release do not add up to the escrow');
+  if (
+    trade + bonds.seller + bonds.buyer + held.seller + held.buyer + ex.seller + ex.buyer !==
+    data.escrow_output_sats
+  )
     fail('the amounts of the release do not add up to the escrow');
   const myHeld = role === 'seller' ? held.seller : held.buyer;
   // our fee inside the escrow is what we agreed to pay: what we owed beyond the trade amount
@@ -559,13 +605,14 @@ export const owedInRelease = (data: EscrowOrderData): { due: number; paysFee: bo
   const atRelease = data.escrow_release_coordinator_sats ?? 0;
   if (atRelease && atRelease !== (data.escrow_fee_at_release_sats ?? -1))
     fail('the release charges a fee we did not agree');
+  // our funding extra (rl31-beta20) comes back with our bond, whatever the release is
   if (data.escrow_release_cancel)
     return role === 'seller'
-      ? { due: trade + bonds.seller + held.seller, paysFee: true }
-      : { due: bonds.buyer + held.buyer, paysFee: false };
+      ? { due: trade + bonds.seller + held.seller + ex.seller, paysFee: true }
+      : { due: bonds.buyer + held.buyer + ex.buyer, paysFee: false };
   return role === 'buyer'
-    ? { due: trade + bonds.buyer - atRelease, paysFee: true }
-    : { due: bonds.seller, paysFee: false };
+    ? { due: trade + bonds.buyer + ex.buyer - atRelease, paysFee: true }
+    : { due: bonds.seller + ex.seller, paysFee: false };
 };
 
 const checkRelease = (

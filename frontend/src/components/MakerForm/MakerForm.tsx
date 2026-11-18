@@ -15,6 +15,8 @@ import {
   MenuItem,
   FormControl,
   FormControlLabel,
+  InputAdornment,
+  InputLabel,
   Box,
   useTheme,
   Collapse,
@@ -34,6 +36,7 @@ import { StoreTokenDialog, NoRobotDialog, F2fMapDialog, UsedRobotDialog } from '
 import { FlagWithProps } from '../Icons';
 import AutocompletePayments from './AutocompletePayments';
 import AmountRange from './AmountRange';
+import { cleanNumberInput, numberFromInput } from '../../utils/numberInput';
 import currencyDict from '../../utils/currencies';
 import { amountToString, computeSats, pn } from '../../utils';
 import { onchainFees } from '../../utils/escrow/fees';
@@ -458,7 +461,8 @@ const MakerForm = ({
   };
 
   const handlePremiumChange: React.ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement> =
-    function ({ target: { value } }): void {
+    function ({ target }): void {
+      const value = cleanNumberInput(target);
       const max = fav.mode === 'fiat' ? 999 : 99;
       const min = -100;
       const newPremium = Math.floor(Number(value) * Math.pow(10, 2)) / Math.pow(10, 2);
@@ -486,12 +490,9 @@ const MakerForm = ({
   };
 
   const handleFixedPriceChange: React.ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement> =
-    function ({ target: { value } }): void {
-      const price = parseFloat(value);
-      setMaker((maker) => ({
-        ...maker,
-        fixedPrice: value === '' || isNaN(price) ? null : price,
-      }));
+    function ({ target }): void {
+      const price = numberFromInput(target);
+      setMaker((maker) => ({ ...maker, fixedPrice: price }));
     };
 
   const buildOrderAttributes = (): object =>
@@ -730,7 +731,9 @@ const MakerForm = ({
         (!makerHasAmountRange ||
           (!fixedLike && !satMode && (Object.keys(limits)?.length ?? 0) < 1))) ||
       (makerHasAmountRange && hasRangeError) ||
-      (!makerHasAmountRange && maker.amount && maker.amount <= 0) ||
+      // rl31-beta20: a cleared range field is empty, i.e. required
+      (makerHasAmountRange && (maker.minAmount == null || maker.maxAmount == null)) ||
+      (!makerHasAmountRange && maker.amount != null && maker.amount <= 0) ||
       (fixedLike && fixedLikeUnits === null) ||
       (satMode && !satTotalMode && marketPrice === null) ||
       (!fixedLike && maker.badPremiumText !== '') ||
@@ -819,6 +822,9 @@ const MakerForm = ({
     }
     if (makerHasAmountRange && hasRangeError) {
       return t('The amount range is not valid.');
+    }
+    if (makerHasAmountRange && (maker.minAmount == null || maker.maxAmount == null)) {
+      return t('Please enter an amount.');
     }
     if (!makerHasAmountRange && maker.amount && maker.amount <= 0) {
       return t('The amount must be greater than 0.');
@@ -1268,8 +1274,10 @@ const MakerForm = ({
                       required={true}
                       value={maker.amount ?? ''}
                       type='number'
+                      slotProps={{ htmlInput: { inputMode: satMode ? 'numeric' : 'decimal' } }}
                       onChange={(e) => {
-                        setMaker({ ...maker, amount: Number(e.target.value) });
+                        const amount = numberFromInput(e.target);
+                        setMaker({ ...maker, amount });
                       }}
                     />
                   </Tooltip>
@@ -1332,7 +1340,15 @@ const MakerForm = ({
                   onAutocompleteChange={handlePaymentMethodChange}
                   optionsType={fav.mode}
                   error={maker.badPaymentMethod}
-                  label={`${fav.mode === 'swap' ? t('Swap Destination(s)') : t('Fiat Payment Method(s)')} *`}
+                  label={`${
+                    satMode
+                      ? payCurrency === SPAMCOIN
+                        ? t('Spamcoin payment method(s)')
+                        : t('Payment method(s)')
+                      : fav.mode === 'swap'
+                        ? t('Swap Destination(s)')
+                        : t('Fiat Payment Method(s)')
+                  } *`}
                   tooltipTitle={t(
                     fav.mode === 'swap'
                       ? t('Enter the destination of the Lightning swap')
@@ -1425,14 +1441,44 @@ const MakerForm = ({
                 sx={{ mb: 1, backgroundColor: theme.palette.background.paper }}
               >
                 <ToggleButton value='total' sx={{ textTransform: 'none' }}>
-                  {t('Fixed amount in exchange')}
+                  {t('Fixed')}
                 </ToggleButton>
                 <ToggleButton value='market' sx={{ textTransform: 'none' }}>
                   {t('Premium over market')}
                 </ToggleButton>
               </ToggleButtonGroup>
+              {!satTotalMode ? (
+                // Premium mode: the payment unit on its own row, labelled, so the premium
+                // field never reads like "100 EUR" (Kilombino, 18 nov 2026)
+                <FormControl fullWidth sx={{ mb: 1.5 }}>
+                  <InputLabel id='sat-pay-unit'>{t('Paid in')}</InputLabel>
+                  <Select
+                    labelId='sat-pay-unit'
+                    label={t('Paid in')}
+                    fullWidth
+                    sx={{ backgroundColor: theme.palette.background.paper, borderRadius: '4px' }}
+                    value={payCurrency}
+                    renderValue={(v) => exchangeUnit(Number(v))}
+                    onChange={(e) => {
+                      handlePayCurrencyChange(Number(e.target.value));
+                    }}
+                  >
+                    {makerCurrencyOptions(currencyDict).map(([key, value]) => (
+                      <MenuItem key={key} value={parseInt(key)}>
+                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <FlagWithProps code={value} />
+                          {' ' +
+                            (Number(key) === SPAMCOIN
+                              ? exchangeUnit(SPAMCOIN)
+                              : currencyLabel(value))}
+                        </div>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              ) : null}
               <Grid container sx={{ width: '100%', flexWrap: 'nowrap' }}>
-                <Grid sx={{ width: '60%' }}>
+                <Grid sx={{ width: satTotalMode ? '60%' : '100%' }}>
                   {satTotalMode ? (
                     <TextField
                       fullWidth
@@ -1465,6 +1511,7 @@ const MakerForm = ({
                       }
                       slotProps={{
                         htmlInput: {
+                          inputMode: 'decimal',
                           min: 0,
                           style: {
                             textAlign: 'center',
@@ -1474,11 +1521,8 @@ const MakerForm = ({
                         },
                       }}
                       onChange={(e) => {
-                        const v = parseFloat(e.target.value);
-                        setMaker((maker) => ({
-                          ...maker,
-                          exchangeTotal: e.target.value === '' || isNaN(v) ? null : v,
-                        }));
+                        const v = numberFromInput(e.target);
+                        setMaker((maker) => ({ ...maker, exchangeTotal: v }));
                       }}
                     />
                   ) : (
@@ -1498,7 +1542,11 @@ const MakerForm = ({
                       type='number'
                       value={maker.premium ?? ''}
                       slotProps={{
+                        input: {
+                          endAdornment: <InputAdornment position='end'>%</InputAdornment>,
+                        },
                         htmlInput: {
+                          inputMode: 'decimal',
                           min: -100,
                           max: 999,
                           style: {
@@ -1512,29 +1560,31 @@ const MakerForm = ({
                     />
                   )}
                 </Grid>
-                <Grid sx={{ width: '40%' }}>
-                  <Select
-                    fullWidth
-                    sx={{ backgroundColor: theme.palette.background.paper, borderRadius: '4px' }}
-                    value={payCurrency}
-                    renderValue={(v) => exchangeUnit(Number(v))}
-                    onChange={(e) => {
-                      handlePayCurrencyChange(Number(e.target.value));
-                    }}
-                  >
-                    {makerCurrencyOptions(currencyDict).map(([key, value]) => (
-                      <MenuItem key={key} value={parseInt(key)}>
-                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-                          <FlagWithProps code={value} />
-                          {' ' +
-                            (Number(key) === SPAMCOIN
-                              ? exchangeUnit(SPAMCOIN)
-                              : currencyLabel(value))}
-                        </div>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </Grid>
+                {satTotalMode ? (
+                  <Grid sx={{ width: '40%' }}>
+                    <Select
+                      fullWidth
+                      sx={{ backgroundColor: theme.palette.background.paper, borderRadius: '4px' }}
+                      value={payCurrency}
+                      renderValue={(v) => exchangeUnit(Number(v))}
+                      onChange={(e) => {
+                        handlePayCurrencyChange(Number(e.target.value));
+                      }}
+                    >
+                      {makerCurrencyOptions(currencyDict).map(([key, value]) => (
+                        <MenuItem key={key} value={parseInt(key)}>
+                          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <FlagWithProps code={value} />
+                            {' ' +
+                              (Number(key) === SPAMCOIN
+                                ? exchangeUnit(SPAMCOIN)
+                                : currencyLabel(value))}
+                          </div>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </Grid>
+                ) : null}
               </Grid>
             </Grid>
           ) : null}
@@ -1574,6 +1624,7 @@ const MakerForm = ({
                 }
                 slotProps={{
                   htmlInput: {
+                    inputMode: 'decimal',
                     min: 0,
                     style: {
                       textAlign: 'center',
@@ -1596,6 +1647,7 @@ const MakerForm = ({
               value={maker.premium ?? ''}
               slotProps={{
                 htmlInput: {
+                  inputMode: 'decimal',
                   min: -100,
                   max: 999,
                   style: {

@@ -22,6 +22,9 @@ import { addressToScript } from '../taproot';
 
 const URL = process.env.ESCROW_E2E_URL;
 const maybe = URL ? test : test.skip;
+// rl31-beta20: the seller sends what it owes plus this (its mining share plus a little): the
+// excess, too small for a change output, rides in the escrow and comes back with its bond
+const OVER = Number(process.env.ESCROW_E2E_PAY_OVER ?? 0);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const call = async (path: string, body: object = {}): Promise<any> => {
@@ -87,7 +90,10 @@ const toChat = async () => {
   const s = await data('seller');
   expect(s.escrow_waiting_for).toBe('you');
   checkFundingAddress(s, keys.seller);
-  await call('pay', { address: s.escrow_funding_address, sats: s.escrow_funding_recommended });
+  await call('pay', {
+    address: s.escrow_funding_address,
+    sats: OVER ? s.escrow_funding_owed! + OVER : s.escrow_funding_recommended,
+  });
   await call('advance');
 
   // rl31-beta16 (fair rescue): the deposit signatures are refused before both rescue ones
@@ -124,6 +130,7 @@ const toChat = async () => {
   }
   await call('advance', { mine: 1 });
   expect((await data('buyer')).status).toBe(9);
+  if (OVER) expect((await data('seller')).escrow_extra_in_escrow!.seller).toBeGreaterThan(0);
   return { keys, data, payout, rescues };
 };
 
@@ -180,7 +187,8 @@ maybe(
     const seller = (await data('seller')).onchain_summary!;
     expect(seller.role).toBe('seller');
     expect(seller.bond_back_sats).toBe(30_000);
-    expect(seller.received_sats).toBe(30_000);
+    expect(seller.received_sats).toBe(30_000 + (seller.extra_back_sats ?? 0));
+    if (OVER) expect(seller.extra_back_sats).toBeGreaterThan(0);
     // the release paid the coordinator both fees in one output
     const tx = await call('rawtx', { txid: done.escrow_release_txid });
     const coord = tx.vout.filter(
@@ -217,8 +225,9 @@ maybe(
     expect(tx.vout.length).toBe(2); // nothing for the coordinator
     const bonds = r.escrow_bond_in_escrow!;
     const mining = r.escrow_output_sats! - to(payout.seller) - to(payout.buyer);
-    expect(to(payout.seller)).toBe(1_000_000 + bonds.seller + held.seller - mining);
-    expect(to(payout.buyer)).toBe(bonds.buyer + held.buyer);
+    const ex = r.escrow_extra_in_escrow ?? { seller: 0, buyer: 0 };
+    expect(to(payout.seller)).toBe(1_000_000 + bonds.seller + held.seller + ex.seller - mining);
+    expect(to(payout.buyer)).toBe(bonds.buyer + held.buyer + ex.buyer);
   },
   180_000,
 );

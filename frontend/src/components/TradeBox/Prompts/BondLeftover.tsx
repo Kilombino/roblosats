@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Button, Grid, TextField, Typography } from '@mui/material';
+import { Alert, Button, Grid, TextField } from '@mui/material';
 
 import { type Order } from '../../../models';
 import { pn } from '../../../utils';
@@ -11,7 +11,7 @@ import {
   type EscrowOrderData,
 } from '../../../utils/escrow/client';
 import { addressToScript, bytesToHex } from '../../../utils/escrow/taproot';
-import { TxLine, type EscrowAction } from './OnchainEscrow';
+import { RecoveredLine, type EscrowAction } from './OnchainEscrow';
 
 interface Props {
   order: Order;
@@ -74,13 +74,40 @@ export const BondLeftoverBox = ({ order, token, onAction }: Props): React.JSX.El
     onAction('bond_leftover_return', { address });
   };
 
+  const fee = data.bond_leftover_fee_sats ?? 0;
+  // rl31-beta20: not worth sending back now (the mining fee would eat more than the sats)
+  const notWorth = left > 0 && data.bond_leftover_worth === false;
+  const returns =
+    data.bond_leftover_returns ??
+    (data.bond_leftover_txid
+      ? [
+          {
+            txid: data.bond_leftover_txid,
+            sats: data.bond_leftover_returned_sats ?? 0,
+            status: 'pending' as const,
+          },
+        ]
+      : []);
+
   return (
     <Grid
       container
       spacing={1}
       sx={{ flexDirection: 'column', alignItems: 'center', padding: 1, width: '100%' }}
     >
-      {left > 0 ? (
+      {left > 0 && notWorth ? (
+        <Grid>
+          <Alert severity='info'>
+            <b>{t('Recover your sats')}</b>
+            <br />
+            {t(
+              'Not worth it right now: the mining fee (~{{fee}} sats) would eat more than the {{amount}} sats',
+              { fee: pn(fee), amount: pn(left) },
+            )}
+          </Alert>
+        </Grid>
+      ) : null}
+      {left > 0 && !notWorth ? (
         <>
           <Grid>
             <Alert severity='warning'>
@@ -108,16 +135,11 @@ export const BondLeftoverBox = ({ order, token, onAction }: Props): React.JSX.El
           </Grid>
         </>
       ) : null}
-      {data.bond_leftover_txid ? (
-        <Grid>
-          <Typography variant='body2' align='center'>
-            {t('{{amount}} Sats that were not the bond are on their way back to you.', {
-              amount: pn(data.bond_leftover_returned_sats ?? 0),
-            })}
-          </Typography>
-          <TxLine label={t('Your payment')} txid={data.bond_leftover_txid} />
+      {returns.map((r) => (
+        <Grid key={r.txid} sx={{ width: '100%' }}>
+          <RecoveredLine sats={r.sats} txid={r.txid} confirmed={r.status === 'confirmed'} />
         </Grid>
-      ) : null}
+      ))}
       {error ? (
         <Grid>
           <Alert severity='error'>{error}</Alert>

@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
+import { cleanNumberInput, parseNumberInput } from '../../utils/numberInput';
 import {
   Alert,
   Box,
@@ -224,11 +225,9 @@ const TakeButton = ({
   };
 
   const handleTakeAmountChange = function (e: React.ChangeEvent<HTMLInputElement>): void {
-    if (e.target.value !== '' && e.target.value != null) {
-      setTakeAmount(`${parseFloat(e.target.value)}`);
-    } else {
-      setTakeAmount(e.target.value);
-    }
+    // rl31-beta20: keep what was typed ('' when cleared, never a stuck "0"), minus leading zeros
+    const v = cleanNumberInput(e.target);
+    setTakeAmount(v === '' || parseNumberInput(v) !== null ? v : takeAmount);
   };
 
   const amountHelperText = useMemo(() => {
@@ -338,6 +337,7 @@ const TakeButton = ({
                   sx={{ flex: 1 }}
                   slotProps={{
                     htmlInput: {
+                      inputMode: satOrder ? 'numeric' : 'decimal',
                       min: satOrder ? rangeMin : currentOrder?.min_amount,
                       max: satOrder ? rangeMax : currentOrder?.max_amount,
                       style: { textAlign: 'center' },

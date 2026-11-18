@@ -6,12 +6,14 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   Divider,
+  FormControlLabel,
   TextField,
   Typography,
 } from '@mui/material';
@@ -29,7 +31,9 @@ import {
   keysOf,
   loadRescues,
   pendingPayments,
+  recoveryFee,
   storedFairRescue,
+  worthRecovering,
   type BuiltRescue,
   type RescueRecord,
   type Utxo,
@@ -76,6 +80,9 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
   const [busy, setBusy] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [done, setDone] = useState<Record<string, BuiltRescue>>({});
+  // rl31-beta20: the explorer's fee rate, to warn before a leftover the miners would eat
+  const [rate, setRate] = useState<number | null>(null);
+  const [override, setOverride] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!open || !token) return;
@@ -97,6 +104,7 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
       systemClient.setItem(EXPLORER_SETTING, explorerUrl.trim() || DEFAULT_EXPLORER);
       const ex = explorer();
       const height = await ex.tipHeight();
+      setRate(await ex.feeRate());
       setTip(height);
       const found: Item[] = [];
       const info: string[] = [];
@@ -253,6 +261,15 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
     }
   };
 
+  /** A leftover (funding or bond address) whose recovery the miners would mostly eat at the
+   * current fee rate: its fee and whether it can be sent at all (above dust). Null if fine. */
+  const cost = (it: Item): { fee: number; possible: boolean } | null => {
+    if (rate === null || (it.kind !== 'funding' && it.kind !== 'bond')) return null;
+    const fee = recoveryFee(it.kind, it.utxos.length, rate);
+    if (worthRecovering(it.sats, fee)) return null;
+    return { fee, possible: it.sats - fee > 330 };
+  };
+
   const label = (k: Kind): string =>
     k === 'funding'
       ? t('Sats left on your funding address')
@@ -350,6 +367,35 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
                       {it.note}
                     </Typography>
                   ) : null}
+                  {!ok && cost(it) ? (
+                    <Alert severity='warning' sx={{ mt: 0.5 }}>
+                      {t(
+                        'Not worth it right now: the mining fee (~{{fee}} sats) would eat more than the {{amount}} sats',
+                        { fee: pn(cost(it)!.fee), amount: pn(it.sats) },
+                      )}
+                      {cost(it)!.possible ? (
+                        <FormControlLabel
+                          sx={{ display: 'flex' }}
+                          control={
+                            <Checkbox
+                              size='small'
+                              checked={Boolean(override[key])}
+                              onChange={(e) =>
+                                setOverride((o) => ({ ...o, [key]: e.target.checked }))
+                              }
+                            />
+                          }
+                          label={
+                            <Typography variant='caption'>
+                              {t(
+                                'Recover anyway: I understand that most of these sats go to the miners',
+                              )}
+                            </Typography>
+                          }
+                        />
+                      ) : null}
+                    </Alert>
+                  ) : null}
                   {ok ? (
                     <Alert severity='success' sx={{ mt: 0.5, wordBreak: 'break-all' }}>
                       {t('Sent: {{sats}} Sats (mining fee {{fee}}). TXID {{txid}}', {
@@ -372,7 +418,12 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
                         variant='contained'
                         size='small'
                         sx={{ mt: 0.5 }}
-                        disabled={busy || it.wait !== 0 || (it.kind !== 'fair' && !dest.trim())}
+                        disabled={
+                          busy ||
+                          it.wait !== 0 ||
+                          (it.kind !== 'fair' && !dest.trim()) ||
+                          (cost(it) !== null && !override[key])
+                        }
                         onClick={() => {
                           void recover(it);
                         }}
