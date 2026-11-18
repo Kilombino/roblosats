@@ -310,3 +310,55 @@ class TakeView(HybridBase):
         self.assertTrue(r.data["taker_lightning"])
         self.assertEqual(r.data["bond_role"], "maker")
         self.assertEqual(r.data["bond_status_code"], OnchainBond.Status.LOCKED)
+
+
+class TakeAgain093(TakeView):
+    """0.9.3 (Kilobot #24): a Lightning take cancelled, then an onchain take of a 丰 sat order."""
+
+    def _sat_order(self):
+        order = self._order(maker_sells=True)
+        Order.objects.filter(id=order.id).update(sats_denominated=True, amount=1_000_000, fixed_price=Decimal("0.0021"))
+        order.refresh_from_db()
+        return order
+
+    @patch("api.views.escrow_flow.robot_allowed", return_value=True)
+    def test_onchain_take_says_it_is_not_lightning(self, _allowed):
+        order = self._sat_order()
+        r = self._call("post", order, self.taker, {"action": "take", "amount": 0})
+        self.assertEqual(r.status_code, 200, r.data)
+        self.assertIs(r.data["take_lightning"], False)
+        self.assertEqual(r.data["bond_role"], "taker")
+        self.assertEqual(Decimal(r.data["amount"]), Decimal(1_000_000))
+        self.assertEqual(r.data["exchange_amount"], "0.000021")  # 0.01 BTC at 0.0021 per BTC
+        self.assertEqual(r.data["status"], Order.Status.TAK)
+
+    @patch("api.escrow.service.rpc", side_effect=lambda m, *a, **k: {"descriptor": "addr(x)#y"} if m == "getdescriptorinfo" else [])
+    @patch("api.views.escrow_flow.robot_allowed", return_value=True)
+    def test_onchain_take_after_a_cancelled_lightning_take_opens_a_bond(self, _allowed, _rpc):
+        order = self._sat_order()
+        Logics.take(order, self.taker, lightning=True)
+        TakeOrder.objects.filter(order=order, taker=self.taker).update(expires_at=timezone.now())
+        other = _user()
+        r = self._call("post", order, other, {"action": "take", "amount": 0})
+        self.assertEqual(r.status_code, 200, r.data)
+        self.assertIs(r.data["take_lightning"], False)
+        r = self._call("post", order, other, {"action": "bond_key", "escrow": {"bond_pubkey": "02" + "44" * 32}})
+        self.assertEqual(r.status_code, 200, r.data)
+        bond = OnchainBond.objects.get(order=order, owner=other, role="taker")
+        self.assertEqual(bond.required_sats, 30_000)
+
+    @patch("api.logics.LNNode.gen_hold_invoice")
+    @patch("api.views.escrow_flow.robot_allowed", return_value=True)
+    def test_no_onchain_bond_for_a_lightning_take(self, _allowed, gen):
+        now = timezone.now()
+        gen.return_value = {
+            "invoice": "lnbcrt300u1hybrid", "preimage": "ab" * 32, "payment_hash": "cd" * 32,
+            "created_at": now, "expires_at": now + timezone.timedelta(hours=3), "cltv_expiry": 144,
+        }
+        order = self._sat_order()
+        r = self._call("post", order, self.taker, {"action": "take", "take_lightning": True})
+        self.assertEqual(r.data["bond_invoice"], "lnbcrt300u1hybrid")
+        self.assertEqual(r.data["bond_satoshis"], 30_000)
+        r = self._call("post", order, self.taker, {"action": "bond_key", "escrow": {"bond_pubkey": "02" + "44" * 32}})
+        self.assertEqual(r.status_code, 400, r.data)
+        self.assertFalse(OnchainBond.objects.filter(order=order, role="taker").exists())

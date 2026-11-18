@@ -506,7 +506,9 @@ class OrderView(viewsets.ViewSet):
                     data["exchange_amount"] = f"{total:.8f}".rstrip("0").rstrip(".")
 
             if escrow_flow.is_onchain(order) and not take_order.first().lightning:
-                valid, context = True, {}
+                # Said out loud (0.9.3): apps that kept take_lightning from an earlier Lightning
+                # take of this order showed an empty hold invoice instead of the onchain bond.
+                valid, context = True, {"take_lightning": False}
             else:
                 valid, context = Logics.gen_taker_hold_invoice(order, request.user)
                 if escrow_flow.is_onchain(order):

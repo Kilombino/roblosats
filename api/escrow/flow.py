@@ -599,6 +599,12 @@ def bond_action(order, user, name, data):
 
     role, take_order = bond_role(order, user)
     if name == "bond_key":
+        from django.utils import timezone
+
+        # A Lightning take pays its bond with a hold invoice: no onchain bond for it (0.9.3).
+        if role == "taker" and take_order is not None and take_order.lightning and order.taker != user \
+                and take_order.expires_at > timezone.now():
+            raise EscrowError("this take pays its bond with Lightning")
         bonds.open_bond(order, user, role, data["bond_pubkey"], take_order if role == "taker" else None)
         return
     bond = bond_of(order, role, owner=user)
