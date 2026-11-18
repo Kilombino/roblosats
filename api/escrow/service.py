@@ -135,23 +135,43 @@ def _pub(hex33):
     return b
 
 
+# 0.9.5: in a mixed order where the buyer took with Lightning (case A) the buyer has nothing in
+# the escrow, so the fair rescue (plan 2, which both pre-sign) protects nobody but makes the
+# buyer sign and the seller wait for it. Plan 1 (the seller alone after the timelock) gives the
+# seller exactly what plan 2 would: the whole escrow is its own. Escrows created before have no
+# "hybrid_plan" and keep the rescue plan they were created with.
+HYBRID_PLAN = 1
+
+
+def _buyer_has_ln_bond(order):
+    from api.logics import Logics
+
+    if not order.taker_lightning or order.taker_id is None:
+        return False
+    return not Logics.is_seller(order, order.taker)
+
+
 def create_escrow(order):
     from api.models import OnchainEscrow
 
+    plans = {"fee_plan": 2, "rescue_plan": RESCUE_PLAN, "extra_plan": EXTRA_PLAN}
+    if HYBRID_PLAN >= 1 and _buyer_has_ln_bond(order):
+        plans.update(rescue_plan=1, hybrid_plan=HYBRID_PLAN)
     escrow, _ = OnchainEscrow.objects.get_or_create(
         order=order,
         defaults={
             "coordinator_pubkey": pubkey(coordinator_key(order.id)).hex(),
             "rescue_csv": config("ESCROW_RESCUE_CSV", cast=int, default=2016),
             # fixed for the life of the escrow (api/escrow/flow.py FEE_PLAN, RESCUE_PLAN)
-            "funding_signatures": {"fee_plan": 2, "rescue_plan": RESCUE_PLAN, "extra_plan": EXTRA_PLAN},
+            "funding_signatures": plans,
         },
     )
     return escrow
 
 
-def submit_keys(order, user, escrow_pubkey_hex, funding_pubkey_hex):
-    """A trader gives its escrow key and its funding key (both derived from its token)."""
+def submit_keys(order, user, escrow_pubkey_hex, funding_pubkey_hex, leaf_release=False):
+    """A trader gives its escrow key and its funding key (both derived from its token).
+    leaf_release (0.9.5): its app signs a cooperative release alone through its leaf."""
     from api.models import OnchainEscrow
 
     role = role_of(order, user)
@@ -164,6 +184,8 @@ def submit_keys(order, user, escrow_pubkey_hex, funding_pubkey_hex):
         setattr(escrow, f"{role}_pubkey", escrow_pk.hex())
         funding = dict(escrow.funding_signatures)
         funding[f"{role}_funding_pubkey"] = funding_pk.hex()
+        if leaf_release:
+            funding[f"{role}_leaf_release"] = True
         escrow.funding_signatures = funding
         if escrow.seller_pubkey and escrow.buyer_pubkey:
             c = contract_for(escrow)
@@ -470,9 +492,11 @@ def refresh_confirmation(escrow, min_conf=1):
     return escrow
 
 
-def _release_tx(escrow, payouts, kind, fee_payer=0):
+def _release_tx(escrow, payouts, kind, fee_payer=0, leaf=False):
     rate = fee_rate(1)
-    vb = VB_KEYPATH if kind == escrow.ReleaseKind.COOPERATIVE else VB_LEAF_2SIG
+    # 0.9.5: a cooperative release the seller's app can sign alone through its leaf with the
+    # coordinator is planned for that (bigger) witness, so it pays the rate it was built for.
+    vb = VB_KEYPATH if kind == escrow.ReleaseKind.COOPERATIVE and not leaf else VB_LEAF_2SIG
     if isinstance(payouts, (bytes, bytearray)):
         payouts = [TxOut(escrow.escrow_sats, bytes(payouts))]
     tx = release_tx(contract_for(escrow), escrow.funding_txid, escrow.funding_vout, escrow.escrow_sats,
@@ -480,14 +504,15 @@ def _release_tx(escrow, payouts, kind, fee_payer=0):
     return tx, rate
 
 
-def start_release(escrow, payouts, kind, fee_payer=0):
+def start_release(escrow, payouts, kind, fee_payer=0, leaf=False):
     """Fix the release transaction. payouts: list of TxOut adding up to the escrow output (or a
-    single script that takes it all); payouts[fee_payer] pays the next-block mining fee."""
+    single script that takes it all); payouts[fee_payer] pays the next-block mining fee.
+    leaf: a cooperative release planned for the seller's leaf (0.9.5, one signing round)."""
     from api.models import OnchainEscrow
 
     if escrow.status != OnchainEscrow.Status.LOCKED:
         raise EscrowError("the escrow is not locked")
-    tx, rate = _release_tx(escrow, payouts, kind, fee_payer)
+    tx, rate = _release_tx(escrow, payouts, kind, fee_payer, leaf)
     escrow.release_kind = kind
     escrow.release_tx = tx.serialize().hex()
     escrow.release_fee_rate = rate
@@ -516,7 +541,8 @@ def submit_release_nonce(escrow, role, pubnonce_hex):
 
     with transaction.atomic():
         escrow = OnchainEscrow.objects.select_for_update().get(pk=escrow.pk)
-        if escrow.status != OnchainEscrow.Status.RELEASING or escrow.release_kind != escrow.ReleaseKind.COOPERATIVE:
+        if escrow.status != OnchainEscrow.Status.RELEASING or escrow.release_kind != escrow.ReleaseKind.COOPERATIVE \
+                or escrow.release_txid:
             raise EscrowError("not waiting for release nonces")
         nonce = bytes.fromhex(pubnonce_hex)
         if len(nonce) != 66:
@@ -553,7 +579,7 @@ def submit_release_partial(escrow, role, psig_hex):
     with transaction.atomic():
         escrow = OnchainEscrow.objects.select_for_update().get(pk=escrow.pk)
         agg = aggregate_nonce(escrow)
-        if escrow.status != OnchainEscrow.Status.RELEASING or agg is None:
+        if escrow.status != OnchainEscrow.Status.RELEASING or agg is None or escrow.release_txid:
             raise EscrowError("not waiting for partial signatures")
         c = contract_for(escrow)
         tx, msg = release_message(escrow)
@@ -581,6 +607,89 @@ def submit_release_partial(escrow, role, psig_hex):
         cancel = bool(escrow.funding_signatures.get("cancel"))
         escrow.status = OnchainEscrow.Status.REFUNDED if cancel else OnchainEscrow.Status.RELEASED
         escrow.save(update_fields=["status", "updated_at"])
+    return escrow
+
+
+# Lowest rate a release may pay to be relayed (sat/vB). A cooperative release fixed before 0.9.5
+# was planned for the key path; through the leaf it is bigger, so its rate drops.
+MIN_RELEASE_RATE = 1.0
+
+
+def _leaf_release(escrow):
+    """The stored release with a placeholder witness on the seller's leaf, and its fee."""
+    c = contract_for(escrow)
+    tx = Transaction.parse(bytes.fromhex(escrow.release_tx))
+    tx.inputs[0].witness = leaf_witness(c, c.SELLER_COORDINATOR, [bytes(64), bytes(64)])
+    return tx, escrow.escrow_sats - sum(o.value for o in tx.outputs)
+
+
+def leaf_release_rate(escrow):
+    """Rate (sat/vB) the stored cooperative release pays if it goes through the seller's leaf."""
+    tx, fee = _leaf_release(escrow)
+    return fee / tx.vsize()
+
+
+def leaf_release_ok(escrow):
+    """A cooperative release the seller can finish alone with the coordinator (0.9.5): no
+    second round, no buyer needed. Also for releases started before 0.9.5 (same outputs)."""
+    from api.models import OnchainEscrow
+
+    if escrow.status != OnchainEscrow.Status.RELEASING or escrow.release_kind != escrow.ReleaseKind.COOPERATIVE:
+        return False
+    if escrow.release_txid or not escrow.release_tx:
+        return False
+    try:
+        return leaf_release_rate(escrow) >= MIN_RELEASE_RATE
+    except Exception:
+        return False
+
+
+def cooperative_leaf_message(escrow):
+    """Sighash of the stored cooperative release spent through the seller's leaf (index 0)."""
+    c = contract_for(escrow)
+    tx = Transaction.parse(bytes.fromhex(escrow.release_tx))
+    for txin in tx.inputs:
+        txin.witness = []
+    leaf = c.leaf_hash(c.SELLER_COORDINATOR)
+    return tx, tx.sighash_unified(0, [TxOut(escrow.escrow_sats, c.script_pubkey)], SIGHASH_ALL_UNIFIED, leaf)
+
+
+def submit_cooperative_leaf(escrow, role, sig_hex):
+    """0.9.5: the seller signs the cooperative release (the same transaction, same outputs)
+    through its leaf with the coordinator; the coordinator adds its signature and broadcasts.
+    The buyer signs nothing; any MuSig2 nonce or partial signature already given is dropped."""
+    from api.models import OnchainEscrow
+
+    with transaction.atomic():
+        escrow = OnchainEscrow.objects.select_for_update().get(pk=escrow.pk)
+        if escrow.status != OnchainEscrow.Status.RELEASING or escrow.release_kind != escrow.ReleaseKind.COOPERATIVE \
+                or escrow.release_txid:
+            raise EscrowError("not waiting for the cooperative release")
+        if role != "seller":
+            raise EscrowError("only the seller signs the release through its leaf")
+        if leaf_release_rate(escrow) < MIN_RELEASE_RATE:
+            raise EscrowError("this release pays too little mining fee for the leaf: sign it together")
+        c = contract_for(escrow)
+        tx, msg = cooperative_leaf_message(escrow)
+        sig = bytes.fromhex(sig_hex)
+        seller_pk = xonly(bytes.fromhex(escrow.seller_pubkey))
+        if len(sig) != 65 or sig[64] != SIGHASH_ALL_UNIFIED or not schnorr_verify(msg, seller_pk, sig[:64]):
+            raise EscrowError("the signature does not verify")
+        coord = schnorr_sign(coordinator_key(escrow.order_id), msg)
+        tx.inputs[0].witness = leaf_witness(c, c.SELLER_COORDINATOR, [coord, sig[:64]])
+        signed = tx.serialize().hex()
+        # Broadcast before storing it: if the node refuses it, the release stays as it was and
+        # the two-round signing (or a new try) can still finish it.
+        rpc("sendrawtransaction", [signed])
+        escrow.release_tx = signed
+        escrow.release_txid = tx.txid()
+        data = dict(escrow.funding_signatures)
+        data["release_path"] = "seller_leaf"
+        escrow.funding_signatures = data
+        escrow.save()
+    cancel = bool(escrow.funding_signatures.get("cancel"))
+    escrow.status = OnchainEscrow.Status.REFUNDED if cancel else OnchainEscrow.Status.RELEASED
+    escrow.save(update_fields=["status", "updated_at"])
     return escrow
 
 

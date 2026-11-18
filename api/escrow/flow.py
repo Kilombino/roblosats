@@ -436,6 +436,12 @@ def _record_release(escrow, **values):
     escrow.save(update_fields=["funding_signatures"])
 
 
+def seller_leaf(escrow):
+    """0.9.5: the seller's app signs the cooperative release alone through its leaf with the
+    coordinator, so the release is planned for that witness."""
+    return bool(escrow.funding_signatures.get("seller_leaf_release"))
+
+
 def seller_confirms(order):
     """Seller confirmed the fiat: fix the cooperative release (buyer: amount + its bond;
     seller: its bond; plan 2: the coordinator its fees, out of the escrow)."""
@@ -455,7 +461,7 @@ def seller_confirms(order):
         if bonds["seller"] + ex["seller"]:
             payouts.append(TxOut(bonds["seller"] + ex["seller"], _spk(escrow, "seller")))
         payouts += fee_outs
-        tx = service.start_release(escrow, payouts, OnchainEscrow.ReleaseKind.COOPERATIVE, 0)
+        tx = service.start_release(escrow, payouts, OnchainEscrow.ReleaseKind.COOPERATIVE, 0, seller_leaf(escrow))
         _record_release(escrow, release_coordinator_sats=fee_later, release_fee_sats=_paid_to_coordinator(tx),
                         release_dev_sats=dev_sats)
     else:
@@ -466,7 +472,7 @@ def seller_confirms(order):
             payouts.append(TxOut(bonds["seller"] + ex["seller"], _spk(escrow, "seller")))
         if fee_later:
             payouts.append(TxOut(fee_later, coordinator_fee_spk()))
-        service.start_release(escrow, payouts, OnchainEscrow.ReleaseKind.COOPERATIVE, 0)
+        service.start_release(escrow, payouts, OnchainEscrow.ReleaseKind.COOPERATIVE, 0, seller_leaf(escrow))
         if fee_later:
             _record_release(escrow, release_coordinator_sats=fee_later)
     order.update_status(Order.Status.PAY)
@@ -498,7 +504,7 @@ def collaborative_cancel(order):
     payouts = [TxOut(to_seller, _spk(escrow, "seller"))]
     if to_buyer:
         payouts.append(TxOut(to_buyer, _spk(escrow, "buyer")))
-    service.start_release(escrow, payouts, OnchainEscrow.ReleaseKind.COOPERATIVE, 0)
+    service.start_release(escrow, payouts, OnchainEscrow.ReleaseKind.COOPERATIVE, 0, seller_leaf(escrow))
     if order.taker_lightning:
         from api.logics import Logics
 
@@ -646,7 +652,8 @@ def action(order, user, name, data):
     if escrow is None:
         raise EscrowError("this order has no onchain escrow")
     if name == "escrow_keys":
-        service.submit_keys(order, user, data["escrow_pubkey"], data["funding_pubkey"])
+        service.submit_keys(order, user, data["escrow_pubkey"], data["funding_pubkey"],
+                            bool(data.get("leaf_release")))
     elif name == "escrow_address":
         set_payout_address(order, user, data["address"])
     elif name == "escrow_rescue_signature":
@@ -661,6 +668,11 @@ def action(order, user, name, data):
         advance(order)
     elif name == "escrow_leaf_signature":
         service.submit_leaf_signature(escrow, role, data["signature"])
+    elif name == "escrow_release_leaf":
+        # 0.9.5: the seller alone (with the coordinator) finishes the cooperative release
+        service.submit_cooperative_leaf(escrow, role, data["signature"])
+        escrow.refresh_from_db()
+        advance(order)
     elif name == "escrow_sweep":
         sweep_tx(order, escrow, role, _spk_for_address(data["address"]))
     elif name == "escrow_sweep_signatures":
@@ -818,6 +830,8 @@ def order_data(order, user):
         data["escrow_release_my_partial"] = bool(escrow.release_partial_sigs.get(role))
         # signing round: a new one starts when a trader had to send a new nonce
         data["escrow_release_round"] = int(escrow.funding_signatures.get("release_round") or 0)
+        # 0.9.5: the seller can finish a cooperative release alone (with the coordinator)
+        data["escrow_release_leaf_ok"] = role == "seller" and service.leaf_release_ok(escrow)
     if escrow.release_txid:
         data["escrow_release_txid"] = escrow.release_txid
         summary = trade_summary(order, user)
@@ -1120,6 +1134,11 @@ def waiting_for(order, escrow, role):
     if escrow.status == S.RELEASING:
         if escrow.release_kind != escrow.ReleaseKind.COOPERATIVE:
             return "coordinator", "release"
+        # 0.9.5: the seller's app finishes it alone through its leaf with the coordinator
+        if role == "seller" and seller_leaf(escrow) and service.leaf_release_ok(escrow):
+            return "you", "release_signature"
+        if role == "buyer" and seller_leaf(escrow) and service.leaf_release_ok(escrow):
+            return "peer", "release_signature"
         if role not in escrow.release_nonces or role not in escrow.release_partial_sigs and service.aggregate_nonce(escrow):
             return "you", "release_signature"
         if peer not in escrow.release_nonces or peer not in escrow.release_partial_sigs:

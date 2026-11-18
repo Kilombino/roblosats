@@ -88,7 +88,7 @@ class Plan2Base(TestCase):
         for p in self.patches:
             p.stop()
 
-    def _start_release(self, escrow, payouts, kind, fee_payer=0):
+    def _start_release(self, escrow, payouts, kind, fee_payer=0, leaf=False):
         self.captured.append((list(payouts), kind))
         outs = [TxOut(p.value - (300 if i == 0 else 0), p.script_pubkey) for i, p in enumerate(payouts)]
         escrow.release_kind = kind

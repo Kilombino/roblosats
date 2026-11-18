@@ -244,7 +244,7 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
 
         order, buyer, seller, keys = self._make_and_take()
         for r, u in (("seller", seller), ("buyer", buyer)):
-            flow.action(order, u, "escrow_keys", {"escrow_pubkey": pubkey(keys[r]["escrow"]).hex(), "funding_pubkey": pubkey(keys[r]["funding"]).hex()})
+            flow.action(order, u, "escrow_keys", self._keys_payload(keys, r))
             flow.action(order, u, "escrow_address", {"address": _faucet("getnewaddress", "", "bech32m")})
         flow.advance(order)
         order.refresh_from_db()
@@ -371,6 +371,38 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
             flow.action(order, users[r], "escrow_partial", {"partial": M.sign(secs[r], keys[r]["escrow"], ctx).hex()})
         return flow.escrow_of(order)
 
+    # 0.9.5: the seller's app announces with its keys that it signs the cooperative release
+    # alone through its leaf; False plays an app up to 0.9.4 (two-round MuSig2 release).
+    LEAF = False
+
+    def _keys_payload(self, keys, r):
+        payload = {"escrow_pubkey": pubkey(keys[r]["escrow"]).hex(), "funding_pubkey": pubkey(keys[r]["funding"]).hex()}
+        if self.LEAF:
+            payload["leaf_release"] = True
+        return payload
+
+    def _leaf(self, order, users, keys):
+        """0.9.5: the seller alone signs the release on leaf 0; the buyer signs nothing."""
+        from api.escrow import flow
+
+        escrow = flow.escrow_of(order)
+        self.assertTrue(flow.order_data(order, users["seller"])["escrow_release_leaf_ok"])
+        self.assertFalse(flow.order_data(order, users["buyer"])["escrow_release_leaf_ok"])
+        _, msg = service.cooperative_leaf_message(escrow)
+        flow.action(order, users["seller"], "escrow_release_leaf",
+                    {"signature": with_hashtype(schnorr_sign(keys["seller"]["escrow"], msg)).hex()})
+        escrow = flow.escrow_of(order)
+        self.assertEqual(escrow.funding_signatures["release_path"], "seller_leaf")
+        self.assertEqual(escrow.release_partial_sigs, {})
+        return escrow
+
+    def _release(self, order, users, keys):
+        if self.LEAF:
+            escrow = self._leaf(order, users, keys)
+            self.assertEqual(escrow.release_nonces, {})
+            return escrow
+        return self._musig(order, users, keys)
+
     def test_happy_path_to_successful(self):
         from api.logics import Logics
 
@@ -380,7 +412,7 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
         self.assertEqual(Logics.confirm_fiat(order, seller), (True, None))
         order.refresh_from_db()
         self.assertEqual(order.status, Order.Status.PAY)
-        escrow = self._musig(order, {"seller": seller, "buyer": buyer}, keys)
+        escrow = self._release(order, {"seller": seller, "buyer": buyer}, keys)
         order.refresh_from_db()
         self.assertEqual(order.status, Order.Status.SUC)
         outs, mining = self._release_outputs(escrow)
@@ -464,7 +496,7 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
         Logics.cancel_order(order, buyer)
         order.refresh_from_db()
         Logics.cancel_order(order, seller)
-        escrow = self._musig(order, {"seller": seller, "buyer": buyer}, keys)
+        escrow = self._release(order, {"seller": seller, "buyer": buyer}, keys)
         flow.advance(order)
         order.refresh_from_db()
         self.assertEqual(order.status, Order.Status.CCA)
@@ -633,7 +665,7 @@ class EscrowHybridRegtest(EscrowOrderFlowRegtest):
         keys = {"seller": ks, "buyer": self._keys(order, "buyer")}
         users = {"seller": seller, "buyer": buyer}
         for r, u in users.items():
-            flow.action(order, u, "escrow_keys", {"escrow_pubkey": pubkey(keys[r]["escrow"]).hex(), "funding_pubkey": pubkey(keys[r]["funding"]).hex()})
+            flow.action(order, u, "escrow_keys", self._keys_payload(keys, r))
             flow.action(order, u, "escrow_address", {"address": _faucet("getnewaddress", "", "bech32m")})
         flow.advance(order)
         order.refresh_from_db()
@@ -657,9 +689,19 @@ class EscrowHybridRegtest(EscrowOrderFlowRegtest):
         self.case_a_fees = (seller_fee, buyer_fee)
         self.assertEqual(plan["buyer_fee_at_release"], buyer_fee)
         self._sign_rescue(order, {"seller": seller, "buyer": buyer}, keys)
-        self.assertEqual(self.rescue_plan_data["to_buyer"], 0)  # Lightning bond: nothing inside
-        self.assertEqual(len(Transaction.parse(bytes.fromhex(self.rescue_hex)).outputs), 1)
+        if service.rescue_plan(escrow) >= 2:  # escrows up to 0.9.4 (no hybrid_plan)
+            self.assertNotIn("hybrid_plan", escrow.funding_signatures)
+            self.assertEqual(self.rescue_plan_data["to_buyer"], 0)  # Lightning bond: nothing inside
+            self.assertEqual(len(Transaction.parse(bytes.fromhex(self.rescue_hex)).outputs), 1)
+        else:
+            # 0.9.5 (hybrid_plan 1): the buyer has nothing inside, the seller's own rescue leaf
+            self.assertEqual(escrow.funding_signatures["hybrid_plan"], 1)
+            self.assertNotIn("rescue", escrow.funding_signatures)
+            self.assertEqual(flow.waiting_for(order, escrow, "buyer"), ("peer", "deposit_signature"))
+        hybrid = escrow.funding_signatures.get("hybrid_plan")
         for r, u in (("buyer", buyer), ("seller", seller)):  # the buyer's app sends no signature
+            if r == "buyer" and hybrid:
+                continue  # 0.9.5: the buyer does not even open the order for the deposit
             d = flow.order_data(order, u)
             tx = Transaction.parse(bytes.fromhex(d["escrow_deposit_tx"]))
             spent = [TxOut(v, bytes.fromhex(sp)) for v, sp in d["escrow_deposit_spent"]]
@@ -683,7 +725,7 @@ class EscrowHybridRegtest(EscrowOrderFlowRegtest):
             ln.cancel_return_hold_invoice.assert_called_once_with(order.taker_bond.payment_hash)
         order.refresh_from_db()
         self.assertEqual(order.taker_bond.status, LNPayment.Status.RETNED)
-        escrow = self._musig(order, users, keys)
+        escrow = self._release(order, users, keys)
         order.refresh_from_db()
         self.assertEqual(order.status, Order.Status.SUC)
         _mine()
@@ -695,6 +737,11 @@ class EscrowHybridRegtest(EscrowOrderFlowRegtest):
         self.assertEqual(values, sorted([seller_fee + buyer_fee, 30_000, T - buyer_fee - mining]))
         self.assertEqual(outs[service.rpc("decodescript", [flow.coordinator_fee_spk().hex()])["address"]], seller_fee + buyer_fee)
         self.assertEqual(order.proceeds, seller_fee + buyer_fee)
+        if hybrid and self.LEAF:
+            # 0.9.5 mixed A: the buyer acted only at the take (keys, address) and "fiat sent"
+            fs = escrow.funding_signatures
+            self.assertFalse([k for k in fs if k.startswith("buyer_") and ("sig" in k)])
+            self.assertEqual(escrow.release_nonces, {})
         summary = flow.trade_summary(order, buyer)
         self.assertTrue(summary["lightning_bond"])
         self.assertTrue(summary["fee_at_release"])
@@ -797,3 +844,86 @@ class EscrowFeeSpikeRegtest(EscrowSatOrderRegtest):
 
         rate = service.fee_rate(2)
         return patch("api.escrow.service.fee_rate", return_value=rate * 3)
+
+
+@skipUnless(REGTEST, "needs the regtest lab (ESCROW_REGTEST=1)")
+class EscrowLeafFlowRegtest(EscrowOrderFlowRegtest):
+    """0.9.5: the whole onchain order with apps that sign the cooperative release alone (seller
+    leaf with the coordinator): happy path, collaborative cancel, disputes, fair rescue."""
+
+    LEAF = True
+
+
+@skipUnless(REGTEST, "needs the regtest lab (ESCROW_REGTEST=1)")
+class EscrowMidMusigRegtest(EscrowOrderFlowRegtest):
+    """Order #24: a release started with the two-round signing (app up to 0.9.4, release planned
+    for the key path), the seller's nonce in, the buyer gone. The seller's 0.9.5 app finishes it
+    through its leaf: same outputs, confirmed."""
+
+    test_happy_path_to_successful = None
+    test_fair_rescue_without_the_coordinator = None
+    test_rescue_plan_1_kept_for_old_escrows = None
+    test_collaborative_cancel = None
+    test_dispute_for_the_buyer_from_the_admin = None
+    test_dispute_return_everything_from_the_admin = None
+    test_taker_never_funds_is_penalized = None
+
+    def test_leaf_finishes_a_release_started_with_musig(self):
+        from api.escrow import flow
+        from api.escrow.taproot import Transaction
+        from api.logics import Logics
+
+        order, buyer, seller, keys = self._to_chat()
+        self.assertFalse(flow.seller_leaf(flow.escrow_of(order)))  # old app: no flag
+        Logics.confirm_fiat(order, buyer)
+        order.refresh_from_db()
+        Logics.confirm_fiat(order, seller)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.PAY)
+        escrow = flow.escrow_of(order)
+        c = service.contract_for(escrow)
+        _, msg = service.release_message(escrow)
+        _, pub = M.nonce_gen(keys["seller"]["escrow"], c.musig_pubkeys()[0], c.output_key, msg, None)
+        flow.action(order, seller, "escrow_nonce", {"nonce": pub.hex()})
+        escrow = flow.escrow_of(order)
+        self.assertEqual(flow.waiting_for(order, escrow, "seller"), ("peer", "release_signature"))
+        planned = [(o.value, o.script_pubkey) for o in Transaction.parse(bytes.fromhex(escrow.release_tx)).outputs]
+        escrow = self._leaf(order, {"seller": seller, "buyer": buyer}, keys)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.SUC)
+        _mine()
+        info = service.rpc("getrawtransaction", [escrow.release_txid, True])
+        self.assertGreaterEqual(info["confirmations"], 1)
+        mined = [(round(o["value"] * 1e8), bytes.fromhex(o["scriptPubKey"]["hex"])) for o in info["vout"]]
+        self.assertEqual(mined, planned)
+        fee = escrow.escrow_sats - sum(v for v, _ in mined)
+        self.assertGreaterEqual(fee / info["vsize"], service.MIN_RELEASE_RATE)
+        self.assertEqual(len(info["vin"][0]["txinwitness"]), 4)  # leaf spend, not key path
+
+
+@skipUnless(REGTEST, "needs the regtest lab (ESCROW_REGTEST=1)")
+class EscrowHybridLeafRegtest(EscrowHybridRegtest):
+    """0.9.5 mixed A: hybrid_plan 1 (seller rescue leaf) and the seller-leaf release: the buyer
+    acts only at the take and at "fiat sent"; the seller at publish, funding and "received"."""
+
+    LEAF = True
+    test_case_b_proxy_return_and_penalty_onchain = None
+
+
+@skipUnless(REGTEST, "needs the regtest lab (ESCROW_REGTEST=1)")
+class EscrowHybridOldPlanRegtest(EscrowHybridRegtest):
+    """Mixed A escrows created before 0.9.5 (no hybrid_plan: fair rescue both pre-sign) with
+    apps up to 0.9.4 (two-round release): still work."""
+
+    test_case_b_proxy_return_and_penalty_onchain = None
+
+    def setUp(self):
+        from unittest.mock import patch
+
+        super().setUp()
+        self.old_plan = patch.object(service, "HYBRID_PLAN", 0)
+        self.old_plan.start()
+
+    def tearDown(self):
+        self.old_plan.stop()
+        super().tearDown()
