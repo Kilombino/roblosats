@@ -123,6 +123,88 @@ class Leftovers(SimpleTestCase):
         self.assertEqual(bonds.leftovers(b, here), [(T[2], 1, 5000)])
 
 
+class _DataBond(_FakeBond):
+    """Just what bonds.bond_data reads."""
+
+    def __init__(self, status, coins, **kw):
+        super().__init__(status, coins, **kw)
+        self.required_sats, self.refund_csv, self.coordinator_pubkey = 3330, 540, "02" + "11" * 32
+        self.return_tx = self.spend_txid = self.penalty_tx = self.leftover_tx = ""
+        self.leftover_coins = []
+
+    def get_status_display(self):
+        return "x"
+
+
+class Uneconomic(SimpleTestCase):
+    """rl31-beta20 (Kilobot #22: 331 sats left with the mempool at ~4.7 sat/vB): a leftover is
+    only offered and sent back when what arrives is above dust and at least the mining fee."""
+
+    def setUp(self):
+        p = patch("api.models.OnchainBond.Status", _FakeBond.Status)
+        p.start()
+        self.addCleanup(p.stop)
+
+    def test_rule(self):
+        fee = bonds.leftover_cost(1, 4.7)
+        self.assertGreater(fee, 331)
+        self.assertFalse(bonds.worth_recovering(331, fee))
+        self.assertTrue(bonds.worth_recovering(3300, fee))
+        self.assertFalse(bonds.worth_recovering(2 * fee - 1, fee))
+        self.assertTrue(bonds.worth_recovering(2 * fee, fee))
+        self.assertFalse(bonds.worth_recovering(DUST_P2TR + 9, 10))
+
+    def test_return_refused_and_marked_in_the_data(self):
+        S = _FakeBond.Status
+        b = _DataBond(S.LOCKED, [(T[1], 0, 3330)])
+        here = [(T[0], 0, 331), (T[1], 0, 3330)]
+        with patch.object(bonds, "confirmed_coins", return_value=here), \
+                patch.object(bonds.service, "fee_rate", return_value=4.7), \
+                patch.object(bonds.service, "network_hrp", return_value="bcrt"), \
+                patch.object(bonds.service, "coordinator_alias", return_value="kilobot"):
+            d = bonds.bond_data(b)
+            self.assertEqual(d["bond_leftover_sats"], 331)
+            self.assertFalse(d["bond_leftover_worth"])
+            self.assertEqual(d["bond_leftover_fee_sats"], bonds.leftover_cost(1, 4.7))
+            with self.assertRaisesRegex(bonds.EscrowError, "not worth it"):
+                bonds.leftover_return_tx(b, bonds.P2TR_SPK)
+
+    def test_returns_pending_then_confirmed(self):
+        S = _FakeBond.Status
+        b = _DataBond(S.IN_DEPOSIT, [(T[1], 0, 3330)],
+                      leftover_txids=[{"txid": T[3], "coins": [[T[0], 0, 3300]], "sats": 2607}])
+        confs = {"n": 0}
+
+        def rpc(method, params=None, **kw):
+            if method == "getrawtransaction":
+                return {"confirmations": confs["n"]} if confs["n"] else {}
+            raise AssertionError(method)
+
+        with patch.object(bonds, "confirmed_coins", return_value=[(T[1], 0, 3330)]), \
+                patch.object(bonds.service, "rpc", side_effect=rpc), \
+                patch.object(bonds.service, "network_hrp", return_value="bcrt"), \
+                patch.object(bonds.service, "coordinator_alias", return_value="kilobot"):
+            d = bonds.bond_data(b)
+            self.assertNotIn("bond_leftover_sats", d)
+            self.assertEqual(d["bond_leftover_returns"],
+                             [{"txid": T[3], "sats": 2607, "spent_sats": 3300, "status": "pending"}])
+            self.assertFalse(d["bond_leftover_returned_confirmed"])
+            confs["n"] = 1
+            d = bonds.bond_data(b)
+            self.assertEqual(d["bond_leftover_returns"][0]["status"], "confirmed")
+            self.assertTrue(d["bond_leftover_returned_confirmed"])
+
+    def test_funding_sweep_refused(self):
+        from api.escrow import flow
+
+        u = Utxo(T[0], 0, 331, b"\x51\x20" + b"\x22" * 32)
+        with patch.object(flow, "funding_leftover", return_value=[u]), \
+                patch.object(flow.service, "fee_rate", return_value=4.7):
+            with self.assertRaisesRegex(bonds.EscrowError, "not worth it"):
+                flow.sweep_tx(None, None, "seller", bonds.P2TR_SPK)
+        self.assertGreater(flow.sweep_cost(1, 4.7), 331)
+
+
 def _bond_contract(n=1):
     owner = derive_secret(b"tok", "kilobot", 22, f"bond{n}")
     coord = derive_secret(b"coord", "kilobot", 22, f"bond{n}")
@@ -292,8 +374,9 @@ class BondTopUpRegtest(base.EscrowOrderFlowRegtest):
         escrow = flow.escrow_of(order)
         outs, mining = self._release_outputs(escrow)
         # the buyer (maker) gets the trade amount and what its 2-coin bond left in the escrow
-        self.assertEqual(outs["buyer"] + mining, 1_000_000 + self.buyer_in)
-        self.assertEqual(outs["seller"], 30_000)
+        # (rl31-beta20: plus any funding extra that rode in the escrow)
+        self.assertEqual(outs["buyer"] + mining, 1_000_000 + self.buyer_in + self.extra["buyer"])
+        self.assertEqual(outs["seller"], 30_000 + self.extra["seller"])
         flow.advance(order)
         order.refresh_from_db()
         self.assertEqual(order.status, Order.Status.SUC)
@@ -327,7 +410,13 @@ class BondTopUpRegtest(base.EscrowOrderFlowRegtest):
         first_back = got
         d = flow.order_data(order, buyer)
         self.assertNotIn("bond_leftovers", d)
+        self.assertNotIn("bond_leftover_sats", d)
         self.assertEqual(d["bond_leftover_returned_sats"], got)
+        # rl31-beta20: the return is marked done (mined in _return_leftover: confirmed)
+        self.assertEqual(d["bond_leftover_returns"], [
+            {"txid": d["bond_leftover_txid"],
+             "sats": got, "spent_sats": 29_700, "status": "confirmed"}])
+        self.assertTrue(d["bond_leftover_returned_confirmed"])
         # the bond itself was never touched
         bond.refresh_from_db()
         self.assertEqual(bond.status, bond.Status.LOCKED)
@@ -350,6 +439,20 @@ class BondTopUpRegtest(base.EscrowOrderFlowRegtest):
         self.assertEqual(s["bond_extra_returned_sats"], first_back + got)
         self.assertEqual(s["bond_extra_sats"], 0)
         self.assertEqual(len([t for t in s["txs"] if t["label"] == "bond_leftover_return"]), 2)
+
+        # rl31-beta20: a leftover the miners would eat is not offered nor sent back
+        from api.escrow import service
+        from api.escrow.service import EscrowError
+
+        self._send(bond.address, 400)
+        with patch.object(service, "fee_rate", return_value=5.0):
+            d = flow.order_data(order, buyer)
+            self.assertEqual(d["bond_leftover_sats"], 400)
+            self.assertFalse(d["bond_leftover_worth"])
+            self.assertEqual(d["bond_leftover_fee_sats"], bonds.leftover_cost(1, 5.0))
+            addr = _faucet("getnewaddress", "", "bech32m")
+            with self.assertRaisesRegex(EscrowError, "not worth it"):
+                flow.action(order, buyer, "bond_leftover_return", {"address": addr})
 
     def test_overpay_single_coin(self):
         from api.escrow import flow

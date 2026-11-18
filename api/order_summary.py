@@ -179,6 +179,9 @@ def _base(order, user, role, former_taker):
         "bond_lost_reason": "",
         "bond_extra_sats": 0,
         "bond_extra_returned_sats": 0,
+        "funding_leftover_returned_sats": 0,
+        "escrow_extra_sats": 0,
+        "escrow_extra_returned_sats": 0,
         "fee_from_bond": False,
         "fee_at_release": False,
         "coordinator_fee_sats": 0,
@@ -321,11 +324,24 @@ def _apply_onchain_trade(s, order, user, role_in_order):
     except Exception:
         erole = "buyer" if s["is_buyer"] else "seller"
     plan = escrow.funding_signatures.get("plan", {})
+    # rl31-beta20: sats left on the funding address and sent back (also with no deposit)
+    if escrow.funding_signatures.get(f"sweep_{erole}_txid"):
+        try:
+            info = flow.sweep_info(escrow, erole)
+        except Exception:
+            info = {"escrow_sweep_txid": escrow.funding_signatures[f"sweep_{erole}_txid"]}
+        s["funding_leftover_returned_sats"] = int(info.get("escrow_sweep_sats") or 0)
+        if info.get("escrow_sweep_spent_sats") is not None:
+            s["mining_fee_sats"] += max(0, int(info["escrow_sweep_spent_sats"]) - s["funding_leftover_returned_sats"])
+        s["txs"].append({"label": "funding_leftover_return", "txid": info["escrow_sweep_txid"]})
     if escrow.funding_txid:
         s["txs"].append({"label": "deposit", "txid": escrow.funding_txid})
     if not escrow.funding_txid or "trade_sats" not in plan and not escrow.release_txid:
         return
     bonds, trade = flow._bond_values(escrow)
+    # rl31-beta20: a funding excess that rode in the escrow and comes back with the bond
+    extra = flow._extras(escrow)[erole]
+    s["escrow_extra_sats"] = extra
     if "seller_fee" in plan:
         seller_fee, buyer_fee = plan.get("seller_fee", 0), plan.get("buyer_fee", 0)
     else:  # plans before rl31-beta9 kept no fees: what the split asked for then
@@ -365,7 +381,7 @@ def _apply_onchain_trade(s, order, user, role_in_order):
     elif not at_release:
         s["mining_fee_sats"] += max(0, paid("buyer") - buyer_fee)
     if erole == "seller":
-        s["sent_sats"] = int(paid("seller") or trade + seller_fee + int(plan.get("seller_mining") or 0))
+        s["sent_sats"] = int(paid("seller") - extra or trade + seller_fee + int(plan.get("seller_mining") or 0))
     if not escrow.release_txid:
         return
     s["txs"].append({"label": "release", "txid": escrow.release_txid})
@@ -375,6 +391,9 @@ def _apply_onchain_trade(s, order, user, role_in_order):
         return
     my_spk = escrow.funding_signatures.get(f"{erole}_payout_spk", "")
     received = sum(o.value for o in tx.outputs if o.script_pubkey.hex() == my_spk)
+    if extra and received >= extra:
+        received -= extra
+        s["escrow_extra_returned_sats"] = extra
     release_mining = escrow.escrow_sats - sum(o.value for o in tx.outputs)
     cancel = bool(escrow.funding_signatures.get("cancel"))
     K = OnchainEscrow.ReleaseKind

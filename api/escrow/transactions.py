@@ -56,6 +56,9 @@ class DepositPlan:
     bond_in_escrow: dict = None
     seller_mining: int = 0
     buyer_mining: int = 0
+    # rl31-beta20 (extra plan 1): a funding excess too small for a change output of its own,
+    # kept in the escrow output and returned to its owner with its bond
+    extra_in_escrow: dict = None
 
 
 class DepositError(ValueError):
@@ -96,6 +99,7 @@ def plan_deposit(
     buyer_bond: "BondInput | None" = None,
     buyer_fee_from_bond: bool = False,
     fees_in_escrow: bool = False,
+    extra_to_escrow: bool = False,
 ) -> DepositPlan:
     """Joint deposit: escrow output, coordinator fee, dev fee and each side's change.
 
@@ -108,6 +112,12 @@ def plan_deposit(
 
     fees_in_escrow (fee plan 2, rl31-beta15): no coordinator nor dev output; both fees are added
     to the escrow output and the release of a completed trade pays them (a cancel returns them).
+
+    extra_to_escrow (rl31-beta20): every confirmed coin at a funding address is spent; an excess
+    worth a change output (at least dust plus the cost of that output at this fee rate) comes
+    back as change, a smaller one rides in the escrow output (extra_in_escrow) and goes back to
+    its owner with its bond in every release, cancel, dispute and rescue. Only for a trader with
+    an onchain bond in the deposit (it always has an output of its own to carry it).
     """
     if not seller_utxos:
         raise DepositError("the seller has not funded yet")
@@ -142,18 +152,27 @@ def plan_deposit(
         vb += VB_BOND_COOP * len(bond.utxos) if bond else 0
         return math.ceil((vb + shared_vb / 2) * fee_rate)
 
-    def change_for(total_in, owed, n_inputs, change_spk, bond=None):
+    extra_in_escrow = {}
+
+    def change_threshold(change_spk):
+        return DUST_P2TR + math.ceil(output_vbytes(change_spk) * fee_rate)
+
+    def change_for(total_in, owed, n_inputs, change_spk, bond=None, role=None):
         fee = side_fee(n_inputs, change_spk, True, bond)
         change = total_in - owed - fee
-        if change >= DUST_P2TR:
+        keep_extra = extra_to_escrow and bond is not None and role is not None
+        if change >= (change_threshold(change_spk) if keep_extra else DUST_P2TR):
             return change, fee
         fee = side_fee(n_inputs, change_spk, False, bond)
         if total_in - owed - fee < 0:
             return None, fee
+        if keep_extra and total_in - owed - fee > 0:
+            extra_in_escrow[role] = total_in - owed - fee
+            return 0, fee
         return 0, total_in - owed
 
     seller_change, seller_mining = change_for(
-        seller_in, escrow_sats + seller_fee_sats, len(seller_utxos), seller_change_spk, seller_bond
+        seller_in, escrow_sats + seller_fee_sats, len(seller_utxos), seller_change_spk, seller_bond, "seller"
     )
     if seller_change is None:
         raise DepositError(f"the seller's funding is short by {escrow_sats + seller_fee_sats + seller_mining - seller_in} sats")
@@ -167,10 +186,15 @@ def plan_deposit(
         outputs[0] = TxOut(escrow_sats + held + sum(bond_in_escrow.values()), contract.script_pubkey)
     elif buyer_utxos:
         buyer_change, buyer_mining = change_for(
-            buyer_in, buyer_fee_sats, len(buyer_utxos), buyer_change_spk, buyer_bond
+            buyer_in, buyer_fee_sats, len(buyer_utxos), buyer_change_spk, buyer_bond, "buyer"
         )
         if buyer_change is None:
             raise DepositError(f"the buyer's funding is short by {buyer_fee_sats + buyer_mining - buyer_in} sats")
+    if extra_in_escrow:
+        outputs[0] = TxOut(
+            escrow_sats + held + sum(bond_in_escrow.values()) + sum(extra_in_escrow.values()),
+            contract.script_pubkey,
+        )
     if seller_change:
         outputs.append(TxOut(seller_change, seller_change_spk))
     if buyer_change:
@@ -200,6 +224,7 @@ def plan_deposit(
         bond_in_escrow=bond_in_escrow,
         seller_mining=seller_mining,
         buyer_mining=buyer_mining,
+        extra_in_escrow=extra_in_escrow,
     )
 
 
@@ -213,15 +238,18 @@ def check_deposit(
     my_change_spk: bytes,
     max_fee_rate: float,
     bonds_sats: int = 0,
+    extra_sats: int = 0,
+    my_extra: int = 0,
 ) -> None:
-    """What a trader's client checks before signing its inputs of the deposit."""
+    """What a trader's client checks before signing its inputs of the deposit. extra_sats: the
+    funding extras of both in the escrow (rl31-beta20); my_extra, ours (it comes back to us)."""
     if not tx.outputs or tx.outputs[0].script_pubkey != contract.script_pubkey:
         raise DepositError("the first output is not the escrow")
-    if tx.outputs[0].value != escrow_sats + bonds_sats:
+    if tx.outputs[0].value != escrow_sats + bonds_sats + extra_sats:
         raise DepositError("the escrow amount is wrong")
     mine_in = sum(spent[i].value for i in my_inputs)
     mine_back = sum(o.value for o in tx.outputs if o.script_pubkey == my_change_spk)
-    if mine_in - mine_back > my_max_spend:
+    if mine_in - mine_back - my_extra > my_max_spend:
         raise DepositError("this deposit takes more than agreed from you")
     fee = sum(s.value for s in spent) - sum(o.value for o in tx.outputs)
     if fee < 0:

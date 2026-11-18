@@ -105,6 +105,13 @@ def contract_for(escrow):
 
 
 RESCUE_PLAN = 2
+# rl31-beta20: a funding excess too small for its own change output rides in the escrow and goes
+# back to its owner with its bond (escrows created before have no "extra_plan": as before).
+EXTRA_PLAN = 1
+
+
+def extra_plan(escrow):
+    return int((escrow.funding_signatures or {}).get("extra_plan") or 0)
 
 
 def rescue_plan(escrow):
@@ -132,7 +139,7 @@ def create_escrow(order):
             "coordinator_pubkey": pubkey(coordinator_key(order.id)).hex(),
             "rescue_csv": config("ESCROW_RESCUE_CSV", cast=int, default=2016),
             # fixed for the life of the escrow (api/escrow/flow.py FEE_PLAN, RESCUE_PLAN)
-            "funding_signatures": {"fee_plan": 2, "rescue_plan": RESCUE_PLAN},
+            "funding_signatures": {"fee_plan": 2, "rescue_plan": RESCUE_PLAN, "extra_plan": EXTRA_PLAN},
         },
     )
     return escrow
@@ -214,6 +221,7 @@ def build_deposit(escrow, escrow_sats, seller_fee, buyer_fee, coordinator_spk, d
         bond_service.bond_input(bonds["seller"]) if bonds.get("seller") else None,
         bond_service.bond_input(bonds["buyer"]) if bonds.get("buyer") else None,
         buyer_fee_from_bond=buyer_fee_from_bond, fees_in_escrow=fees_in_escrow,
+        extra_to_escrow=extra_plan(escrow) >= 1,
     )
     escrow.escrow_sats = plan.tx.outputs[0].value
     dev_paid = sum(o.value for o in plan.tx.outputs[1:] if dev_spk and o.script_pubkey == dev_spk)
@@ -240,6 +248,7 @@ def build_deposit(escrow, escrow_sats, seller_fee, buyer_fee, coordinator_spk, d
         "seller_fee": seller_fee,
         "buyer_fee": buyer_fee,
         "mining_fee": plan.mining_fee,
+        "extra_in_escrow": plan.extra_in_escrow or {},
     }
     if fees_in_escrow:  # plan 2: the fees ride in the escrow output until the release
         sigs["plan"]["fees_in_escrow"] = {"seller": seller_fee, "buyer": buyer_fee}

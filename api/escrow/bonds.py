@@ -17,7 +17,7 @@ from api.escrow.taproot import (
     schnorr_verify,
     xonly,
 )
-from api.escrow.transactions import DUST_P2TR, BondInput, Utxo, coins_spend_tx
+from api.escrow.transactions import DUST_P2TR, BondInput, Utxo, coins_spend_tx, coins_spend_vbytes
 
 # A bond can be paid in up to this many payments (rl31-beta18: a short first payment is topped
 # up with a second one). Each extra coin costs its owner one more bond input in the deposit.
@@ -349,14 +349,42 @@ def submit_return_signature(bond, sigs):
     return bond
 
 
+# rl31-beta20: a leftover is only worth sending back when what arrives is at least the dust limit
+# and at least what the miners take (331 sats at ~4.7 sat/vB cost ~530 in mining: not worth it).
+P2TR_SPK = b"\x51\x20" + b"\x00" * 32
+
+
+def worth_recovering(sats, fee):
+    return sats - fee >= max(DUST_P2TR, fee)
+
+
+def leftover_cost(n_coins, rate=None, refund=False):
+    """Mining fee of sending n coins of a bond address back to one (taproot) output."""
+    rate = service.fee_rate(2) if rate is None else rate
+    return math.ceil(coins_spend_vbytes(n_coins, P2TR_SPK, refund) * rate)
+
+
+def tx_status(txid):
+    """'confirmed' once a transaction is in a block, 'pending' while not (or unknown)."""
+    try:
+        tx = service.rpc("getrawtransaction", [txid, True])
+        return "confirmed" if int(tx.get("confirmations") or 0) > 0 else "pending"
+    except Exception:
+        return "pending"
+
+
 def leftover_return_tx(bond, payout_spk):
     """Coins at the bond address that are not the bond go back to an address of the owner's,
     with the coordinator's signature, at any time (the bond itself stays where it is)."""
     coins = leftovers(bond)
     if not coins:
         raise EscrowError("there is nothing else at your bond address")
+    rate = service.fee_rate(2)
+    total = sum(c[2] for c in coins)
+    if not worth_recovering(total, leftover_cost(len(coins), rate)):
+        raise EscrowError("not worth it right now: the mining fee would eat more than these sats")
     try:
-        tx = coins_spend_tx(coins, payout_spk, service.fee_rate(2))
+        tx = coins_spend_tx(coins, payout_spk, rate)
     except ValueError:
         raise EscrowError("what is left at your bond address is too small to send back")
     bond.leftover_tx = tx.serialize().hex()
@@ -445,6 +473,12 @@ def bond_data(bond):
         if lo:
             data["bond_leftovers"] = [{"txid": t, "vout": v, "value": s} for t, v, s in lo]
             data["bond_leftover_sats"] = sum(c[2] for c in lo)
+            try:
+                fee = leftover_cost(len(lo))
+                data["bond_leftover_fee_sats"] = fee
+                data["bond_leftover_worth"] = worth_recovering(data["bond_leftover_sats"], fee)
+            except Exception:
+                pass
             if bond.leftover_tx:
                 data["bond_leftover_tx"] = bond.leftover_tx
                 data["bond_leftover_coins"] = [
@@ -453,6 +487,20 @@ def bond_data(bond):
     if bond.leftover_txids:
         data["bond_leftover_txid"] = bond.leftover_txids[-1]["txid"]
         data["bond_leftover_returned_sats"] = sum(int(i.get("sats", 0)) for i in bond.leftover_txids)
+        # rl31-beta20: each return with its state, so the app shows them as done (pending or
+        # confirmed) also after a reload, in past orders and in the final summary
+        data["bond_leftover_returns"] = [
+            {
+                "txid": i["txid"],
+                "sats": int(i.get("sats", 0)),
+                "spent_sats": sum(int(c[2]) for c in i.get("coins", [])),
+                "status": tx_status(i["txid"]),
+            }
+            for i in bond.leftover_txids
+        ]
+        data["bond_leftover_returned_confirmed"] = all(
+            r["status"] == "confirmed" for r in data["bond_leftover_returns"]
+        )
     return data
 
 

@@ -382,6 +382,13 @@ def _bond_values(escrow):
     return values, plan.get("trade_sats", escrow.escrow_sats - sum(values.values()))
 
 
+def _extras(escrow):
+    """rl31-beta20: what each trader's funding left in the escrow output beyond what it owed
+    (too small for a change output): it goes back to it with its bond, whatever happens."""
+    ex = (escrow.funding_signatures.get("plan", {}) or {}).get("extra_in_escrow") or {}
+    return {"seller": int(ex.get("seller") or 0), "buyer": int(ex.get("buyer") or 0)}
+
+
 def _spk(escrow, role):
     hex_ = escrow.funding_signatures.get(f"{role}_payout_spk")
     if not hex_:
@@ -425,13 +432,14 @@ def seller_confirms(order):
     if escrow is None or escrow.status != OnchainEscrow.Status.LOCKED:
         raise EscrowError("the onchain escrow is not locked")
     bonds, trade = _bond_values(escrow)
+    ex = _extras(escrow)
     fee_later = int(escrow.funding_signatures.get("plan", {}).get("buyer_fee_at_release") or 0)
     if fee_plan(escrow) >= 2:
         held = fees_held(escrow)
         fee_outs, coord_sats, dev_sats = _fee_outputs(order, escrow, held["seller"] + held["buyer"] + fee_later)
-        payouts = [TxOut(trade + bonds["buyer"] - fee_later, _spk(escrow, "buyer"))]
-        if bonds["seller"]:
-            payouts.append(TxOut(bonds["seller"], _spk(escrow, "seller")))
+        payouts = [TxOut(trade + bonds["buyer"] + ex["buyer"] - fee_later, _spk(escrow, "buyer"))]
+        if bonds["seller"] + ex["seller"]:
+            payouts.append(TxOut(bonds["seller"] + ex["seller"], _spk(escrow, "seller")))
         payouts += fee_outs
         tx = service.start_release(escrow, payouts, OnchainEscrow.ReleaseKind.COOPERATIVE, 0)
         _record_release(escrow, release_coordinator_sats=fee_later, release_fee_sats=_paid_to_coordinator(tx),
@@ -439,9 +447,9 @@ def seller_confirms(order):
     else:
         if fee_later < DUST_P2TR:  # too small to be an output of its own: not charged
             fee_later = 0
-        payouts = [TxOut(trade + bonds["buyer"] - fee_later, _spk(escrow, "buyer"))]
-        if bonds["seller"]:
-            payouts.append(TxOut(bonds["seller"], _spk(escrow, "seller")))
+        payouts = [TxOut(trade + bonds["buyer"] + ex["buyer"] - fee_later, _spk(escrow, "buyer"))]
+        if bonds["seller"] + ex["seller"]:
+            payouts.append(TxOut(bonds["seller"] + ex["seller"], _spk(escrow, "seller")))
         if fee_later:
             payouts.append(TxOut(fee_later, coordinator_fee_spk()))
         service.start_release(escrow, payouts, OnchainEscrow.ReleaseKind.COOPERATIVE, 0)
@@ -458,7 +466,9 @@ def _returns(escrow):
     buyer its bond and (plan 2) its fee."""
     bonds, trade = _bond_values(escrow)
     held = fees_held(escrow)
-    return trade + bonds["seller"] + held["seller"], bonds["buyer"] + held["buyer"]
+    ex = _extras(escrow)
+    return (trade + bonds["seller"] + held["seller"] + ex["seller"],
+            bonds["buyer"] + held["buyer"] + ex["buyer"])
 
 
 def collaborative_cancel(order):
@@ -527,8 +537,15 @@ def resolve_dispute(order, buyer_wins):
         escrow.save(update_fields=["status"])
     bonds, trade = _bond_values(escrow)
     reward = int(bonds[loser] * config("SLASHED_BOND_REWARD_SPLIT", cast=float, default=0.5))
-    payouts = [TxOut(trade + bonds[winner] + reward, _spk(escrow, winner))]
+    ex = _extras(escrow)
+    payouts = [TxOut(trade + bonds[winner] + reward + ex[winner], _spk(escrow, winner))]
     penalty = bonds[loser] - reward
+    # rl31-beta20: the loser's funding extra was never part of its bond: it goes back to it
+    # (below dust it cannot be an output of its own and goes with the penalty)
+    if ex[loser] >= DUST_P2TR and escrow.funding_signatures.get(f"{loser}_payout_spk"):
+        payouts.append(TxOut(ex[loser], _spk(escrow, loser)))
+    else:
+        penalty += ex[loser]
     held = fees_held(escrow)
     fee_sats = held["seller"] + held["buyer"]
     dev_sats = 0
@@ -684,6 +701,9 @@ def order_data(order, user):
     }
     if escrow.funding_signatures.get("plan"):
         data["escrow_fees_in_escrow"] = fees_held(escrow)
+        # rl31-beta20: funding extras that ride in the escrow and come back with each bond
+        data["escrow_extra_in_escrow"] = _extras(escrow)
+    data["escrow_extra_plan"] = service.extra_plan(escrow)
     fpk = escrow.funding_signatures.get(f"{role}_funding_pubkey")
     at_release = role == "buyer" and bool(fees(order)[1]) and buyer_fee_at_release(order)
     from_bond = role == "buyer" and bool(fees(order)[1]) and not at_release and buyer_fee_from_bond(order, escrow)
@@ -789,8 +809,17 @@ def order_data(order, user):
     if sw and left:
         data["escrow_sweep_tx"] = sw["tx"]
         data["escrow_sweep_spent"] = sw["spent"]
+    if left:
+        from api.escrow import bonds
+
+        try:
+            fee = sweep_cost(len(left))
+            data["escrow_leftover_fee_sats"] = fee
+            data["escrow_leftover_worth"] = bonds.worth_recovering(data["escrow_leftover_sats"], fee)
+        except Exception:
+            pass
     if escrow.funding_signatures.get(f"sweep_{role}_txid"):
-        data["escrow_sweep_txid"] = escrow.funding_signatures[f"sweep_{role}_txid"]
+        data.update(sweep_info(escrow, role))
     return data
 
 
@@ -1057,6 +1086,8 @@ def trade_summary(order, user):
         "received_sats": received,
         "bond_sats": bond_sats,
         "bond_back_sats": bond_sats if ln_bond else bonds.get(role, 0),
+        # rl31-beta20: a funding excess that rode in the escrow, back with the bond (in received)
+        "extra_back_sats": _extras(escrow)[role],
         "coordinator_fee_sats": charged_fees(escrow, order)[role],
         "fee_from_bond": role == "buyer" and bool(plan.get("buyer_fee_from_bond")),
         "deposit_mining_sats": plan.get(f"{role}_mining"),
@@ -1446,7 +1477,38 @@ def funding_leftover(order, escrow, role):
     return utxos
 
 
+def sweep_cost(n_utxos, rate=None):
+    """Mining fee of sending n coins of a funding address back to one (taproot) output."""
+    from api.escrow import bonds
+
+    rate = service.fee_rate(2) if rate is None else rate
+    return math.ceil(math.ceil(VB_OVERHEAD + n_utxos * VB_TAPROOT_KEY_INPUT + output_vbytes(bonds.P2TR_SPK)) * rate)
+
+
+def sweep_info(escrow, role):
+    """A sent-back funding leftover (rl31-beta20): txid, what arrives, what it spent and whether
+    it is confirmed. Sweeps before rl31-beta20 kept only the txid: read the rest from the node."""
+    from api.escrow import bonds
+
+    fs = escrow.funding_signatures
+    txid = fs[f"sweep_{role}_txid"]
+    out = {"escrow_sweep_txid": txid, "escrow_sweep_status": bonds.tx_status(txid)}
+    sats, spent = fs.get(f"sweep_{role}_sats"), fs.get(f"sweep_{role}_spent_sats")
+    if sats is None:
+        try:
+            tx = service.rpc("getrawtransaction", [txid, True])
+            sats = round(sum(float(v["value"]) for v in tx["vout"]) * 1e8)
+        except Exception:
+            sats = None
+    if sats is not None:
+        out["escrow_sweep_sats"] = int(sats)
+    if spent is not None:
+        out["escrow_sweep_spent_sats"] = int(spent)
+    return out
+
+
 def sweep_tx(order, escrow, role, payout_spk):
+    from api.escrow import bonds
     from api.escrow.taproot import Transaction, TxIn, TxOut
 
     utxos = funding_leftover(order, escrow, role)
@@ -1455,8 +1517,8 @@ def sweep_tx(order, escrow, role, payout_spk):
     total = sum(u.value for u in utxos)
     vb = math.ceil(VB_OVERHEAD + len(utxos) * VB_TAPROOT_KEY_INPUT + output_vbytes(payout_spk))
     value = total - math.ceil(vb * service.fee_rate(2))
-    if value < DUST_P2TR:
-        raise EscrowError("what is left is too small to send back")
+    if value < DUST_P2TR or not bonds.worth_recovering(total, total - value):
+        raise EscrowError("not worth it right now: the mining fee would eat more than these sats")
     tx = Transaction([TxIn(u.txid, u.vout) for u in utxos], [TxOut(value, payout_spk)])
     data = dict(escrow.funding_signatures)
     data[f"sweep_{role}"] = {"tx": tx.serialize().hex(), "spent": [[u.value, u.script_pubkey.hex()] for u in utxos]}
@@ -1484,6 +1546,8 @@ def submit_sweep(order, escrow, role, sigs_hex):
     service.rpc("sendrawtransaction", [tx.serialize().hex()])
     data = dict(escrow.funding_signatures)
     data[f"sweep_{role}_txid"] = tx.txid()
+    data[f"sweep_{role}_sats"] = sum(o.value for o in tx.outputs)
+    data[f"sweep_{role}_spent_sats"] = sum(o.value for o in spent)
     data.pop(f"sweep_{role}", None)
     escrow.funding_signatures = data
     escrow.save(update_fields=["funding_signatures"])

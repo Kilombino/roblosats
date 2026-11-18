@@ -254,7 +254,8 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
             if "escrow_funding_address" not in d:  # beta9: the buyer's fee comes out of its bond
                 self.assertTrue(d.get("escrow_fee_from_bond"))
                 continue
-            _faucet("sendtoaddress", d["escrow_funding_address"], d["escrow_funding_recommended"] / 1e8)
+            # rl31-beta20: a test may send another amount (test_escrow_funding_extra)
+            _faucet("sendtoaddress", d["escrow_funding_address"], self._funding_amount(d, r) / 1e8)
         _mine()
         flow.advance(order)
         self.assertEqual(flow.escrow_of(order).status, OnchainEscrow.Status.FUNDING)
@@ -285,12 +286,18 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
         self.seller_fee, self.buyer_fee = flow.fees(order)
         self.assertGreaterEqual(self.seller_fee + self.buyer_fee, flow.min_coordinator_fee())
         self.assertEqual(flow.fees_held(escrow), {"seller": self.seller_fee, "buyer": self.buyer_fee})
-        self.assertEqual(escrow.escrow_sats, 1_000_000 + 30_000 + self.buyer_in + self.seller_fee + self.buyer_fee)
+        # rl31-beta20: funding excess too small for a change output rides in the escrow
+        self.extra = flow._extras(escrow)
+        self.assertEqual(escrow.escrow_sats, 1_000_000 + 30_000 + self.buyer_in + self.seller_fee + self.buyer_fee
+                         + self.extra["seller"] + self.extra["buyer"])
         deposit = service.rpc("getrawtransaction", [escrow.funding_txid, True])
         coord = flow.coordinator_fee_spk().hex()
         self.assertFalse([o for o in deposit["vout"] if o["scriptPubKey"]["hex"] == coord])
         self.assertEqual(escrow.coordinator_fee_sats, 0)
         return order, buyer, seller, keys
+
+    def _funding_amount(self, d, role):
+        return d["escrow_funding_recommended"]
 
     def _sign_rescue(self, order, users, keys):
         """rl31-beta16 (rescue plan 2): both sign the rescue before the deposit, as the client
@@ -367,9 +374,10 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
         order.refresh_from_db()
         self.assertEqual(order.status, Order.Status.SUC)
         outs, mining = self._release_outputs(escrow)
+        e = self.extra
         self.assertEqual(outs, {
-            "buyer": 1_000_000 + self.buyer_in - mining,
-            "seller": 30_000,
+            "buyer": 1_000_000 + self.buyer_in + e["buyer"] - mining,
+            "seller": 30_000 + e["seller"],
             "coordinator": self.seller_fee + self.buyer_fee,
         })
         self.assertEqual(order.proceeds, self.seller_fee + self.buyer_fee)
@@ -407,8 +415,8 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
         txid = service.rpc("sendrawtransaction", [self.rescue_hex])
         _mine(1)
         outs = self._mined_outputs(escrow, txid)
-        to_seller = 1_000_000 + 30_000 + self.seller_fee
-        to_buyer = self.buyer_in + self.buyer_fee
+        to_seller = 1_000_000 + 30_000 + self.seller_fee + self.extra["seller"]
+        to_buyer = self.buyer_in + self.buyer_fee + self.extra["buyer"]
         self.assertEqual((self.rescue_plan_data["to_seller"], self.rescue_plan_data["to_buyer"]), (to_seller, to_buyer))
         fee = to_seller + to_buyer - outs["seller"] - outs["buyer"]
         self.assertEqual(outs, {"seller": to_seller - (fee - fee // 2), "buyer": to_buyer - fee // 2})
@@ -454,8 +462,8 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
         outs, mining = self._release_outputs(escrow)
         # the coordinator fee goes back to each trader (Kilombino, 17 nov 2026)
         self.assertEqual(outs, {
-            "seller": 1_000_000 + 30_000 + self.seller_fee - mining,
-            "buyer": self.buyer_in + self.buyer_fee,
+            "seller": 1_000_000 + 30_000 + self.seller_fee + self.extra["seller"] - mining,
+            "buyer": self.buyer_in + self.buyer_fee + self.extra["buyer"],
         })
         self.assertEqual(order.proceeds, 0)
         s = __import__("api.order_summary", fromlist=["x"]).final_summary(order, seller)
@@ -488,10 +496,17 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
         flow.action(order, buyer, "escrow_leaf_signature", {"signature": with_hashtype(schnorr_sign(keys["buyer"]["escrow"], msg)).hex()})
         outs, mining = self._release_outputs(escrow)
         # the winner gets what it got before beta15; the coordinator the fees and the penalty
-        self.assertEqual(outs, {
-            "buyer": 1_000_000 + self.buyer_in + 15_000 - mining,
+        e = self.extra
+        want = {
+            "buyer": 1_000_000 + self.buyer_in + 15_000 + e["buyer"] - mining,
             "coordinator": 15_000 + self.seller_fee + self.buyer_fee,
-        })
+        }
+        # rl31-beta20: the loser's funding extra goes back to it (below dust: with the penalty)
+        if e["seller"] >= 330:
+            want["seller"] = e["seller"]
+        else:
+            want["coordinator"] += e["seller"]
+        self.assertEqual(outs, want)
 
     def test_dispute_return_everything_from_the_admin(self):
         from unittest.mock import MagicMock, patch
@@ -510,8 +525,8 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
         outs, mining = self._release_outputs(escrow)
         # like a collaborative cancel: nothing for the coordinator
         self.assertEqual(outs, {
-            "seller": 1_000_000 + 30_000 + self.seller_fee - mining,
-            "buyer": self.buyer_in + self.buyer_fee,
+            "seller": 1_000_000 + 30_000 + self.seller_fee + self.extra["seller"] - mining,
+            "buyer": self.buyer_in + self.buyer_fee + self.extra["buyer"],
         })
         self.assertEqual(flow.proceeds(order), 0)
 

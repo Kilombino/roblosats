@@ -6,6 +6,8 @@ The same code ran end to end on regtest with the BLAKE2b fork (lab-onchain/py/la
 with estimated sizes equal to the real ones and the requested fee rate reached.
 """
 
+import math
+
 from django.test import SimpleTestCase
 
 from api.escrow.taproot import BondContract, EscrowContract, TxOut, derive_secret, pubkey
@@ -18,6 +20,7 @@ from api.escrow.transactions import (
     check_deposit,
     funding_descriptor,
     funding_script_pubkey,
+    output_vbytes,
     plan_deposit,
     release_tx,
 )
@@ -138,3 +141,67 @@ class ReleaseTest(SimpleTestCase):
             release_tx(c, "cc" * 32, 0, 1_000_000, [TxOut(999_999, SPK(5))], VB_KEYPATH, 2.0)
         tx = release_tx(c, "cc" * 32, 0, 1_000_000, [TxOut(999_800, SPK(5)), TxOut(200, SPK(6))], VB_KEYPATH, 2.0)
         self.assertEqual(len(tx.outputs), 1)
+
+
+class FundingExtraInEscrowTest(SimpleTestCase):
+    """rl31-beta20 (Kilobot #22: 331 sats stranded on the seller's funding address): every
+    confirmed funding coin goes into the deposit; an excess worth a change output (dust plus the
+    cost of that output) comes back as change, a smaller one rides in the escrow output and goes
+    back to its owner with its bond."""
+
+    RATE = 3.0
+
+    def _plan(self, excess, extra=True, bond=True, seller_coins=1):
+        c, fs = _setup()
+        owed = 1_000_000 + 1_700
+        # mining share without change: what makes the excess exact
+        probe = plan_deposit(
+            [Utxo("aa" * 32, i, 10_000_000 // seller_coins, fs) for i in range(seller_coins)], [], c, 1_000_000,
+            1_700, 0, SPK(1), 0, None, fs, SPK(9), self.RATE, _bond("c", 30_000) if bond else None,
+            fees_in_escrow=True, extra_to_escrow=extra,
+        )
+        no_change_fee = probe.seller_mining - math.ceil(output_vbytes(fs) * self.RATE)
+        total = owed + no_change_fee + excess
+        coins = [Utxo("aa" * 32, i, total // seller_coins + (total % seller_coins if i == 0 else 0), fs)
+                 for i in range(seller_coins)]
+        p = plan_deposit(
+            coins, [], c, 1_000_000, 1_700, 0, SPK(1), 0, None, fs, SPK(9), self.RATE,
+            _bond("c", 30_000) if bond else None, fees_in_escrow=True, extra_to_escrow=extra,
+        )
+        return c, fs, p, no_change_fee
+
+    def test_small_excess_rides_in_the_escrow(self):
+        c, fs, p, fee = self._plan(331)
+        self.assertEqual(p.extra_in_escrow, {"seller": 331})
+        self.assertEqual(p.tx.outputs[0].value, 1_000_000 + 1_700 + 30_000 + 331)
+        self.assertNotIn(fs, [o.script_pubkey for o in p.tx.outputs])
+        self.assertEqual(p.seller_mining, fee)
+        # the client check accepts it only counting the extra
+        check_deposit(p.tx, p.spent, c, 1_000_000 + 1_700, p.seller_inputs, 1_001_700 + fee, fs, 10,
+                      bonds_sats=30_000, extra_sats=331, my_extra=331)
+        with self.assertRaisesRegex(DepositError, "escrow amount"):
+            check_deposit(p.tx, p.spent, c, 1_000_000 + 1_700, p.seller_inputs, 1_001_700 + fee, fs, 10,
+                          bonds_sats=30_000)
+
+    def test_excess_worth_a_change_output_comes_back(self):
+        threshold = DUST_P2TR + math.ceil(43 * self.RATE)
+        _c, fs, p, _ = self._plan(threshold + math.ceil(43 * self.RATE))
+        self.assertEqual(p.extra_in_escrow, {})
+        change = {o.script_pubkey: o.value for o in p.tx.outputs}[fs]
+        self.assertGreaterEqual(change, threshold)
+        # just under the threshold (above dust): in the escrow now, saving the change output
+        _c, fs, p, _ = self._plan(threshold + math.ceil(43 * self.RATE) - 1)
+        self.assertNotIn(fs, [o.script_pubkey for o in p.tx.outputs])
+        self.assertEqual(p.extra_in_escrow["seller"], threshold + math.ceil(43 * self.RATE) - 1)
+
+    def test_several_coins_all_taken(self):
+        _c, _fs, p, _ = self._plan(500, seller_coins=3)
+        self.assertEqual(len(p.seller_inputs), 3)
+        self.assertEqual(p.extra_in_escrow, {"seller": 500})
+
+    def test_old_plans_and_no_bond_as_before(self):
+        _c, fs, p, _ = self._plan(331, extra=False)
+        self.assertEqual(p.extra_in_escrow, {})
+        self.assertEqual(p.tx.outputs[0].value, 1_000_000 + 1_700 + 30_000)
+        _c, fs, p, _ = self._plan(331, bond=False)
+        self.assertEqual(p.extra_in_escrow, {})
