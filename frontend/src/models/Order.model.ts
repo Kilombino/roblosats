@@ -72,6 +72,16 @@ export interface TradeCoordinatorSummary {
   trade_revenue_sats: number;
 }
 
+// Keys of one moment of the order (a take, a bond, the escrow) that a later full order page
+// must drop when the coordinator stops sending them. 0.9.3: take_lightning stayed true after a
+// Lightning take was cancelled, and the onchain take that followed showed an empty hold invoice
+// ("Lock 0 Sats") instead of the onchain bond.
+const STALE_KEYS =
+  /^(bond_|escrow_|onchain_|take_|lightning_take_swap$|hybrid_onchain_maker_bond$|swap_surcharge_)/;
+
+/** What a previous take of this order left behind in the app (0.9.3). */
+const TAKE_KEYS = ['take_lightning', 'take_expires_at', 'bond_invoice', 'bond_satoshis'];
+
 class Order {
   constructor(attributes: object) {
     Object.assign(this, attributes);
@@ -223,6 +233,17 @@ class Order {
   private serverKeys: string[] = [];
 
   update = (attributes: object): Order => {
+    // Another Order (the slot merges the order it follows with the one a take or a fetch
+    // returned) is already in app units: copy it as it is. 0.9.3: normalising it again turned
+    // the 1,000,000 sats of a 丰 sat order into its 0.000021 Spamcoin ("Amount: 0 丰 sat").
+    if (attributes instanceof Order) {
+      const self = this as unknown as Record<string, unknown>;
+      for (const k of Object.keys(self)) {
+        if (!(k in attributes) && STALE_KEYS.test(k)) delete self[k];
+      }
+      Object.assign(this, attributes);
+      return this;
+    }
     const a = attributes as Record<string, unknown>;
     // A full order page replaces the previous one: a key the coordinator stopped sending (a
     // leftover already sent back, a return already signed...) goes away instead of staying with
@@ -231,7 +252,7 @@ class Order {
     if (typeof a.id === 'number' && 'status' in a && !a.bad_request) {
       const self = this as unknown as Record<string, unknown>;
       for (const k of this.serverKeys) {
-        if (!(k in a) && /^(bond_|escrow_|onchain_)/.test(k)) delete self[k];
+        if (!(k in a) && STALE_KEYS.test(k)) delete self[k];
       }
       this.serverKeys = Object.keys(a);
     }
@@ -314,6 +335,10 @@ class Order {
     takeAmount: string,
     lightning?: boolean,
   ) => Promise<this> = async (federation, slot, takeAmount, lightning = false) => {
+    // A new take starts clean: nothing from an earlier take (a cancelled Lightning take, another
+    // robot) may decide which bond screen this one shows.
+    const self = this as unknown as Record<string, unknown>;
+    for (const k of TAKE_KEYS) delete self[k];
     return await this.submitAction(federation, slot, {
       action: 'take',
       password: this?.password,
