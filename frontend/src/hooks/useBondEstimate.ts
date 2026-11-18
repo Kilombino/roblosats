@@ -9,6 +9,7 @@ interface UseBondEstimateProps {
   currentPrice?: number;
   federationUpdatedAt: number;
   amountRangeEnabled: boolean;
+  satMode?: boolean; // rl31-beta19: amounts in sats (pass currentPrice 100,000,000)
 }
 
 export const useBondEstimate = ({
@@ -18,6 +19,7 @@ export const useBondEstimate = ({
   currentPrice,
   federationUpdatedAt,
   amountRangeEnabled,
+  satMode = false,
 }: UseBondEstimateProps): number | null => {
   const makerHasAmountRange = useMemo(() => {
     return maker.advancedOptions && amountRangeEnabled;
@@ -34,7 +36,7 @@ export const useBondEstimate = ({
       isRange: makerHasAmountRange,
       bondSize: bondPercentage,
       // fixed price (rl31-beta17): sats = amount / price in any currency, Spamcoin too
-      mode: maker.priceMode === 'fixed' ? 'fiat' : (fav.mode as 'fiat' | 'swap'),
+      mode: satMode || maker.priceMode === 'fixed' ? 'fiat' : (fav.mode as 'fiat' | 'swap'),
       price: currentPrice ?? 0,
       premium: maker.premium ?? 0,
     });
@@ -46,6 +48,7 @@ export const useBondEstimate = ({
     maker.bondSize,
     maker.premium,
     maker.priceMode,
+    satMode,
     currentPrice,
     fav.mode,
     maker.coordinator,

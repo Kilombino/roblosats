@@ -28,6 +28,7 @@ import { useNavigate } from 'react-router-dom';
 import { sha256 } from 'js-sha256';
 import { UseAppStoreType, AppContext } from '../../contexts/AppContext';
 import useLegacyMode from '../../hooks/useLegacyMode';
+import { SAT_LABEL, formatTotal } from '../../utils/satOrders';
 
 interface TakeButtonProps {
   currentOrder: Order;
@@ -74,13 +75,25 @@ const TakeButton = ({
   const [takeWith, setTakeWith] = useState<'onchain' | 'lightning'>('onchain');
   // The maker's order type: 0 = the maker buys (the taker sells), 1 = the maker sells.
   const takerSells = currentOrder?.type === 0;
+  // rl31-beta19: a "丰 sat" order is taken in sats
+  const satOrder = Boolean(currentOrder?.sats_denominated);
+  const toOrderUnits = (v: string): number =>
+    satOrder ? Number(v) : currentOrder?.currency === 1000 ? Number(v) / 100000000 : Number(v);
+  const rangeMin = satOrder
+    ? Number(currentOrder?.sats_min_amount)
+    : Number(currentOrder?.min_amount);
+  const rangeMax = satOrder
+    ? Number(currentOrder?.sats_max_amount)
+    : Number(currentOrder?.max_amount);
 
   // rl31-beta14: what this robot will pay the coordinator, for the way it takes the order
   // (onchain: at least the coordinator's minimum; Lightning seller: a Lightning order, plain %).
   const takeFeeText = (): string => {
     if (!isOnchainOrder || !currentOrder || !info) return '';
     let tradeSats = currentOrder.satoshis_now;
-    if (currentOrder.has_range && Number(takeAmount) > 0 && currentOrder.max_amount > 0) {
+    if (satOrder && currentOrder.has_range && Number(takeAmount) > 0) {
+      tradeSats = Math.round(Number(takeAmount));
+    } else if (currentOrder.has_range && Number(takeAmount) > 0 && currentOrder.max_amount > 0) {
       tradeSats = Math.round((tradeSats * Number(takeAmount)) / Number(currentOrder.max_amount));
     }
     if (!tradeSats) return '';
@@ -156,8 +169,11 @@ const TakeButton = ({
     const btcNow = currentOrder.satoshis_now / 100000000;
     const rate =
       currentOrder.amount != null ? currentOrder.amount / btcNow : currentOrder.max_amount / btcNow;
-    const amount =
-      currentOrder.currency === 1000 ? Number(takeAmount) / 100000000 : Number(takeAmount);
+    const amount = satOrder
+      ? (Number(takeAmount) / 100000000) * rate
+      : currentOrder.currency === 1000
+        ? Number(takeAmount) / 100000000
+        : Number(takeAmount);
     const satoshis = computeSats({
       amount,
       routingBudget: currentOrder.is_buyer ? defaultRoutingBudget : 0,
@@ -171,8 +187,11 @@ const TakeButton = ({
     setSatoshis(satoshisNow() ?? '');
   }, [slotUpdatedAt, takeAmount, info]);
 
-  const currencyCode: string =
-    currentOrder?.currency === 1000 ? 'Sats' : currencies[`${Number(currentOrder?.currency)}`];
+  const currencyCode: string = satOrder
+    ? SAT_LABEL
+    : currentOrder?.currency === 1000
+      ? 'Sats'
+      : currencies[`${Number(currentOrder?.currency)}`];
 
   interface countdownTakeOrderRendererProps {
     seconds: number;
@@ -215,12 +234,16 @@ const TakeButton = ({
   const amountHelperText = useMemo(() => {
     if (currentOrder === null) return;
 
-    const amount =
-      currentOrder.currency === 1000 ? Number(takeAmount) / 100000000 : Number(takeAmount);
-    if (amount < Number(currentOrder.min_amount) && takeAmount !== '') {
+    const amount = toOrderUnits(takeAmount);
+    if (amount < rangeMin && takeAmount !== '') {
       return t('Too low');
-    } else if (amount > Number(currentOrder.max_amount) && takeAmount !== '') {
+    } else if (amount > rangeMax && takeAmount !== '') {
       return t('Too high');
+    } else if (satOrder && takeAmount !== '' && currentOrder.satoshis_now > 0) {
+      // what is paid in exchange for these sats (the price per sat is the same along the range)
+      const max = Number(currentOrder.max_amount);
+      const total = rangeMax > 0 ? (max * amount) / rangeMax : 0;
+      return total > 0 ? `↔ ${formatTotal(total, currentOrder.currency)}` : null;
     } else {
       return null;
     }
@@ -267,14 +290,8 @@ const TakeButton = ({
   };
 
   const invalidTakeAmount = useMemo(() => {
-    const amount =
-      currentOrder?.currency === 1000 ? Number(takeAmount) / 100000000 : Number(takeAmount);
-    return (
-      amount < Number(currentOrder?.min_amount) ||
-      amount > Number(currentOrder?.max_amount) ||
-      takeAmount === '' ||
-      takeAmount == null
-    );
+    const amount = toOrderUnits(takeAmount);
+    return amount < rangeMin || amount > rangeMax || takeAmount === '' || takeAmount == null;
   }, [takeAmount, slotUpdatedAt]);
 
   const takeOrderButton = function (): React.JSX.Element {
@@ -321,8 +338,8 @@ const TakeButton = ({
                   sx={{ flex: 1 }}
                   slotProps={{
                     htmlInput: {
-                      min: currentOrder?.min_amount,
-                      max: currentOrder?.max_amount,
+                      min: satOrder ? rangeMin : currentOrder?.min_amount,
+                      max: satOrder ? rangeMax : currentOrder?.max_amount,
                       style: { textAlign: 'center' },
                     },
                   }}

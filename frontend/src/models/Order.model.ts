@@ -91,6 +91,14 @@ class Order {
   premium: number = 0;
   // Roblosats rl31-beta17: fixed price per BTC in the order's currency (null = market + premium)
   fixed_price: number | string | null = null;
+  // Roblosats rl31-beta19: "丰 sat" order. The coordinator sends the amounts in sats plus
+  // exchange_* in the currency; update() keeps the sats in sats_* and puts what is paid in
+  // exchange in amount/min_amount/max_amount, the same shape as the book, so everything that
+  // reads amount (rate, Spamcoin note, fees) works in the currency as for any other order.
+  sats_denominated: boolean = false;
+  sats_amount: number | null = null;
+  sats_min_amount: number | null = null;
+  sats_max_amount: number | null = null;
   satoshis: number = 0;
   maker: number = 0;
   taker: number = 0;
@@ -212,6 +220,20 @@ class Order {
 
   update = (attributes: object): Order => {
     Object.assign(this, attributes);
+    const a = attributes as Record<string, unknown>;
+    if (
+      a.sats_denominated === true &&
+      ('exchange_amount' in a || 'exchange_min_amount' in a || 'exchange_max_amount' in a)
+    ) {
+      const num = (v: unknown): number | null =>
+        v === null || v === undefined || v === '' ? null : Number(v);
+      this.sats_amount = num(a.amount);
+      this.sats_min_amount = num(a.min_amount);
+      this.sats_max_amount = num(a.max_amount);
+      this.amount = num(a.exchange_amount);
+      this.min_amount = num(a.exchange_min_amount) ?? 0;
+      this.max_amount = num(a.exchange_max_amount) ?? 0;
+    }
     return this;
   };
 
@@ -227,10 +249,19 @@ class Order {
     const body = {
       type: this.type,
       currency: this.currency,
-      amount: this.has_range ? null : this.amount,
+      amount: this.has_range
+        ? null
+        : this.sats_denominated
+          ? (this.sats_amount ?? this.amount)
+          : this.amount,
       has_range: this.has_range,
-      min_amount: this.min_amount,
-      max_amount: this.max_amount,
+      min_amount: this.sats_denominated
+        ? (this.sats_min_amount ?? this.min_amount)
+        : this.min_amount,
+      max_amount: this.sats_denominated
+        ? (this.sats_max_amount ?? this.max_amount)
+        : this.max_amount,
+      sats_denominated: this.sats_denominated,
       payment_method: this.payment_method,
       is_explicit: this.is_explicit,
       premium: this.is_explicit ? null : this.premium,
@@ -271,7 +302,11 @@ class Order {
     return await this.submitAction(federation, slot, {
       action: 'take',
       password: this?.password,
-      amount: this?.currency === 1000 ? Number(takeAmount) / 100000000 : Number(takeAmount),
+      amount: this.sats_denominated
+        ? Math.round(Number(takeAmount))
+        : this?.currency === 1000
+          ? Number(takeAmount) / 100000000
+          : Number(takeAmount),
       // Roblosats hybrid: take an onchain order with Lightning
       ...(lightning ? { take_lightning: true } : {}),
     });

@@ -173,10 +173,16 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
       const orderAttributes = {
         type: newOrder.type,
         currency: newOrder.currency,
-        amount: newOrder.has_range ? null : newOrder.amount,
+        // rl31-beta19: a "丰 sat" order renews with its sats
+        amount: newOrder.has_range
+          ? null
+          : newOrder.sats_denominated
+            ? newOrder.sats_amount
+            : newOrder.amount,
         has_range: newOrder.has_range,
-        min_amount: newOrder.min_amount,
-        max_amount: newOrder.max_amount,
+        min_amount: newOrder.sats_denominated ? newOrder.sats_min_amount : newOrder.min_amount,
+        max_amount: newOrder.sats_denominated ? newOrder.sats_max_amount : newOrder.max_amount,
+        sats_denominated: newOrder.sats_denominated,
         payment_method: newOrder.payment_method,
         is_explicit: newOrder.is_explicit,
         premium: newOrder.is_explicit ? null : newOrder.premium,

@@ -5,6 +5,7 @@ import { fromUnixTime } from 'date-fns';
 import Geohash from 'latlon-geohash';
 import thirdParties from '../../static/thirdparties.json';
 import currencyDict from '../../static/assets/currencies.json';
+import { applySatsTag } from './satOrders';
 import defaultFederation from '../../static/federation.json';
 import hashStringToInteger from './stringToInteger';
 
@@ -103,6 +104,9 @@ const eventToPublicOrder = (
         if (Number.isFinite(fixed) && fixed > 0) publicOrder.fixed_price = fixed;
         break;
       }
+      case 'sats':
+        applySatsTag(publicOrder, tag);
+        break;
       case 'pm':
         tag.shift();
         publicOrder.payment_method = tag.join(' ');

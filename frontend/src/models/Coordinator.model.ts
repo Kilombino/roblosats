@@ -58,6 +58,7 @@ export interface Info {
   current_swap_fee_rate: number;
   blossom_enabled: boolean;
   fixed_price?: boolean; // rl31-beta17: understands fixed-price orders
+  sats_orders?: boolean; // rl31-beta19: understands "丰 sat" orders (sats_denominated)
   network: 'mainnet' | 'testnet' | undefined;
   openUpdateClient: boolean;
   notice_severity: 'none' | 'warning' | 'error' | 'success' | 'info';

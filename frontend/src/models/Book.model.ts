@@ -25,6 +25,11 @@ export interface PublicOrder {
   price: number | null;
   // Roblosats rl31-beta17: fixed price per BTC in the order's currency (null = market + premium)
   fixed_price?: number | string | null;
+  // Roblosats rl31-beta19: "丰 sat" order (amounts above in the payment currency, sats here)
+  sats_denominated?: boolean;
+  sats_amount?: number | string | null;
+  sats_min_amount?: number | string | null;
+  sats_max_amount?: number | string | null;
   maker_status?: 'Active' | 'Seen recently' | 'Inactive';
   coordinatorShortAlias?: string;
   link?: string;

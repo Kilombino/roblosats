@@ -18,6 +18,7 @@ import { pn } from '../../utils';
 import { GarageContext, UseGarageStoreType } from '../../contexts/GarageContext';
 import { UseAppStoreType, AppContext } from '../../contexts/AppContext';
 import { currencyOptions, currencyLabel } from '../../utils/currencies';
+import { SAT_LABEL, SAT_OPTION, makerCurrencyOptions } from '../../utils/satOrders';
 
 const RangeThumbComponent: React.FC<React.PropsWithChildren> = (props) => {
   const { children, ...other } = props;
@@ -38,6 +39,8 @@ interface AmountRangeProps {
   handleCurrencyChange: (newCurrency: number) => void;
   currencyCode: string;
   amountLimits: number[];
+  satMode?: boolean; // rl31-beta19: the range is in sats ("丰 sat")
+  satsAvailable?: boolean;
 }
 
 const AmountRange: React.FC<AmountRangeProps> = ({
@@ -47,6 +50,8 @@ const AmountRange: React.FC<AmountRangeProps> = ({
   handleCurrencyChange,
   setHasRangeError,
   amountLimits,
+  satMode = false,
+  satsAvailable = false,
 }) => {
   const { fav } = useContext<UseAppStoreType>(AppContext);
   const { setMaker, maker } = useContext<UseGarageStoreType>(GarageContext);
@@ -112,8 +117,12 @@ const AmountRange: React.FC<AmountRangeProps> = ({
 
     setMaker({
       ...maker,
-      minAmount: parseFloat(minAmount.toPrecision(minAmount < 100 ? 2 : 3)),
-      maxAmount: parseFloat(maxAmount.toPrecision(maxAmount < 100 ? 2 : 3)),
+      minAmount: satMode
+        ? Math.round(minAmount)
+        : parseFloat(minAmount.toPrecision(minAmount < 100 ? 2 : 3)),
+      maxAmount: satMode
+        ? Math.round(maxAmount)
+        : parseFloat(maxAmount.toPrecision(maxAmount < 100 ? 2 : 3)),
     });
   };
 
@@ -157,7 +166,9 @@ const AmountRange: React.FC<AmountRangeProps> = ({
                   const value = Number(e.target.value);
                   return {
                     ...maker,
-                    minAmount: parseFloat(value.toPrecision(value < 100 ? 2 : 3)),
+                    minAmount: satMode
+                      ? Math.round(value)
+                      : parseFloat(value.toPrecision(value < 100 ? 2 : 3)),
                   };
                 });
               }}
@@ -165,7 +176,7 @@ const AmountRange: React.FC<AmountRangeProps> = ({
               sx={{
                 width: `${(maker.minAmount?.toString().length ?? 0) * 0.56}em`,
                 minWidth: '0.56em',
-                maxWidth: '2.8em',
+                maxWidth: satMode ? '4.5em' : '2.8em',
               }}
             />
             <Typography
@@ -188,7 +199,9 @@ const AmountRange: React.FC<AmountRangeProps> = ({
                   const value = Number(e.target.value);
                   return {
                     ...maker,
-                    maxAmount: parseFloat(value.toPrecision(value < 100 ? 2 : 3)),
+                    maxAmount: satMode
+                      ? Math.round(value)
+                      : parseFloat(value.toPrecision(value < 100 ? 2 : 3)),
                   };
                 });
               }}
@@ -196,33 +209,40 @@ const AmountRange: React.FC<AmountRangeProps> = ({
               sx={{
                 width: `${(maker.maxAmount?.toString().length ?? 0) * 0.56}em`,
                 minWidth: '0.56em',
-                maxWidth: '3.36em',
+                maxWidth: satMode ? '4.5em' : '3.36em',
               }}
             />
             <div style={{ width: '0.5em' }} />
             <Select
-              sx={{ width: '3.8em' }}
+              sx={{ width: satMode ? '4.6em' : '3.8em' }}
               variant='standard'
               size='small'
               required={true}
               inputProps={{
                 style: { textAlign: 'center' },
               }}
-              disabled={fav.mode !== 'fiat'}
-              value={currency === 0 ? 1 : currency}
+              disabled={fav.mode !== 'fiat' && !satsAvailable}
+              value={satMode ? SAT_OPTION : currency === 0 ? 1 : currency}
               renderValue={() => currencyCode}
               onChange={(e) => {
                 handleCurrencyChange(Number(e.target.value));
               }}
             >
-              {currencyOptions(currencyDict).map(([key, value]) => (
-                <MenuItem key={key} value={parseInt(key)}>
-                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <FlagWithProps code={value} />
-                    {' ' + currencyLabel(value)}
-                  </div>
+              {satsAvailable ? (
+                <MenuItem key='sat' value={SAT_OPTION}>
+                  {SAT_LABEL}
                 </MenuItem>
-              ))}
+              ) : null}
+              {(satsAvailable ? makerCurrencyOptions : currencyOptions)(currencyDict).map(
+                ([key, value]) => (
+                  <MenuItem key={key} value={parseInt(key)}>
+                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <FlagWithProps code={value} />
+                      {' ' + currencyLabel(value)}
+                    </div>
+                  </MenuItem>
+                ),
+              )}
             </Select>
           </Grid>
 

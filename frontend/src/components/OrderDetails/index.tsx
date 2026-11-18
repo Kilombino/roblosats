@@ -43,6 +43,7 @@ import { FlagWithProps, SendReceiveIcon } from '../Icons';
 import LinearDeterminate from './LinearDeterminate';
 
 import { pn, amountToString, btcToSatsString, computeSats, statusBadgeColor } from '../../utils';
+import { formatSatRange, formatSats, formatTotal } from '../../utils/satOrders';
 import TakeButton from './TakeButton';
 import { F2fMapDialog, OrderDescriptionDialog } from '../Dialogs';
 import { type UseFederationStoreType, FederationContext } from '../../contexts/FederationContext';
@@ -93,6 +94,22 @@ const OrderDetails = ({
   const amountString = useMemo(() => {
     if (currentOrder === null) return;
 
+    if (currentOrder.sats_denominated) {
+      // rl31-beta19: "丰 sat" order: the sats, and what is paid in exchange in its unit
+      const single = (currentOrder.sats_amount ?? 0) > 0;
+      const sats = single
+        ? formatSats(currentOrder.sats_amount ?? 0)
+        : formatSatRange(currentOrder.sats_min_amount ?? 0, currentOrder.sats_max_amount ?? 0);
+      const paid = single
+        ? (currentOrder.amount ?? 0) > 0
+          ? formatTotal(Number(currentOrder.amount), currentOrder.currency)
+          : ''
+        : currentOrder.max_amount > 0
+          ? `${formatTotal(Number(currentOrder.min_amount), currentOrder.currency).split(' ')[0]}-${formatTotal(Number(currentOrder.max_amount), currentOrder.currency)}`
+          : '';
+      return paid ? `${sats} ↔ ${paid}` : sats;
+    }
+
     if (currentOrder.currency === 1000) {
       return (
         btcToSatsString(
@@ -113,6 +130,18 @@ const OrderDetails = ({
       );
     }
   }, [currentOrder, currencyCode]);
+
+  // rl31-beta19: in a "丰 sat" order what goes by the payment method is the total in exchange
+  const paidString = useMemo(() => {
+    if (!currentOrder?.sats_denominated) return amountString;
+    if ((currentOrder.sats_amount ?? 0) > 0)
+      return (currentOrder.amount ?? 0) > 0
+        ? formatTotal(Number(currentOrder.amount), currentOrder.currency)
+        : amountString;
+    return currentOrder.max_amount > 0
+      ? `${formatTotal(Number(currentOrder.min_amount), currentOrder.currency).split(' ')[0]}-${formatTotal(Number(currentOrder.max_amount), currentOrder.currency)}`
+      : amountString;
+  }, [currentOrder, amountString]);
 
   // Countdown Renderer callback with condition
   const countdownRenderer = function ({
@@ -238,7 +267,7 @@ const OrderDetails = ({
         sats = `${String(min)}-${String(max)}`;
       }
       send = t('You send via {{method}} {{amount}}', {
-        amount: amountString,
+        amount: paidString,
         method: order.payment_method,
       });
       // Roblosats: in an onchain escrow order the sats move on chain, not over Lightning.
@@ -273,7 +302,7 @@ const OrderDetails = ({
         ? t('You send onchain {{amount}} Sats (Approx)', { amount: sats })
         : t('You send via Lightning {{amount}} Sats (Approx)', { amount: sats });
       receive = t('You receive via {{method}} {{amount}}', {
-        amount: amountString,
+        amount: paidString,
         method: order.payment_method,
       });
     }
@@ -284,7 +313,9 @@ const OrderDetails = ({
     // "="; before that, or with a coordinator that does not send it, it is an estimate ("≈")
     // from the coordinator's BTCB2→BTC price (the "BTC" currency, id 1000).
     const btcRatio = Number(coordinator?.limits?.[1000]?.price ?? 0);
-    const paidInSpamcoin = order.payment_method.toLowerCase().includes('spamcoin');
+    const paidInSpamcoin =
+      !(order.sats_denominated && order.currency === 1000) &&
+      order.payment_method.toLowerCase().includes('spamcoin');
     let note = '';
     if (paidInSpamcoin && order.spamcoin_sats != null && order.spamcoin_sats > 0) {
       note = ` = ${pn(order.spamcoin_sats)} ${t('Spamcoin sats')}`;
@@ -313,6 +344,7 @@ const OrderDetails = ({
     currentOrder?.trade_satoshis,
     currentOrder?.escrow_satoshis,
     amountString,
+    paidString,
     coordinator?.limits,
   ]);
 

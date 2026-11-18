@@ -29,6 +29,7 @@ import currencyDict from '../../utils/currencies';
 import { type PublicOrder } from '../../models';
 import { filterOrders, hexToRgb, statusBadgeColor, pn, amountToString } from '../../utils';
 import { fixedPriceOf, formatPricePerBtc, orderPremium, orderPrice } from '../../utils/fixedPrice';
+import { bookSats, formatSatRange, formatSats, formatTotal } from '../../utils/satOrders';
 import BookControl from './BookControl';
 
 import { FlagWithProps } from '../Icons';
@@ -343,6 +344,24 @@ const BookTable = ({
       type: 'number',
       flex: 1.5,
       renderCell: (params: { row: PublicOrder }) => {
+        const sats = bookSats(params.row);
+        if (sats !== null) {
+          // rl31-beta19: "丰 sat" order: its sats, and what is paid in exchange below
+          const paid = params.row.has_range
+            ? `${formatTotal(Number(params.row.min_amount), params.row.currency).split(' ')[0]}-${formatTotal(Number(params.row.max_amount), params.row.currency)}`
+            : formatTotal(Number(params.row.amount), params.row.currency);
+          return (
+            <div
+              style={{ cursor: 'pointer', lineHeight: 1.2 }}
+              onClick={() => {
+                onOrderClicked(params.row.id, params.row.coordinatorShortAlias ?? '');
+              }}
+            >
+              <div>{sats.length > 1 ? formatSatRange(sats[0], sats[1]) : formatSats(sats[0])}</div>
+              <div style={{ fontSize: '0.8em', opacity: 0.75 }}>↔ {paid}</div>
+            </div>
+          );
+        }
         const amount =
           fav.mode === 'swap'
             ? parseFloat(params.row.amount ?? '0') * 100
@@ -755,7 +774,9 @@ const BookTable = ({
             : parseFloat(params.row.amount ?? '0');
         const price =
           orderPrice(params.row, limits[(params.row.currency ?? 0).toString()]?.price) ?? 0;
-        const satoshisNow = price > 0 ? (100000000 * amount) / price : 0;
+        const sats = bookSats(params.row);
+        const satoshisNow =
+          sats !== null ? sats[sats.length - 1] : price > 0 ? (100000000 * amount) / price : 0;
 
         return (
           <div

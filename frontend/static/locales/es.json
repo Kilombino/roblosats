@@ -1135,5 +1135,17 @@
   "A payment of {{sats}} Sats to your funding address, not confirmed yet": "Un pago de {{sats}} Sats a tu dirección de aportación, todavía sin confirmar",
   "{{n}} payments to your funding address ({{sats}} Sats), not confirmed yet": "{{n}} pagos a tu dirección de aportación ({{sats}} Sats), todavía sin confirmar",
   "Waiting for its confirmation. Then it can be recovered here once the bond timelock passes ({{blocks}} blocks).": "Esperando su confirmación. Después se podrá recuperar aquí cuando pase el bloqueo de tiempo de la fianza ({{blocks}} bloques).",
-  "Waiting for its confirmation. Then it can be recovered here at any time.": "Esperando su confirmación. Después se podrá recuperar aquí en cualquier momento."
+  "Waiting for its confirmation. Then it can be recovered here at any time.": "Esperando su confirmación. Después se podrá recuperar aquí en cualquier momento.",
+  "Amount ({{unit}})": "Importe ({{unit}})",
+  "Fixed amount in exchange": "Importe fijo a cambio",
+  "Premium over market": "Prima sobre el mercado",
+  "In exchange for the maximum ({{unit}})": "A cambio del máximo ({{unit}})",
+  "In exchange for ({{unit}})": "A cambio de ({{unit}})",
+  "The total you want for your sats, whatever the market does": "Lo que quieres en total por tus sats, haga lo que haga el mercado",
+  "for the minimum: {{total}}": "por el mínimo: {{total}}",
+  "No market price for this currency right now": "Ahora no hay precio de mercado para esta moneda",
+  "Please enter what you want in exchange.": "Escribe lo que quieres a cambio.",
+  "Order of {{sats}}": "Orden de {{sats}}",
+  "Buy {{sats}}": "Comprar {{sats}}",
+  "Sell {{sats}}": "Vender {{sats}}"
 }

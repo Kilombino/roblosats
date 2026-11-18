@@ -1038,5 +1038,17 @@
   "A payment of {{sats}} Sats to your funding address, not confirmed yet": "A payment of {{sats}} Sats to your funding address, not confirmed yet",
   "{{n}} payments to your funding address ({{sats}} Sats), not confirmed yet": "{{n}} payments to your funding address ({{sats}} Sats), not confirmed yet",
   "Waiting for its confirmation. Then it can be recovered here once the bond timelock passes ({{blocks}} blocks).": "Waiting for its confirmation. Then it can be recovered here once the bond timelock passes ({{blocks}} blocks).",
-  "Waiting for its confirmation. Then it can be recovered here at any time.": "Waiting for its confirmation. Then it can be recovered here at any time."
+  "Waiting for its confirmation. Then it can be recovered here at any time.": "Waiting for its confirmation. Then it can be recovered here at any time.",
+  "Amount ({{unit}})": "Amount ({{unit}})",
+  "Fixed amount in exchange": "Fixed amount in exchange",
+  "Premium over market": "Premium over market",
+  "In exchange for the maximum ({{unit}})": "In exchange for the maximum ({{unit}})",
+  "In exchange for ({{unit}})": "In exchange for ({{unit}})",
+  "The total you want for your sats, whatever the market does": "The total you want for your sats, whatever the market does",
+  "for the minimum: {{total}}": "for the minimum: {{total}}",
+  "No market price for this currency right now": "No market price for this currency right now",
+  "Please enter what you want in exchange.": "Please enter what you want in exchange.",
+  "Order of {{sats}}": "Order of {{sats}}",
+  "Buy {{sats}}": "Buy {{sats}}",
+  "Sell {{sats}}": "Sell {{sats}}"
 }

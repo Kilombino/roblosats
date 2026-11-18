@@ -29,6 +29,12 @@ export interface Maker {
   // the currency, or Spamsuits per BTC for Spamcoin); 'market' = market price + premium
   priceMode: 'market' | 'fixed';
   fixedPrice: number | null;
+  // Roblosats rl31-beta19: "丰 sat" order (amounts in sats; the currency is what is paid in
+  // exchange): 'total' = the maker writes the total in exchange (exchangeTotal, as typed: the
+  // currency, or Spamsats for Spamcoin), 'market' = market price + premium
+  satsMode: boolean;
+  satPricing: 'total' | 'market';
+  exchangeTotal: number | null;
 }
 
 export const defaultMaker: Maker = {
@@ -61,6 +67,9 @@ export const defaultMaker: Maker = {
   onchainEscrow: false,
   priceMode: 'market',
   fixedPrice: null,
+  satsMode: true,
+  satPricing: 'total',
+  exchangeTotal: null,
 };
 
 export default Maker;
