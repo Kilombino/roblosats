@@ -27,6 +27,7 @@ from rest_framework.views import APIView
 from api.errors import new_error
 from api import order_summary
 from api.escrow import flow as escrow_flow
+from api import hybrid_swap
 from api.logics import Logics, order_lock, rewards_wait, withdrawable_rewards
 from api.tasks import cache_market
 from api.models import (
@@ -295,6 +296,21 @@ class OrderView(viewsets.ViewSet):
     lookup_url_kwarg = "order_id"
 
     @extend_schema(**OrderViewSchema.get)
+    @staticmethod
+    def _add_lightning_take_swap(order, data):
+        """rl31-beta21, hybrid B: a seller taking an onchain BUY with Lightning pays the buyer's
+        swap to onchain; the take screen shows the estimate."""
+        if (
+            order.status in (Order.Status.PUB, Order.Status.TAK)
+            and order.type == Order.Types.BUY
+            and escrow_flow.is_onchain(order)
+            and not data.get("is_maker")
+            and escrow_flow.lightning_taker_enabled()
+        ):
+            quote = hybrid_swap.take_quote(order)
+            if quote:
+                data["lightning_take_swap"] = quote
+
     def get(self, request, format=None):
         """
         Full trade pipeline takes place while looking/refreshing the order page.
@@ -383,6 +399,7 @@ class OrderView(viewsets.ViewSet):
                 data["latitude"] = None
                 data["longitude"] = None
                 data["description"] = None
+            self._add_lightning_take_swap(order, data)
             return Response(data, status=status.HTTP_200_OK)
 
         # 4) If order is between public and WF2
@@ -672,6 +689,13 @@ class OrderView(viewsets.ViewSet):
                 data.update(onchain_bonds.bond_data(escrow_flow.proxied_bond(order.maker_bond)))
                 data["bond_role"] = "maker"
         data["taker_lightning"] = bool(order.taker_lightning)
+
+        # rl31-beta21, hybrid B: a seller taking an onchain BUY order with Lightning pays the
+        # buyer's swap to onchain. The take screen shows the estimate; the traders the amount.
+        self._add_lightning_take_swap(order, data)
+        if order.swap_surcharge_sats and data.get("is_participant"):
+            data["swap_surcharge_sats"] = int(order.swap_surcharge_sats)
+            data["swap_surcharge_refund_sats"] = int(order.swap_surcharge_refund_sats or 0)
 
         # Roblosats rl31-beta14: one final summary for every way an order ends (both escrows,
         # both roles). An onchain release still waiting for signatures is not final yet.

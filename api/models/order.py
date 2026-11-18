@@ -237,6 +237,10 @@ class Order(models.Model):
     # timestamp of last_satoshis
     last_satoshis_time = models.DateTimeField(null=True, default=None, blank=True)
     spamcoin_sats = models.PositiveBigIntegerField(null=True, default=None, blank=True)
+    # Roblosats rl31-beta21, hybrid B: the Lightning seller pays the buyer's swap to onchain.
+    # Collected on top of the escrow; whatever the swap did not use goes back as rewards.
+    swap_surcharge_sats = models.PositiveBigIntegerField(default=0, db_default=0)
+    swap_surcharge_refund_sats = models.PositiveBigIntegerField(default=0, db_default=0)
     # time the fiat exchange is confirmed and Sats released to buyer
     contract_finalization_time = models.DateTimeField(
         null=True, default=None, blank=True

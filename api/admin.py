@@ -11,6 +11,7 @@ from rest_framework.authtoken.models import TokenProxy
 
 from api.escrow import flow as escrow_flow
 from api.logics import Logics, ledger_add, ledger_backed, ledger_credit
+from api import hybrid_swap
 from api.models import Currency, LNPayment, MarketTick, OnchainPayment, Order, Robot
 from api.utils import render_order_logs
 from api.tasks import send_notification
@@ -281,6 +282,9 @@ class OrderAdmin(AdminChangeLinksMixin, admin.ModelAdmin):
                         trade_sats = order.payout_tx.num_satoshis
                     else:
                         trade_sats = order.payout.num_satoshis
+                    # rl31-beta21, hybrid B: paid in rewards, no swap: the seller's swap
+                    # surcharge goes back to the seller
+                    hybrid_swap.refund_all_to_seller(order, "dispute won by the buyer: no swap")
                 else:
                     trade_sats = order.trade_escrow.num_satoshis
 
@@ -331,6 +335,9 @@ class OrderAdmin(AdminChangeLinksMixin, admin.ModelAdmin):
                         trade_sats = order.payout_tx.num_satoshis
                     else:
                         trade_sats = order.payout.num_satoshis
+                    # rl31-beta21, hybrid B: paid in rewards, no swap: the seller's swap
+                    # surcharge goes back to the seller
+                    hybrid_swap.refund_all_to_seller(order, "dispute won by the buyer: no swap")
                 else:
                     trade_sats = order.trade_escrow.num_satoshis
 

@@ -286,8 +286,17 @@ def _apply_lightning_trade(s, order):
             if order.is_swap and order.payout_tx is not None:
                 tx = order.payout_tx
                 s["received_sats"] = int(tx.sent_satoshis or 0)
-                s["mining_fee_sats"] += int(tx.mining_fee_sats or 0)
-                s["swap_fee_sats"] = max(0, int((tx.num_satoshis or 0) - (tx.mining_fee_sats or 0) - (tx.sent_satoshis or 0)))
+                if order.swap_surcharge_sats:
+                    # rl31-beta21, hybrid B: the seller paid the swap; only what its surcharge
+                    # did not cover (a higher mining fee) came out of the buyer's payout
+                    from api import hybrid_swap
+
+                    covered = hybrid_swap.covered_by_seller(order, tx)
+                    s["mining_fee_sats"] += max(0, hybrid_swap.swap_cost(tx) - covered)
+                    s["swap_paid_by_seller_sats"] = covered
+                else:
+                    s["mining_fee_sats"] += int(tx.mining_fee_sats or 0)
+                    s["swap_fee_sats"] = max(0, int((tx.num_satoshis or 0) - (tx.mining_fee_sats or 0) - (tx.sent_satoshis or 0)))
                 s["coordinator_fee_sats"] = max(0, int(order.last_satoshis - (tx.num_satoshis or 0)))
                 if tx.txid:
                     s["txs"].append({"label": "payout", "txid": tx.txid})
@@ -303,8 +312,14 @@ def _apply_lightning_trade(s, order):
     elif esc is not None:
         if esc.status == S.SETLED and s["outcome"] in ("success", "dispute_lost"):
             s["sent_sats"] = int(esc.num_satoshis)
+            surcharge = int(order.swap_surcharge_sats or 0)
             if s["outcome"] == "success":
-                s["coordinator_fee_sats"] = max(0, int(esc.num_satoshis - order.last_satoshis))
+                s["coordinator_fee_sats"] = max(0, int(esc.num_satoshis - order.last_satoshis - surcharge))
+            if surcharge:
+                # rl31-beta21, hybrid B: the buyer's swap this seller paid (net of what came back)
+                s["swap_surcharge_sats"] = surcharge
+                s["swap_surcharge_refund_sats"] = int(order.swap_surcharge_refund_sats or 0)
+                s["swap_for_buyer_sats"] = max(0, surcharge - int(order.swap_surcharge_refund_sats or 0))
         elif esc.status in (S.RETNED, S.CANCEL):
             s["returned_sats"] = int(esc.num_satoshis)
         if esc.status in (S.SETLED, S.RETNED, S.CANCEL, S.LOCKED):

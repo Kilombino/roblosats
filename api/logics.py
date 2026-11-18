@@ -12,6 +12,7 @@ from django.utils.html import format_html
 from django.db import connection, transaction
 
 from api.escrow import flow as escrow_flow
+from api import hybrid_swap
 from api.lightning.node import LNNode
 from api.errors import new_error
 from api.models import (
@@ -1127,6 +1128,9 @@ class Logics:
             order.payout_tx.suggested_mining_fee_rate
         )
         context["swap_fee_rate"] = order.payout_tx.swap_fee_rate
+        if order.swap_surcharge_sats:
+            # rl31-beta21, hybrid B: the seller already paid for this swap (up to this much)
+            context["swap_paid_by_seller_sats"] = int(order.swap_surcharge_sats)
 
         return True, context
 
@@ -1146,6 +1150,8 @@ class Logics:
             escrow_amount = round(
                 order.last_satoshis + fee_sats
             )  # Trading fee to seller is charged here.
+            # rl31-beta21, hybrid B: the Lightning seller also pays the buyer's swap to onchain.
+            escrow_amount += int(order.swap_surcharge_sats or 0)
 
         return True, {"escrow_amount": escrow_amount}
 
@@ -1217,11 +1223,15 @@ class Logics:
         tx.address = address
         tx.mining_fee_sats = int(tx.mining_fee_rate * 280)
         tx.num_satoshis = num_satoshis
-        tx.sent_satoshis = int(
-            float(tx.num_satoshis)
-            - float(tx.num_satoshis) * float(tx.swap_fee_rate) / 100
-            - float(tx.mining_fee_sats)
-        )
+        if order.swap_surcharge_sats:
+            # rl31-beta21, hybrid B: the seller's surcharge pays the swap
+            tx.sent_satoshis = hybrid_swap.sent_satoshis(order, tx)
+        else:
+            tx.sent_satoshis = int(
+                float(tx.num_satoshis)
+                - float(tx.num_satoshis) * float(tx.swap_fee_rate) / 100
+                - float(tx.mining_fee_sats)
+            )
 
         if float(tx.sent_satoshis) < 20_000:
             order.log(
@@ -2011,6 +2021,10 @@ class Logics:
                 "escrow_satoshis": order.trade_escrow.num_satoshis,
             }
 
+        # rl31-beta21, hybrid B: price the buyer's swap the seller pays, once, before the invoice
+        if cls.is_seller(order, user):
+            hybrid_swap.fix_surcharge(order)
+
         # If there was no taker_bond object yet, generate one
         escrow_satoshis = cls.escrow_amount(order, user)[1][
             "escrow_amount"
@@ -2222,6 +2236,12 @@ class Logics:
             from_statuses=[Order.Status.FSE, Order.Status.PAY, Order.Status.FAI],
         ):
             return
+
+        # rl31-beta21, hybrid B: the unused part of the seller's swap surcharge goes back
+        try:
+            hybrid_swap.refund_seller(order)
+        except Exception as e:
+            order.log(f"Hybrid B: swap surcharge refund failed: {e}", level="ERROR")
 
         # Computes coordinator trade revenue
         cls.compute_proceeds(order)
@@ -2664,6 +2684,10 @@ class Logics:
         else:
             payout_sats = order.payout.num_satoshis + order.payout.fee
             new_proceeds = int(order.trade_escrow.num_satoshis - payout_sats)
+
+        if not escrow_flow.is_onchain(order):
+            # rl31-beta21: the seller's unused swap surcharge was returned as rewards
+            new_proceeds -= int(order.swap_surcharge_refund_sats or 0)
 
         order.proceeds += new_proceeds
         order.save(update_fields=["proceeds"])
