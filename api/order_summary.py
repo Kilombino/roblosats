@@ -15,7 +15,7 @@ import re
 from django.db import connection
 from django.db.models import Q
 
-from api.models import LNPayment, OnchainBond, OnchainEscrow, Order
+from api.models import LNPayment, OnchainBond, OnchainEscrow, OnchainPayment, Order
 
 FINISHED = (
     Order.Status.UCA,
@@ -299,7 +299,11 @@ def _apply_lightning_trade(s, order):
                     s["swap_fee_sats"] = max(0, int((tx.num_satoshis or 0) - (tx.mining_fee_sats or 0) - (tx.sent_satoshis or 0)))
                 s["coordinator_fee_sats"] = max(0, int(order.last_satoshis - (tx.num_satoshis or 0)))
                 if tx.txid:
-                    s["txs"].append({"label": "payout", "txid": tx.txid})
+                    # 0.9.7: with its status (in the mempool / confirmed)
+                    s["txs"].append({"label": "payout", "txid": tx.txid, "status": tx_status(tx.txid) or (
+                        "confirmed" if tx.status == OnchainPayment.Status.CONFI else "mempool")})
+                elif tx.status == OnchainPayment.Status.QUEUE:
+                    s["txs"].append({"label": "payout", "txid": "", "status": "queued"})
             elif order.payout is not None:
                 p = order.payout
                 budget = int(p.routing_budget_sats or 0)
@@ -399,7 +403,7 @@ def _apply_onchain_trade(s, order, user, role_in_order):
         s["sent_sats"] = int(paid("seller") - extra or trade + seller_fee + int(plan.get("seller_mining") or 0))
     if not escrow.release_txid:
         return
-    s["txs"].append({"label": "release", "txid": escrow.release_txid})
+    s["txs"].append({"label": "release", "txid": escrow.release_txid, "status": tx_status(escrow.release_txid)})
     try:
         tx = Transaction.parse(bytes.fromhex(escrow.release_tx))
     except Exception:
@@ -461,6 +465,29 @@ def _apply_onchain_trade(s, order, user, role_in_order):
             s["returned_sats"] = int(trade - paid_mining)
 
 
+
+def tx_status(txid):
+    """0.9.7: "confirmed" / "mempool" for an onchain transaction, from the coordinator's node
+    (cached a minute), or None when the node does not answer or does not know it."""
+    if not txid:
+        return None
+    from django.core.cache import cache
+
+    key = f"txstatus:{txid}"
+    cached = cache.get(key)
+    if cached:
+        return cached
+    try:
+        from api.escrow import service
+
+        info = service.rpc("getrawtransaction", [txid, True])
+    except Exception:
+        return None
+    status = "confirmed" if int(info.get("confirmations") or 0) > 0 else "mempool"
+    cache.set(key, status, 60 if status == "mempool" else 3600)
+    return status
+
+
 def final_summary(order, user, former_taker=False):
     """The final summary of `order` for `user` (maker, taker, or a taker that left it)."""
     if order.maker == user:
@@ -488,7 +515,11 @@ def final_summary(order, user, former_taker=False):
     # Dedupe txids (a bond txid may also be the deposit's parent; keep the first label).
     seen, txs = set(), []
     for t in s["txs"]:
-        if t["txid"] and t["txid"] not in seen:
+        if not t["txid"]:
+            if t.get("status") == "queued":  # 0.9.7: a payout the coordinator has not sent yet
+                txs.append(t)
+            continue
+        if t["txid"] not in seen:
             seen.add(t["txid"])
             txs.append(t)
     s["txs"] = txs

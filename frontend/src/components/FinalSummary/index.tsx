@@ -53,7 +53,8 @@ export interface FinalSummaryData {
   swap_for_buyer_sats?: number;
   swap_paid_by_seller_sats?: number;
   rewards_sats?: number;
-  txs?: Array<{ label: string; txid: string }>;
+  // 0.9.7: status of onchain payouts and releases: mempool | confirmed | queued
+  txs?: Array<{ label: string; txid: string; status?: string | null }>;
   hashes?: Array<{ label: string; value: string }>;
   error?: string;
 }
@@ -132,7 +133,7 @@ const txLabel = (label: string, t: (k: string) => string): string => {
     case 'bond_penalty':
       return t('Your bond penalized');
     case 'payout':
-      return t('Onchain payout to you');
+      return t('Your onchain payout');
     default:
       return label;
   }
@@ -353,8 +354,29 @@ const FinalSummary = ({
         />
       ) : null}
       {(s.txs ?? []).map((tx) => (
-        <Box key={tx.txid} sx={{ mt: 1 }}>
-          <TxLine label={txLabel(tx.label, t)} txid={tx.txid} />
+        <Box key={tx.txid || tx.label} sx={{ mt: 1 }}>
+          {tx.txid ? (
+            <TxLine label={txLabel(tx.label, t)} txid={tx.txid} />
+          ) : (
+            <Typography variant='caption' component='p' align='center'>
+              {txLabel(tx.label, t)}
+            </Typography>
+          )}
+          {tx.status ? (
+            <Typography
+              variant='caption'
+              component='p'
+              align='center'
+              color={tx.status === 'confirmed' ? 'success.main' : 'text.secondary'}
+              data-testid='tx-status'
+            >
+              {tx.status === 'confirmed'
+                ? t('Confirmed')
+                : tx.status === 'mempool'
+                  ? t('In the mempool, waiting for a block')
+                  : t('Queued: the coordinator sends it shortly')}
+            </Typography>
+          ) : null}
         </Box>
       ))}
       {(s.hashes ?? []).map((h) => (

@@ -1237,5 +1237,8 @@
   "No swap fee for you: the seller pays the swap to onchain. The seller pays mining up to {{rate}} sat/vB ({{covered}} Sats); anything above that ({{excess}} Sats) comes out of what you receive.": "Sin comisión de swap para ti: el vendedor paga el swap a on-chain. El vendedor paga la minería hasta {{rate}} sat/vB ({{covered}} sats); lo que pase de ahí ({{excess}} sats) sale de lo que recibes.",
   "Mining fee (paid by the seller up to {{rate}} sat/vB)": "Comisión de minería (la paga el vendedor hasta {{rate}} sat/vB)",
   "Max {{max}} sat/vB": "Máx. {{max}} sat/vB",
-  "With this fee you would receive less than {{min}} Sats, the least an onchain payout can be. Use at most {{max}} sat/vB.": "Con esta comisión recibirías menos de {{min}} sats, lo mínimo de un pago on-chain. Usa como mucho {{max}} sat/vB."
+  "With this fee you would receive less than {{min}} Sats, the least an onchain payout can be. Use at most {{max}} sat/vB.": "Con esta comisión recibirías menos de {{min}} sats, lo mínimo de un pago on-chain. Usa como mucho {{max}} sat/vB.",
+  "Your onchain payout": "Tu pago on-chain",
+  "In the mempool, waiting for a block": "En la mempool, esperando un bloque",
+  "Queued: the coordinator sends it shortly": "En cola: el coordinador lo envía en breve"
 }

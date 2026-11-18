@@ -1223,5 +1223,8 @@
   "No swap fee for you: the seller pays the swap to onchain. The seller pays mining up to {{rate}} sat/vB ({{covered}} Sats); anything above that ({{excess}} Sats) comes out of what you receive.": "No swap fee for you: the seller pays the swap to onchain. The seller pays mining up to {{rate}} sat/vB ({{covered}} Sats); anything above that ({{excess}} Sats) comes out of what you receive.",
   "Mining fee (paid by the seller up to {{rate}} sat/vB)": "Mining fee (paid by the seller up to {{rate}} sat/vB)",
   "Max {{max}} sat/vB": "Max {{max}} sat/vB",
-  "With this fee you would receive less than {{min}} Sats, the least an onchain payout can be. Use at most {{max}} sat/vB.": "With this fee you would receive less than {{min}} Sats, the least an onchain payout can be. Use at most {{max}} sat/vB."
+  "With this fee you would receive less than {{min}} Sats, the least an onchain payout can be. Use at most {{max}} sat/vB.": "With this fee you would receive less than {{min}} Sats, the least an onchain payout can be. Use at most {{max}} sat/vB.",
+  "Your onchain payout": "Your onchain payout",
+  "In the mempool, waiting for a block": "In the mempool, waiting for a block",
+  "Queued: the coordinator sends it shortly": "Queued: the coordinator sends it shortly"
 }
