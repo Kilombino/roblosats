@@ -128,6 +128,12 @@ def ensure_ledger():
             )
 
 
+SELF_INVOICE_ERROR = (
+    "This invoice comes from the coordinator's own node: use an invoice from "
+    "another Lightning wallet"
+)
+
+
 def ledger_add(robot_id, amount, kind, fingerprint, order_id=None, note="", delay=0):
     """Appends one row; False if the fingerprint is already there (nothing written)."""
     ensure_ledger()
@@ -2623,16 +2629,21 @@ class Logics:
             if not reward_payout["valid"]:
                 return False, reward_payout["context"]
 
+            try:
+                destination = LNNode.decode_payreq(invoice).destination or None
+            except Exception:
+                destination = None
+
+            # An invoice of the coordinator's own node can't be paid (LND refuses
+            # self-payments): refuse it before anything is debited.
+            if destination is not None and destination == LNNode.get_identity_pubkey():
+                return False, {"bad_invoice": SELF_INVOICE_ERROR}
+
             # Nodes that rewards are never paid to (the coordinator's blocklist, e.g. the
             # nodes of a known exploit): the balance stays with the coordinator.
             blocked = config("BLOCKED_PAYOUT_NODES", cast=Csv(), default="")
-            if blocked:
-                try:
-                    destination = LNNode.decode_payreq(invoice).destination
-                except Exception:
-                    destination = None
-                if destination in blocked:
-                    return False, {"bad_invoice": "Invalid invoice"}
+            if blocked and destination in blocked:
+                return False, {"bad_invoice": "Invalid invoice"}
 
             try:
                 with transaction.atomic():
@@ -2666,8 +2677,13 @@ class Logics:
                 earned_rewards=F("earned_rewards") - withdrawn_balance
             )
 
-        # Pays the invoice.
-        paid, failure_reason = LNNode.pay_invoice(lnpayment)
+        # Pays the invoice. pay_invoice resolves its own errors; anything that
+        # still escapes is treated as uncertain (no refund, no HTTP 500).
+        try:
+            paid, failure_reason = LNNode.pay_invoice(lnpayment)
+        except Exception as e:
+            print(f"withdraw_rewards {lnpayment.payment_hash}: {e}", flush=True)
+            paid, failure_reason = False, "Payment status is uncertain"
         if paid:
             Robot.objects.filter(pk=user.robot.pk).update(
                 claimed_rewards=F("claimed_rewards") + num_satoshis
@@ -2685,12 +2701,20 @@ class Logics:
         # stays in the DB; a retry with the same invoice is blocked by the duplicate-
         # hash guard above (error 3004) until the hash is resolved or expires.
         if lnpayment.status == LNPayment.Status.FAILRO:
-            ledger_credit(
-                user.robot,
-                withdrawn_balance,
-                "withdraw_refund",
-                f"withdraw_refund:{lnpayment.payment_hash}",
-            )
+            # The refunded sats were already withdrawable: they come back available
+            # right away, not after REWARD_WITHDRAW_DELAY like a new reward.
+            with transaction.atomic():
+                if ledger_add(
+                    user.robot.pk,
+                    withdrawn_balance,
+                    "withdraw_refund",
+                    f"withdraw_refund:{lnpayment.payment_hash}",
+                ):
+                    Robot.objects.filter(pk=user.robot.pk).update(
+                        earned_rewards=F("earned_rewards") + withdrawn_balance
+                    )
+            if failure_reason == SELF_INVOICE_ERROR:
+                return False, {"bad_invoice": SELF_INVOICE_ERROR}
             return False, new_error(3005, {"failure_reason": failure_reason})
 
         # Payment outcome is ambiguous (in-flight or stream ended without final status).

@@ -81,6 +81,17 @@ class CLNNode:
         except Exception as e:
             print(f"Cannot get CLN node id: {e}")
 
+    _identity_pubkey = None
+
+    @classmethod
+    def get_identity_pubkey(cls):
+        """The coordinator node's own public key (hex), or None if CLN can't say."""
+        if cls._identity_pubkey is None:
+            info = cls.get_info()
+            if info is not None and info.id:
+                cls._identity_pubkey = info.id.hex()
+        return cls._identity_pubkey
+
     @classmethod
     def newaddress(cls):
         """Only used on tests to fund the regtest node"""
@@ -133,6 +144,7 @@ class CLNNode:
             expiry=int(response.expiry),
             description=response.description,
             route_hints=route_hints,
+            destination=response.payee.hex() if response.payee else "",
         )
 
     @classmethod
@@ -623,9 +635,23 @@ class CLNNode:
                 lnpayment.status = LNPayment.Status.FAILRO
                 lnpayment.save(update_fields=["failure_reason", "status"])
                 return False, failure_reason
-        except grpc._channel._InactiveRpcError as e:
-            status_code = int(e.details().split("code: Some(")[1].split(")")[0])
-            failure_reason = cls.payment_failure_context[status_code]
+        except Exception as e:
+            # Never let an error escape: the caller has already debited the robot.
+            # CLN's pay only returns an error once no part is left in flight,
+            # except 200 (a payment for this hash is already in progress) and 201
+            # (already paid). Those, an unparseable error or a transport error stay
+            # uncertain (row unchanged, no refund).
+            status_code = None
+            try:
+                status_code = int(e.details().split("code: Some(")[1].split(")")[0])
+            except Exception:
+                pass
+            print(f"pay_invoice {lnpayment.payment_hash}: {e}", flush=True)
+            if status_code is None or status_code in (200, 201):
+                return False, "Payment status is uncertain"
+            failure_reason = cls.payment_failure_context.get(
+                status_code, cls.payment_failure_context[-1]
+            )
             lnpayment.failure_reason = LNPayment.FailureReason.NOROUTE
             lnpayment.status = LNPayment.Status.FAILRO
             lnpayment.save(update_fields=["failure_reason", "status"])

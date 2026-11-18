@@ -126,7 +126,22 @@ class LNDNode:
             description=response.description,
             route_hints=route_hints,
             features=frozenset(response.features.keys()),
+            destination=response.destination,
         )
+
+    _identity_pubkey = None
+
+    @classmethod
+    def get_identity_pubkey(cls):
+        """The coordinator node's own public key (hex), or None if LND can't say."""
+        if cls._identity_pubkey is None:
+            try:
+                lightningstub = lightning_pb2_grpc.LightningStub(cls.channel)
+                response = lightningstub.GetInfo(lightning_pb2.GetInfoRequest())
+                cls._identity_pubkey = response.identity_pubkey or None
+            except Exception as e:
+                print(f"Cannot get LND identity pubkey: {e}")
+        return cls._identity_pubkey
 
     @classmethod
     def estimate_fee(cls, amount_sats, target_conf=2, min_confs=1):
@@ -564,6 +579,94 @@ class LNDNode:
 
         return payout
 
+    # Errors that LND's SendPaymentV2 returns while validating the request
+    # (routerrpc extractIntentFromSendRequest / ValidatePayReqExpiry), before the
+    # payment is registered in its control tower: no HTLC can exist for them, so
+    # the payment definitively did not happen. Each maps to the text shown to the
+    # robot. Matched lowercase against the gRPC details.
+    PREFLIGHT_ERRORS = (
+        (
+            "self-payments not allowed",
+            "This invoice comes from the coordinator's own node: use an invoice "
+            "from another Lightning wallet",
+        ),
+        ("invoice expired", "The invoice has expired"),
+        ("amount must be specified", "The invoice has no explicit amount"),
+        ("payment amount", "The invoice amount is not payable"),
+        ("exceeds max", "The invoice requires a time lock that is too long"),
+        ("destination doesn't", "The destination node does not support this payment"),
+        ("amp flag", "AMP invoices are not supported, use a regular invoice"),
+        ("invalid payment request", "Invalid invoice"),
+        ("invalid bech32", "Invalid invoice"),
+        ("checksum", "Invalid invoice"),
+        ("unable to decode", "Invalid invoice"),
+        ("invoice not for current active network", "Invalid invoice"),
+        ("fee limit", "The routing fee limit is not valid"),
+    )
+
+    @classmethod
+    def preflight_failure(cls, error):
+        """If ``error`` (raised by SendPaymentV2 before its first update) is one LND
+        returns before creating the payment, the text for the robot; else None.
+
+        Only codes UNKNOWN / INVALID_ARGUMENT qualify: ALREADY_EXISTS means a payment
+        for this hash exists (in transition or already paid) and transport errors
+        (UNAVAILABLE, DEADLINE_EXCEEDED, CANCELLED) don't say whether LND started it.
+        """
+        code = error.code() if isinstance(error, grpc.RpcError) else None
+        if code not in (grpc.StatusCode.UNKNOWN, grpc.StatusCode.INVALID_ARGUMENT):
+            return None
+        details = (error.details() or "").lower()
+        for needle, text in cls.PREFLIGHT_ERRORS:
+            if needle in details:
+                return text
+        return None
+
+    @classmethod
+    def _pay_invoice_error(cls, lnpayment, error, started):
+        """Resolves an exception raised while paying a reward/donation invoice.
+
+        Never refunds on doubt: FAILRO only when LND rejected the request before
+        creating the payment, or when LND itself reports the payment FAILED (which
+        it only does once no HTLC is left in flight). Otherwise the row is left
+        VALIDI (or set FLIGHT / SUCCED as LND reports) and the caller treats it as
+        uncertain.
+        """
+        from api.models import LNPayment
+
+        print(
+            f"pay_invoice {lnpayment.payment_hash}: {type(error).__name__}: "
+            f"{error.details() if isinstance(error, grpc.RpcError) else error}",
+            flush=True,
+        )
+        reason = None if started else cls.preflight_failure(error)
+        if reason:
+            lnpayment.failure_reason = LNPayment.FailureReason.INCORRE
+            lnpayment.status = LNPayment.Status.FAILRO
+            lnpayment.save(update_fields=["failure_reason", "status"])
+            return False, reason
+
+        try:
+            status = cls.payment_status(lnpayment.payment_hash)
+        except Exception as e:
+            print(f"pay_invoice {lnpayment.payment_hash}: TrackPayment: {e}", flush=True)
+            status = None
+
+        if status == LNPayment.Status.SUCCED:
+            lnpayment.status = LNPayment.Status.SUCCED
+            lnpayment.save(update_fields=["status"])
+            return True, None
+        if status == LNPayment.Status.FAILRO:
+            lnpayment.failure_reason = LNPayment.FailureReason.NONRECO
+            lnpayment.status = LNPayment.Status.FAILRO
+            lnpayment.save(update_fields=["failure_reason", "status"])
+            return False, cls.payment_failure_context[3]
+        if status == LNPayment.Status.FLIGHT:
+            lnpayment.failure_reason = LNPayment.FailureReason.NOTYETF
+            lnpayment.status = LNPayment.Status.FLIGHT
+            lnpayment.save(update_fields=["failure_reason", "status"])
+        return False, "Payment status is uncertain"
+
     @classmethod
     def pay_invoice(cls, lnpayment):
         """Sends sats. Used for rewards payouts"""
@@ -584,43 +687,50 @@ class LNDNode:
         )
 
         routerstub = router_pb2_grpc.RouterStub(cls.channel)
-        for response in routerstub.SendPaymentV2(request):
-            log("router_pb2_grpc.SendPaymentV2", request, response)
-            if (
-                response.status == lightning_pb2.Payment.PaymentStatus.UNKNOWN
-            ):  # Status 0 'UNKNOWN'
-                # Not sure when this status happens
-                pass
+        started = False
+        try:
+            for response in routerstub.SendPaymentV2(request):
+                started = True
+                log("router_pb2_grpc.SendPaymentV2", request, response)
+                if (
+                    response.status == lightning_pb2.Payment.PaymentStatus.UNKNOWN
+                ):  # Status 0 'UNKNOWN'
+                    # Not sure when this status happens
+                    pass
 
-            if (
-                response.status == lightning_pb2.Payment.PaymentStatus.IN_FLIGHT
-            ):  # Status 1 'IN_FLIGHT'
-                pass
+                if (
+                    response.status == lightning_pb2.Payment.PaymentStatus.IN_FLIGHT
+                ):  # Status 1 'IN_FLIGHT'
+                    pass
 
-            if (
-                response.status == lightning_pb2.Payment.PaymentStatus.FAILED
-            ):  # Status 3 'FAILED'
-                """0	Payment isn't failed (yet).
-                1	There are more routes to try, but the payment timeout was exceeded.
-                2	All possible routes were tried and failed permanently. Or were no routes to the destination at all.
-                3	A non-recoverable error has occured.
-                4	Payment details incorrect (unknown hash, invalid amt or invalid final cltv delta)
-                5	Insufficient local balance.
-                """
-                failure_reason = cls.payment_failure_context[response.failure_reason]
-                lnpayment.failure_reason = response.failure_reason
-                lnpayment.status = LNPayment.Status.FAILRO
-                lnpayment.save(update_fields=["failure_reason", "status"])
-                return False, failure_reason
+                if (
+                    response.status == lightning_pb2.Payment.PaymentStatus.FAILED
+                ):  # Status 3 'FAILED'
+                    """0	Payment isn't failed (yet).
+                    1	There are more routes to try, but the payment timeout was exceeded.
+                    2	All possible routes were tried and failed permanently. Or were no routes to the destination at all.
+                    3	A non-recoverable error has occured.
+                    4	Payment details incorrect (unknown hash, invalid amt or invalid final cltv delta)
+                    5	Insufficient local balance.
+                    """
+                    failure_reason = cls.payment_failure_context[response.failure_reason]
+                    lnpayment.failure_reason = response.failure_reason
+                    lnpayment.status = LNPayment.Status.FAILRO
+                    lnpayment.save(update_fields=["failure_reason", "status"])
+                    return False, failure_reason
 
-            if (
-                response.status == lightning_pb2.Payment.PaymentStatus.SUCCEEDED
-            ):  # STATUS 'SUCCEEDED'
-                lnpayment.status = LNPayment.Status.SUCCED
-                lnpayment.fee = float(response.fee_msat) / 1000
-                lnpayment.preimage = response.payment_preimage
-                lnpayment.save(update_fields=["fee", "status", "preimage"])
-                return True, None
+                if (
+                    response.status == lightning_pb2.Payment.PaymentStatus.SUCCEEDED
+                ):  # STATUS 'SUCCEEDED'
+                    lnpayment.status = LNPayment.Status.SUCCED
+                    lnpayment.fee = float(response.fee_msat) / 1000
+                    lnpayment.preimage = response.payment_preimage
+                    lnpayment.save(update_fields=["fee", "status", "preimage"])
+                    return True, None
+        except Exception as e:
+            # A gRPC error (or any other) must never escape: the caller has already
+            # debited the robot and would leave the LNPayment unresolved.
+            return cls._pay_invoice_error(lnpayment, e, started)
 
         return False, "Payment stream ended without a final status"
 
@@ -755,9 +865,11 @@ class LNDNode:
                 results = {"succeded": True}
                 return results
 
+        got_response = False
         try:
             routerstub = router_pb2_grpc.RouterStub(cls.channel)
             for response in routerstub.SendPaymentV2(request):
+                got_response = True
                 log("router_pb2_grpc.SendPaymentV2", request, response)
                 handle_response(response)
 
@@ -830,6 +942,23 @@ class LNDNode:
 
             else:
                 print(str(e))
+                # LND rejected the request before creating the payment (bad
+                # invoice...): no HTLC exists, so fail it like a FAILED payment
+                # (the buyer is asked for a new invoice after the retries)
+                # instead of retrying it forever. Anything else (transport
+                # errors...) is left as it was and retried.
+                reason = None if got_response else cls.preflight_failure(e)
+                if reason:
+                    order.log(
+                        f"Payment LNPayment({lnpayment.payment_hash},{str(lnpayment)}) "
+                        f"rejected by the node before sending: {reason}"
+                    )
+                    return handle_response(
+                        lightning_pb2.Payment(
+                            status=lightning_pb2.Payment.PaymentStatus.FAILED,
+                            failure_reason=lightning_pb2.PaymentFailureReason.FAILURE_REASON_INCORRECT_PAYMENT_DETAILS,
+                        )
+                    )
 
     @classmethod
     def payment_status(cls, payment_hash):

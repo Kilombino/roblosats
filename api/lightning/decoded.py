@@ -17,6 +17,7 @@ route_hints             list  – list of hinted routes; each route is a list of
                                 ``HopHint`` objects (may be empty)
 features                frozenset – feature bits set in the invoice (LND only;
                                 empty for CLN)
+destination             str   – hex public key of the node the invoice pays to
 """
 
 from dataclasses import dataclass, field
@@ -41,3 +42,4 @@ class DecodedPayReq:
     description: str
     route_hints: list = field(default_factory=list)  # list[list[HopHint]]
     features: frozenset = field(default_factory=frozenset)
+    destination: str = ""

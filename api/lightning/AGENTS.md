@@ -23,8 +23,15 @@ class-definition time (also import time), reused by every call.
   bool.
 - `validate_ln_invoice(cls, invoice, num_satoshis, routing_budget_ppm)` → **dict**
   `{valid, context, description, payment_hash, created_at, expires_at}`.
-- `pay_invoice(cls, lnpayment)` — **rewards-withdrawal payouts only** (sole caller:
-  `Logics.withdraw_rewards`). Returns `(bool, Optional[str] failure_reason)` on all paths — consistent with CLN.
+- `pay_invoice(cls, lnpayment)` — rewards withdrawals (`Logics.withdraw_rewards`) and
+  community donations (`tasks.py`). Returns `(bool, Optional[str] failure_reason)` on all
+  paths and **never raises** (rl31-beta23): an error LND returns before creating the
+  payment (`preflight_failure`: self-payment, expired/invalid invoice...) → FAILRO; any
+  other error is resolved with `payment_status` (SUCCED/FAILRO/FLIGHT) or left VALIDI
+  (uncertain, never refunded). CLN: codes 200/201 or unparseable errors stay uncertain.
+- `get_identity_pubkey(cls)` — the node's own pubkey (hex, cached) or None.
+- `decode_payreq(...).destination` — payee pubkey (hex); was missing before rl31-beta23,
+  which silently disabled `BLOCKED_PAYOUT_NODES`.
 - `follow_send_payment(cls, lnpayment, fee_limit_sat, timeout_seconds, on_started=None)` — **`fee_limit_sat`
   is absolute satoshis, not ppm** (converted by the caller in `tasks.py`). LND streams via
   `RouterStub.SendPaymentV2`; CLN polls `ListPays` in a loop with recursive retry.
