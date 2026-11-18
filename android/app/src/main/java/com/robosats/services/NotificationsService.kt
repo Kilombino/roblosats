@@ -32,6 +32,7 @@ import com.robosats.models.EncryptedStorage
 import com.robosats.models.NostrClient
 import com.robosats.models.NostrClient.garagePubKeys
 import com.robosats.models.NostrClient.getRobotKeyPair
+import com.robosats.models.NotificationDedup
 import com.vitorpamplona.ammolite.relays.Client
 import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.quartz.events.ChatMessageEvent
@@ -62,6 +63,10 @@ class NotificationsService : Service() {
     private val timer = Timer()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val processedEvents = ConcurrentHashMap<String, Boolean>()
+    private val dedupStore = object : NotificationDedup.Store {
+        override fun get(key: String) = EncryptedStorage.getEncryptedStorage(key)
+        override fun set(key: String, value: String) = EncryptedStorage.setEncryptedStorage(key, value)
+    }
 
     companion object {
         const val ACTION_STOP_SERVICE = "com.robosats.services.STOP_SERVICE"
@@ -88,15 +93,13 @@ class NotificationsService : Service() {
                             if (gift is SealedGossipEvent) {
                                 gift.unseal(nostrSigner) { rumor ->
                                     if (rumor is ChatMessageEvent) {
-                                        val lastNotification = EncryptedStorage.getEncryptedStorage("last_notification")
-                                        // 0.9.4: "<=": two notices in the same second (two steps, two robots) both show; the
-                                        // gift wraps already seen are skipped by processedEvents
-                                        if (lastNotification == "" || lastNotification.toLong() <= rumor.createdAt) {
-                                            val federationPubKeys = EncryptedStorage.getEncryptedStorage("federation_pubkeys")
-                                            if (federationPubKeys.contains(rumor.pubKey)) {
-                                                EncryptedStorage.setEncryptedStorage("last_notification", rumor.createdAt.toString())
-                                                displayOrderNotification(rumor, firstTaggedUser)
-                                            }
+                                        val federationPubKeys = EncryptedStorage.getEncryptedStorage("federation_pubkeys")
+                                        // 0.9.6: each notice once, ever (rumor ids kept on the device): a relay that
+                                        // sends the same gift wrap again after a restart no longer repeats it
+                                        if (federationPubKeys.contains(rumor.pubKey) &&
+                                            NotificationDedup.shouldNotify(dedupStore, rumor.id, rumor.createdAt)
+                                        ) {
+                                            displayOrderNotification(rumor, firstTaggedUser)
                                         }
                                     }
                                 }
