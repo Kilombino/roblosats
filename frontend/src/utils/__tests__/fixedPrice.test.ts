@@ -39,11 +39,11 @@ describe('fixed price (rl31-beta17)', () => {
     expect(fixedPriceSats(60, 0)).toBe(0);
   });
 
-  it('Spamcoin (1000) is typed and shown in Spamsuits per BTC', () => {
+  it('Spamcoin (1000) is typed and shown in Spamsats per BTC', () => {
     expect(fromDisplayPrice(500000, 1000)).toBeCloseTo(0.005);
     expect(toDisplayPrice(0.005, 1000)).toBeCloseTo(500000);
     expect(fromDisplayPrice(50000, 2)).toBe(50000);
-    expect(formatPricePerBtc(0.005, 1000)).toMatch(/Spamsuits\/BTC$/);
+    expect(formatPricePerBtc(0.005, 1000)).toMatch(/Spamsats\/BTC$/);
     expect(formatPricePerBtc(50000, 2)).toMatch(/EUR\/BTC$/);
   });
 });

@@ -26,7 +26,7 @@ export interface Maker {
   badDescription: boolean;
   onchainEscrow: boolean;
   // Roblosats rl31-beta17: 'fixed' = the maker sets the price per BTC (fixedPrice, as typed:
-  // the currency, or Spamsuits per BTC for Spamcoin); 'market' = market price + premium
+  // the currency, or Spamsats per BTC for Spamcoin); 'market' = market price + premium
   priceMode: 'market' | 'fixed';
   fixedPrice: number | null;
   // Roblosats rl31-beta19: "丰 sat" order (amounts in sats; the currency is what is paid in

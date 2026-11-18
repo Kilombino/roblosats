@@ -2,7 +2,7 @@
  * Roblosats rl31-beta17: FIXED PRICE orders.
  *
  * The maker sets the price per BTC in the order's currency (fixed_price): fiat, or Spamcoin
- * for currency 1000 (shown to people as Spamsuits per BTC = Spamcoin × 100,000,000). The sats
+ * for currency 1000 (shown to people as Spamsats per BTC = Spamcoin × 100,000,000). The sats
  * are amount / fixed_price and never depend on the coordinator's market price; the premium
  * against the market is only informative, and only when there is a market price.
  */
@@ -50,9 +50,9 @@ export const orderPremium = (order: Priced, marketPrice?: number | null): number
   return parseFloat(String(order.premium ?? '0'));
 };
 
-/** What people type and read: Spamsuits per BTC for currency 1000, else the currency. */
+/** What people type and read: Spamsats per BTC for currency 1000, else the currency. */
 export const priceUnit = (currency: number | null | undefined): string =>
-  currency === SPAMCOIN_CODE ? 'Spamsuits' : (currencies[String(currency ?? 1)] ?? '');
+  currency === SPAMCOIN_CODE ? 'Spamsats' : (currencies[String(currency ?? 1)] ?? '');
 
 export const toDisplayPrice = (price: number, currency: number | null | undefined): number =>
   currency === SPAMCOIN_CODE ? price * SUITS_PER_COIN : price;

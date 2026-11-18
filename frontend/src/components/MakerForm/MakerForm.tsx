@@ -153,7 +153,7 @@ const MakerForm = ({
   );
 
   // Roblosats rl31-beta17: FIXED PRICE. The maker types the price per BTC (the currency, or
-  // Spamsuits for Spamcoin); the order carries it in the order's currency (fixed_price) and
+  // Spamsats for Spamcoin); the order carries it in the order's currency (fixed_price) and
   // the sats are amount / price: no market price needed. vs market is only informative.
   // Only coordinators that announce it: any other would silently make a market order of it.
   const fixedAvailable = Boolean(federation.getCoordinator(maker.coordinator)?.info?.fixed_price);
@@ -718,43 +718,33 @@ const MakerForm = ({
 
   const { isLegacyMode, legacyDisabledTooltip } = useLegacyMode();
 
-  const disableSubmit = useMemo(() => {
-    return (
-      !federation.federationListLoaded ||
-      isLegacyMode ||
-      fav.type == null ||
-      (!makerHasAmountRange &&
-        maker.amount &&
-        (maker.amount < amountLimits[0] || maker.amount > amountLimits[1])) ||
-      maker.badPaymentMethod ||
-      (maker.amount == null &&
-        (!makerHasAmountRange ||
-          (!fixedLike && !satMode && (Object.keys(limits)?.length ?? 0) < 1))) ||
-      (makerHasAmountRange && hasRangeError) ||
-      // rl31-beta20: a cleared range field is empty, i.e. required
-      (makerHasAmountRange && (maker.minAmount == null || maker.maxAmount == null)) ||
-      (!makerHasAmountRange && maker.amount != null && maker.amount <= 0) ||
-      (fixedLike && fixedLikeUnits === null) ||
-      (satMode && !satTotalMode && marketPrice === null) ||
-      (!fixedLike && maker.badPremiumText !== '') ||
-      (!fixedLike &&
-        Object.keys(federation.getCoordinator(maker.coordinator)?.limits ?? {}).length === 0) ||
-      (fixedLike && !federation.getCoordinator(maker.coordinator)?.info) ||
-      (!fixedLike && maker.premium !== null && typeof maker.premium !== 'number') ||
-      maker.paymentMethods.length === 0 ||
-      maker.badDescription
-    );
-  }, [
-    maker,
-    maker.premium,
-    amountLimits,
-    federationUpdatedAt,
-    fav.type,
-    makerHasAmountRange,
-    isLegacyMode,
-    satMode,
-    satPriceUnits,
-  ]);
+  // rl31-beta20: computed on every render (a memo with missing dependencies kept CREATE ORDER
+  // disabled after picking a payment method until something else re-rendered the form)
+  const disableSubmit: boolean = Boolean(
+    !federation.federationListLoaded ||
+    isLegacyMode ||
+    fav.type == null ||
+    (!makerHasAmountRange &&
+      maker.amount &&
+      (maker.amount < amountLimits[0] || maker.amount > amountLimits[1])) ||
+    maker.badPaymentMethod ||
+    (maker.amount == null &&
+      (!makerHasAmountRange ||
+        (!fixedLike && !satMode && (Object.keys(limits)?.length ?? 0) < 1))) ||
+    (makerHasAmountRange && hasRangeError) ||
+    // rl31-beta20: a cleared range field is empty, i.e. required
+    (makerHasAmountRange && (maker.minAmount == null || maker.maxAmount == null)) ||
+    (!makerHasAmountRange && maker.amount != null && maker.amount <= 0) ||
+    (fixedLike && fixedLikeUnits === null) ||
+    (satMode && !satTotalMode && marketPrice === null) ||
+    (!fixedLike && maker.badPremiumText !== '') ||
+    (!fixedLike &&
+      Object.keys(federation.getCoordinator(maker.coordinator)?.limits ?? {}).length === 0) ||
+    (fixedLike && !federation.getCoordinator(maker.coordinator)?.info) ||
+    (!fixedLike && maker.premium !== null && typeof maker.premium !== 'number') ||
+    maker.paymentMethods.length === 0 ||
+    maker.badDescription,
+  );
 
   const clearMaker = function (): void {
     setFav((prev) => {

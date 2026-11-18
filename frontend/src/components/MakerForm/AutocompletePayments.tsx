@@ -346,6 +346,12 @@ const AutocompletePayments: React.FC<AutocompletePaymentsProps> = (props) => {
       if (props.isFilter) setShowFilterInput(false);
       setSelectedOptions(value);
       props.onAutocompleteChange(value.map((v) => v.name));
+      // rl31-beta20: in the maker form a pick is final right away: drop the focus so the phone
+      // keyboard goes and the form (CREATE ORDER) is visible and up to date
+      if (!props.isFilter) {
+        const el = document.activeElement as HTMLElement | null;
+        el?.blur?.();
+      }
     },
     onOpen: () => {
       if (props.isFilter) setShowFilterInput(true);
