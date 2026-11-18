@@ -92,6 +92,23 @@ describe('actionNeeded (0.9.4)', () => {
     expect(actionNeeded({ status: 14, ...oc })).toBeNull();
   });
 
+  it('a paid funding is not asked again', () => {
+    const funding = {
+      status: 7,
+      escrow_type: 'onchain',
+      ...seller,
+      escrow_status_code: 0,
+      escrow_waiting_for: 'you',
+      escrow_waiting_what: 'funding',
+      escrow_funding_owed: 1000,
+    };
+    expect(actionNeeded(funding)).toBe('Fund the onchain escrow');
+    expect(actionNeeded({ ...funding, escrow_funding_mempool_sats: 1000 })).toBeNull();
+    expect(actionNeeded({ ...funding, escrow_funding_confirmed_sats: 1000 })).toBe(
+      'Keep this order open: your app has to sign',
+    );
+  });
+
   it('nothing without an order', () => {
     expect(actionNeeded(null)).toBeNull();
     expect(actionNeeded(undefined)).toBeNull();

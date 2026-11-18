@@ -23,6 +23,9 @@ export interface ActionOrder {
   escrow_leftover_sats?: number;
   escrow_sweep_txid?: string;
   invoice_amount?: number;
+  escrow_funding_owed?: number;
+  escrow_funding_confirmed_sats?: number;
+  escrow_funding_mempool_sats?: number;
 }
 
 const BOND_SIGN = 1;
@@ -65,10 +68,16 @@ export const actionNeeded = (o: ActionOrder | null | undefined): string | null =
             return o.is_buyer
               ? 'Give the address that will receive the sats'
               : 'Give your refund address';
-          if (mine && what === 'funding')
+          if (mine && what === 'funding') {
+            const owed = o.escrow_funding_owed ?? Infinity;
+            // paid: confirmed, the app signs the deposit next; only seen, nothing to do
+            if ((o.escrow_funding_confirmed_sats ?? 0) >= owed)
+              return 'Keep this order open: your app has to sign';
+            if ((o.escrow_funding_mempool_sats ?? 0) >= owed) return null;
             return o.is_seller
               ? 'Fund the onchain escrow'
               : 'Send your fee to your funding address';
+          }
         }
         return null;
       }
