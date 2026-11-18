@@ -37,6 +37,7 @@ import {
   Warning,
   Tag,
   Description,
+  CurrencyBitcoin,
 } from '@mui/icons-material';
 import {
   fiatMethods,
@@ -150,13 +151,27 @@ const OrderDetails = ({
       (currentOrder.status ?? 0) <= 3;
     return `${estimate ? '≈ ' : ''}${paidString ?? ''}`;
   }, [currentOrder, currentOrder?.status, paidString]);
-  const paidWithText = useMemo(() => {
-    if (!currentOrder?.sats_denominated || paidString === amountString) return null;
-    return t('Paid with: {{amount}} via {{method}}', {
-      amount: paidShown,
-      method: methodsText(currentOrder.payment_method),
-    });
-  }, [currentOrder, paidShown, paidString, amountString]);
+
+  // 0.9.6: "Amount" is always the BTC (BLAKE2b) amount, in 丰 sat; what is paid for it, in the
+  // order's currency (EUR, Spamsats…), goes in its own row "Fiat traded" with its method.
+  const btcAmountString = useMemo(() => {
+    if (currentOrder === null) return;
+    if (currentOrder.sats_denominated) return amountString;
+    const satsNow = Number(currentOrder.satoshis_now ?? 0);
+    if (!(satsNow > 0)) return amountString;
+    const estimate = !currentOrder.is_explicit && (currentOrder.status ?? 0) <= 3 ? '≈ ' : '';
+    if ((currentOrder.amount ?? 0) > 0) return `${estimate}${formatSats(satsNow)}`;
+    const max = Number(currentOrder.max_amount ?? 0);
+    const min = Number(currentOrder.min_amount ?? 0);
+    if (!(max > 0)) return amountString;
+    return `${estimate}${formatSatRange((satsNow * min) / max, satsNow)}`;
+  }, [currentOrder, currentOrder?.satoshis_now, currentOrder?.status, amountString]);
+  const fiatTradedText = useMemo(() => {
+    if (currentOrder === null) return;
+    const fiat = currentOrder.sats_denominated ? paidShown : amountString;
+    const methods = methodsText(currentOrder.payment_method);
+    return methods ? `${fiat ?? ''} · ${methods}` : (fiat ?? '');
+  }, [currentOrder, paidShown, amountString]);
 
   // Countdown Renderer callback with condition
   const countdownRenderer = function ({
@@ -494,12 +509,16 @@ const OrderDetails = ({
                     MozTransformOrigin: 'left center',
                   }}
                 >
-                  <FlagWithProps code={currencyCode ?? ''} width='1.2em' height='1.2em' />
+                  <CurrencyBitcoin sx={{ width: '1.2em', height: '1.2em' }} color='primary' />
                 </div>
               </ListItemIcon>
               <ListItemText
-                primary={amountString}
-                secondary={(currentOrder?.amount ?? 0) > 0 ? t('Amount') : t('Amount Range')}
+                primary={btcAmountString}
+                secondary={
+                  (currentOrder?.amount ?? 0) > 0 || currentOrder?.sats_amount
+                    ? t('Amount')
+                    : t('Amount Range')
+                }
               />
               <ListItemIcon sx={{ minWidth: 56 }}>
                 <RobotAvatar
@@ -509,6 +528,22 @@ const OrderDetails = ({
                   tooltip={t(currentOrder.maker_status ?? '')}
                 />
               </ListItemIcon>
+            </ListItem>
+
+            <ListItem sx={{ paddingTop: 0 }}>
+              <ListItemIcon sx={{ minWidth: 56 }}>
+                <div
+                  style={{
+                    zoom: 1.25,
+                    opacity: 0.7,
+                    MozTransform: 'scale(1.25,1.25)',
+                    MozTransformOrigin: 'left center',
+                  }}
+                >
+                  <FlagWithProps code={currencyCode ?? ''} width='1.2em' height='1.2em' />
+                </div>
+              </ListItemIcon>
+              <ListItemText primary={fiatTradedText} secondary={t('Fiat traded')} />
             </ListItem>
 
             <List dense={true} sx={{ position: 'relative', bottom: '0.5em' }}>
@@ -599,11 +634,7 @@ const OrderDetails = ({
             </ListItem>
             <ListItem sx={{ paddingTop: 0 }}>
               <ListItemIcon />
-              <ListItemText
-                sx={{ marginTop: 0 }}
-                primary={paidWithText ?? undefined}
-                secondary={t('Accepted payment methods')}
-              />
+              <ListItemText sx={{ marginTop: 0 }} secondary={t('Accepted payment methods')} />
             </ListItem>
 
             <Divider />

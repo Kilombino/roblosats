@@ -612,6 +612,138 @@ class WebAppInterface(private val context: MainActivity, private val webView: We
         }
     }
 
+    // 0.9.6: recent logs for a bug report. The page redacts tokens, keys, PGP blocks and
+    // invoices before it shows, copies or shares anything (utils/logs.ts).
+    @JavascriptInterface
+    fun getRecentLogs(uuid: String) {
+        if (!isValidUuid(uuid)) return
+        Thread {
+            val logs = runCatching {
+                val p = Runtime.getRuntime().exec(arrayOf("logcat", "-d", "-t", "800", "-v", "time", "--pid=${android.os.Process.myPid()}"))
+                p.inputStream.bufferedReader().use { it.readText() }
+            }.getOrElse { "logcat unavailable: ${it.message}" }
+            val crash = runCatching { java.io.File(context.filesDir, "last_crash.txt").takeIf { it.exists() }?.readText() }.getOrNull()
+            val o = JSONObject().put("logs", logs).put("crash", crash ?: "")
+                .put("version", appVersion()).put("android", android.os.Build.VERSION.RELEASE)
+                .put("device", "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}")
+            resolvePromise(uuid, o.toString())
+        }.start()
+    }
+
+    /** Android's share sheet with [text] (already redacted by the page). */
+    @JavascriptInterface
+    fun shareText(text: String) {
+        context.runOnUiThread {
+            runCatching {
+                val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
+                context.startActivity(Intent.createChooser(send, "Roblosats logs").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+        }
+    }
+
+    // 0.9.6: background reliability. Notifications need POST_NOTIFICATIONS (Android 13+), and
+    // some phones stop the notification service unless the app is exempt from battery
+    // optimization. Asked with an explanation, never forced.
+    @JavascriptInterface
+    fun backgroundStatus(uuid: String) {
+        if (!isValidUuid(uuid)) return
+        val notif = if (android.os.Build.VERSION.SDK_INT >= 33)
+            androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) ==
+                android.content.pm.PackageManager.PERMISSION_GRANTED
+        else androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()
+        val pm = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        val exempt = pm.isIgnoringBatteryOptimizations(context.packageName)
+        resolvePromise(uuid, JSONObject().put("notifications", notif).put("batteryExempt", exempt).toString())
+    }
+
+    @JavascriptInterface
+    fun requestNotificationPermission() {
+        context.runOnUiThread {
+            runCatching {
+                if (android.os.Build.VERSION.SDK_INT >= 33 &&
+                    androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(context, android.Manifest.permission.POST_NOTIFICATIONS).not() &&
+                    EncryptedStorage.getEncryptedStorage("notif_permission_asked") == "true"
+                ) {
+                    // Android will not ask again: open the app's notification settings
+                    context.startActivity(Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName))
+                } else if (android.os.Build.VERSION.SDK_INT >= 33) {
+                    EncryptedStorage.setEncryptedStorage("notif_permission_asked", "true")
+                    androidx.core.app.ActivityCompat.requestPermissions(context, arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1001)
+                } else {
+                    context.startActivity(Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName))
+                }
+            }
+        }
+    }
+
+    @android.annotation.SuppressLint("BatteryLife")
+    @JavascriptInterface
+    fun requestBatteryExemption() {
+        context.runOnUiThread {
+            runCatching {
+                context.startActivity(Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    android.net.Uri.parse("package:${context.packageName}")))
+            }.onFailure {
+                runCatching { context.startActivity(Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
+            }
+        }
+    }
+
+    // 0.9.6: in-app update (as in Kilowallet). The check goes to GitHub through Tor when the
+    // app uses its own Tor; nothing is installed unless the APK's SHA-256 matches the release
+    // notes and it carries this app's signing certificate.
+    private fun updateProxy(): java.net.Proxy? = if (context.useProxy) getTorKmpObject().proxy else null
+
+    @JavascriptInterface
+    fun checkUpdate(uuid: String) {
+        if (!isValidUuid(uuid)) return
+        Thread {
+            val result = com.robosats.updates.AppUpdater.check(context, updateProxy())
+            resolvePromise(uuid, result)
+        }.start()
+    }
+
+    @JavascriptInterface
+    fun startUpdate() {
+        com.robosats.updates.AppUpdater.onState = { json ->
+            safeEvaluateJavascript("javascript:window.AndroidRobosats.onUpdateState('${encodeForJavaScript(json)}')")
+        }
+        Thread { com.robosats.updates.AppUpdater.start(context, updateProxy()) }.start()
+    }
+
+    /** After "Allow from this source": opens Android's setting, then the page calls resumeUpdate. */
+    @JavascriptInterface
+    fun allowInstalls() {
+        context.runOnUiThread {
+            runCatching {
+                val i = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    android.net.Uri.parse("package:${context.packageName}"))
+                context.startActivity(i)
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun resumeUpdate() {
+        Thread { com.robosats.updates.AppUpdater.resume(context) }.start()
+    }
+
+    /** Opens a Roblosats release page in the browser (only github.com/Kilombino/roblosats). */
+    @JavascriptInterface
+    fun openReleasePage(url: String) {
+        if (!url.startsWith("https://github.com/Kilombino/roblosats/")) return
+        context.runOnUiThread {
+            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        }
+    }
+
+    /** The installed app's version name ("0.9.6"). */
+    @JavascriptInterface
+    fun appVersion(): String =
+        runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: ""
+
     @JavascriptInterface
     fun restart() {
         try {

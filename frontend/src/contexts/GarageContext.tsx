@@ -146,6 +146,9 @@ export const GarageContextProvider = ({
           ? statusToDelay[slot.activeOrder.status]
           : defaultDelay;
       if (pageRef.current !== 'order') delay = delay * 5;
+      // 0.9.6: the app in the background (or a hidden tab) asks much less often; the Android
+      // notification service tells about new steps meanwhile
+      if (typeof document !== 'undefined' && document.hidden) delay = delay * 10;
       if (+new Date() - lastOrderCheckAtRef.current >= delay) {
         void slot.fetchActiveOrder(federation).finally(() => {
           const order = slot.activeOrder ?? slot.lastOrder;

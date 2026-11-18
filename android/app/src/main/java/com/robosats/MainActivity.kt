@@ -137,18 +137,20 @@ class MainActivity : AppCompatActivity() {
         // Set initial status message
         updateStatus(getString(R.string.init_tor))
 
-        // Request notification permission
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS,
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                requestCodePostNotifications,
-            )
+        // 0.9.6: the notification permission is asked by the page, with an explanation, at the
+        // first start (and from Settings); see components/Dialogs/Background.tsx.
+
+        // 0.9.6: keep the last crash for "Recent logs" (Settings), then let Android handle it
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, e ->
+            runCatching {
+                val sw = java.io.StringWriter()
+                e.printStackTrace(java.io.PrintWriter(sw))
+                java.io.File(filesDir, "last_crash.txt").writeText(
+                    "${java.util.Date()} thread=${thread.name}\n$sw",
+                )
+            }
+            previous?.uncaughtException(thread, e)
         }
 
         intentData = extractOrderPath(intent)
@@ -161,6 +163,24 @@ class MainActivity : AppCompatActivity() {
         } else {
             // Initialize Tor and setup WebView only after Tor is properly connected
             initializeTor()
+        }
+    }
+
+    // 0.9.6: no JS timers while the app is in the background (the page's polling through Tor);
+    // the notification service keeps telling about new steps. Back in front, everything resumes.
+    override fun onPause() {
+        super.onPause()
+        if (::webView.isInitialized) {
+            webView.onPause()
+            webView.pauseTimers()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::webView.isInitialized) {
+            webView.resumeTimers()
+            webView.onResume()
         }
     }
 

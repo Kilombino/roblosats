@@ -8,6 +8,8 @@ import {
   ProfileDialog,
   ClientDialog,
   UpdateDialog,
+  AppUpdateDialog,
+  BackgroundDialog,
 } from '../../components/Dialogs';
 import { AppContext, type UseAppStoreType, closeAll } from '../../contexts/AppContext';
 import { FederationContext, type UseFederationStoreType } from '../../contexts/FederationContext';
@@ -37,6 +39,8 @@ const MainDialogs = (): React.JSX.Element => {
 
   return (
     <>
+      <AppUpdateDialog />
+      <BackgroundDialog />
       <UpdateDialog
         coordinatorVersion={federation.exchange.info.version}
         clientVersion={clientVersion.semver}

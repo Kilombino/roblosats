@@ -9,6 +9,10 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- 0.9.6: the in-app update (checked APK handed to Android's installer) -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- 0.9.6: offer (never force) to keep notifications working with the screen off -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- Permissions for file picker / image attachments -->
     <!-- For Android 13+ (API 33+) -->
@@ -38,6 +42,9 @@
                 android:value="Run a foreground service to check for notes and keep the connection to the relays active"
                 />
         </service>
+        <receiver
+            android:name=".updates.AppUpdater$InstallResultReceiver"
+            android:exported="false" />
         <activity
             android:name="com.robosats.MainActivity"
             android:exported="true">

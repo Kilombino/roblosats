@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type UseAppStoreType, AppContext } from '../../contexts/AppContext';
 import {
@@ -13,6 +13,7 @@ import {
   Typography,
   ToggleButtonGroup,
   ToggleButton,
+  Button,
 } from '@mui/material';
 import SelectLanguage from './SelectLanguage';
 import {
@@ -26,7 +27,11 @@ import {
   SettingsInputAntenna,
   NotificationsActive,
   Vibration,
+  SystemUpdate,
+  BugReport,
+  BatteryChargingFull,
 } from '@mui/icons-material';
+import { CHECK_UPDATE_EVENT, BACKGROUND_EVENT, RecentLogsDialog } from '../Dialogs';
 import { systemClient } from '../../services/System';
 import Tor from '../Icons/Tor';
 import { UseFederationStoreType, FederationContext } from '../../contexts/FederationContext';
@@ -40,6 +45,13 @@ const SettingsForm = ({ dense = false }: SettingsFormProps): React.JSX.Element =
   const { settings, setSettings, client } = useContext<UseAppStoreType>(AppContext);
   const theme = useTheme();
   const { t } = useTranslation();
+  const [openLogs, setOpenLogs] = useState<boolean>(false);
+  const [checkUpdates, setCheckUpdates] = useState<boolean>(true);
+  React.useEffect(() => {
+    void systemClient.getItem('settings_check_updates').then((v) => {
+      setCheckUpdates(v !== 'false');
+    });
+  }, []);
   const fontSizes = [
     { label: 'XS', value: { basic: 12, pro: 10 } },
     { label: 'S', value: { basic: 13, pro: 11 } },
@@ -308,6 +320,72 @@ const SettingsForm = ({ dense = false }: SettingsFormProps): React.JSX.Element =
           </ToggleButtonGroup>
         </ListItem>
       )}
+      {/* 0.9.6: update notice, recent logs, background reliability */}
+      <ListItem>
+        <ListItemIcon sx={{ minWidth: 56 }}>
+          <SystemUpdate />
+        </ListItemIcon>
+        <ToggleButtonGroup
+          exclusive={true}
+          sx={{ width: '100%' }}
+          value={checkUpdates}
+          onChange={(_e, value) => {
+            if (value === null) return;
+            setCheckUpdates(value);
+            systemClient.setItem('settings_check_updates', String(value));
+          }}
+        >
+          <ToggleButton value={true} color='primary' sx={{ flexGrow: 1 }}>
+            {t('Check for updates')}
+          </ToggleButton>
+          <ToggleButton value={false} color='secondary' sx={{ flexGrow: 1 }}>
+            {t('Off')}
+          </ToggleButton>
+        </ToggleButtonGroup>
+        <Button
+          size='small'
+          sx={{ ml: 1, whiteSpace: 'nowrap' }}
+          onClick={() => window.dispatchEvent(new Event(CHECK_UPDATE_EVENT))}
+        >
+          {t('Check now')}
+        </Button>
+      </ListItem>
+
+      <ListItem>
+        <ListItemIcon sx={{ minWidth: 56 }}>
+          <BugReport />
+        </ListItemIcon>
+        <Button
+          variant='outlined'
+          sx={{ width: '100%' }}
+          onClick={() => {
+            setOpenLogs(true);
+          }}
+        >
+          {t('Recent logs')}
+        </Button>
+      </ListItem>
+
+      {client == 'mobile' && window.AndroidAppRobosats?.backgroundStatus ? (
+        <ListItem>
+          <ListItemIcon sx={{ minWidth: 56 }}>
+            <BatteryChargingFull />
+          </ListItemIcon>
+          <Button
+            variant='outlined'
+            sx={{ width: '100%' }}
+            onClick={() => window.dispatchEvent(new Event(BACKGROUND_EVENT))}
+          >
+            {t('Notifications when the app is closed')}
+          </Button>
+        </ListItem>
+      ) : null}
+      <RecentLogsDialog
+        open={openLogs}
+        onClose={() => {
+          setOpenLogs(false);
+        }}
+      />
     </List>
   );
 };

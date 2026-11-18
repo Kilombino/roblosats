@@ -32,6 +32,10 @@ const Main: React.FC = () => {
   const [show, setShow] = useState<boolean>(false);
 
   useEffect(() => setShow(settings.network === 'testnet'), [settings.network]);
+  // 0.9.6: start-up time, for "Recent logs" and for measuring cold starts
+  useEffect(() => {
+    console.info(`roblosats-ready ${Math.round(performance.now())} ms`);
+  }, []);
 
   return (
     <Router>

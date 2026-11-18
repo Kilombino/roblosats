@@ -17,3 +17,6 @@ export { default as DeleteRobotConfirmationDialog } from './DeleteRobotConfirmat
 export { default as DeleteGarageKeyConfirmationDialog } from './DeleteGarageKeyConfirmation';
 export { default as OrderDescriptionDialog } from './OrderDescription';
 export { default as UsedRobotDialog } from './UsedRobotDialog';
+export { default as AppUpdateDialog, CHECK_UPDATE_EVENT } from './AppUpdate';
+export { default as RecentLogsDialog } from './RecentLogs';
+export { default as BackgroundDialog, BACKGROUND_EVENT } from './Background';

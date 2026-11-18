@@ -200,7 +200,10 @@ export const AppContextProvider = ({ children }: AppContextProviderProps): React
 
     if (client === 'mobile') {
       getTorstaus();
-      const interval = setInterval(getTorstaus, 5000);
+      // 0.9.6: not while the app is in the background
+      const interval = setInterval(() => {
+        if (!document.hidden) getTorstaus();
+      }, 5000);
       return () => clearInterval(interval);
     }
   }, []);
