@@ -52,6 +52,8 @@ import java.util.concurrent.ConcurrentHashMap
 class NotificationsService : Service() {
     private var channelRelaysId = "RelaysConnections"
     private var channelNotificationsId = "Notifications"
+    // 0.9.4: steps where the robot must act (the coordinator tags them "action")
+    private var channelActionId = "OrderNeedsYou"
 
     private lateinit var notificationGroup: NotificationChannelGroupCompat
     private var wakeLock: PowerManager.WakeLock? = null
@@ -87,7 +89,9 @@ class NotificationsService : Service() {
                                 gift.unseal(nostrSigner) { rumor ->
                                     if (rumor is ChatMessageEvent) {
                                         val lastNotification = EncryptedStorage.getEncryptedStorage("last_notification")
-                                        if (lastNotification == "" || lastNotification.toLong() < rumor.createdAt) {
+                                        // 0.9.4: "<=": two notices in the same second (two steps, two robots) both show; the
+                                        // gift wraps already seen are skipped by processedEvents
+                                        if (lastNotification == "" || lastNotification.toLong() <= rumor.createdAt) {
                                             val federationPubKeys = EncryptedStorage.getEncryptedStorage("federation_pubkeys")
                                             if (federationPubKeys.contains(rumor.pubKey)) {
                                                 EncryptedStorage.setEncryptedStorage("last_notification", rumor.createdAt.toString())
@@ -275,8 +279,17 @@ class NotificationsService : Service() {
             .setGroup(notificationGroup.id)
             .build()
 
+        val channelAction = NotificationChannelCompat.Builder(channelActionId, NotificationManager.IMPORTANCE_HIGH)
+            .setName(getString(R.string.order_needs_you))
+            .setDescription(getString(R.string.order_needs_you_description))
+            .setVibrationEnabled(true)
+            .setVibrationPattern(longArrayOf(0, 300, 150, 300))
+            .setGroup(notificationGroup.id)
+            .build()
+
         notificationManager.createNotificationChannel(channelRelays)
         notificationManager.createNotificationChannel(channelNotification)
+        notificationManager.createNotificationChannel(channelAction)
 
         Log.d("RobosatsNotifications", "Building notification...")
 
@@ -354,18 +367,23 @@ class NotificationsService : Service() {
             }
         }
 
+        val needsYou = event.firstTag("action") == "1"
         val builder: NotificationCompat.Builder =
             NotificationCompat.Builder(
                 applicationContext,
-                channelNotificationsId,
+                if (needsYou) channelActionId else channelNotificationsId,
             )
                 .setContentTitle(orderId?.replace("/", "#")?.replaceFirstChar { it.uppercase() })
                 .setContentText(event.content)
+                // 0.9.4: the whole step text, not one cut line
+                .setStyle(NotificationCompat.BigTextStyle().bigText(event.content))
                 .setSmallIcon(R.drawable.ic_notification)
                 .setLargeIcon(bitmap)
                 .setContentIntent(pendingIntent)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setPriority(if (needsYou) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_DEFAULT)
+                .setCategory(if (needsYou) NotificationCompat.CATEGORY_REMINDER else NotificationCompat.CATEGORY_MESSAGE)
                 .setAutoCancel(true)
+        if (needsYou) builder.setVibrate(longArrayOf(0, 300, 150, 300))
 
         notificationManager.notify(event.id.hashCode(), builder.build())
     }

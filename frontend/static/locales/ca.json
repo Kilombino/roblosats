@@ -1180,5 +1180,20 @@
   "Keep this order open in the foreground until the deposit is signed.": "Mantén aquesta ordre oberta en primer pla fins que el dipòsit quedi signat.",
   "After paying, keep this order open on this device: your app signs your bond by itself.": "Després de pagar, deixa aquesta ordre oberta en aquest dispositiu: la teva app signa la teva fiança tota sola.",
   "After paying, keep this order open on this device: your app signs the rescue and the deposit by itself.": "Després de pagar, deixa aquesta ordre oberta en aquest dispositiu: la teva app signa tota sola el rescat i el dipòsit.",
-  "✅ Payment confirmed. Building the deposit… Your app will sign it by itself.": "✅ Pagament confirmat. Preparant el dipòsit… La teva app el signarà tota sola."
+  "✅ Payment confirmed. Building the deposit… Your app will sign it by itself.": "✅ Pagament confirmat. Preparant el dipòsit… La teva app el signarà tota sola.",
+  "Action needed": "Acció necessària",
+  "Sound when an order needs you": "So quan una ordre et necessita",
+  "Keep this order open: your app has to sign": "Mantén aquesta ordre oberta: la teva app ha de signar",
+  "Your counterpart asked to cancel by agreement: accept it or keep trading": "La teva contrapart demana cancel·lar de mutu acord: accepta-ho o continua amb l'intercanvi",
+  "Lock your bond to publish the order": "Bloqueja la teva fiança per publicar l'ordre",
+  "Lock your bond to take the order": "Bloqueja la teva fiança per prendre l'ordre",
+  "Give the address that will receive the sats": "Dona l'adreça que rebrà els sats",
+  "Give your refund address": "Dona la teva adreça de devolució",
+  "Send your fee to your funding address": "Envia la teva comissió a la teva adreça de pagament",
+  "Lock the trade escrow": "Bloqueja el dipòsit de garantia",
+  "Send your payout invoice": "Envia la teva factura de cobrament",
+  "Send the payment and press \"Confirm sent\"": "Envia el pagament i prem \"Confirmar enviat\"",
+  "Check your account: confirm only when the money has arrived": "Revisa el teu compte: confirma només quan hagin arribat els diners",
+  "Send your dispute statement": "Envia la teva declaració de la disputa",
+  "Send a new invoice": "Envia una factura nova"
 }

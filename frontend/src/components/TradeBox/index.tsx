@@ -37,6 +37,8 @@ import { defaultLightning, type LightningForm, defaultOnchain, type OnchainForm 
 import { type Order } from '../../models';
 import { type EncryptedChatMessage } from './EncryptedChat';
 import CollabCancelAlert from './CollabCancelAlert';
+import ActionNeededBanner from './ActionNeededBanner';
+import { type ActionOrder } from '../../utils/actionNeeded';
 import FinalSummary, { type FinalSummaryData } from '../FinalSummary';
 import { Bolt } from '@mui/icons-material';
 import { signCleartextMessage } from '../../pgp';
@@ -861,6 +863,13 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
           />
         </Grid>
         <Divider />
+
+        <Grid sx={{ width: '100%', mt: 1 }}>
+          <ActionNeededBanner
+            order={currentOrder as unknown as ActionOrder | undefined}
+            alerts={settings.actionAlerts}
+          />
+        </Grid>
 
         <Grid>{contract?.prompt()}</Grid>
 

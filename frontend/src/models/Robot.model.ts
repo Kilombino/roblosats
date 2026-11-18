@@ -1,5 +1,6 @@
 import { apiClient, type Auth } from '../services/api';
 import type Federation from './Federation.model';
+import i18next from 'i18next';
 
 interface RobotApiResponse {
   bad_request?: string;
@@ -125,8 +126,17 @@ class Robot {
 
     this.loading = true;
 
+    // 0.9.4: tell the coordinator the app language, so its notices come in it
+    let lang = '';
+    try {
+      lang = (i18next.resolvedLanguage ?? i18next.language ?? '').slice(0, 2);
+    } catch {
+      lang = '';
+    }
+    const robotPath = /^[a-z]{2}$/.test(lang) ? `/api/robot/?lang=${lang}` : '/api/robot/';
+
     await apiClient
-      .get(coordinator.url, '/api/robot/', authHeaders, true)
+      .get(coordinator.url, robotPath, authHeaders, true)
       .then((raw) => {
         const data = raw as RobotApiResponse;
         if (data?.bad_request) {

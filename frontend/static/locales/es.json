@@ -1180,5 +1180,20 @@
   "Keep this order open in the foreground until the deposit is signed.": "Mantén esta orden abierta en primer plano hasta que el depósito quede firmado.",
   "After paying, keep this order open on this device: your app signs your bond by itself.": "Después de pagar, deja esta orden abierta en este dispositivo: tu app firma tu fianza ella sola.",
   "After paying, keep this order open on this device: your app signs the rescue and the deposit by itself.": "Después de pagar, deja esta orden abierta en este dispositivo: tu app firma ella sola el rescate y el depósito.",
-  "✅ Payment confirmed. Building the deposit… Your app will sign it by itself.": "✅ Pago confirmado. Preparando el depósito… Tu app lo firmará ella sola."
+  "✅ Payment confirmed. Building the deposit… Your app will sign it by itself.": "✅ Pago confirmado. Preparando el depósito… Tu app lo firmará ella sola.",
+  "Action needed": "Acción necesaria",
+  "Sound when an order needs you": "Sonido cuando una orden te necesita",
+  "Keep this order open: your app has to sign": "Mantén esta orden abierta: tu app tiene que firmar",
+  "Your counterpart asked to cancel by agreement: accept it or keep trading": "Tu contraparte pide cancelar de mutuo acuerdo: acéptalo o sigue con el intercambio",
+  "Lock your bond to publish the order": "Bloquea tu fianza para publicar la orden",
+  "Lock your bond to take the order": "Bloquea tu fianza para tomar la orden",
+  "Give the address that will receive the sats": "Da la dirección que recibirá los sats",
+  "Give your refund address": "Da tu dirección de devolución",
+  "Send your fee to your funding address": "Envía tu comisión a tu dirección de pago",
+  "Lock the trade escrow": "Bloquea el depósito de garantía",
+  "Send your payout invoice": "Envía tu factura de cobro",
+  "Send the payment and press \"Confirm sent\"": "Envía el pago y pulsa \"Confirmar enviado\"",
+  "Check your account: confirm only when the money has arrived": "Revisa tu cuenta: confirma solo cuando haya llegado el dinero",
+  "Send your dispute statement": "Envía tu declaración de la disputa",
+  "Send a new invoice": "Envía una factura nueva"
 }

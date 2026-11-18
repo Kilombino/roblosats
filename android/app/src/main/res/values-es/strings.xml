@@ -17,4 +17,6 @@
     <string name="setting_tor">Configurando navegación segura con Tor...</string>
     <string name="setting_orbot">Configurando navegación con Orbot...</string>
     <string name="loading_app">Conexión segura establecida. Cargando aplicación...</string>
+    <string name="order_needs_you">La orden te necesita</string>
+    <string name="order_needs_you_description">Pasos de tus órdenes en los que tienes que hacer algo</string>
 </resources>

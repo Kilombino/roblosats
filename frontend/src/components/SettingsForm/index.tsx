@@ -25,6 +25,7 @@ import {
   QrCode,
   SettingsInputAntenna,
   NotificationsActive,
+  Vibration,
 } from '@mui/icons-material';
 import { systemClient } from '../../services/System';
 import Tor from '../Icons/Tor';
@@ -232,6 +233,29 @@ const SettingsForm = ({ dense = false }: SettingsFormProps): React.JSX.Element =
           </ToggleButton>
           <ToggleButton value='testnet' color='secondary' sx={{ flexGrow: 1 }}>
             {t('Testnet')}
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </ListItem>
+
+      <ListItem>
+        <ListItemIcon sx={{ minWidth: 56 }}>
+          <Vibration />
+        </ListItemIcon>
+        <ToggleButtonGroup
+          exclusive={true}
+          sx={{ width: '100%' }}
+          value={settings.actionAlerts}
+          onChange={(_e, actionAlerts) => {
+            if (actionAlerts === null) return;
+            setSettings({ ...settings, actionAlerts });
+            systemClient.setItem('settings_action_alerts', String(actionAlerts));
+          }}
+        >
+          <ToggleButton value={true} color='primary' sx={{ flexGrow: 1 }}>
+            {t('Sound when an order needs you')}
+          </ToggleButton>
+          <ToggleButton value={false} color='secondary' sx={{ flexGrow: 1 }}>
+            {t('Off')}
           </ToggleButton>
         </ToggleButtonGroup>
       </ListItem>

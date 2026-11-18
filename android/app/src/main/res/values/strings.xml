@@ -17,4 +17,6 @@
     <string name="setting_tor">Setting up secure Tor browsing...</string>
     <string name="setting_orbot">Setting up Orbot browsing...</string>
     <string name="loading_app">Secure connection established. Loading app...</string>
+    <string name="order_needs_you">Order needs you</string>
+    <string name="order_needs_you_description">Steps of your orders where you have to do something</string>
 </resources>

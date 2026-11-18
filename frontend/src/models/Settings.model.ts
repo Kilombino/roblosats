@@ -61,6 +61,11 @@ class BaseSettings {
       this.androidNotifications = !result ? client === 'mobile' : result === 'true';
     });
 
+    // 0.9.4: sound and vibration when an order needs you (on unless switched off)
+    systemClient.getItem('settings_action_alerts').then((result) => {
+      this.actionAlerts = result !== 'false';
+    });
+
     systemClient.getItem('settings_use_proxy').then((result) => {
       this.useProxy = client === 'mobile' && result !== 'false';
     });
@@ -86,6 +91,7 @@ class BaseSettings {
   public selfhostedClient: boolean = false;
   public useProxy: boolean = false;
   public androidNotifications: boolean = false;
+  public actionAlerts: boolean = true;
 }
 
 export default BaseSettings;
