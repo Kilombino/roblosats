@@ -4,11 +4,27 @@ from collections import defaultdict
 from django.core.management.base import BaseCommand
 from django.db.models import Sum
 
+from api.escrow import flow as escrow_flow
 from api.lightning.node import LNNode
 from api.models import LNPayment, OnchainPayment, Order, Robot
 
 REWARDED = re.compile(r"Robot\((\d+),[^)]*\) was rewarded (\d+) Sats")
 RETURNED = re.compile(r"Robot\((\d+),[^)]*\) was returned (\d+) Sats")
+
+
+def _corrected(order, proxy):
+    """A correction of a wrong slash_return was already booked in the reward ledger."""
+    from django.db import connection
+
+    from api.logics import LEDGER_TABLE, ensure_ledger
+
+    ensure_ledger()
+    with connection.cursor() as c:
+        c.execute(
+            f"SELECT 1 FROM {LEDGER_TABLE} WHERE fingerprint = %s",
+            [f"correction:{order.id}:slash_return:{proxy.payment_hash}"],
+        )
+        return c.fetchone() is not None
 
 
 class Command(BaseCommand):
@@ -48,10 +64,23 @@ class Command(BaseCommand):
             returned = RETURNED.findall(order.logs)
             if returned:
                 credited[int(returned[0][0])] += int(returned[0][1])
+            # rl31-beta22: an onchain maker bond behind a proxy (hybrid B) is checked onchain,
+            # and nothing of it may go back to the maker that lost it (order #23).
+            proxy = order.maker_bond if escrow_flow.is_bond_proxy(order.maker_bond) else None
+            if proxy is not None and proxy.status == LNPayment.Status.SETLED:
+                if not escrow_flow.proxy_is_penalized(proxy):
+                    report(f"order {order.id}: proxy {proxy.payment_hash} is SETTLED but its onchain bond is not penalized")
+                elif returned and not _corrected(order, proxy):
+                    report(
+                        f"order {order.id}: robot {returned[0][0]} was credited back {returned[0][1]} sats "
+                        f"of its penalized onchain bond (the penalty paid {escrow_flow.proxy_penalty_sats(proxy)})"
+                    )
             if lnd:
                 for bond in (order.maker_bond, order.taker_bond):
                     if bond is None or bond.status != LNPayment.Status.SETLED:
                         continue
+                    if escrow_flow.is_bond_proxy(bond):
+                        continue  # not a Lightning invoice: checked above
                     try:
                         ok = LNNode.double_check_htlc_is_settled(bond.payment_hash)
                     except Exception as e:
