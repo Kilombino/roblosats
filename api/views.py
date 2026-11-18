@@ -132,6 +132,7 @@ class MakerView(CreateAPIView):
         satoshis = serializer.data.get("satoshis")
         is_explicit = serializer.data.get("is_explicit")
         fixed_price = serializer.data.get("fixed_price")
+        sats_denominated = bool(serializer.data.get("sats_denominated"))
         public_duration = serializer.data.get("public_duration")
         escrow_duration = serializer.data.get("escrow_duration")
         bond_size = serializer.data.get("bond_size")
@@ -171,6 +172,21 @@ class MakerView(CreateAPIView):
 
         if len(Currency.objects.all()) == 0:
             cache_market()
+
+        # Roblosats rl31-beta19: "丰 sat" order, the amounts are whole sats
+        if sats_denominated:
+            sizes = [a for a in (amount, min_amount, max_amount) if a is not None]
+            try:
+                whole = all(float(a) >= 1 and float(a) == int(float(a)) for a in sizes)
+            except (TypeError, ValueError):
+                whole = False
+            if not whole:
+                return Response(
+                    {"bad_request": "The amount of a sat order is a whole number of sats"},
+                    status.HTTP_400_BAD_REQUEST,
+                )
+            is_explicit = False
+            satoshis = None
 
         # Roblosats rl31-beta17: fixed price per BTC (in the order's currency). The sats come
         # from it, never from the exchange rate; the premium is only informative.
@@ -225,6 +241,7 @@ class MakerView(CreateAPIView):
                 satoshis=satoshis,
                 is_explicit=is_explicit,
                 fixed_price=fixed_price,
+                sats_denominated=sats_denominated,
                 expires_at=timezone.now() + timedelta(seconds=EXP_MAKER_BOND_INVOICE),
                 maker=request.user,
                 public_duration=public_duration,
@@ -300,6 +317,13 @@ class OrderView(viewsets.ViewSet):
         order = order[0]
 
         data = ListOrderSerializer(order).data
+        # rl31-beta19: a "丰 sat" order (amounts in sats): what is paid in exchange, in its currency
+        if order.sats_denominated:
+            data["sats_denominated"] = True
+            for key, sats in (("exchange_amount", order.amount), ("exchange_min_amount", order.min_amount),
+                              ("exchange_max_amount", order.max_amount)):
+                total = Logics.exchange_total(order, sats) if sats is not None else None
+                data[key] = None if total is None else f"{total:.8f}".rstrip("0").rstrip(".")
         take_order = TakeOrder.objects.filter(
             taker=request.user, order=order, expires_at__gt=timezone.now()
         )
@@ -459,6 +483,10 @@ class OrderView(viewsets.ViewSet):
             data["status"] = Order.Status.TAK
             data["total_secs_exp"] = order.t_to_expire(Order.Status.TAK)
             data["amount"] = str(take_order.first().amount)
+            if order.sats_denominated:
+                total = Logics.exchange_total(order, take_order.first().amount)
+                if total is not None:
+                    data["exchange_amount"] = f"{total:.8f}".rstrip("0").rstrip(".")
 
             if escrow_flow.is_onchain(order) and not take_order.first().lightning:
                 valid, context = True, {}
@@ -1064,6 +1092,15 @@ class BookView(ListAPIView):
         # fixed-price order without a market price: premium unknown, "0" for old clients
         data["price"], data["premium"] = price, str(premium if premium is not None else 0)
         data["maker_status"] = Logics.user_activity_status(order.maker.last_login)
+        if order.sats_denominated:
+            # rl31-beta19: like the Nostr event, a "丰 sat" order shows in the book with its
+            # amounts in the currency paid in exchange (what any client reads in amount) and its
+            # size in sats in sats_amount / sats_min_amount / sats_max_amount.
+            for field in ("amount", "min_amount", "max_amount"):
+                sats = getattr(order, field)
+                data[f"sats_{field}"] = None if sats is None else int(sats)
+                total = None if sats is None else Logics.exchange_total(order, sats)
+                data[field] = None if sats is None else ("0" if total is None else f"{total:.8f}".rstrip("0").rstrip("."))
         for key in (
             "status",
             "taker",
@@ -1303,6 +1340,9 @@ class InfoView(viewsets.ViewSet):
         # rl31-beta17: this coordinator understands fixed_price (others would silently make a
         # market order out of it, so clients only offer it where this is true)
         context["fixed_price"] = True
+        # rl31-beta19: "丰 sat" orders (amount in sats, sats_denominated); clients offer the
+        # option only where this is true
+        context["sats_orders"] = True
 
         try:
             context["current_swap_fee_rate"] = Logics.compute_swap_fee_rate(

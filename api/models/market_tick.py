@@ -67,7 +67,12 @@ class MarketTick(models.Model):
 
         elif order.taker_bond.status == LNPayment.Status.LOCKED:
             volume = order.last_satoshis / 100_000_000
-            price = float(order.amount) / volume  # Amount Fiat / Amount BTC
+            if order.sats_denominated:  # rl31-beta19: "丰 sat" order
+                from api.logics import Logics
+
+                price = Logics.price_per_btc(order) or 0
+            else:
+                price = float(order.amount) / volume  # Amount Fiat / Amount BTC
             # Roblosats: a fixed-price order may be taken while there is no market price;
             # keep the premium inside the field's 5 digits (a fixed price can be far off).
             market_exchange_rate = float(order.currency.exchange_rate or 0)

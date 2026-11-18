@@ -1,3 +1,4 @@
+from decimal import Decimal
 import pygeohash
 import hashlib
 import uuid
@@ -127,6 +128,8 @@ class Nostr:
         and an extra ["price", <fixed price per BTC>] tag carries the price itself."""
         from api.logics import Logics
 
+        if getattr(order, "sats_denominated", False) is True:
+            return Nostr.sats_pricing_tags(order)
         if not Logics.is_fixed_price(order):
             return {"amt": "0", "premium": str(order.premium), "price": None}
         premium = Logics.fixed_price_premium(order)
@@ -137,6 +140,37 @@ class Nostr:
             "price": format(order.fixed_price.normalize(), "f")
             if hasattr(order.fixed_price, "normalize")
             else str(order.fixed_price),
+        }
+
+    @staticmethod
+    def sats_pricing_tags(order):
+        """A "丰 sat" order (rl31-beta19): the size is in sats and the currency is what is paid
+        in exchange. So that every NIP-69 client reads it right:
+        - amt: the sats (one amount); a range: 0 (NIP-69 has one amt);
+        - fa: what is paid in exchange, in the currency (a range: for the min and the max sats),
+          at the fixed price, or at market + premium when published;
+        - premium: the fixed price against the market (0 without one), or the order's premium;
+        - price: the fixed price per BTC (only fixed-price orders);
+        - ["sats", <sats>] or ["sats", <min>, <max>]: the size in sats, which marks the order as
+          a sat order for our app."""
+        from api.logics import Logics
+
+        sizes = [order.amount] if not order.has_range else [order.min_amount, order.max_amount]
+        totals = [Logics.exchange_total(order, s) for s in sizes]
+        fa = [("0" if t is None else f"{t:.8f}".rstrip("0").rstrip(".")) for t in totals]
+        sats = [str(int(Decimal(str(s)))) for s in sizes]
+        if Logics.is_fixed_price(order):
+            premium = Logics.fixed_price_premium(order)
+            price = format(order.fixed_price.normalize(), "f") if hasattr(order.fixed_price, "normalize") \
+                else str(order.fixed_price)
+        else:
+            premium, price = order.premium, None
+        return {
+            "amt": "0" if order.has_range else sats[0],
+            "premium": str(premium if premium is not None else 0),
+            "price": price,
+            "fa": fa,
+            "sats": sats,
         }
 
     def generate_tags(self, order, robot_name, robot_hash_id, currency, pricing=None):
@@ -156,7 +190,9 @@ class Nostr:
             Tag.parse(
                 ["fa"]
                 + (
-                    [str(order.amount)]
+                    pricing["fa"]
+                    if pricing.get("fa")
+                    else [str(order.amount)]
                     if not order.has_range
                     else [str(order.min_amount), str(order.max_amount)]
                 )
@@ -185,6 +221,8 @@ class Nostr:
 
         if pricing.get("price"):
             tags.append(Tag.parse(["price", pricing["price"]]))
+        if pricing.get("sats"):
+            tags.append(Tag.parse(["sats"] + pricing["sats"]))
 
         if order.latitude and order.longitude:
             tags.extend(

@@ -121,6 +121,19 @@ class Order(models.Model):
         default=None,
         validators=[MinValueValidator(Decimal(0))],
     )
+    # Roblosats rl31-beta19: "丰 sat" orders. The amount (or range) is in sats of BTC and the
+    # currency is what is paid in exchange; the price per BTC is fixed_price (the maker's total
+    # "in exchange for" / sats) or, without it, the market price + premium, frozen in
+    # contract_price when the taker's bond locks.
+    sats_denominated = models.BooleanField(default=False, null=False)
+    contract_price = models.DecimalField(
+        max_digits=22,
+        decimal_places=8,
+        null=True,
+        blank=True,
+        default=None,
+        validators=[MinValueValidator(Decimal(0))],
+    )
     # explicit
     satoshis = models.PositiveBigIntegerField(
         null=True,
@@ -331,6 +344,9 @@ class Order(models.Model):
             amt = str(float(self.min_amount)) + "-" + str(float(self.max_amount))
         else:
             amt = float(self.amount)
+        if self.sats_denominated:
+            sats = amt if isinstance(amt, str) else f"{amt:.0f}"
+            return f"Order {self.id}: {self.Types(self.type).label} {sats} sat for {self.currency}"
         return f"Order {self.id}: {self.Types(self.type).label} BTC for {amt} {self.currency}"
 
     def t_to_expire(self, status):

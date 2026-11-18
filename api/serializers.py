@@ -106,6 +106,7 @@ class ListOrderSerializer(serializers.ModelSerializer):
             "longitude",
             "escrow_type",
             "fixed_price",
+            "sats_denominated",
         )
 
 
@@ -599,6 +600,7 @@ class OrderPublicSerializer(serializers.ModelSerializer):
             "latitude",
             "longitude",
             "fixed_price",
+            "sats_denominated",
         )
 
 
@@ -644,6 +646,7 @@ class MakeOrderSerializer(serializers.ModelSerializer):
             "description",
             "escrow_type",
             "fixed_price",
+            "sats_denominated",
         )
 
 

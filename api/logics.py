@@ -522,8 +522,49 @@ class Logics:
             return 0
         return rate if rate > 0 and math.isfinite(rate) else 0
 
+    # --- "丰 sat" orders (Roblosats rl31-beta19) ---------------------------------------------
+    # The amount is in sats; what is paid in exchange is sats × price per BTC in the order's
+    # currency: the fixed price, else the price frozen when the taker's bond locked, else the
+    # market price + premium (None without a market price).
+    @classmethod
+    def price_per_btc(cls, order):
+        if cls.is_fixed_price(order):
+            return float(order.fixed_price)
+        if order.contract_price and order.contract_price > 0:
+            return float(order.contract_price)
+        rate = cls.market_rate(order.currency)
+        if not rate:
+            return None
+        return rate * (1 + float(order.premium or 0) / 100)
+
+    @classmethod
+    def exchange_total(cls, order, sats):
+        """What is paid in exchange for 'sats' of a sats order, in the order's currency."""
+        price = cls.price_per_btc(order)
+        if price is None or sats is None:
+            return None
+        return round(float(sats) / 100_000_000 * price, 8)
+
+    @classmethod
+    def fiat_of(cls, order):
+        """The amount paid in exchange (the order's currency): order.amount, or for a sats order
+        its sats × price."""
+        if getattr(order, "sats_denominated", False) is True:
+            return cls.exchange_total(order, order.last_satoshis or order.amount)
+        return order.amount
+
+    @classmethod
+    def lock_contract_price(cls, order):
+        """A sats order at market price + premium: the price is final when the trade amount is."""
+        if getattr(order, "sats_denominated", False) is True and not cls.is_fixed_price(order):
+            price = cls.price_per_btc(order)
+            if price:
+                order.contract_price = Decimal(str(round(price, 8)))
+
     @classmethod
     def sats_for_amount(cls, order, amount):
+        if getattr(order, "sats_denominated", False) is True:
+            return float(amount)
         if cls.is_fixed_price(order):
             return float(amount) / float(order.fixed_price) * 100_000_000
         return cls.calc_sats(amount, order.currency.exchange_rate, order.premium)
@@ -547,6 +588,9 @@ class Logics:
         if "spamcoin" not in (order.payment_method or "").lower():
             return None
         if order.currency.currency == cls.SPAMCOIN_CURRENCY:
+            if getattr(order, "sats_denominated", False) is True:
+                total = cls.exchange_total(order, order.last_satoshis or order.amount)
+                return None if total is None else round(total * 100_000_000)
             return round(float(order.amount) * 100_000_000)
         try:
             ratio = Currency.objects.get(currency=cls.SPAMCOIN_CURRENCY).exchange_rate
@@ -559,6 +603,12 @@ class Logics:
     @classmethod
     def satoshis_now(cls, order, take_amount=None):
         """checks trade amount in sats"""
+        if getattr(order, "sats_denominated", False) is True:
+            if take_amount is not None:
+                amount = take_amount
+            else:
+                amount = order.amount if order.amount is not None else order.max_amount
+            return int(Decimal(str(amount)))
         if cls.is_fixed_price(order):
             if take_amount is not None:
                 amount = take_amount
@@ -584,6 +634,9 @@ class Logics:
         if cls.is_fixed_price(order):
             # The maker's price as it is; the premium is None without a market price.
             return float(order.fixed_price), cls.fixed_price_premium(order)
+        if getattr(order, "sats_denominated", False) is True:
+            price = cls.price_per_btc(order)
+            return (round(price, 8) if price else 0), float(order.premium or 0)
         exchange_rate = cls.market_rate(order.currency)
         if not order.is_explicit:
             premium = order.premium
@@ -1782,6 +1835,7 @@ class Logics:
 
         if order.has_range:
             order.amount = take_order.amount
+        cls.lock_contract_price(order)  # rl31-beta19: a sats order at market price
 
         # THE TRADE AMOUNT IS FINAL WITH THE CONFIRMATION OF THE TAKER BOND!
         # (This is the last update to "last_satoshis", it becomes the escrow amount next)
@@ -2648,7 +2702,7 @@ class Logics:
             summary["is_buyer"] = cls.is_buyer(order, users[order_user])
 
             if summary["is_buyer"]:
-                summary["sent_fiat"] = order.amount
+                summary["sent_fiat"] = cls.fiat_of(order)
                 if order.is_swap:
                     summary["received_sats"] = order.payout_tx.sent_satoshis
                 else:
@@ -2683,14 +2737,14 @@ class Logics:
                     )
             else:
                 summary["sent_sats"] = order.trade_escrow.num_satoshis
-                summary["received_fiat"] = order.amount
+                summary["received_fiat"] = cls.fiat_of(order)
                 summary["trade_fee_sats"] = round(
                     summary["sent_sats"] - order.last_satoshis
                 )
             context[f"{order_user}_summary"] = summary
 
         platform_summary = {}
-        platform_summary["contract_exchange_rate"] = float(order.amount) / (
+        platform_summary["contract_exchange_rate"] = float(cls.fiat_of(order) or 0) / (
             float(order.last_satoshis) / 100_000_000
         )
         if order.last_satoshis_time is not None:
