@@ -1371,3 +1371,40 @@ class EscrowTakeRaceRegtest(EscrowHybridRegtest):
         bond.refresh_from_db()
         self.assertEqual(bond.status, OnchainBond.Status.RETURNABLE)
         self._get_bond_back(order, loser, keys, bond)
+
+    def test_two_takers_confirmed_in_the_same_block_oldest_wins(self):
+        """Kilombino: "what if two takers confirm in the same block?" Both bonds confirm in
+        one block and both apps sign before the next pass: the robot that took first wins."""
+        from api.escrow import flow
+        from api.escrow.bonds import penalty_message
+        from api.logics import Logics
+        from api.models import OnchainBond
+
+        order, maker, _, km = self._make(maker_sells=True)
+        takers = []
+        for name in ("first", "second"):
+            u = _user()
+            Logics.take(order, u)
+            k = self._keys(order, f"{name}-{u.id}")
+            flow.action(order, u, "bond_key", {"bond_pubkey": pubkey(k["bond"]).hex()})
+            d = flow.order_data(order, u)
+            _faucet("sendtoaddress", d["bond_address"], d["bond_required_sats"] / 1e8)
+            takers.append((u, k))
+        _mine()  # one block confirms both
+        flow.advance(order)
+        bonds_ = [flow.bond_of(order, "taker", owner=u) for u, _ in takers]
+        for b in bonds_:
+            b.refresh_from_db()
+            self.assertEqual(b.status, OnchainBond.Status.SIGN)
+        for (u, k), b in zip(reversed(takers), reversed(bonds_)):  # the younger signs first
+            _, msgs = penalty_message(b)
+            sigs = [with_hashtype(schnorr_sign(k["bond"], m)).hex() for m in msgs]
+            flow.action(order, u, "bond_penalty_signature", {"signatures": sigs})
+        flow.advance(order)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.WF2)
+        self.assertEqual(order.taker, takers[0][0])
+        bonds_[1].refresh_from_db()
+        self.assertEqual(bonds_[1].status, OnchainBond.Status.RETURNABLE)
+        self.notify.delay.assert_any_call(order_id=order.id, message=f"take_lost:{takers[1][0].id}")
+        self._get_bond_back(order, takers[1][0], takers[1][1], bonds_[1])

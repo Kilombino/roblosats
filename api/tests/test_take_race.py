@@ -193,3 +193,44 @@ class TakeLostNotice(RaceBase):
             send_notification(order_id=self.order.id, message=f"take_lost:{self.loser.id}")
         tl.assert_called_once()
         self.assertEqual(tl.call_args.args[1], self.loser.id)
+
+
+class SameBlock(RaceBase):
+    """Kilombino: "what if two takers confirm in the same block?" Both bonds are LOCKED when
+    the loop looks at them: the robot that took the order first wins, the other loses the race."""
+
+    def test_oldest_take_wins_when_both_lock_in_the_same_pass(self):
+        from api.logics import Logics
+
+        self.order.status = Order.Status.PUB
+        self.order.taker = None
+        self.order.save(update_fields=["status", "taker"])
+        TakeOrder.objects.filter(order=self.order).delete()
+        later = timezone.now() + timezone.timedelta(hours=1)
+        first, second = _user(), _user()
+        # The younger take's row is written first (explicit ids): without order_by("id") the
+        # database hands it out first and it would win.
+        base = (TakeOrder.objects.order_by("-id").values_list("id", flat=True).first() or 0) + 10
+        t2 = TakeOrder.objects.create(id=base + 1, order=self.order, taker=second, expires_at=later)
+        t1 = TakeOrder.objects.create(id=base, order=self.order, taker=first, expires_at=later)
+        bonds = {}
+        for t, k in ((t1, "44"), (t2, "55")):
+            bonds[t.pk] = OnchainBond.objects.create(
+                order=self.order, take_order=t, owner=t.taker, role="taker",
+                owner_pubkey="02" + k * 32, coordinator_pubkey="02" + "22" * 32, refund_csv=144,
+                address=f"bcrt1p{k}", script_pubkey="5120" + k * 32, required_sats=30_000,
+                status=OnchainBond.Status.LOCKED, txid=k * 32, vout=0, value=30_000,
+            )
+        with patch("api.tasks.send_notification") as notify, \
+                patch("api.escrow.flow.on_contract"), \
+                patch("api.escrow.bonds.refresh", side_effect=lambda b, *a, **k: b), \
+                patch("api.escrow.bonds._broadcast_auto_return"), \
+                patch.object(Logics, "satoshis_now", return_value=1_000_000):
+            flow._advance_bonds(self.order)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.Status.WF2)
+        self.assertEqual(self.order.taker, first)
+        b1, b2 = (OnchainBond.objects.get(pk=bonds[t.pk].pk) for t in (t1, t2))
+        self.assertEqual(b1.status, OnchainBond.Status.LOCKED)  # the contract's bond
+        self.assertEqual(b2.status, OnchainBond.Status.RETURNABLE)  # free, never penalized
+        notify.delay.assert_called_once_with(order_id=self.order.id, message=f"take_lost:{second.id}")

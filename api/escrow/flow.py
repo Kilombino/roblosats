@@ -287,7 +287,9 @@ def _advance_bonds(order):
                 order.log("Onchain maker bond **locked**")
                 Logics.publish_order(order)
     elif order.status == Order.Status.PUB:
-        for take_order in TakeOrder.objects.filter(order=order, expires_at__gt=timezone.now()):
+        # Oldest take first: if several onchain taker bonds lock in the same pass (same block),
+        # the robot that took the order first wins; the others lose the race and get their bond back.
+        for take_order in TakeOrder.objects.filter(order=order, expires_at__gt=timezone.now()).order_by("id"):
             bond = OnchainBond.objects.filter(order=order, role="taker", take_order=take_order).order_by("-created_at").first()
             if not bond:
                 continue
