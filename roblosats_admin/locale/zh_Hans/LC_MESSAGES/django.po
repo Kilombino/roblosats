@@ -1806,3 +1806,83 @@ msgstr "地址"
 msgctxt "roblosats-admin"
 msgid "Queued since"
 msgstr "排队开始于"
+
+msgctxt "roblosats-admin"
+msgid "cooperative"
+msgstr "协作"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the traders' escrow keys"
+msgstr "等待双方的托管密钥"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the funding transaction signatures"
+msgstr "等待存入交易的签名"
+
+msgctxt "roblosats-admin"
+msgid "Funding transaction in the mempool"
+msgstr "存入交易在内存池中"
+
+msgctxt "roblosats-admin"
+msgid "Escrow confirmed"
+msgstr "托管已确认"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the release signatures"
+msgstr "等待释放签名"
+
+msgctxt "roblosats-admin"
+msgid "Released to the buyer"
+msgstr "已释放给买方"
+
+msgctxt "roblosats-admin"
+msgid "Returned to the seller"
+msgstr "已退回卖方"
+
+msgctxt "roblosats-admin"
+msgid "Recovered by the seller after the timelock"
+msgstr "时间锁后由卖方取回"
+
+msgctxt "roblosats-admin"
+msgid "Never funded"
+msgstr "从未存入"
+
+msgctxt "roblosats-admin"
+msgid "Buyer and coordinator"
+msgstr "买方与协调者"
+
+msgctxt "roblosats-admin"
+msgid "Seller and coordinator"
+msgstr "卖方与协调者"
+
+msgctxt "roblosats-admin"
+msgid "Seller after the timelock"
+msgstr "时间锁后的卖方"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the bond on chain"
+msgstr "等待链上保证金"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the owner's penalty signature"
+msgstr "等待所有者的罚没签名"
+
+msgctxt "roblosats-admin"
+msgid "Bond locked"
+msgstr "保证金已锁定"
+
+msgctxt "roblosats-admin"
+msgid "Moved into the escrow deposit"
+msgstr "已并入托管存款"
+
+msgctxt "roblosats-admin"
+msgid "Penalty broadcast"
+msgstr "罚没已广播"
+
+msgctxt "roblosats-admin"
+msgid "Free to return to its owner"
+msgstr "可退回所有者"
+
+msgctxt "roblosats-admin"
+msgid "Returned to its owner"
+msgstr "已退回所有者"

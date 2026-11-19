@@ -1806,3 +1806,83 @@ msgstr "アドレス"
 msgctxt "roblosats-admin"
 msgid "Queued since"
 msgstr "キュー開始"
+
+msgctxt "roblosats-admin"
+msgid "cooperative"
+msgstr "協調"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the traders' escrow keys"
+msgstr "双方のエスクロー鍵待ち"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the funding transaction signatures"
+msgstr "入金トランザクションの署名待ち"
+
+msgctxt "roblosats-admin"
+msgid "Funding transaction in the mempool"
+msgstr "入金がmempool内"
+
+msgctxt "roblosats-admin"
+msgid "Escrow confirmed"
+msgstr "エスクロー承認済み"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the release signatures"
+msgstr "解放の署名待ち"
+
+msgctxt "roblosats-admin"
+msgid "Released to the buyer"
+msgstr "買い手に解放済み"
+
+msgctxt "roblosats-admin"
+msgid "Returned to the seller"
+msgstr "売り手に返却済み"
+
+msgctxt "roblosats-admin"
+msgid "Recovered by the seller after the timelock"
+msgstr "タイムロック後に売り手が回収"
+
+msgctxt "roblosats-admin"
+msgid "Never funded"
+msgstr "入金されず"
+
+msgctxt "roblosats-admin"
+msgid "Buyer and coordinator"
+msgstr "買い手とコーディネーター"
+
+msgctxt "roblosats-admin"
+msgid "Seller and coordinator"
+msgstr "売り手とコーディネーター"
+
+msgctxt "roblosats-admin"
+msgid "Seller after the timelock"
+msgstr "タイムロック後の売り手"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the bond on chain"
+msgstr "オンチェーン保証金待ち"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the owner's penalty signature"
+msgstr "所有者のペナルティ署名待ち"
+
+msgctxt "roblosats-admin"
+msgid "Bond locked"
+msgstr "保証金ロック中"
+
+msgctxt "roblosats-admin"
+msgid "Moved into the escrow deposit"
+msgstr "エスクロー入金に移動"
+
+msgctxt "roblosats-admin"
+msgid "Penalty broadcast"
+msgstr "ペナルティ送信済み"
+
+msgctxt "roblosats-admin"
+msgid "Free to return to its owner"
+msgstr "所有者へ返却可能"
+
+msgctxt "roblosats-admin"
+msgid "Returned to its owner"
+msgstr "所有者に返却済み"

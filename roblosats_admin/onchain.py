@@ -245,7 +245,7 @@ def _bond_row(bond):
         "id": bond.pk,
         "role": bond.role,
         "owner": bond.owner.username if bond.owner_id else "",
-        "status": bond.get_status_display(),
+        "status": _(bond.get_status_display()),  # model labels, translated in locale/
         "required": fmt_sats(bond.required_sats),
         "value": fmt_sats(bond.value) if bond.value else "",
         "coins": len(coins) or (1 if bond.txid else 0),
@@ -307,6 +307,7 @@ def auto_return_text(bond):
 def order_section(order, now=None):
     """Context for the on-chain section of the order page; None for a Lightning order."""
     from api.escrow import flow, service
+    from api.models import OnchainEscrow
 
     k = kind(order)
     if k == LIGHTNING:
@@ -340,7 +341,7 @@ def order_section(order, now=None):
             if data.get(f"sweep_{r}_txid")
         ]
         section["escrow"] = {
-            "status": escrow.get_status_display(),
+            "status": _(escrow.get_status_display()),
             "sats": fmt_sats(escrow.escrow_sats),
             "address": escrow.address,
             "fee_plan": flow.fee_plan(escrow),
@@ -353,7 +354,15 @@ def order_section(order, now=None):
             "deposit": tx_link(escrow.funding_txid),
             "confirmed_height": escrow.confirmed_height or "",
             "release": tx_link(escrow.release_txid),
-            "release_kind": escrow.get_release_kind_display() if escrow.release_kind is not None else "",
+            # 0.9.5: a cooperative release may go through the seller's leaf, so the model's label
+            # ("key path") would be wrong: "cooperative" plus how it was signed (release_path)
+            "release_kind": (
+                _("cooperative")
+                if escrow.release_kind == OnchainEscrow.ReleaseKind.COOPERATIVE
+                else _(escrow.get_release_kind_display())
+            )
+            if escrow.release_kind is not None
+            else "",
             "release_status": status_text(escrow.release_txid),
             "release_path": release_path_text(escrow),
             "hybrid_plan": int(data.get("hybrid_plan") or 0),
@@ -386,7 +395,7 @@ def escrow_column(order):
     if k == LIGHTNING:
         return format_html("{} {}", KIND_ICON[k], KIND_LABEL[k])
     escrow = _escrow(order)
-    status = escrow.get_status_display() if escrow is not None else _("bonds only")
+    status = _(escrow.get_status_display()) if escrow is not None else _("bonds only")
     warn = flags(order, with_mempool=False)
     return format_html(
         '{} {}<br><small>{}</small>{}',

@@ -1806,3 +1806,83 @@ msgstr "Адрес"
 msgctxt "roblosats-admin"
 msgid "Queued since"
 msgstr "В очереди с"
+
+msgctxt "roblosats-admin"
+msgid "cooperative"
+msgstr "совместный"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the traders' escrow keys"
+msgstr "Ожидание ключей депозита участников"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the funding transaction signatures"
+msgstr "Ожидание подписей транзакции депозита"
+
+msgctxt "roblosats-admin"
+msgid "Funding transaction in the mempool"
+msgstr "Депозит в мемпуле"
+
+msgctxt "roblosats-admin"
+msgid "Escrow confirmed"
+msgstr "Депозит подтверждён"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the release signatures"
+msgstr "Ожидание подписей выпуска"
+
+msgctxt "roblosats-admin"
+msgid "Released to the buyer"
+msgstr "Выпущен покупателю"
+
+msgctxt "roblosats-admin"
+msgid "Returned to the seller"
+msgstr "Возвращён продавцу"
+
+msgctxt "roblosats-admin"
+msgid "Recovered by the seller after the timelock"
+msgstr "Возвращён продавцом после таймлока"
+
+msgctxt "roblosats-admin"
+msgid "Never funded"
+msgstr "Не был оплачен"
+
+msgctxt "roblosats-admin"
+msgid "Buyer and coordinator"
+msgstr "Покупатель и координатор"
+
+msgctxt "roblosats-admin"
+msgid "Seller and coordinator"
+msgstr "Продавец и координатор"
+
+msgctxt "roblosats-admin"
+msgid "Seller after the timelock"
+msgstr "Продавец после таймлока"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the bond on chain"
+msgstr "Ожидание залога ончейн"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the owner's penalty signature"
+msgstr "Ожидание подписи штрафа владельца"
+
+msgctxt "roblosats-admin"
+msgid "Bond locked"
+msgstr "Залог заблокирован"
+
+msgctxt "roblosats-admin"
+msgid "Moved into the escrow deposit"
+msgstr "Перенесён в депозит"
+
+msgctxt "roblosats-admin"
+msgid "Penalty broadcast"
+msgstr "Штраф отправлен"
+
+msgctxt "roblosats-admin"
+msgid "Free to return to its owner"
+msgstr "Свободен для возврата владельцу"
+
+msgctxt "roblosats-admin"
+msgid "Returned to its owner"
+msgstr "Возвращён владельцу"

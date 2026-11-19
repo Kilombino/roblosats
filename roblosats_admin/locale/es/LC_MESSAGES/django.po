@@ -1806,3 +1806,83 @@ msgstr "Dirección"
 msgctxt "roblosats-admin"
 msgid "Queued since"
 msgstr "En cola desde"
+
+msgctxt "roblosats-admin"
+msgid "cooperative"
+msgstr "cooperativa"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the traders' escrow keys"
+msgstr "Esperando las claves del depósito de los dos"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the funding transaction signatures"
+msgstr "Esperando las firmas de la transacción de depósito"
+
+msgctxt "roblosats-admin"
+msgid "Funding transaction in the mempool"
+msgstr "Depósito en la mempool"
+
+msgctxt "roblosats-admin"
+msgid "Escrow confirmed"
+msgstr "Depósito confirmado"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the release signatures"
+msgstr "Esperando las firmas de la liberación"
+
+msgctxt "roblosats-admin"
+msgid "Released to the buyer"
+msgstr "Liberado al comprador"
+
+msgctxt "roblosats-admin"
+msgid "Returned to the seller"
+msgstr "Devuelto al vendedor"
+
+msgctxt "roblosats-admin"
+msgid "Recovered by the seller after the timelock"
+msgstr "Recuperado por el vendedor tras el plazo"
+
+msgctxt "roblosats-admin"
+msgid "Never funded"
+msgstr "Nunca se pagó"
+
+msgctxt "roblosats-admin"
+msgid "Buyer and coordinator"
+msgstr "Comprador y coordinador"
+
+msgctxt "roblosats-admin"
+msgid "Seller and coordinator"
+msgstr "Vendedor y coordinador"
+
+msgctxt "roblosats-admin"
+msgid "Seller after the timelock"
+msgstr "Vendedor tras el plazo"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the bond on chain"
+msgstr "Esperando la fianza on-chain"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the owner's penalty signature"
+msgstr "Esperando la firma de penalización del dueño"
+
+msgctxt "roblosats-admin"
+msgid "Bond locked"
+msgstr "Fianza bloqueada"
+
+msgctxt "roblosats-admin"
+msgid "Moved into the escrow deposit"
+msgstr "Dentro del depósito"
+
+msgctxt "roblosats-admin"
+msgid "Penalty broadcast"
+msgstr "Penalización emitida"
+
+msgctxt "roblosats-admin"
+msgid "Free to return to its owner"
+msgstr "Libre para volver a su dueño"
+
+msgctxt "roblosats-admin"
+msgid "Returned to its owner"
+msgstr "Devuelta a su dueño"
