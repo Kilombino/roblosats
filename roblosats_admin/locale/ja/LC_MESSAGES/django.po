@@ -1886,3 +1886,143 @@ msgstr "所有者へ返却可能"
 msgctxt "roblosats-admin"
 msgid "Returned to its owner"
 msgstr "所有者に返却済み"
+
+msgctxt "roblosats-admin"
+msgid "On-chain orders: bonds and deposits in the mempool and confirmed, deposit signed, release, automatic bond returns, swap payouts and rescues"
+msgstr "オンチェーン注文：mempool内・承認済みの保証金と入金、入金署名、解放、保証金の自動返却、スワップ支払い、救済"
+
+msgctxt "roblosats-admin"
+msgid "Your node's on-chain wallet: payments in and out, channels opened and closed (force closes too) and high mining fees"
+msgstr "ノードのオンチェーンウォレット：入出金、チャネルの開設・閉鎖（強制閉鎖も）、高いマイニング手数料"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's on-chain bond is in the mempool (%(sats)s sats)"
+msgstr "注文 %(id)s：%(role)s のオンチェーン保証金が mempool にあります（%(sats)s sats）"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's on-chain bond is confirmed (%(sats)s sats)"
+msgstr "注文 %(id)s：%(role)s のオンチェーン保証金が承認されました（%(sats)s sats）"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's deposit payment is in the mempool (%(sats)s sats)"
+msgstr "注文 %(id)s：%(role)s の入金が mempool にあります（%(sats)s sats）"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the escrow deposit is fully signed and broadcast (%(sats)s sats)"
+msgstr "注文 %(id)s：エスクロー入金が全署名され送信されました（%(sats)s sats）"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the escrow deposit is confirmed in block %(h)s"
+msgstr "注文 %(id)s：エスクロー入金がブロック %(h)s で承認されました"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the escrow release was broadcast"
+msgstr "注文 %(id)s：エスクローの解放が送信されました"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the escrow release is confirmed"
+msgstr "注文 %(id)s：エスクローの解放が承認されました"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's bond went back by itself (%(sats)s sats)"
+msgstr "注文 %(id)s：%(role)s の保証金が自動で返却されました（%(sats)s sats）"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's automatic bond return is confirmed"
+msgstr "注文 %(id)s：%(role)s の保証金自動返却が承認されました"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the buyer's on-chain payout was sent (%(sats)s sats)"
+msgstr "注文 %(id)s：買い手へのオンチェーン支払いを送信しました（%(sats)s sats）"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the buyer's on-chain payout is confirmed (%(sats)s sats)"
+msgstr "注文 %(id)s：買い手へのオンチェーン支払いが承認されました（%(sats)s sats）"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the escrow was rescued without the coordinator"
+msgstr "注文 %(id)s：コーディネーターなしでエスクローが救済されました"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: on-chain event"
+msgstr "注文 %(id)s：オンチェーンの動き"
+
+msgctxt "roblosats-admin"
+msgid "seller's leaf, one signature"
+msgstr "売り手のリーフ、署名1つ"
+
+msgctxt "roblosats-admin"
+msgid "cooperative close"
+msgstr "協調クローズ"
+
+msgctxt "roblosats-admin"
+msgid "force close by your node"
+msgstr "あなたのノードによる強制クローズ"
+
+msgctxt "roblosats-admin"
+msgid "force close by the peer"
+msgstr "相手による強制クローズ"
+
+msgctxt "roblosats-admin"
+msgid "breach: the peer published an old state"
+msgstr "違反：相手が古い状態を公開"
+
+msgctxt "roblosats-admin"
+msgid "funding cancelled"
+msgstr "資金提供キャンセル"
+
+msgctxt "roblosats-admin"
+msgid "abandoned"
+msgstr "放棄"
+
+msgctxt "roblosats-admin"
+msgid "Your wallet: %(sats)s sats coming in, in the mempool"
+msgstr "ウォレット：%(sats)s sats 入金中（mempool）"
+
+msgctxt "roblosats-admin"
+msgid "Your wallet: %(sats)s sats received (%(c)s confirmations)"
+msgstr "ウォレット：%(sats)s sats 受領（承認 %(c)s）"
+
+msgctxt "roblosats-admin"
+msgid "Your wallet: %(sats)s sats sent, in the mempool (mining fee %(fee)s sats)"
+msgstr "ウォレット：%(sats)s sats 送金（mempool、手数料 %(fee)s sats）"
+
+msgctxt "roblosats-admin"
+msgid "Your wallet: %(sats)s sats sent, confirmed (mining fee %(fee)s sats)"
+msgstr "ウォレット：%(sats)s sats 送金、承認済み（手数料 %(fee)s sats）"
+
+msgctxt "roblosats-admin"
+msgid "Your wallet paid a high mining fee: %(fee)s sats"
+msgstr "ウォレットが高いマイニング手数料を支払いました：%(fee)s sats"
+
+msgctxt "roblosats-admin"
+msgid "Channel opening with %(peer)s: %(cap)s sats"
+msgstr "%(peer)s とのチャネル開設中：%(cap)s sats"
+
+msgctxt "roblosats-admin"
+msgid "Channel open with %(peer)s: %(cap)s sats"
+msgstr "%(peer)s とのチャネル開設済み：%(cap)s sats"
+
+msgctxt "roblosats-admin"
+msgid "Channel force-closing with %(peer)s (%(cap)s sats)"
+msgstr "%(peer)s とのチャネルを強制クローズ中（%(cap)s sats）"
+
+msgctxt "roblosats-admin"
+msgid "Channel closing with %(peer)s (%(cap)s sats)"
+msgstr "%(peer)s とのチャネルをクローズ中（%(cap)s sats）"
+
+msgctxt "roblosats-admin"
+msgid "Channel closed with %(peer)s: %(type)s, %(settled)s sats back to your wallet"
+msgstr "%(peer)s とのチャネルをクローズ：%(type)s、%(settled)s sats がウォレットに戻りました"
+
+msgctxt "roblosats-admin"
+msgid "Your wallet: on-chain event"
+msgstr "ウォレット：オンチェーンの動き"
+
+msgctxt "roblosats-admin"
+msgid "Alert already sent"
+msgstr "送信済みの通知"
+
+msgctxt "roblosats-admin"
+msgid "Alerts already sent"
+msgstr "送信済みの通知"

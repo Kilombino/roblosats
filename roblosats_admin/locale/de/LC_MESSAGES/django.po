@@ -1886,3 +1886,143 @@ msgstr "Frei zur Rückgabe an den Besitzer"
 msgctxt "roblosats-admin"
 msgid "Returned to its owner"
 msgstr "An den Besitzer zurückgegeben"
+
+msgctxt "roblosats-admin"
+msgid "On-chain orders: bonds and deposits in the mempool and confirmed, deposit signed, release, automatic bond returns, swap payouts and rescues"
+msgstr "On-chain-Orders: Kautionen und Einzahlungen im Mempool und bestätigt, Einzahlung signiert, Freigabe, automatische Kautionsrückgaben, Swap-Auszahlungen und Rettungen"
+
+msgctxt "roblosats-admin"
+msgid "Your node's on-chain wallet: payments in and out, channels opened and closed (force closes too) and high mining fees"
+msgstr "Die On-chain-Wallet deines Nodes: Ein- und Ausgänge, geöffnete und geschlossene Kanäle (auch Force-Closes) und hohe Mining-Gebühren"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's on-chain bond is in the mempool (%(sats)s sats)"
+msgstr "Order %(id)s: die On-chain-Kaution des %(role)s ist im Mempool (%(sats)s sats)"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's on-chain bond is confirmed (%(sats)s sats)"
+msgstr "Order %(id)s: die On-chain-Kaution des %(role)s ist bestätigt (%(sats)s sats)"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's deposit payment is in the mempool (%(sats)s sats)"
+msgstr "Order %(id)s: die Einzahlung des %(role)s ist im Mempool (%(sats)s sats)"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the escrow deposit is fully signed and broadcast (%(sats)s sats)"
+msgstr "Order %(id)s: die Escrow-Einzahlung ist vollständig signiert und gesendet (%(sats)s sats)"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the escrow deposit is confirmed in block %(h)s"
+msgstr "Order %(id)s: die Escrow-Einzahlung ist in Block %(h)s bestätigt"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the escrow release was broadcast"
+msgstr "Order %(id)s: die Escrow-Freigabe wurde gesendet"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the escrow release is confirmed"
+msgstr "Order %(id)s: die Escrow-Freigabe ist bestätigt"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's bond went back by itself (%(sats)s sats)"
+msgstr "Order %(id)s: die Kaution des %(role)s ging von selbst zurück (%(sats)s sats)"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's automatic bond return is confirmed"
+msgstr "Order %(id)s: die automatische Kautionsrückgabe des %(role)s ist bestätigt"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the buyer's on-chain payout was sent (%(sats)s sats)"
+msgstr "Order %(id)s: die On-chain-Auszahlung an den Käufer wurde gesendet (%(sats)s sats)"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the buyer's on-chain payout is confirmed (%(sats)s sats)"
+msgstr "Order %(id)s: die On-chain-Auszahlung an den Käufer ist bestätigt (%(sats)s sats)"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the escrow was rescued without the coordinator"
+msgstr "Order %(id)s: das Escrow wurde ohne den Koordinator gerettet"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: on-chain event"
+msgstr "Order %(id)s: On-chain-Ereignis"
+
+msgctxt "roblosats-admin"
+msgid "seller's leaf, one signature"
+msgstr "Blatt des Verkäufers, eine Signatur"
+
+msgctxt "roblosats-admin"
+msgid "cooperative close"
+msgstr "kooperative Schließung"
+
+msgctxt "roblosats-admin"
+msgid "force close by your node"
+msgstr "Force-Close durch deinen Node"
+
+msgctxt "roblosats-admin"
+msgid "force close by the peer"
+msgstr "Force-Close durch den Peer"
+
+msgctxt "roblosats-admin"
+msgid "breach: the peer published an old state"
+msgstr "Betrug: der Peer hat einen alten Zustand veröffentlicht"
+
+msgctxt "roblosats-admin"
+msgid "funding cancelled"
+msgstr "Finanzierung abgebrochen"
+
+msgctxt "roblosats-admin"
+msgid "abandoned"
+msgstr "aufgegeben"
+
+msgctxt "roblosats-admin"
+msgid "Your wallet: %(sats)s sats coming in, in the mempool"
+msgstr "Deine Wallet: %(sats)s sats eingehend, im Mempool"
+
+msgctxt "roblosats-admin"
+msgid "Your wallet: %(sats)s sats received (%(c)s confirmations)"
+msgstr "Deine Wallet: %(sats)s sats empfangen (%(c)s Bestätigungen)"
+
+msgctxt "roblosats-admin"
+msgid "Your wallet: %(sats)s sats sent, in the mempool (mining fee %(fee)s sats)"
+msgstr "Deine Wallet: %(sats)s sats gesendet, im Mempool (Mining-Gebühr %(fee)s sats)"
+
+msgctxt "roblosats-admin"
+msgid "Your wallet: %(sats)s sats sent, confirmed (mining fee %(fee)s sats)"
+msgstr "Deine Wallet: %(sats)s sats gesendet, bestätigt (Mining-Gebühr %(fee)s sats)"
+
+msgctxt "roblosats-admin"
+msgid "Your wallet paid a high mining fee: %(fee)s sats"
+msgstr "Deine Wallet hat eine hohe Mining-Gebühr bezahlt: %(fee)s sats"
+
+msgctxt "roblosats-admin"
+msgid "Channel opening with %(peer)s: %(cap)s sats"
+msgstr "Kanal wird geöffnet mit %(peer)s: %(cap)s sats"
+
+msgctxt "roblosats-admin"
+msgid "Channel open with %(peer)s: %(cap)s sats"
+msgstr "Kanal offen mit %(peer)s: %(cap)s sats"
+
+msgctxt "roblosats-admin"
+msgid "Channel force-closing with %(peer)s (%(cap)s sats)"
+msgstr "Force-Close läuft für den Kanal mit %(peer)s (%(cap)s sats)"
+
+msgctxt "roblosats-admin"
+msgid "Channel closing with %(peer)s (%(cap)s sats)"
+msgstr "Kanal wird geschlossen mit %(peer)s (%(cap)s sats)"
+
+msgctxt "roblosats-admin"
+msgid "Channel closed with %(peer)s: %(type)s, %(settled)s sats back to your wallet"
+msgstr "Kanal mit %(peer)s geschlossen: %(type)s, %(settled)s sats zurück in deine Wallet"
+
+msgctxt "roblosats-admin"
+msgid "Your wallet: on-chain event"
+msgstr "Deine Wallet: On-chain-Ereignis"
+
+msgctxt "roblosats-admin"
+msgid "Alert already sent"
+msgstr "Bereits gesendeter Hinweis"
+
+msgctxt "roblosats-admin"
+msgid "Alerts already sent"
+msgstr "Bereits gesendete Hinweise"

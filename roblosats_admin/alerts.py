@@ -13,6 +13,17 @@ from django.utils import translation
 
 from roblosats_admin.i18n import _, _lazy
 from roblosats_admin.middleware import PANEL_LANGUAGES, panel_language
+
+# 0.9.7: the alerts also speak Catalan (only the alert texts are in locale/ca; the panel
+# itself is not translated to Catalan).
+ALERT_LANGUAGES = PANEL_LANGUAGES + [("ca", "Català")]
+
+
+def alert_language(code):
+    code = (code or "").lower()
+    if code.split("-")[0].split("_")[0] == "ca":
+        return "ca"
+    return panel_language(code)
 from roblosats_admin.models import EVENT_FIELDS
 
 logger = logging.getLogger("roblosats_admin")
@@ -43,6 +54,21 @@ EVENTS = {
         "on_bond_manual",
         _lazy("On-chain bond not returned by itself: its owner takes it back by hand"),
         "🔓",
+    ),
+    # 0.9.7 (watch.py): one toggle per group
+    "onchain": (
+        "on_onchain_events",
+        _lazy(
+            "On-chain orders: bonds and deposits in the mempool and confirmed, deposit signed, release, automatic bond returns, swap payouts and rescues"
+        ),
+        "⛓️",
+    ),
+    "wallet": (
+        "on_wallet_events",
+        _lazy(
+            "Your node's on-chain wallet: payments in and out, channels opened and closed (force closes too) and high mining fees"
+        ),
+        "👛",
     ),
 }
 
@@ -237,7 +263,92 @@ def headline(event, order, extra):
             )
             % values
         )
+    if event == "onchain":
+        return onchain_headline(order, extra)
+    if event == "wallet":
+        return wallet_headline(extra)
     return _("Test message: the coordinator's alerts reach this chat.")
+
+
+def _who(role):
+    from roblosats_admin import disputes
+
+    if role in ("buyer", "seller"):
+        return disputes.role_name(role)
+    return disputes.side_name(role)
+
+
+def onchain_headline(order, extra):
+    from roblosats_admin.disputes import fmt_sats
+
+    v = {
+        "id": order.pk if order else extra.get("order", "?"),
+        "role": _who(extra.get("role", "")),
+        "sats": fmt_sats(extra.get("sats") or 0),
+        "h": extra.get("height", ""),
+        "how": extra.get("how", ""),
+    }
+    k = extra.get("kind")
+    texts = {
+        "bond_mempool": _("Order %(id)s: the %(role)s's on-chain bond is in the mempool (%(sats)s sats)"),
+        "bond_confirmed": _("Order %(id)s: the %(role)s's on-chain bond is confirmed (%(sats)s sats)"),
+        "deposit_mempool": _("Order %(id)s: the %(role)s's deposit payment is in the mempool (%(sats)s sats)"),
+        "deposit_signed": _("Order %(id)s: the escrow deposit is fully signed and broadcast (%(sats)s sats)"),
+        "deposit_confirmed": _("Order %(id)s: the escrow deposit is confirmed in block %(h)s"),
+        "release_sent": _("Order %(id)s: the escrow release was broadcast"),
+        "release_confirmed": _("Order %(id)s: the escrow release is confirmed"),
+        "return_sent": _("Order %(id)s: the %(role)s's bond went back by itself (%(sats)s sats)"),
+        "return_confirmed": _("Order %(id)s: the %(role)s's automatic bond return is confirmed"),
+        "payout_sent": _("Order %(id)s: the buyer's on-chain payout was sent (%(sats)s sats)"),
+        "payout_confirmed": _("Order %(id)s: the buyer's on-chain payout is confirmed (%(sats)s sats)"),
+        "rescue_sent": _("Order %(id)s: the escrow was rescued without the coordinator"),
+    }
+    text = texts.get(k, _("Order %(id)s: on-chain event")) % v
+    if k == "release_sent":
+        how = _("seller's leaf, one signature") if extra.get("leaf") else v["how"]
+        if how:
+            text += f" ({how})"
+    return text
+
+
+CLOSE_TYPES = {
+    "cooperative": _lazy("cooperative close"),
+    "local_force": _lazy("force close by your node"),
+    "remote_force": _lazy("force close by the peer"),
+    "breach": _lazy("breach: the peer published an old state"),
+    "funding_canceled": _lazy("funding cancelled"),
+    "abandoned": _lazy("abandoned"),
+}
+
+
+def wallet_headline(extra):
+    from roblosats_admin.disputes import fmt_sats
+
+    k = extra.get("kind")
+    peer = extra.get("peer") or ""
+    v = {
+        "sats": fmt_sats(abs(int(extra.get("amount") or 0))),
+        "fee": fmt_sats(int(extra.get("fee") or 0)),
+        "c": extra.get("confs", 0),
+        "peer": f"{peer[:10]}…{peer[-6:]}" if len(peer) > 20 else peer or "?",
+        "cap": fmt_sats(int(extra.get("capacity") or 0)),
+        "settled": fmt_sats(int(extra.get("settled") or 0)),
+        "type": str(CLOSE_TYPES.get(extra.get("type"), extra.get("type") or "")),
+    }
+    texts = {
+        "tx_in_mempool": _("Your wallet: %(sats)s sats coming in, in the mempool"),
+        "tx_in_confirmed": _("Your wallet: %(sats)s sats received (%(c)s confirmations)"),
+        "tx_out_mempool": _("Your wallet: %(sats)s sats sent, in the mempool (mining fee %(fee)s sats)"),
+        "tx_out_confirmed": _("Your wallet: %(sats)s sats sent, confirmed (mining fee %(fee)s sats)"),
+        "fee_notable": _("Your wallet paid a high mining fee: %(fee)s sats"),
+        "chan_opening": _("Channel opening with %(peer)s: %(cap)s sats"),
+        "chan_open": _("Channel open with %(peer)s: %(cap)s sats"),
+        "chan_closing": _("Channel force-closing with %(peer)s (%(cap)s sats)")
+        if extra.get("force")
+        else _("Channel closing with %(peer)s (%(cap)s sats)"),
+        "chan_closed": _("Channel closed with %(peer)s: %(type)s, %(settled)s sats back to your wallet"),
+    }
+    return texts.get(k, _("Your wallet: on-chain event")) % v
 
 
 def build_text(cfg, event, order, extra):
@@ -261,6 +372,15 @@ def build_text(cfg, event, order, extra):
             lines.append(f"«{extra['text']}»")
         if event == "bond_manual" and extra.get("reason"):
             lines.append(f"({extra['reason']})")
+    if event in ("onchain", "wallet"):
+        from roblosats_admin.onchain import EXPLORER
+
+        if extra.get("label"):
+            lines.append(f"«{extra['label']}»")
+        txid = extra.get("txid") or ""
+        if len(txid) == 64:
+            lines.append(EXPLORER + txid)
+    if order is not None:
         path = order_path(order)
         if path:
             lines.append(base_url(cfg) + path)
@@ -283,7 +403,7 @@ def deliver(event, order_id, extra):
         )
         if order is None:
             return False
-    lang = panel_language(cfg.language) or "en"
+    lang = alert_language(cfg.language) or "en"
     with translation.override(lang):
         text = build_text(cfg, event, order, extra)
     from roblosats_admin.tasks import send_telegram
@@ -295,7 +415,7 @@ def send_test(cfg):
     from api.utils import get_session
     from roblosats_admin.tasks import telegram_send_once
 
-    lang = panel_language(cfg.language) or "en"
+    lang = alert_language(cfg.language) or "en"
     with translation.override(lang):
         text = build_text(cfg, TEST_EVENT, None, {})
         if base_url(cfg):
@@ -342,7 +462,7 @@ def _save(request, cfg):
         )
     else:
         cfg.panel_url = url.rstrip("/")
-    cfg.language = panel_language(post.get("language")) or "en"
+    cfg.language = alert_language(post.get("language")) or "en"
     for field in EVENT_FIELDS:
         setattr(cfg, field, post.get(field) == "1")
     if errors:
@@ -410,7 +530,7 @@ def settings_view(model_admin, request):
             "events": events,
             "alert_languages": [
                 {"code": code, "name": name, "current": code == cfg.language}
-                for code, name in PANEL_LANGUAGES
+                for code, name in ALERT_LANGUAGES
             ],
             "languages": _languages(request),
         },

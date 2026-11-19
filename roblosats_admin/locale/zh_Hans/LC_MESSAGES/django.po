@@ -1886,3 +1886,143 @@ msgstr "可退回所有者"
 msgctxt "roblosats-admin"
 msgid "Returned to its owner"
 msgstr "已退回所有者"
+
+msgctxt "roblosats-admin"
+msgid "On-chain orders: bonds and deposits in the mempool and confirmed, deposit signed, release, automatic bond returns, swap payouts and rescues"
+msgstr "链上订单：内存池中及已确认的保证金和存款、存款签名、释放、保证金自动退回、兑换付款和救援"
+
+msgctxt "roblosats-admin"
+msgid "Your node's on-chain wallet: payments in and out, channels opened and closed (force closes too) and high mining fees"
+msgstr "节点的链上钱包：收付款、开启和关闭的通道（含强制关闭）以及高额矿工费"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's on-chain bond is in the mempool (%(sats)s sats)"
+msgstr "订单 %(id)s：%(role)s 的链上保证金在内存池中（%(sats)s sats）"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's on-chain bond is confirmed (%(sats)s sats)"
+msgstr "订单 %(id)s：%(role)s 的链上保证金已确认（%(sats)s sats）"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's deposit payment is in the mempool (%(sats)s sats)"
+msgstr "订单 %(id)s：%(role)s 的存款付款在内存池中（%(sats)s sats）"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the escrow deposit is fully signed and broadcast (%(sats)s sats)"
+msgstr "订单 %(id)s：托管存款已全部签名并广播（%(sats)s sats）"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the escrow deposit is confirmed in block %(h)s"
+msgstr "订单 %(id)s：托管存款已在区块 %(h)s 确认"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the escrow release was broadcast"
+msgstr "订单 %(id)s：托管释放已广播"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the escrow release is confirmed"
+msgstr "订单 %(id)s：托管释放已确认"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's bond went back by itself (%(sats)s sats)"
+msgstr "订单 %(id)s：%(role)s 的保证金已自动退回（%(sats)s sats）"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's automatic bond return is confirmed"
+msgstr "订单 %(id)s：%(role)s 的保证金自动退回已确认"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the buyer's on-chain payout was sent (%(sats)s sats)"
+msgstr "订单 %(id)s：给买方的链上付款已发送（%(sats)s sats）"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the buyer's on-chain payout is confirmed (%(sats)s sats)"
+msgstr "订单 %(id)s：给买方的链上付款已确认（%(sats)s sats）"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the escrow was rescued without the coordinator"
+msgstr "订单 %(id)s：托管已在无协调者的情况下被救援"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: on-chain event"
+msgstr "订单 %(id)s：链上事件"
+
+msgctxt "roblosats-admin"
+msgid "seller's leaf, one signature"
+msgstr "卖方叶子，一个签名"
+
+msgctxt "roblosats-admin"
+msgid "cooperative close"
+msgstr "协作关闭"
+
+msgctxt "roblosats-admin"
+msgid "force close by your node"
+msgstr "由你的节点强制关闭"
+
+msgctxt "roblosats-admin"
+msgid "force close by the peer"
+msgstr "由对方强制关闭"
+
+msgctxt "roblosats-admin"
+msgid "breach: the peer published an old state"
+msgstr "违约：对方发布了旧状态"
+
+msgctxt "roblosats-admin"
+msgid "funding cancelled"
+msgstr "注资已取消"
+
+msgctxt "roblosats-admin"
+msgid "abandoned"
+msgstr "已放弃"
+
+msgctxt "roblosats-admin"
+msgid "Your wallet: %(sats)s sats coming in, in the mempool"
+msgstr "你的钱包：%(sats)s sats 正在转入，在内存池中"
+
+msgctxt "roblosats-admin"
+msgid "Your wallet: %(sats)s sats received (%(c)s confirmations)"
+msgstr "你的钱包：已收到 %(sats)s sats（%(c)s 个确认）"
+
+msgctxt "roblosats-admin"
+msgid "Your wallet: %(sats)s sats sent, in the mempool (mining fee %(fee)s sats)"
+msgstr "你的钱包：已发送 %(sats)s sats，在内存池中（矿工费 %(fee)s sats）"
+
+msgctxt "roblosats-admin"
+msgid "Your wallet: %(sats)s sats sent, confirmed (mining fee %(fee)s sats)"
+msgstr "你的钱包：已发送 %(sats)s sats，已确认（矿工费 %(fee)s sats）"
+
+msgctxt "roblosats-admin"
+msgid "Your wallet paid a high mining fee: %(fee)s sats"
+msgstr "你的钱包支付了高额矿工费：%(fee)s sats"
+
+msgctxt "roblosats-admin"
+msgid "Channel opening with %(peer)s: %(cap)s sats"
+msgstr "正在与 %(peer)s 开启通道：%(cap)s sats"
+
+msgctxt "roblosats-admin"
+msgid "Channel open with %(peer)s: %(cap)s sats"
+msgstr "与 %(peer)s 的通道已开启：%(cap)s sats"
+
+msgctxt "roblosats-admin"
+msgid "Channel force-closing with %(peer)s (%(cap)s sats)"
+msgstr "正在强制关闭与 %(peer)s 的通道（%(cap)s sats）"
+
+msgctxt "roblosats-admin"
+msgid "Channel closing with %(peer)s (%(cap)s sats)"
+msgstr "正在关闭与 %(peer)s 的通道（%(cap)s sats）"
+
+msgctxt "roblosats-admin"
+msgid "Channel closed with %(peer)s: %(type)s, %(settled)s sats back to your wallet"
+msgstr "与 %(peer)s 的通道已关闭：%(type)s，%(settled)s sats 退回你的钱包"
+
+msgctxt "roblosats-admin"
+msgid "Your wallet: on-chain event"
+msgstr "你的钱包：链上事件"
+
+msgctxt "roblosats-admin"
+msgid "Alert already sent"
+msgstr "已发送的提醒"
+
+msgctxt "roblosats-admin"
+msgid "Alerts already sent"
+msgstr "已发送的提醒"

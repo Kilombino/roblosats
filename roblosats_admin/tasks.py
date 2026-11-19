@@ -68,3 +68,18 @@ def telegram_alert(event=None, order_id=None, extra=None):
     from roblosats_admin import alerts
 
     alerts.deliver(event, order_id, extra or {})
+
+
+@shared_task(name="roblosats_admin_watch", ignore_result=True, time_limit=240)
+def watch_alerts():
+    """0.9.7: on-chain order and LND wallet alerts (watch.py), one pass at a time."""
+    from django.core.cache import cache
+
+    from roblosats_admin import watch
+
+    if not cache.add("roblosats-admin:watch-lock", 1, 230):
+        return
+    try:
+        watch.watch()
+    finally:
+        cache.delete("roblosats-admin:watch-lock")

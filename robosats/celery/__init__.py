@@ -36,6 +36,10 @@ app.conf.beat_schedule = {
         "task": "step_alert_sweep",
         "schedule": timedelta(seconds=60),
     },
+    "roblosats-admin-watch": {  # 0.9.7: on-chain order and LND wallet alerts to the coordinator
+        "task": "roblosats_admin_watch",
+        "schedule": timedelta(seconds=60),
+    },
     "users-cleansing": {  # Cleans abandoned users at midnight
         "task": "users_cleansing",
         "schedule": crontab(hour=0, minute=0),

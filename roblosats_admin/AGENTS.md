@@ -122,3 +122,11 @@ It patches the already-registered `api` admin classes in `ready()` instead of ed
   (`queued_onchain`): the order is already Successful, so it never reaches status 15.
 - Telegram event `bond_manual` (`on_bond_manual`, migration 0002): queued from
   `api.escrow.bonds._broadcast_auto_return` when the signed return could not be sent.
+- `watch.py` (beat `roblosats-admin-watch`, task `roblosats_admin_watch`, every 60 s, redis lock):
+  Telegram groups `onchain` (`on_onchain_events`) and `wallet` (`on_wallet_events`). Each event
+  has a key stored in `AlertMark` (told once, also across restarts). The first run of each
+  source only stores keys (`started:<source>`), and keys are stored while a toggle is off, so
+  nothing floods. LND: GetTransactions over the last 2016 blocks, ListChannels, PendingChannels,
+  ClosedChannels; `ALERT_NOTABLE_FEE_SATS` (2000) flags high mining fees. LND down: wallet
+  skipped, orders still watched. Alerts can be in Catalan (`ALERT_LANGUAGES`, locale/ca holds
+  only the alert texts).
