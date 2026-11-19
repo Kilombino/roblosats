@@ -399,12 +399,26 @@ def _broadcast_auto_return(bond):
         service.rpc("sendrawtransaction", [tx.serialize().hex()])
     except Exception as e:
         bond.order.log(f"Onchain {bond.role} bond: automatic return not sent ({e}); the owner takes it back by hand", level="WARN")
+        _alert_bond_manual(bond, e)
         return False
     bond.spend_txid = tx.txid()
     bond.status = OnchainBond.Status.RETURNED
     bond.save(update_fields=["spend_txid", "status", "updated_at"])
     bond.order.log(f"Onchain {bond.role} bond **returned automatically** to {ar.get('address')} in {bond.spend_txid}")
     return True
+
+
+def _alert_bond_manual(bond, error):
+    """The coordinator's Telegram alert (roblosats_admin), when it is installed and wants it."""
+    try:
+        from django.apps import apps
+
+        if apps.is_installed("roblosats_admin"):
+            from roblosats_admin import alerts
+
+            alerts.queue("bond_manual", bond.order_id, {"role": bond.role, "reason": str(error)[:200]})
+    except Exception:  # noqa: BLE001 (an alert never stops a release)
+        pass
 
 
 def _coordinator_key_of(bond):

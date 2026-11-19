@@ -16,7 +16,7 @@ from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 from django.utils.html import format_html, format_html_join
 
-from roblosats_admin.disputes import fmt_sats, fmt_time
+from roblosats_admin.disputes import currency_text, fmt_sats, fmt_time
 from roblosats_admin.i18n import _, _lazy
 
 EXPLORER = "https://mempool.kilombino.com/tx/"
@@ -128,7 +128,7 @@ def rescue_height(escrow):
 def price_text(order):
     """Fixed price / '丰 sat' order, '' for a market-price order in its currency."""
     parts = []
-    currency = ("Spamcoin" if order.currency_id == 1000 else str(order.currency)) if order.currency_id else ""
+    currency = currency_text(order)
     if getattr(order, "sats_denominated", False):
         parts.append("丰 sat")
     if getattr(order, "fixed_price", None) is not None:
@@ -173,8 +173,14 @@ def flags(order, now=None, height=None, with_mempool=False, hint=None):
                 out.append(_("deposit signature missing: %(who)s") % {"who": ", ".join(missing)})
         if escrow.status == OnchainEscrow.Status.RELEASING and not escrow.release_txid:
             if escrow.release_kind == OnchainEscrow.ReleaseKind.COOPERATIVE:
-                missing = [r for r in service.ROLES if r not in (escrow.release_partial_sigs or {})]
-                out.append(_("release signature missing: %(who)s") % {"who": ", ".join(missing) or "?"})
+                from api.escrow import flow as flow_
+
+                if flow_.seller_leaf(escrow) and service.leaf_release_ok(escrow):
+                    # 0.9.5: one round, only the seller's signature (the buyer signs nothing)
+                    out.append(_("release waits for the seller's signature (one signature)"))
+                else:
+                    missing = [r for r in service.ROLES if r not in (escrow.release_partial_sigs or {})]
+                    out.append(_("release signature missing: %(who)s") % {"who": ", ".join(missing) or "?"})
             else:
                 out.append(_("release waits for the winner's signature"))
         due = rescue_height(escrow)
@@ -207,6 +213,27 @@ def flags(order, now=None, height=None, with_mempool=False, hint=None):
 # ---------------------------------------------------------------- order page
 
 
+def release_path_text(escrow):
+    """0.9.5: how the cooperative release was (or will be) signed."""
+    from api.escrow import flow
+    from api.models import OnchainEscrow
+
+    if escrow.release_kind != OnchainEscrow.ReleaseKind.COOPERATIVE:
+        return ""
+    data = escrow.funding_signatures or {}
+    if data.get("release_path") == "seller_leaf":
+        return _("seller's leaf: the seller signed alone, with the coordinator")
+    if escrow.release_txid:
+        return _("key path: both traders signed together (MuSig2)")
+    try:
+        if flow.seller_leaf(escrow):
+            return _("the seller's app can sign it alone (one signature)")
+    except Exception:  # noqa: BLE001
+        pass
+    return _("both traders sign together (MuSig2)")
+
+
+
 def _bond_row(bond):
     from api.escrow import bonds as bond_service
     from api.models import OnchainBond
@@ -230,7 +257,51 @@ def _bond_row(bond):
         "leftover": tx_links(bond.leftover_txids or []),
         "leftover_pending": bool(bond.leftover_coins) and not bond.leftover_txids,
         "address": bond.address,
+        "auto_return": auto_return_text(bond),
+        "returned_status": status_text(returned) if bond.status == OnchainBond.Status.RETURNED else "",
     }
+
+
+def status_text(txid):
+    """0.9.7: "confirmed" / "in the mempool" from the node (cached), "" when it does not answer."""
+    from api.order_summary import tx_status
+
+    st = tx_status(_txid(txid)) if _txid(txid) else None
+    return {"confirmed": _("confirmed"), "mempool": _("in the mempool")}.get(st, "")
+
+
+def _auto_return_txid(bond):
+    try:
+        from api.escrow import bonds as bond_service
+
+        return bond_service.auto_return_message(bond)[0].txid()
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def auto_return_text(bond):
+    """0.9.7: what became of the bond's return signed in advance (stored, sent or by hand)."""
+    from api.models import OnchainBond
+
+    ar = getattr(bond, "auto_return", None) or {}
+    S = OnchainBond.Status
+    if not ar.get("address"):
+        if bond.status in (S.LOCKED, S.RETURNABLE):
+            return _("not set: the owner takes it back by hand")
+        return ""
+    addr = ar["address"]
+    short = f"{addr[:10]}…{addr[-6:]}" if len(addr) > 20 else addr
+    if bond.status == S.RETURNED and ar.get("sigs") and bond.spend_txid and bond.spend_txid == _auto_return_txid(bond):
+        return _("sent by itself to %(a)s") % {"a": short}
+    if not ar.get("sigs"):
+        if bond.status in (S.RETURNED, S.IN_DEPOSIT, S.PENALIZED):
+            return ""
+        return _("to %(a)s, not signed yet: the owner takes it back by hand") % {"a": short}
+    if bond.status == S.RETURNABLE:
+        return _("signed to %(a)s but not sent (see the log): the owner takes it back by hand") % {"a": short}
+    if bond.status in (S.FUNDING, S.SIGN, S.LOCKED):
+        return _("signed: goes back by itself to %(a)s when the bond is free") % {"a": short}
+    return ""
 
 
 def order_section(order, now=None):
@@ -283,6 +354,9 @@ def order_section(order, now=None):
             "confirmed_height": escrow.confirmed_height or "",
             "release": tx_link(escrow.release_txid),
             "release_kind": escrow.get_release_kind_display() if escrow.release_kind is not None else "",
+            "release_status": status_text(escrow.release_txid),
+            "release_path": release_path_text(escrow),
+            "hybrid_plan": int(data.get("hybrid_plan") or 0),
             "cancelled": bool(data.get("cancel")),
             "rescue_csv": escrow.rescue_csv,
             "rescue_height": due or "",

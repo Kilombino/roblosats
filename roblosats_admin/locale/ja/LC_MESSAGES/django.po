@@ -1730,3 +1730,79 @@ msgstr "オンチェーン保証金"
 msgctxt "roblosats-admin"
 msgid "On-chain escrow"
 msgstr "オンチェーンエスクロー"
+
+msgctxt "roblosats-admin"
+msgid "not set: the owner takes it back by hand"
+msgstr "未設定：所有者が手動で取り戻します"
+
+msgctxt "roblosats-admin"
+msgid "sent by itself to %(a)s"
+msgstr "%(a)s へ自動で送金済み"
+
+msgctxt "roblosats-admin"
+msgid "to %(a)s, not signed yet: the owner takes it back by hand"
+msgstr "%(a)s 宛て、未署名：所有者が手動で取り戻します"
+
+msgctxt "roblosats-admin"
+msgid "signed to %(a)s but not sent (see the log): the owner takes it back by hand"
+msgstr "%(a)s 宛てに署名済みだが未送信（ログ参照）：所有者が手動で取り戻します"
+
+msgctxt "roblosats-admin"
+msgid "signed: goes back by itself to %(a)s when the bond is free"
+msgstr "署名済み：保証金が解放されると %(a)s へ自動で戻ります"
+
+msgctxt "roblosats-admin"
+msgid "seller's leaf: the seller signed alone, with the coordinator"
+msgstr "売り手のリーフ：売り手が単独でコーディネーターと署名"
+
+msgctxt "roblosats-admin"
+msgid "key path: both traders signed together (MuSig2)"
+msgstr "キーパス：両者が共同で署名（MuSig2）"
+
+msgctxt "roblosats-admin"
+msgid "the seller's app can sign it alone (one signature)"
+msgstr "売り手のアプリが単独で署名できます（署名1つ）"
+
+msgctxt "roblosats-admin"
+msgid "both traders sign together (MuSig2)"
+msgstr "両者が共同で署名（MuSig2）"
+
+msgctxt "roblosats-admin"
+msgid "release waits for the seller's signature (one signature)"
+msgstr "解放は売り手の署名待ち（署名1つ）"
+
+msgctxt "roblosats-admin"
+msgid "On-chain bond not returned by itself: its owner takes it back by hand"
+msgstr "オンチェーン保証金が自動返却されず：所有者が手動で取り戻します"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's on-chain bond is free but did not go back by itself; their app shows the button to take it back"
+msgstr "注文 %(id)s：%(role)s のオンチェーン保証金は解放済みですが自動で戻りませんでした。アプリに取り戻すボタンが表示されます"
+
+msgctxt "roblosats-admin"
+msgid "hybrid"
+msgstr "ハイブリッド"
+
+msgctxt "roblosats-admin"
+msgid "the Lightning buyer signs nothing on-chain"
+msgstr "Lightning 買い手はオンチェーンで何も署名しません"
+
+msgctxt "roblosats-admin"
+msgid "Automatic return"
+msgstr "自動返却"
+
+msgctxt "roblosats-admin"
+msgid "On-chain payouts not sent yet"
+msgstr "未送信のオンチェーン支払い"
+
+msgctxt "roblosats-admin"
+msgid "Orders whose Lightning seller paid and whose buyer chose an on-chain payout, still queued more than 15 minutes after the trade finished: your wallet has not sent it (funds or node). The app shows it to the buyer as queued."
+msgstr "Lightning 売り手の注文で買い手がオンチェーン受取を選び、取引終了後15分以上キューに残っているもの：あなたのウォレットが送金していません（資金またはノード）。アプリは買い手にキュー待ちとして表示します。"
+
+msgctxt "roblosats-admin"
+msgid "Address"
+msgstr "アドレス"
+
+msgctxt "roblosats-admin"
+msgid "Queued since"
+msgstr "キュー開始"

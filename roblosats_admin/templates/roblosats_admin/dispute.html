@@ -37,6 +37,8 @@
   <p class="rsd-note" style="margin-top:.5rem">{% translate "When the deadline passes nothing is resolved automatically: the decision is always yours." context "roblosats-admin" %}</p>
 </section>
 
+{% include "roblosats_admin/_onchain.html" %}
+
 {% if outcome %}
 <section class="rsd-sec" id="outcome">
   <h2>{% translate "Outcome of the dispute" context "roblosats-admin" %}</h2>
@@ -188,7 +190,7 @@
         {% with pg=seller.bond %}<tr><td>{% translate "Seller's bond" context "roblosats-admin" %}</td>{% include "roblosats_admin/_payment_row.html" %}</tr>{% endwith %}
         {% with pg=escrow %}<tr><td>{% translate "Seller's escrow" context "roblosats-admin" %}</td>{% include "roblosats_admin/_payment_row.html" %}</tr>{% endwith %}
         {% if payout %}{% with pg=payout %}<tr><td>{% translate "Buyer's payout invoice" context "roblosats-admin" %}</td>{% include "roblosats_admin/_payment_row.html" %}</tr>{% endwith %}{% endif %}
-        {% if payout_tx %}<tr><td>{% translate "Buyer's on-chain payout" context "roblosats-admin" %}</td><td>{{ payout_tx.num_satoshis }}</td><td>{{ payout_tx.get_status_display }}</td><td>{{ payout_tx.address }}</td></tr>{% endif %}
+        {% if payout_tx.exists %}<tr><td>{% translate "Buyer's on-chain payout" context "roblosats-admin" %}</td><td>{{ payout_tx.sats }}</td><td>{{ payout_tx.status }}{% if payout_tx.chain %} · {{ payout_tx.chain }}{% endif %}</td><td><code>{{ payout_tx.address }}</code>{% if payout_tx.link %}<br>{{ payout_tx.link }}{% endif %}</td></tr>{% endif %}
       </table></div>
       <h3 style="margin-top:1rem">{% translate "Order log" context "roblosats-admin" %} <span class="rsd-note">({{ tz }})</span></h3>
       {% if log %}

@@ -1730,3 +1730,79 @@ msgstr "Ончейн-залоги"
 msgctxt "roblosats-admin"
 msgid "On-chain escrow"
 msgstr "Ончейн-эскроу"
+
+msgctxt "roblosats-admin"
+msgid "not set: the owner takes it back by hand"
+msgstr "не задан: владелец забирает её вручную"
+
+msgctxt "roblosats-admin"
+msgid "sent by itself to %(a)s"
+msgstr "отправлен сам на %(a)s"
+
+msgctxt "roblosats-admin"
+msgid "to %(a)s, not signed yet: the owner takes it back by hand"
+msgstr "на %(a)s, ещё не подписан: владелец забирает вручную"
+
+msgctxt "roblosats-admin"
+msgid "signed to %(a)s but not sent (see the log): the owner takes it back by hand"
+msgstr "подписан на %(a)s, но не отправлен (см. журнал): владелец забирает вручную"
+
+msgctxt "roblosats-admin"
+msgid "signed: goes back by itself to %(a)s when the bond is free"
+msgstr "подписан: вернётся сам на %(a)s, когда залог освободится"
+
+msgctxt "roblosats-admin"
+msgid "seller's leaf: the seller signed alone, with the coordinator"
+msgstr "лист продавца: подписал только продавец, вместе с координатором"
+
+msgctxt "roblosats-admin"
+msgid "key path: both traders signed together (MuSig2)"
+msgstr "путь ключа: оба подписали вместе (MuSig2)"
+
+msgctxt "roblosats-admin"
+msgid "the seller's app can sign it alone (one signature)"
+msgstr "приложение продавца может подписать само (одна подпись)"
+
+msgctxt "roblosats-admin"
+msgid "both traders sign together (MuSig2)"
+msgstr "оба подписывают вместе (MuSig2)"
+
+msgctxt "roblosats-admin"
+msgid "release waits for the seller's signature (one signature)"
+msgstr "выпуск ждёт подписи продавца (одна подпись)"
+
+msgctxt "roblosats-admin"
+msgid "On-chain bond not returned by itself: its owner takes it back by hand"
+msgstr "Ончейн-залог не вернулся сам: владелец забирает его вручную"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's on-chain bond is free but did not go back by itself; their app shows the button to take it back"
+msgstr "Ордер %(id)s: ончейн-залог (%(role)s) свободен, но не вернулся сам; приложение показывает кнопку, чтобы забрать его"
+
+msgctxt "roblosats-admin"
+msgid "hybrid"
+msgstr "гибрид"
+
+msgctxt "roblosats-admin"
+msgid "the Lightning buyer signs nothing on-chain"
+msgstr "покупатель Lightning ничего не подписывает ончейн"
+
+msgctxt "roblosats-admin"
+msgid "Automatic return"
+msgstr "Автовозврат"
+
+msgctxt "roblosats-admin"
+msgid "On-chain payouts not sent yet"
+msgstr "Ещё не отправленные ончейн-выплаты"
+
+msgctxt "roblosats-admin"
+msgid "Orders whose Lightning seller paid and whose buyer chose an on-chain payout, still queued more than 15 minutes after the trade finished: your wallet has not sent it (funds or node). The app shows it to the buyer as queued."
+msgstr "Ордера с продавцом Lightning, где покупатель выбрал ончейн-выплату, всё ещё в очереди более 15 минут после завершения сделки: ваш кошелёк её не отправил (средства или нода). Приложение показывает её покупателю как ожидающую."
+
+msgctxt "roblosats-admin"
+msgid "Address"
+msgstr "Адрес"
+
+msgctxt "roblosats-admin"
+msgid "Queued since"
+msgstr "В очереди с"

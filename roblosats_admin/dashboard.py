@@ -3,7 +3,7 @@ from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
 
-from roblosats_admin.disputes import ORDER_STATUS, amount_text, fmt_duration
+from roblosats_admin.disputes import ORDER_STATUS, amount_text, currency_text, fmt_duration
 from roblosats_admin.i18n import _
 
 ADMIN_ROOT = "/coordinator/"
@@ -69,7 +69,7 @@ def dashboard(request, context=None):
             {
                 "id": o.id,
                 "type": _("BUY") if o.type == Order.Types.BUY else _("SELL"),
-                "amount": f"{amount_text(o)} {o.currency or ''}",
+                "amount": f"{amount_text(o)} {currency_text(o)}",
                 "status": ORDER_STATUS.get(o.status, o.get_status_display()),
                 "since": _time(o.created_at),
                 "until": _time(o.expires_at),

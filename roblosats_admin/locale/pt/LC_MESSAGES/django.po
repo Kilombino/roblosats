@@ -1730,3 +1730,79 @@ msgstr "Fianças on-chain"
 msgctxt "roblosats-admin"
 msgid "On-chain escrow"
 msgstr "Depósito on-chain"
+
+msgctxt "roblosats-admin"
+msgid "not set: the owner takes it back by hand"
+msgstr "não definido: o dono recupera-o à mão"
+
+msgctxt "roblosats-admin"
+msgid "sent by itself to %(a)s"
+msgstr "enviado sozinho para %(a)s"
+
+msgctxt "roblosats-admin"
+msgid "to %(a)s, not signed yet: the owner takes it back by hand"
+msgstr "para %(a)s, ainda não assinado: o dono recupera-o à mão"
+
+msgctxt "roblosats-admin"
+msgid "signed to %(a)s but not sent (see the log): the owner takes it back by hand"
+msgstr "assinado para %(a)s mas não enviado (ver o registo): o dono recupera-o à mão"
+
+msgctxt "roblosats-admin"
+msgid "signed: goes back by itself to %(a)s when the bond is free"
+msgstr "assinado: volta sozinho para %(a)s quando a fiança ficar livre"
+
+msgctxt "roblosats-admin"
+msgid "seller's leaf: the seller signed alone, with the coordinator"
+msgstr "folha do vendedor: assinou só o vendedor, com o coordenador"
+
+msgctxt "roblosats-admin"
+msgid "key path: both traders signed together (MuSig2)"
+msgstr "caminho de chave: assinaram os dois juntos (MuSig2)"
+
+msgctxt "roblosats-admin"
+msgid "the seller's app can sign it alone (one signature)"
+msgstr "a app do vendedor pode assiná-lo sozinha (uma assinatura)"
+
+msgctxt "roblosats-admin"
+msgid "both traders sign together (MuSig2)"
+msgstr "assinam os dois juntos (MuSig2)"
+
+msgctxt "roblosats-admin"
+msgid "release waits for the seller's signature (one signature)"
+msgstr "a libertação espera a assinatura do vendedor (uma assinatura)"
+
+msgctxt "roblosats-admin"
+msgid "On-chain bond not returned by itself: its owner takes it back by hand"
+msgstr "Fiança on-chain não devolvida sozinha: o dono recupera-a à mão"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's on-chain bond is free but did not go back by itself; their app shows the button to take it back"
+msgstr "Ordem %(id)s: a fiança on-chain do %(role)s está livre mas não voltou sozinha; a app mostra o botão para a recuperar"
+
+msgctxt "roblosats-admin"
+msgid "hybrid"
+msgstr "híbrido"
+
+msgctxt "roblosats-admin"
+msgid "the Lightning buyer signs nothing on-chain"
+msgstr "o comprador Lightning não assina nada on-chain"
+
+msgctxt "roblosats-admin"
+msgid "Automatic return"
+msgstr "Devolução automática"
+
+msgctxt "roblosats-admin"
+msgid "On-chain payouts not sent yet"
+msgstr "Pagamentos on-chain ainda não enviados"
+
+msgctxt "roblosats-admin"
+msgid "Orders whose Lightning seller paid and whose buyer chose an on-chain payout, still queued more than 15 minutes after the trade finished: your wallet has not sent it (funds or node). The app shows it to the buyer as queued."
+msgstr "Ordens com vendedor Lightning cujo comprador escolheu pagamento on-chain, ainda em fila mais de 15 minutos após o fim da troca: a tua carteira não o enviou (fundos ou nó). A app mostra-o ao comprador como em fila."
+
+msgctxt "roblosats-admin"
+msgid "Address"
+msgstr "Endereço"
+
+msgctxt "roblosats-admin"
+msgid "Queued since"
+msgstr "Em fila desde"

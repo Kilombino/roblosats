@@ -30,6 +30,7 @@ from roblosats_admin.disputes import (
     _parse_time,
     _require_staff,
     amount_text,
+    currency_text,
     fmt_sats,
     fmt_time,
     roles,
@@ -367,6 +368,42 @@ def count_failed():
     return Order.objects.filter(status=FAILED).count()
 
 
+# 0.9.7: an on-chain payout to the buyer (Lightning seller's swap) still queued this long after
+# the trade finished did not go out: the coordinator's wallet must send it.
+QUEUED_AFTER = 15 * 60
+
+
+def queued_onchain(now=None):
+    """Orders whose on-chain payout to the buyer is still waiting to be sent (status Queued)."""
+    from api.models import OnchainPayment, Order
+
+    now = now or timezone.now()
+    out = []
+    qs = (
+        Order.objects.select_related("taker", "maker", "currency", "payout_tx")
+        .filter(is_swap=True, payout_tx__status=OnchainPayment.Status.QUEUE)
+        .order_by("-created_at")[:HISTORY_LIMIT]
+    )
+    for o in qs:
+        since = o.contract_finalization_time or o.payout_tx.created_at
+        if since and (now - since).total_seconds() < QUEUED_AFTER:
+            continue
+        r = roles(o)
+        out.append(
+            {
+                "id": o.pk,
+                "url": reverse("admin:api_order_summary", args=[o.pk]),
+                "amount": amount_text(o),
+                "currency": currency_text(o),
+                "buyer": r["buyer"].username if r["buyer"] else "?",
+                "sats": fmt_sats(o.payout_tx.sent_satoshis or o.payout_tx.num_satoshis),
+                "address": o.payout_tx.address or "",
+                "since": fmt_time(since),
+            }
+        )
+    return out
+
+
 def failed_payouts_view(order_admin, request):
     from api.models import Order
 
@@ -384,7 +421,7 @@ def failed_payouts_view(order_admin, request):
             "id": o.pk,
             "url": reverse(name, args=[o.pk]),
             "amount": amount_text(o),
-            "currency": str(o.currency) if o.currency else "",
+            "currency": currency_text(o),
             "buyer": r["buyer"].username if r["buyer"] else "?",
             "status": ORDER_STATUS.get(o.status, o.get_status_display()),
             "completed": o.status == Order.Status.SUC,
@@ -417,6 +454,7 @@ def failed_payouts_view(order_admin, request):
             else _("Failed payouts to the buyer"),
             "opts": order_admin.model._meta,
             "view": view,
+            "queued": queued_onchain() if view == "now" else [],
             "tabs": tabs,
             "rows": [row(o) for o in orders],
             "history_limit": HISTORY_LIMIT,

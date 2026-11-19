@@ -36,5 +36,15 @@
   <p class="rsd-empty">{% if view == "history" %}{% translate "No order has gone through a failed payout." context "roblosats-admin" %}{% else %}{% translate "No payment to the buyer is failing right now." context "roblosats-admin" %}{% endif %}</p>
   {% endif %}
 </section>
+{% if queued %}
+<section class="rsd-sec" id="queued">
+  <h2>{% translate "On-chain payouts not sent yet" context "roblosats-admin" %}</h2>
+  <p class="rsd-note">{% translate "Orders whose Lightning seller paid and whose buyer chose an on-chain payout, still queued more than 15 minutes after the trade finished: your wallet has not sent it (funds or node). The app shows it to the buyer as queued." context "roblosats-admin" %}</p>
+  <div class="rsd-scroll" style="margin-top:.6rem"><table class="rsd-table">
+    <tr><th>{% translate "Order" context "roblosats-admin" %}</th><th>{% translate "Amount" context "roblosats-admin" %}</th><th>{% translate "Buyer" context "roblosats-admin" %}</th><th>{% translate "Sats to pay" context "roblosats-admin" %}</th><th>{% translate "Address" context "roblosats-admin" %}</th><th>{% translate "Queued since" context "roblosats-admin" %} ({{ tz }})</th></tr>
+    {% for q in queued %}<tr><td><a href="{{ q.url }}"><b>{{ q.id }}</b></a></td><td>{{ q.amount }} {{ q.currency }}</td><td>{{ q.buyer }}</td><td>{{ q.sats }}</td><td><code>{{ q.address }}</code></td><td class="time">{{ q.since }}</td></tr>{% endfor %}
+  </table></div>
+</section>
+{% endif %}
 </div>
 {% endblock %}

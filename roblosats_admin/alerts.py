@@ -38,6 +38,12 @@ EVENTS = {
         _lazy("Message sent from the coordinator"),
         "✉️",
     ),
+    # 0.9.7: a free on-chain bond whose return signed in advance could not be sent
+    "bond_manual": (
+        "on_bond_manual",
+        _lazy("On-chain bond not returned by itself: its owner takes it back by hand"),
+        "🔓",
+    ),
 }
 
 TEST_EVENT = "test"
@@ -223,6 +229,14 @@ def headline(event, order, extra):
     if event == "coordinator_message":
         values["names"] = _(" and ").join(extra.get("names") or []) or "?"
         return _("You wrote to %(names)s on order %(id)s") % values
+    if event == "bond_manual":
+        values["role"] = disputes.side_name(extra.get("role", "")) or extra.get("role", "")
+        return (
+            _(
+                "Order %(id)s: the %(role)s's on-chain bond is free but did not go back by itself; their app shows the button to take it back"
+            )
+            % values
+        )
     return _("Test message: the coordinator's alerts reach this chat.")
 
 
@@ -238,13 +252,15 @@ def build_text(cfg, event, order, extra):
         sats = order.last_satoshis or order.satoshis or order.t0_satoshis
         detail = (
             f"{kind} {disputes.amount_text(order)} "
-            f"{order.currency or ''} · {disputes.fmt_sats(sats)} sats"
+            f"{disputes.currency_text(order)} · {disputes.fmt_sats(sats)} sats"
         )
         if order.payment_method:
             detail += f" · {order.payment_method}"
         lines.append(detail)
         if event == "coordinator_message" and extra.get("text"):
             lines.append(f"«{extra['text']}»")
+        if event == "bond_manual" and extra.get("reason"):
+            lines.append(f"({extra['reason']})")
         path = order_path(order)
         if path:
             lines.append(base_url(cfg) + path)

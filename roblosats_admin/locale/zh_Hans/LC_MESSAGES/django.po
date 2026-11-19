@@ -1730,3 +1730,79 @@ msgstr "链上保证金"
 msgctxt "roblosats-admin"
 msgid "On-chain escrow"
 msgstr "链上托管"
+
+msgctxt "roblosats-admin"
+msgid "not set: the owner takes it back by hand"
+msgstr "未设置：由所有者手动取回"
+
+msgctxt "roblosats-admin"
+msgid "sent by itself to %(a)s"
+msgstr "已自动发送到 %(a)s"
+
+msgctxt "roblosats-admin"
+msgid "to %(a)s, not signed yet: the owner takes it back by hand"
+msgstr "发往 %(a)s，尚未签名：由所有者手动取回"
+
+msgctxt "roblosats-admin"
+msgid "signed to %(a)s but not sent (see the log): the owner takes it back by hand"
+msgstr "已签名发往 %(a)s 但未发送（见日志）：由所有者手动取回"
+
+msgctxt "roblosats-admin"
+msgid "signed: goes back by itself to %(a)s when the bond is free"
+msgstr "已签名：保证金释放后自动退回 %(a)s"
+
+msgctxt "roblosats-admin"
+msgid "seller's leaf: the seller signed alone, with the coordinator"
+msgstr "卖方叶子：卖方与协调者单独签名"
+
+msgctxt "roblosats-admin"
+msgid "key path: both traders signed together (MuSig2)"
+msgstr "密钥路径：双方共同签名（MuSig2）"
+
+msgctxt "roblosats-admin"
+msgid "the seller's app can sign it alone (one signature)"
+msgstr "卖方应用可单独签名（一个签名）"
+
+msgctxt "roblosats-admin"
+msgid "both traders sign together (MuSig2)"
+msgstr "双方共同签名（MuSig2）"
+
+msgctxt "roblosats-admin"
+msgid "release waits for the seller's signature (one signature)"
+msgstr "释放等待卖方签名（一个签名）"
+
+msgctxt "roblosats-admin"
+msgid "On-chain bond not returned by itself: its owner takes it back by hand"
+msgstr "链上保证金未自动退回：由所有者手动取回"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's on-chain bond is free but did not go back by itself; their app shows the button to take it back"
+msgstr "订单 %(id)s：%(role)s 的链上保证金已释放但未自动退回；其应用会显示取回按钮"
+
+msgctxt "roblosats-admin"
+msgid "hybrid"
+msgstr "混合"
+
+msgctxt "roblosats-admin"
+msgid "the Lightning buyer signs nothing on-chain"
+msgstr "Lightning 买方无需在链上签名"
+
+msgctxt "roblosats-admin"
+msgid "Automatic return"
+msgstr "自动退回"
+
+msgctxt "roblosats-admin"
+msgid "On-chain payouts not sent yet"
+msgstr "尚未发送的链上付款"
+
+msgctxt "roblosats-admin"
+msgid "Orders whose Lightning seller paid and whose buyer chose an on-chain payout, still queued more than 15 minutes after the trade finished: your wallet has not sent it (funds or node). The app shows it to the buyer as queued."
+msgstr "卖方使用 Lightning、买方选择链上收款，且交易结束 15 分钟后仍在队列中的订单：你的钱包尚未发送（资金或节点问题）。应用向买方显示为排队中。"
+
+msgctxt "roblosats-admin"
+msgid "Address"
+msgstr "地址"
+
+msgctxt "roblosats-admin"
+msgid "Queued since"
+msgstr "排队开始于"

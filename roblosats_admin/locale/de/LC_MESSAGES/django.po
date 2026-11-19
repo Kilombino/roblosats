@@ -1730,3 +1730,79 @@ msgstr "On-chain-Kautionen"
 msgctxt "roblosats-admin"
 msgid "On-chain escrow"
 msgstr "On-chain-Treuhand"
+
+msgctxt "roblosats-admin"
+msgid "not set: the owner takes it back by hand"
+msgstr "nicht eingerichtet: der Besitzer holt sie von Hand zurück"
+
+msgctxt "roblosats-admin"
+msgid "sent by itself to %(a)s"
+msgstr "von selbst an %(a)s gesendet"
+
+msgctxt "roblosats-admin"
+msgid "to %(a)s, not signed yet: the owner takes it back by hand"
+msgstr "an %(a)s, noch nicht signiert: der Besitzer holt sie von Hand zurück"
+
+msgctxt "roblosats-admin"
+msgid "signed to %(a)s but not sent (see the log): the owner takes it back by hand"
+msgstr "an %(a)s signiert, aber nicht gesendet (siehe Protokoll): der Besitzer holt sie von Hand zurück"
+
+msgctxt "roblosats-admin"
+msgid "signed: goes back by itself to %(a)s when the bond is free"
+msgstr "signiert: geht von selbst an %(a)s zurück, sobald die Kaution frei ist"
+
+msgctxt "roblosats-admin"
+msgid "seller's leaf: the seller signed alone, with the coordinator"
+msgstr "Blatt des Verkäufers: der Verkäufer hat allein signiert, mit dem Koordinator"
+
+msgctxt "roblosats-admin"
+msgid "key path: both traders signed together (MuSig2)"
+msgstr "Schlüsselpfad: beide Händler haben gemeinsam signiert (MuSig2)"
+
+msgctxt "roblosats-admin"
+msgid "the seller's app can sign it alone (one signature)"
+msgstr "die App des Verkäufers kann allein signieren (eine Signatur)"
+
+msgctxt "roblosats-admin"
+msgid "both traders sign together (MuSig2)"
+msgstr "beide Händler signieren gemeinsam (MuSig2)"
+
+msgctxt "roblosats-admin"
+msgid "release waits for the seller's signature (one signature)"
+msgstr "die Freigabe wartet auf die Signatur des Verkäufers (eine Signatur)"
+
+msgctxt "roblosats-admin"
+msgid "On-chain bond not returned by itself: its owner takes it back by hand"
+msgstr "On-chain-Kaution nicht von selbst zurückgegeben: der Besitzer holt sie von Hand zurück"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's on-chain bond is free but did not go back by itself; their app shows the button to take it back"
+msgstr "Order %(id)s: die On-chain-Kaution des %(role)s ist frei, kam aber nicht von selbst zurück; die App zeigt die Schaltfläche zum Zurückholen"
+
+msgctxt "roblosats-admin"
+msgid "hybrid"
+msgstr "hybrid"
+
+msgctxt "roblosats-admin"
+msgid "the Lightning buyer signs nothing on-chain"
+msgstr "der Lightning-Käufer signiert nichts on-chain"
+
+msgctxt "roblosats-admin"
+msgid "Automatic return"
+msgstr "Automatische Rückgabe"
+
+msgctxt "roblosats-admin"
+msgid "On-chain payouts not sent yet"
+msgstr "Noch nicht gesendete On-chain-Auszahlungen"
+
+msgctxt "roblosats-admin"
+msgid "Orders whose Lightning seller paid and whose buyer chose an on-chain payout, still queued more than 15 minutes after the trade finished: your wallet has not sent it (funds or node). The app shows it to the buyer as queued."
+msgstr "Orders mit Lightning-Verkäufer, deren Käufer eine On-chain-Auszahlung gewählt hat und die mehr als 15 Minuten nach Abschluss noch in der Warteschlange stehen: deine Wallet hat sie nicht gesendet (Guthaben oder Node). Die App zeigt sie dem Käufer als wartend."
+
+msgctxt "roblosats-admin"
+msgid "Address"
+msgstr "Adresse"
+
+msgctxt "roblosats-admin"
+msgid "Queued since"
+msgstr "Wartend seit"

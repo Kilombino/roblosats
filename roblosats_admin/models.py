@@ -11,6 +11,7 @@ EVENT_FIELDS = (
     "on_dispute",
     "on_dispute_chat",
     "on_coordinator_message",
+    "on_bond_manual",
 )
 
 
@@ -27,6 +28,7 @@ class TelegramAlerts(models.Model):
     on_dispute = models.BooleanField(default=False)
     on_dispute_chat = models.BooleanField(default=False)
     on_coordinator_message = models.BooleanField(default=False)
+    on_bond_manual = models.BooleanField(default=False)  # 0.9.7
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

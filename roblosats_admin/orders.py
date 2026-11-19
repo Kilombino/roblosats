@@ -86,6 +86,9 @@ def onchain_payout(tx):
         "url": disputes._url("admin:api_onchainpayment_change", tx.pk),
         "address": tx.address or "",
         "txid": tx.txid or "",
+        # 0.9.7: what the node says of it, and a link to the explorer
+        "link": onchain.tx_link(tx.txid),
+        "chain": onchain.status_text(tx.txid),
         "mining_fee": disputes.fmt_sats(tx.mining_fee_sats)
         if tx.mining_fee_sats
         else "",
@@ -199,7 +202,7 @@ def _context(order_admin, request, order):
             else _("the maker sells sats")
         ),
         "amount": disputes.amount_text(order),
-        "currency": str(order.currency) if order.currency else "",
+        "currency": disputes.currency_text(order),
         "method": order.payment_method,
         "sats": disputes.fmt_sats(sats) if sats else "?",
         "spamcoin_sats": disputes.fmt_sats(order.spamcoin_sats)

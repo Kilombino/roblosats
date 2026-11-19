@@ -144,6 +144,17 @@ def fmt_sats(n):
     return f"{int(n):,}".replace(",", " ") if n is not None else "?"
 
 
+SPAMCOIN = 1000  # currency 1000: Spamcoin (SHA-256 chain); "BTC" is the BLAKE2b chain
+
+
+def currency_text(order):
+    """The order's currency as the admin shows it: "Spamcoin" for 1000, which the shared
+    currency table still calls "BTC" (0.9.7: Spamcoin orders are always in 1000)."""
+    if not getattr(order, "currency_id", None):
+        return ""
+    return "Spamcoin" if order.currency_id == SPAMCOIN else str(order.currency)
+
+
 def amount_text(order):
     if order.has_range and order.amount is None:
         return f"{order.min_amount:g}–{order.max_amount:g}"
@@ -819,7 +830,7 @@ def _context(order_admin, request, order, confirm=None):
             else _("the maker sells sats")
         ),
         "amount": amount,
-        "currency": str(order.currency) if order.currency else "",
+        "currency": currency_text(order),
         "method": order.payment_method,
         "sats": fmt_sats(order.last_satoshis or order.satoshis or order.t0_satoshis),
         "premium": f"{float(order.premium):g}" if order.premium is not None else "0",
@@ -841,7 +852,8 @@ def _context(order_admin, request, order, confirm=None):
         "log": render_log(order.logs, role_by_nick),
         "escrow": _payment(order.trade_escrow),
         "payout": _payment(order.payout) if not order.is_swap else None,
-        "payout_tx": order.payout_tx if order.is_swap else None,
+        "payout_tx": _onchain_payout(order) if order.is_swap else None,
+        "onchain": _onchain_section(order),
         "fiat_sent": order.is_fiat_sent,
         "can_change": order_admin.has_change_permission(request, order),
         "languages": _languages(request),
@@ -851,6 +863,22 @@ def _context(order_admin, request, order, confirm=None):
 def _require_staff(request):
     if not (request.user.is_active and request.user.is_staff):
         raise PermissionDenied
+
+
+def _onchain_payout(order):
+    from roblosats_admin import orders
+
+    return orders.onchain_payout(order.payout_tx)
+
+
+def _onchain_section(order):
+    """0.9.7: the order page's on-chain section (bonds, escrow, release, automatic returns)."""
+    try:
+        from roblosats_admin import onchain
+
+        return onchain.order_section(order)
+    except Exception:  # noqa: BLE001 (never break the dispute page)
+        return None
 
 
 def dispute_view(order_admin, request, order_id):
@@ -951,7 +979,7 @@ def disputes_view(order_admin, request):
             "amount": f"{o.amount:f}".rstrip("0").rstrip(".")
             if o.amount is not None
             else "?",
-            "currency": str(o.currency) if o.currency else "",
+            "currency": currency_text(o),
             "method": o.payment_method,
             "status": ORDER_STATUS.get(o.status, o.get_status_display()),
             "buyer": r["buyer"].username if r["buyer"] else "?",

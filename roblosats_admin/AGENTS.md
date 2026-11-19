@@ -108,3 +108,17 @@ It patches the already-registered `api` admin classes in `ready()` instead of ed
 `python manage.py test roblosats_admin` in a container built from `Dockerfile.roblosats`
 (the plain upstream settings do not install this app). `CatalogTest` checks that the nine
 `.po` files carry the same strings, all translated, with the same placeholders.
+
+## 0.9.5–0.9.7 additions (`onchain.py`, `payouts.py`, `alerts.py`)
+- The on-chain section is the partial `_onchain.html`, on the order page AND the dispute page.
+  Escrow: `release_path` (seller's leaf / MuSig2 / can sign alone), `release_status` and the
+  payout's `chain` status from `api.order_summary.tx_status` (node, cached), `hybrid_plan`.
+  Bonds: `auto_return` text (`auto_return_text`: not set / not signed / signed / sent by itself /
+  not sent → by hand). "Sent by itself" compares `spend_txid` with the txid of the stored return.
+- Flag "release waits for the seller's signature (one signature)" when `seller_leaf` and
+  `leaf_release_ok`; otherwise the MuSig2 "signature missing" flag.
+- `disputes.currency_text`: currency 1000 is shown as "Spamcoin" (the shared table says BTC).
+- Failed payouts ("now") lists swaps whose `payout_tx` is still Queued 15 min after the trade
+  (`queued_onchain`): the order is already Successful, so it never reaches status 15.
+- Telegram event `bond_manual` (`on_bond_manual`, migration 0002): queued from
+  `api.escrow.bonds._broadcast_auto_return` when the signed return could not be sent.
