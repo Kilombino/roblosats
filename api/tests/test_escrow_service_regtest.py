@@ -134,7 +134,10 @@ class EscrowServiceRegtest(TransactionTestCase):
         self.assertGreaterEqual(info["confirmations"], 1)
         paid = [round(o["value"] * 1e8) for o in info["vout"] if o["scriptPubKey"]["hex"] == buyer_spk.hex()]
         self.assertEqual(len(paid), 1)
-        self.assertGreater(paid[0], 1_000_000 - 2_000)
+        # the whole escrow less the release's mining fee at its rate (0.9.7: the lab's fee rate
+        # grew past the old fixed 2,000-sat margin)
+        escrow.refresh_from_db()
+        self.assertEqual(paid[0], 1_000_000 - math.ceil(math.ceil(info["vsize"]) * escrow.release_fee_rate))
 
     def test_cooperative_release(self):
         self._trade(dispute=False)

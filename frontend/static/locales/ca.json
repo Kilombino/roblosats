@@ -1245,5 +1245,6 @@
   "Your bond comes back here by itself when it is free. Empty: your payout address.": "La teva fiança torna aquí sola quan quedi lliure. Buit: la teva adreça de cobrament.",
   "the automatic return does not spend exactly our bond": "el retorn automàtic no gasta exactament la nostra fiança",
   "the automatic return does not pay our address": "el retorn automàtic no paga a la nostra adreça",
-  "the automatic return fee is too high": "la comissió del retorn automàtic és massa alta"
+  "the automatic return fee is too high": "la comissió del retorn automàtic és massa alta",
+  "When your bond is free, it goes back by itself to {{address}}.": "Quan la teva fiança quedi lliure, torna sola a {{address}}."
 }

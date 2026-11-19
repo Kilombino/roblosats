@@ -1110,6 +1110,24 @@ export const OnchainEscrowPrompt = ({
           </Typography>
         </Grid>
       ) : null}
+      {/* 0.9.7: the bond goes back by itself once it is free */}
+      {data.bond_auto_return_signed &&
+      [BOND.SIGN, BOND.LOCKED].includes(data.bond_status_code ?? -1) &&
+      data.bond_auto_return_address ? (
+        <Grid>
+          <Typography
+            variant='caption'
+            align='center'
+            color='text.secondary'
+            sx={{ display: 'block', wordBreak: 'break-all' }}
+            data-testid='bond-auto-return'
+          >
+            {t('When your bond is free, it goes back by itself to {{address}}.', {
+              address: data.bond_auto_return_address,
+            })}
+          </Typography>
+        </Grid>
+      ) : null}
       {error ? (
         <Grid>
           <Alert severity='error'>{error}</Alert>

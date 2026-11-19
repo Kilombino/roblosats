@@ -1122,5 +1122,6 @@
   "Your bond comes back here by itself when it is free. Empty: your payout address.": "Your bond comes back here by itself when it is free. Empty: your payout address.",
   "the automatic return does not spend exactly our bond": "the automatic return does not spend exactly our bond",
   "the automatic return does not pay our address": "the automatic return does not pay our address",
-  "the automatic return fee is too high": "the automatic return fee is too high"
+  "the automatic return fee is too high": "the automatic return fee is too high",
+  "When your bond is free, it goes back by itself to {{address}}.": "When your bond is free, it goes back by itself to {{address}}."
 }
