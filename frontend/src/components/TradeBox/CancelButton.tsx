@@ -6,6 +6,7 @@ import { LoadingButton } from '@mui/lab';
 import CancelOrderDialog from '../Dialogs/CancelOrder';
 import { UseFederationStoreType, FederationContext } from '../../contexts/FederationContext';
 import { systemClient } from '../../services/System';
+import { isOnchainEscrow } from './onchainEscrowSteps';
 
 interface CancelButtonProps {
   order: Order | null;
@@ -34,6 +35,15 @@ const CancelButton = ({
   const noBond =
     Boolean(order?.is_maker && order?.status === 0) ||
     Boolean(order?.is_taker && order?.status === 3);
+
+  // 0.9.8: an onchain bond (not a Lightning take of an onchain order) is never lost by
+  // cancelling before it confirms: it comes back from the order page
+  const onchainBond = Boolean(
+    order &&
+    isOnchainEscrow(order) &&
+    !(order as unknown as { take_lightning?: boolean }).take_lightning &&
+    !order.bond_invoice,
+  );
 
   const copyOrderUrl = () => {
     const coordinator = federation.getCoordinator(order?.shortAlias ?? '');
@@ -94,6 +104,7 @@ const CancelButton = ({
           setOpenCancelWarning(false);
         }}
         onAccept={onClickCancel}
+        onchainBond={onchainBond}
       />
     </Box>
   );

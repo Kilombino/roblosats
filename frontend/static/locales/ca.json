@@ -1256,5 +1256,6 @@
   "Your take of this order is over.": "La teva presa d'aquesta ordre ha acabat.",
   "Your bond was never at stake: it is not penalized.": "La teva fiança mai no ha estat en joc: no es penalitza.",
   "Another robot took this order first": "Un altre robot ha pres aquesta ordre abans",
-  "Your take of this order is over": "La teva presa d'aquesta ordre ha acabat"
+  "Your take of this order is over": "La teva presa d'aquesta ordre ha acabat",
+  "If you already paid the bond, you will be able to take it back from this order once it has 1 confirmation (Get my bond back).": "Si ja has pagat la fiança, la podràs recuperar des d'aquesta ordre quan tingui 1 confirmació (Recupera la teva fiança)."
 }

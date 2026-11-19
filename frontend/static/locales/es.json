@@ -1256,5 +1256,6 @@
   "Your take of this order is over.": "Tu toma de esta orden ha terminado.",
   "Your bond was never at stake: it is not penalized.": "Tu fianza nunca estuvo en juego: no se penaliza.",
   "Another robot took this order first": "Otro robot tomó esta orden antes",
-  "Your take of this order is over": "Tu toma de esta orden ha terminado"
+  "Your take of this order is over": "Tu toma de esta orden ha terminado",
+  "If you already paid the bond, you will be able to take it back from this order once it has 1 confirmation (Get my bond back).": "Si ya pagaste la fianza, podrás recuperarla desde esta orden cuando tenga 1 confirmación (Recupera tu fianza)."
 }

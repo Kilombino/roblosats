@@ -13,9 +13,16 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onAccept: () => void;
+  /** 0.9.8: the bond is an onchain payment (not a Lightning hold invoice) */
+  onchainBond?: boolean;
 }
 
-const CancelOrderDialog = ({ open, onClose, onAccept }: Props): React.JSX.Element => {
+const CancelOrderDialog = ({
+  open,
+  onClose,
+  onAccept,
+  onchainBond = false,
+}: Props): React.JSX.Element => {
   const { t } = useTranslation();
 
   return (
@@ -24,9 +31,13 @@ const CancelOrderDialog = ({ open, onClose, onAccept }: Props): React.JSX.Elemen
 
       <DialogContent>
         <DialogContentText>
-          {t(
-            'If the order is cancelled now but you already tried to pay the invoice, you might loose your bond.',
-          )}
+          {onchainBond
+            ? t(
+                'If you already paid the bond, you will be able to take it back from this order once it has 1 confirmation (Get my bond back).',
+              )
+            : t(
+                'If the order is cancelled now but you already tried to pay the invoice, you might loose your bond.',
+              )}
         </DialogContentText>
       </DialogContent>
 

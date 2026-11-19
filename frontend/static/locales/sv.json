@@ -1133,5 +1133,6 @@
   "Your take of this order is over.": "Your take of this order is over.",
   "Your bond was never at stake: it is not penalized.": "Your bond was never at stake: it is not penalized.",
   "Another robot took this order first": "Another robot took this order first",
-  "Your take of this order is over": "Your take of this order is over"
+  "Your take of this order is over": "Your take of this order is over",
+  "If you already paid the bond, you will be able to take it back from this order once it has 1 confirmation (Get my bond back).": "If you already paid the bond, you will be able to take it back from this order once it has 1 confirmation (Get my bond back)."
 }

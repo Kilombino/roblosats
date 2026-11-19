@@ -234,3 +234,34 @@ class SameBlock(RaceBase):
         self.assertEqual(b1.status, OnchainBond.Status.LOCKED)  # the contract's bond
         self.assertEqual(b2.status, OnchainBond.Status.RETURNABLE)  # free, never penalized
         notify.delay.assert_called_once_with(order_id=self.order.id, message=f"take_lost:{second.id}")
+
+
+class CancelBeforeConfirmation(RaceBase):
+    """0.9.8: the cancel dialog says an onchain bond already paid comes back from the order
+    once it confirms. The pretaker cancels while its bond waits in the mempool."""
+
+    def test_pretaker_cancel_frees_its_unconfirmed_bond(self):
+        from api.escrow import bonds
+        from api.logics import Logics
+
+        self.order.status = Order.Status.PUB
+        self.order.taker = None
+        self.order.save(update_fields=["status", "taker"])
+        self.take.expires_at = timezone.now() + timezone.timedelta(hours=1)
+        self.take.save(update_fields=["expires_at"])
+        self.bond.status = OnchainBond.Status.FUNDING
+        self.bond.save(update_fields=["status"])
+        with patch("api.escrow.bonds.refresh", side_effect=lambda b, *a, **k: b):
+            ok, _ = Logics.cancel_order(self.order, self.loser)
+        self.assertTrue(ok)
+        self.bond.refresh_from_db()
+        self.assertEqual(self.bond.status, OnchainBond.Status.ABANDONED)
+        coins = [{"txid": "ab" * 32, "vout": 0, "amount": 0.0003, "address": self.bond.address}]
+        with patch("api.escrow.bonds.service.rpc", return_value=coins):
+            bonds.recover_abandoned()
+        self.bond.refresh_from_db()
+        self.assertEqual(self.bond.status, OnchainBond.Status.RETURNABLE)
+        d = flow.lost_take_view(self.order, self.loser)
+        self.assertTrue(d["lost_take"])
+        self.assertFalse(d["lost_take_taken"])
+        self.assertEqual(d["bond_status_code"], OnchainBond.Status.RETURNABLE)
