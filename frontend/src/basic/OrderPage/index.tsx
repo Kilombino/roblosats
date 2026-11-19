@@ -158,7 +158,9 @@ const OrderPageContent = (): React.JSX.Element => {
         }}
         onClickGenerateRobot={() => garage.generateRobot(federation)}
       />
-      {!currentOrder?.maker && !currentOrder?.bad_request && <CircularProgress />}
+      {!currentOrder?.maker && !currentOrder?.bad_request && !currentOrder?.lost_take && (
+        <CircularProgress />
+      )}
 
       {currentOrder?.bad_request && currentOrder.status !== 5 ? (
         <>
@@ -181,7 +183,18 @@ const OrderPageContent = (): React.JSX.Element => {
           )}
         </>
       ) : null}
-      {currentOrder?.maker && (!currentOrder.bad_request || currentOrder.status === 5) ? (
+      {currentOrder?.lost_take && !currentOrder.bad_request ? (
+        // 0.9.8: lost the race for this order: only our bond, to take it back
+        <Paper
+          elevation={12}
+          style={{ width: '21em', maxHeight: `${maxHeight}em`, overflow: 'auto' }}
+        >
+          {tradeBoxSpace}
+        </Paper>
+      ) : null}
+      {currentOrder?.maker &&
+      !currentOrder.lost_take &&
+      (!currentOrder.bad_request || currentOrder.status === 5) ? (
         currentOrder.is_participant ? (
           windowSize.width > doublePageWidth ? (
             // DOUBLE PAPER VIEW

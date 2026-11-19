@@ -71,7 +71,7 @@ interface Props {
   onSignedAddress: (address: string, then: (signed: string) => void) => void;
 }
 
-const BOND = { FUNDING: 0, SIGN: 1, LOCKED: 2, RETURNABLE: 5 };
+const BOND = { FUNDING: 0, SIGN: 1, LOCKED: 2, RETURNABLE: 5, RETURNED: 6, ABANDONED: 7 };
 const ESCROW = { KEYS: 0, FUNDING: 1, MEMPOOL: 2, LOCKED: 3, RELEASING: 4 };
 
 const EXPLORER = 'https://mempool.kilombino.com/tx/';
@@ -663,6 +663,16 @@ export const OnchainEscrowPrompt = ({
     );
   };
 
+  // 0.9.8: while an onchain taker waits for its confirmation, a faster taker can still win
+  const raceNotice = (): React.JSX.Element | null =>
+    order.status === 3 ? (
+      <Alert severity='warning' data-testid='take-race-notice'>
+        {t(
+          'Until your bond has 1 confirmation, another robot can still take this order first (a Lightning bond locks in seconds). If that happens you lose nothing: you get your bond back from this order.',
+        )}
+      </Alert>
+    ) : null;
+
   const afterPayingNotice = (what: 'bond' | 'deposit'): React.JSX.Element => (
     <Alert severity='info'>
       {what === 'bond'
@@ -720,6 +730,7 @@ export const OnchainEscrowPrompt = ({
           <TxLine label={t('Your bond')} txid={data.bond_mempool_txid} />
           <LowFeeWarning rate={data.bond_mempool_fee_rate} hint={data.onchain_fee_hint} />
           {afterPayingNotice('bond')}
+          {raceNotice()}
         </>,
       );
     else if (data.bond_status_code === BOND.FUNDING && data.bond_address)
@@ -778,6 +789,7 @@ export const OnchainEscrowPrompt = ({
             </Grid>
           ) : null}
           <Grid>{afterPayingNotice('bond')}</Grid>
+          {raceNotice() ? <Grid>{raceNotice()}</Grid> : null}
           {data.bond_mempool_txid ? (
             <Grid>
               <Alert severity='warning'>
@@ -1133,6 +1145,82 @@ export const OnchainEscrowPrompt = ({
           <Alert severity='error'>{error}</Alert>
         </Grid>
       ) : null}
+    </Grid>
+  );
+};
+
+/** 0.9.8: this robot's onchain take of the order is over (another taker locked first, or its
+ * take expired). The coordinator shows only its bond: follow it and take it back. */
+export const LostTakePrompt = (props: Props): React.JSX.Element => {
+  const { t } = useTranslation();
+  const data = props.order as unknown as EscrowOrderData & {
+    lost_take_taken?: boolean;
+    bond_spend_txid?: string;
+  };
+  const code = data.bond_status_code ?? -1;
+  let detail: React.JSX.Element;
+  if (code === BOND.RETURNABLE) {
+    detail = <OnchainEscrowPrompt {...props} />;
+  } else if (code === BOND.RETURNED) {
+    detail = (
+      <Grid container spacing={1} sx={{ flexDirection: 'column', alignItems: 'center' }}>
+        <Grid>
+          <Typography variant='body2' align='center'>
+            {t('Your bond went back to you.')}
+          </Typography>
+        </Grid>
+        {data.bond_spend_txid ? (
+          <Grid>
+            <TxLine label={t('Bond return')} txid={data.bond_spend_txid} />
+          </Grid>
+        ) : null}
+      </Grid>
+    );
+  } else if (data.bond_mempool_txid || code === BOND.SIGN || data.bond_txid) {
+    detail = (
+      <Grid container spacing={1} sx={{ flexDirection: 'column', alignItems: 'center' }}>
+        <Grid>
+          <Typography variant='body2' align='center'>
+            {t(
+              'Your bond payment is waiting for 1 confirmation. Then you can get it back here: keep this order open.',
+            )}
+          </Typography>
+        </Grid>
+        <Grid>
+          <CircularProgress />
+        </Grid>
+        {data.bond_mempool_txid ? (
+          <Grid>
+            <TxLine label={t('Your bond')} txid={data.bond_mempool_txid} />
+          </Grid>
+        ) : null}
+      </Grid>
+    );
+  } else {
+    detail = (
+      <Typography variant='body2' align='center'>
+        {t('You had not sent your bond, so you lose nothing. Do not send it now.')}
+      </Typography>
+    );
+  }
+  return (
+    <Grid
+      container
+      spacing={1}
+      sx={{ flexDirection: 'column', alignItems: 'center', padding: 1 }}
+      data-testid='lost-take'
+    >
+      <Grid>
+        <Alert severity='info'>
+          {data.lost_take_taken
+            ? t(
+                'Another robot took this order before you: its bond locked first (a Lightning bond locks in seconds, an onchain bond needs a confirmation).',
+              )
+            : t('Your take of this order is over.')}{' '}
+          {t('Your bond was never at stake: it is not penalized.')}
+        </Alert>
+      </Grid>
+      <Grid>{detail}</Grid>
     </Grid>
   );
 };

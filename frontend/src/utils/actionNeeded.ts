@@ -26,6 +26,7 @@ export interface ActionOrder {
   escrow_funding_owed?: number;
   escrow_funding_confirmed_sats?: number;
   escrow_funding_mempool_sats?: number;
+  lost_take?: boolean;
 }
 
 const BOND_SIGN = 1;
@@ -40,6 +41,9 @@ export const actionNeeded = (o: ActionOrder | null | undefined): string | null =
   const st = o.status;
   const what = o.escrow_waiting_what ?? '';
   const mine = o.escrow_waiting_for === 'you';
+
+  // 0.9.8: another taker locked first: only our bond is left here
+  if (o.lost_take) return o.bond_status_code === BOND_RETURNABLE ? 'Get your sats back' : null;
 
   // the app signs by itself, but only while the order is open
   if (onchain && mine && what.endsWith('_signature'))

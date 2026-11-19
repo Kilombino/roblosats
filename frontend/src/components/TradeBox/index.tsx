@@ -43,7 +43,7 @@ import { type ActionOrder } from '../../utils/actionNeeded';
 import FinalSummary, { type FinalSummaryData } from '../FinalSummary';
 import { Bolt } from '@mui/icons-material';
 import { signCleartextMessage } from '../../pgp';
-import OnchainEscrowPrompt, { type EscrowAction } from './Prompts/OnchainEscrow';
+import OnchainEscrowPrompt, { LostTakePrompt, type EscrowAction } from './Prompts/OnchainEscrow';
 import BondLeftoverBox, { hasBondLeftover } from './Prompts/BondLeftover';
 import {
   hybridBondStep,
@@ -414,6 +414,24 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
     const status = order.status;
     const isBuyer = order.is_buyer;
     const isMaker = order.is_maker;
+
+    // 0.9.8: another taker locked first (or this take expired): only our bond is left here
+    if (order.lost_take) {
+      baseContract.title = order.lost_take_taken
+        ? 'Another robot took this order first'
+        : 'Your take of this order is over';
+      baseContract.titleColor = 'warning';
+      baseContract.bondStatus = 'hide';
+      baseContract.prompt = () => (
+        <LostTakePrompt
+          order={order}
+          token={garage.getSlot()?.token ?? undefined}
+          onAction={escrowAction}
+          onSignedAddress={signAddress}
+        />
+      );
+      return baseContract;
+    }
 
     if ((isOnchainEscrow(order) && onchainEscrowStep(order)) || hybridBondStep(order)) {
       baseContract.title = onchainEscrowTitle(order);
@@ -909,7 +927,7 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
           <></>
         )}
         <CancelButton
-          order={currentOrder ?? null}
+          order={currentOrder?.lost_take ? null : (currentOrder ?? null)}
           onClickCancel={cancel}
           openCancelDialog={() => {
             setOpen({ ...closeAll, confirmCancel: true });

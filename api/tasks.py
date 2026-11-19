@@ -604,6 +604,9 @@ def send_notification(order_id=None, chat_message_id=None, message=None):
     elif message == "lightning_failed":
         notifications.lightning_failed(order)
 
+    elif message and message.startswith("take_lost:"):
+        notifications.take_lost(order, int(message.split(":")[1]))
+
     elif message and message.startswith("onchain_sign:"):
         _, user_id, what = message.split(":")[:3]
         notifications.onchain_sign_needed(order, int(user_id), what)

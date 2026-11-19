@@ -80,7 +80,7 @@ export interface TradeCoordinatorSummary {
 // Lightning take was cancelled, and the onchain take that followed showed an empty hold invoice
 // ("Lock 0 Sats") instead of the onchain bond.
 const STALE_KEYS =
-  /^(bond_|escrow_|onchain_|take_|lightning_take_swap$|hybrid_onchain_maker_bond$|swap_surcharge_)/;
+  /^(bond_|escrow_|onchain_|take_|lost_take|lightning_take_swap$|hybrid_onchain_maker_bond$|swap_surcharge_)/;
 
 /** What a previous take of this order left behind in the app (0.9.3). */
 const TAKE_KEYS = ['take_lightning', 'take_expires_at', 'bond_invoice', 'bond_satoshis'];
@@ -231,6 +231,11 @@ class Order {
   bad_address?: string = '';
   bad_invoice?: string = '';
   bad_statement?: string = '';
+  /** 0.9.8: this robot's onchain take is over (another taker locked first, or it expired):
+   * the coordinator shows it only its bond, to take it back. */
+  lost_take?: boolean;
+  lost_take_taken?: boolean;
+  lost_take_done?: boolean;
 
   /** Keys the last full order page from the coordinator brought (rl31-beta20). */
   private serverKeys: string[] = [];

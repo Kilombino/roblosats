@@ -251,7 +251,9 @@ class Slot {
           this.activeOrder?.bad_request !== previousBadRequest;
         if (
           this.activeOrder?.bad_request ||
-          [4, 5, 12, 14, 17, 18].includes(this.activeOrder.status)
+          [4, 5, 12, 14, 17, 18].includes(this.activeOrder.status) ||
+          // 0.9.8: lost the race for this order and its bond is settled: nothing left to follow
+          this.activeOrder?.lost_take_done === true
         ) {
           this.lastOrder = this.activeOrder;
           this.lastOrderStatusKnown = this.hasOrderDetails(this.lastOrder);

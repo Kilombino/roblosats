@@ -1246,5 +1246,15 @@
   "the automatic return does not spend exactly our bond": "el retorn automàtic no gasta exactament la nostra fiança",
   "the automatic return does not pay our address": "el retorn automàtic no paga a la nostra adreça",
   "the automatic return fee is too high": "la comissió del retorn automàtic és massa alta",
-  "When your bond is free, it goes back by itself to {{address}}.": "Quan la teva fiança quedi lliure, torna sola a {{address}}."
+  "When your bond is free, it goes back by itself to {{address}}.": "Quan la teva fiança quedi lliure, torna sola a {{address}}.",
+  "Until your bond has 1 confirmation, another robot can still take this order first (a Lightning bond locks in seconds). If that happens you lose nothing: you get your bond back from this order.": "Fins que la teva fiança tingui 1 confirmació, un altre robot encara pot prendre aquesta ordre abans (una fiança Lightning es bloqueja en segons). Si passa, no perds res: recuperes la teva fiança des d'aquesta ordre.",
+  "Your bond went back to you.": "La teva fiança ja t'ha tornat.",
+  "Bond return": "Devolució de la fiança",
+  "Your bond payment is waiting for 1 confirmation. Then you can get it back here: keep this order open.": "El pagament de la teva fiança espera 1 confirmació. Després la podràs recuperar aquí: deixa aquesta ordre oberta.",
+  "You had not sent your bond, so you lose nothing. Do not send it now.": "No havies enviat la teva fiança, així que no perds res. No l'enviïs ara.",
+  "Another robot took this order before you: its bond locked first (a Lightning bond locks in seconds, an onchain bond needs a confirmation).": "Un altre robot ha pres aquesta ordre abans que tu: la seva fiança s'ha bloquejat primer (una fiança Lightning es bloqueja en segons, una on-chain necessita una confirmació).",
+  "Your take of this order is over.": "La teva presa d'aquesta ordre ha acabat.",
+  "Your bond was never at stake: it is not penalized.": "La teva fiança mai no ha estat en joc: no es penalitza.",
+  "Another robot took this order first": "Un altre robot ha pres aquesta ordre abans",
+  "Your take of this order is over": "La teva presa d'aquesta ordre ha acabat"
 }

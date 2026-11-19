@@ -1246,5 +1246,15 @@
   "the automatic return does not spend exactly our bond": "la devolución automática no gasta exactamente nuestra fianza",
   "the automatic return does not pay our address": "la devolución automática no paga a nuestra dirección",
   "the automatic return fee is too high": "la comisión de la devolución automática es demasiado alta",
-  "When your bond is free, it goes back by itself to {{address}}.": "Cuando tu fianza quede libre, vuelve sola a {{address}}."
+  "When your bond is free, it goes back by itself to {{address}}.": "Cuando tu fianza quede libre, vuelve sola a {{address}}.",
+  "Until your bond has 1 confirmation, another robot can still take this order first (a Lightning bond locks in seconds). If that happens you lose nothing: you get your bond back from this order.": "Hasta que tu fianza tenga 1 confirmación, otro robot todavía puede tomar esta orden antes (una fianza Lightning se bloquea en segundos). Si pasa, no pierdes nada: recuperas tu fianza desde esta orden.",
+  "Your bond went back to you.": "Tu fianza ya volvió a ti.",
+  "Bond return": "Devolución de la fianza",
+  "Your bond payment is waiting for 1 confirmation. Then you can get it back here: keep this order open.": "El pago de tu fianza espera 1 confirmación. Después podrás recuperarla aquí: deja esta orden abierta.",
+  "You had not sent your bond, so you lose nothing. Do not send it now.": "No habías enviado tu fianza, así que no pierdes nada. No la envíes ahora.",
+  "Another robot took this order before you: its bond locked first (a Lightning bond locks in seconds, an onchain bond needs a confirmation).": "Otro robot tomó esta orden antes que tú: su fianza se bloqueó primero (una fianza Lightning se bloquea en segundos, una on-chain necesita una confirmación).",
+  "Your take of this order is over.": "Tu toma de esta orden ha terminado.",
+  "Your bond was never at stake: it is not penalized.": "Tu fianza nunca estuvo en juego: no se penaliza.",
+  "Another robot took this order first": "Otro robot tomó esta orden antes",
+  "Your take of this order is over": "Tu toma de esta orden ha terminado"
 }

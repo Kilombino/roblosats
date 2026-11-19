@@ -1123,5 +1123,15 @@
   "the automatic return does not spend exactly our bond": "the automatic return does not spend exactly our bond",
   "the automatic return does not pay our address": "the automatic return does not pay our address",
   "the automatic return fee is too high": "the automatic return fee is too high",
-  "When your bond is free, it goes back by itself to {{address}}.": "When your bond is free, it goes back by itself to {{address}}."
+  "When your bond is free, it goes back by itself to {{address}}.": "When your bond is free, it goes back by itself to {{address}}.",
+  "Until your bond has 1 confirmation, another robot can still take this order first (a Lightning bond locks in seconds). If that happens you lose nothing: you get your bond back from this order.": "Until your bond has 1 confirmation, another robot can still take this order first (a Lightning bond locks in seconds). If that happens you lose nothing: you get your bond back from this order.",
+  "Your bond went back to you.": "Your bond went back to you.",
+  "Bond return": "Bond return",
+  "Your bond payment is waiting for 1 confirmation. Then you can get it back here: keep this order open.": "Your bond payment is waiting for 1 confirmation. Then you can get it back here: keep this order open.",
+  "You had not sent your bond, so you lose nothing. Do not send it now.": "You had not sent your bond, so you lose nothing. Do not send it now.",
+  "Another robot took this order before you: its bond locked first (a Lightning bond locks in seconds, an onchain bond needs a confirmation).": "Another robot took this order before you: its bond locked first (a Lightning bond locks in seconds, an onchain bond needs a confirmation).",
+  "Your take of this order is over.": "Your take of this order is over.",
+  "Your bond was never at stake: it is not penalized.": "Your bond was never at stake: it is not penalized.",
+  "Another robot took this order first": "Another robot took this order first",
+  "Your take of this order is over": "Your take of this order is over"
 }

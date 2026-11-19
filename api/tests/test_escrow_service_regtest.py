@@ -1153,3 +1153,221 @@ class EscrowHybridAutoReturnRegtest(EscrowHybridRegtest):
         conf, paid = _paid_to(bond.spend_txid, self.return_addresses[buyer.id])
         self.assertGreaterEqual(conf, 1)
         self.assertGreater(paid, bond.value - 3_000)
+
+
+class EscrowTakeRaceRegtest(EscrowHybridRegtest):
+    """0.9.8: an onchain taker waits for the confirmation of its bond while another taker locks
+    first (a Lightning bond locks in seconds). The loser's bond is freed at once, never
+    penalized; its robot is told, and the order page shows it only its bond, to take it back.
+    Before 0.9.8 the bond stayed "waiting" (case B: forever) and the page answered 403."""
+
+    test_case_a_lightning_buyer_to_successful = None
+    test_case_a_small_order_one_minimum_in_total = None
+    test_case_b_proxy_return_and_penalty_onchain = None
+
+    def setUp(self):
+        from unittest.mock import patch
+
+        super().setUp()
+        self.notify = patch("api.tasks.send_notification").start()
+        self.patches.append(self.notify)
+
+    def tearDown(self):
+        from unittest.mock import patch
+
+        patch.stopall()
+
+    def _call(self, method, order, user, body=None):
+        from rest_framework.test import APIRequestFactory, force_authenticate
+
+        from api.views import OrderView
+
+        f = APIRequestFactory()
+        if method == "get":
+            req = f.get(f"/api/order/?order_id={order.id}")
+            view = OrderView.as_view({"get": "get"})
+        else:
+            req = f.post(f"/api/order/?order_id={order.id}", body, format="json")
+            view = OrderView.as_view({"post": "take_update_confirm_dispute_cancel"})
+        force_authenticate(req, user=user)
+        return view(req)
+
+    def _onchain_take(self, order, confirm=False):
+        """A taker that sends its onchain bond (left in the mempool unless confirm)."""
+        from api.escrow import flow
+        from api.logics import Logics
+
+        loser = _user()
+        Logics.take(order, loser)
+        keys = self._keys(order, f"loser-{loser.id}")
+        flow.action(order, loser, "bond_key", {"bond_pubkey": pubkey(keys["bond"]).hex()})
+        d = flow.order_data(order, loser)
+        _faucet("sendtoaddress", d["bond_address"], d["bond_required_sats"] / 1e8)
+        if confirm:
+            _mine()
+        flow.advance(order)
+        return loser, keys, flow.bond_of(order, "taker", owner=loser)
+
+    def _get_bond_back(self, order, loser, keys, bond):
+        from api.escrow import bonds
+        from api.models import OnchainBond
+
+        back = _faucet("getnewaddress", "", "bech32m")
+        r = self._call("post", order, loser, {"action": "bond_return", "escrow": {"address": back}})
+        self.assertEqual(r.status_code, 200, r.data)
+        self.assertTrue(r.data["lost_take"])
+        self.assertTrue(r.data["bond_return_tx"])
+        bond.refresh_from_db()
+        tx = Transaction.parse(bytes.fromhex(bond.return_tx))
+        msgs = bonds._coin_messages(bond, tx, bonds.return_coins_of(bond))
+        sigs = [with_hashtype(schnorr_sign(keys["bond"], m)).hex() for m in msgs]
+        r = self._call("post", order, loser, {"action": "bond_return_signature", "escrow": {"signatures": sigs}})
+        self.assertEqual(r.status_code, 200, r.data)
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, OnchainBond.Status.RETURNED)
+        _mine()
+        conf, paid = _paid_to(bond.spend_txid, back)
+        self.assertGreaterEqual(conf, 1)
+        self.assertGreater(paid, bond.required_sats * 0.8)  # minus the lab's mining fee
+        r = self._call("get", order, loser)
+        self.assertEqual(r.status_code, 200, r.data)
+        self.assertTrue(r.data["lost_take_done"])
+
+    def _race_in_the_mempool(self, maker_sells):
+        from api.escrow import bonds
+        from api.models import OnchainBond, TakeOrder
+
+        order, maker, ln_taker, km = self._make(maker_sells=maker_sells)
+        loser, keys, bond = self._onchain_take(order)
+        self.assertEqual(bond.status, OnchainBond.Status.FUNDING)
+        order = self._ln_take(order, ln_taker)
+        self.assertEqual(order.status, Order.Status.WF2)
+        self.assertEqual(order.taker, ln_taker)
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, OnchainBond.Status.ABANDONED)  # free, not penalized
+        self.assertFalse(bond.penalty_tx)
+        self.assertFalse(TakeOrder.objects.filter(order=order, taker=loser, expires_at__gt=timezone.now()).exists())
+        self.notify.delay.assert_any_call(order_id=order.id, message=f"take_lost:{loser.id}")
+        # the page: only its bond, waiting for the confirmation
+        r = self._call("get", order, loser)
+        self.assertEqual(r.status_code, 200, r.data)
+        self.assertTrue(r.data["lost_take"])
+        self.assertTrue(r.data["lost_take_taken"])
+        self.assertFalse(r.data["lost_take_done"])
+        self.assertTrue(r.data["bond_mempool_txid"])
+        self.assertNotIn("escrow_address", r.data)
+        self.assertNotIn("maker_nick", r.data)
+        # no new bond for this take
+        r = self._call("post", order, loser, {"action": "bond_key", "escrow": {"bond_pubkey": pubkey(keys["bond"]).hex()}})
+        self.assertEqual(r.status_code, 403, r.data)
+        # one confirmation later it is free to return
+        _mine()
+        bonds.recover_abandoned()
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, OnchainBond.Status.RETURNABLE)
+        r = self._call("get", order, loser)
+        self.assertEqual(r.data["bond_status_code"], OnchainBond.Status.RETURNABLE)
+        self._get_bond_back(order, loser, keys, bond)
+        return order
+
+    def test_case_a_loser_in_the_mempool_gets_its_bond_back(self):
+        order = self._race_in_the_mempool(maker_sells=True)
+        self.assertEqual(order.escrow_type, Order.EscrowTypes.ONCHAIN)
+
+    def test_case_b_loser_in_the_mempool_gets_its_bond_back(self):
+        # the order becomes a Lightning order: before 0.9.8 the loser's bond waited forever
+        order = self._race_in_the_mempool(maker_sells=False)
+        self.assertEqual(order.escrow_type, Order.EscrowTypes.LIGHTNING)
+
+    def test_loser_already_confirmed_is_free_at_once(self):
+        from api.models import OnchainBond
+
+        order, maker, ln_taker, km = self._make(maker_sells=True)
+        loser, keys, bond = self._onchain_take(order, confirm=True)
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, OnchainBond.Status.SIGN)  # its app had not signed yet
+        order = self._ln_take(order, ln_taker)
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, OnchainBond.Status.RETURNABLE)
+        self._get_bond_back(order, loser, keys, bond)
+
+    def test_loser_confirmed_but_unseen_is_free_at_once(self):
+        """Confirmed after the last advance: release_take_bond picks the coins up itself."""
+        from api.escrow import flow
+        from api.logics import Logics
+        from api.models import OnchainBond
+
+        order, maker, ln_taker, km = self._make(maker_sells=False)
+        loser = _user()
+        Logics.take(order, loser)
+        keys = self._keys(order, f"loser-{loser.id}")
+        flow.action(order, loser, "bond_key", {"bond_pubkey": pubkey(keys["bond"]).hex()})
+        d = flow.order_data(order, loser)
+        _faucet("sendtoaddress", d["bond_address"], d["bond_required_sats"] / 1e8)
+        _mine()
+        bond = flow.bond_of(order, "taker", owner=loser)
+        self.assertEqual(bond.status, OnchainBond.Status.FUNDING)
+        order = self._ln_take(order, ln_taker)
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, OnchainBond.Status.RETURNABLE)
+        self._get_bond_back(order, loser, keys, bond)
+
+    def test_two_onchain_takers_first_confirmed_wins(self):
+        from api.models import OnchainBond
+
+        order, maker, _, km = self._make(maker_sells=True)
+        slow, kslow, bslow = self._onchain_take(order)  # stays in the mempool
+        fast = _user()
+        from api.logics import Logics
+
+        Logics.take(order, fast)
+        self._pay_bond(order, fast, self._keys(order, f"fast-{fast.id}"))  # confirms, signs, locks
+        order.refresh_from_db()
+        self.assertEqual(order.taker, fast)
+        self.assertFalse(order.taker_lightning)
+        bslow.refresh_from_db()
+        # _pay_bond mined a block: the slow bond was picked up before being freed
+        self.assertEqual(bslow.status, OnchainBond.Status.RETURNABLE)
+        self.notify.delay.assert_any_call(order_id=order.id, message=f"take_lost:{slow.id}")
+        self._get_bond_back(order, slow, kslow, bslow)
+
+    def test_reverse_lightning_pretaker_untouched_when_onchain_wins(self):
+        """The Lightning pretaker that has not paid yet keeps its take (upstream: its hold
+        invoice is cancelled if it ever locks); no take_lost notice for it."""
+        from api.logics import Logics
+        from api.models import TakeOrder
+
+        order, maker, ln_pre, km = self._make(maker_sells=True)
+        Logics.take(order, ln_pre, lightning=True)
+        winner = _user()
+        Logics.take(order, winner)
+        self._pay_bond(order, winner, self._keys(order, f"w-{winner.id}"))
+        order.refresh_from_db()
+        self.assertEqual(order.taker, winner)
+        self.assertTrue(TakeOrder.objects.filter(order=order, taker=ln_pre, expires_at__gt=timezone.now()).exists())
+        for c in self.notify.delay.call_args_list:
+            self.assertNotEqual(c.kwargs.get("message"), f"take_lost:{ln_pre.id}")
+        # its page: the usual 403 of a taken order (it has no onchain bond here)
+        self.assertEqual(self._call("get", order, ln_pre).status_code, 403)
+
+    def test_expired_take_in_case_b_is_freed(self):
+        """A take that simply expired after the order became a Lightning order (case B):
+        clean_orders frees its bond by the take, not by the order's escrow type."""
+        from api.escrow import bonds
+        from api.logics import Logics
+        from api.models import OnchainBond, TakeOrder
+
+        order, maker, ln_taker, km = self._make(maker_sells=False)
+        loser, keys, bond = self._onchain_take(order)
+        take = TakeOrder.objects.get(order=order, taker=loser)
+        order = self._ln_take(order, ln_taker)
+        take.refresh_from_db()
+        Logics.take_order_expires(take)  # idempotent after lose_race
+        take.delete()
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, OnchainBond.Status.ABANDONED)
+        _mine()
+        bonds.recover_abandoned()
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, OnchainBond.Status.RETURNABLE)
+        self._get_bond_back(order, loser, keys, bond)

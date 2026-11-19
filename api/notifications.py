@@ -298,6 +298,31 @@ class Notifications:
                      "Keep it open in the foreground on this device until it is done.")
         self.send_message(order, user.robot, title, self.order_url(order), action=True)
 
+    def take_lost(self, order, user_id):
+        """0.9.8: another robot's bond locked first. The onchain bond of this robot is free (it
+        was never at stake): don't send it now; if it was sent, get it back from the order."""
+        from django.contrib.auth.models import User
+
+        from api.step_alerts import lang_of
+
+        user = User.objects.filter(id=user_id).first()
+        if user is None or order.taker_id == user_id or order.maker_id == user_id:
+            return
+        lang = lang_of(user.robot)
+        if lang == "es":
+            title = (f"⚡ Otro robot tomó la orden {order.id} antes que tú: su fianza se bloqueó primero. "
+                     "Tu fianza on-chain no está en juego y no pierdes nada. Si aún no la enviaste, no la envíes. "
+                     "Si ya la enviaste, abre la orden para recuperarla (cuando tenga 1 confirmación).")
+        elif lang == "ca":
+            title = (f"⚡ Un altre robot ha pres l'ordre {order.id} abans que tu: la seva fiança s'ha bloquejat primer. "
+                     "La teva fiança on-chain no està en joc i no perds res. Si encara no l'has enviada, no l'enviïs. "
+                     "Si ja l'has enviada, obre l'ordre per recuperar-la (quan tingui 1 confirmació).")
+        else:
+            title = (f"⚡ Another robot took order {order.id} before you: its bond locked first. "
+                     "Your onchain bond is not at stake and you lose nothing. If you have not sent it yet, don't. "
+                     "If you already sent it, open the order to get it back (once it has 1 confirmation).")
+        self.send_message(order, user.robot, title, self.order_url(order), action=True)
+
     def order_taken_confirmed(self, order):
         lang = order.maker.robot.telegram_lang_code
         if lang == "es":

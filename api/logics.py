@@ -687,8 +687,10 @@ class Logics:
             take_order.expires_at = timezone.now()
             take_order.save(update_fields=["expires_at"])
         cls.cancel_bond(take_order.taker_bond)
-        if escrow_flow.is_onchain(take_order.order) and take_order.taker:
-            escrow_flow.release_bond(take_order.order, "taker", take_order.taker)
+        if take_order.taker:
+            # 0.9.8: by the take itself, also when the order became a Lightning order since
+            # (case B): the bond of a take that lost the race stayed "waiting" forever.
+            escrow_flow.release_take_bond(take_order)
 
     @classmethod
     def order_expires(cls, order):
@@ -1936,6 +1938,12 @@ class Logics:
         order.taker.robot.total_contracts += 1
         order.maker.robot.save(update_fields=["total_contracts"])
         order.taker.robot.save(update_fields=["total_contracts"])
+
+        # 0.9.8: the other onchain takes lost the race: free their bonds and tell them
+        try:
+            escrow_flow.lose_race(order, take_order)
+        except Exception as e:
+            order.log(f"Could not close the other onchain takes: {e}", level="ERROR")
 
         take_order.delete()
 

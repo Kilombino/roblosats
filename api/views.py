@@ -384,6 +384,13 @@ class OrderView(viewsets.ViewSet):
             data["take_expires_at"] = take_order.first().expires_at
         data["has_password"] = order.password is not None
 
+        # 0.9.8: a robot whose onchain take is over (another taker locked first, or its take
+        # expired) still has its bond here: it sees that bond, and only that, to take it back.
+        if not data["is_participant"]:
+            lost = escrow_flow.lost_take_view(order, request.user)
+            if lost is not None:
+                return Response(lost, status.HTTP_200_OK)
+
         # 2) If order has been cancelled
         # (Roblosats: an onchain order still has its bonds, a return or leftovers to settle
         # on chain: its traders keep seeing it. 16 nov 2026 QA: a maker could not get its
@@ -873,6 +880,12 @@ class OrderView(viewsets.ViewSet):
                 and TakeOrder.objects.filter(
                     taker=request.user, order=order, expires_at__gt=timezone.now()
                 ).exists()
+            )
+            # 0.9.8: a take that is over keeps the actions to take its bond back
+            or (
+                action.startswith("bond_")
+                and action != "bond_key"
+                and escrow_flow.lost_take_bond(order, request.user) is not None
             )
         ):
             return Response(new_error(1047), status.HTTP_403_FORBIDDEN)

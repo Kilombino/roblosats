@@ -626,6 +626,9 @@ def bond_role(order, user):
     take_order = TakeOrder.objects.filter(order=order, taker=user).order_by("-expires_at").first()
     if order.taker == user or take_order:
         return "taker", take_order
+    # 0.9.8: a take that is over (lost the race, expired) still owns its bond here
+    if lost_take_bond(order, user) is not None:
+        return "taker", None
     raise EscrowError("you are not in this order")
 
 
@@ -641,6 +644,11 @@ def bond_action(order, user, name, data):
         if role == "taker" and take_order is not None and take_order.lightning and order.taker != user \
                 and take_order.expires_at > timezone.now():
             raise EscrowError("this take pays its bond with Lightning")
+        # 0.9.8: no new bond for a take that is over (another taker locked first, or it expired)
+        if role == "taker" and order.taker != user and (
+            take_order is None or take_order.expires_at <= timezone.now()
+        ):
+            raise EscrowError("your take of this order is over")
         bond = bonds.open_bond(order, user, role, data["bond_pubkey"], take_order if role == "taker" else None)
         # 0.9.7: optional return address for the automatic return of the bond
         if data.get("return_address"):
@@ -1306,6 +1314,125 @@ def release_bond(order, role, owner=None):
     from api.escrow import bonds
 
     return bonds.release(bond_of(order, role, owner))
+
+
+# Bonds of a take that is over: nothing more can happen to them (0.9.8).
+_BOND_DONE = (4, 5, 6, 7)  # PENALIZED, RETURNABLE, RETURNED, ABANDONED
+
+
+def release_take_bond(take_order):
+    """Frees the onchain bond(s) of a pending take that did not become the contract (it expired,
+    or another taker locked first). Looked up by the take itself, not by the order's escrow
+    type: a seller taking with Lightning turns the order into a Lightning order (case B), and
+    the bonds of the other takers must still be freed (0.9.8). A bond already confirmed is
+    picked up first, so it is free to return at once; one still unconfirmed becomes ABANDONED
+    and recover_abandoned() frees it when it confirms."""
+    from api.escrow import bonds
+    from api.models import OnchainBond
+
+    freed = []
+    for bond in OnchainBond.objects.filter(take_order=take_order).exclude(status__in=_BOND_DONE):
+        if bond.status == OnchainBond.Status.FUNDING:
+            try:
+                bond = bonds.refresh(bond)
+            except Exception as e:  # the node down: recover_abandoned() catches it later
+                logger.warning(f"Order {bond.order_id}: could not look at take bond {bond.pk}: {e}")
+        if bonds.release(bond):
+            freed.append(bond)
+    return freed
+
+
+def lose_race(order, winner):
+    """0.9.8: another taker's bond locked first (a Lightning bond locks in seconds, an onchain
+    one needs a confirmation). Every other pending take with an onchain bond is over now: its
+    bond is freed (never penalized), the take can no longer win and its robot is told."""
+    from api.models import OnchainBond, TakeOrder
+    from api.tasks import send_notification
+
+    losers = TakeOrder.objects.filter(order=order).exclude(pk=winner.pk)
+    for take in losers:
+        if not OnchainBond.objects.filter(take_order=take).exists():
+            continue  # a Lightning pretaker: its hold invoice is cancelled if it ever locks
+        freed = release_take_bond(take)
+        take.expires_at = timezone.now()
+        take.save(update_fields=["expires_at"])
+        order.log(
+            f"Another taker locked first: the onchain take of Robot({take.taker.robot.id},{take.taker}) "
+            f"is over, its bond is **free** ({len(freed)} freed, never penalized)"
+        )
+        send_notification.delay(order_id=order.id, message=f"take_lost:{take.taker_id}")
+
+
+def lost_take_bond(order, user):
+    """The onchain bond of a robot whose take of this order is over (it lost the race or its
+    take expired) while it is not the maker nor the taker: what it can still follow and take
+    back from the order page. None when there is nothing of the kind."""
+    from api.models import OnchainBond, TakeOrder
+
+    if user is None or not user.is_authenticated:
+        return None
+    if order.maker_id == user.id or order.taker_id == user.id:
+        return None
+    if TakeOrder.objects.filter(order=order, taker=user, expires_at__gt=timezone.now()).exists():
+        return None
+    bond = OnchainBond.objects.filter(order=order, role="taker", owner=user).order_by("-created_at").first()
+    if bond is None or bond.status not in _BOND_DONE + (OnchainBond.Status.FUNDING, OnchainBond.Status.SIGN):
+        return None
+    return bond
+
+
+def lost_take_view(order, user):
+    """0.9.8: what the order page shows to a robot that lost the race for this order (or whose
+    onchain take expired) while its bond is not settled: only its bond, never the order's
+    trade data. None: the usual view (e.g. a public order it may take again)."""
+    from api.escrow import bonds
+    from api.models import OnchainBond, Order
+
+    bond = lost_take_bond(order, user)
+    if bond is None:
+        return None
+    S = OnchainBond.Status
+    pending = []
+    if bond.status in (S.ABANDONED, S.FUNDING):
+        try:
+            pending = _unconfirmed(bond.address)
+        except Exception:
+            pending = []
+    public = order.status in (Order.Status.PUB, Order.Status.PAU)
+    if bond.status == S.RETURNABLE:
+        done = False
+    elif bond.status in (S.ABANDONED, S.FUNDING, S.SIGN):
+        done = not pending and bond.status == S.ABANDONED
+        if public and done:
+            return None  # never paid: just the public order again
+    else:  # RETURNED, PENALIZED (never happens to a lost take)
+        if public:
+            return None
+        done = True
+    data = {
+        "id": order.id,
+        "status": order.status,
+        "type": order.type,
+        "currency": order.currency_id,
+        "escrow_type": "onchain",
+        "is_maker": False,
+        "is_taker": False,
+        "is_participant": False,
+        "is_buyer": False,
+        "is_seller": False,
+        "bad_request": "",
+        "lost_take": True,
+        "lost_take_taken": order.taker_id is not None,
+        "lost_take_done": done,
+        "escrow_alias": service.coordinator_alias(),
+        "escrow_hrp": service.network_hrp(),
+        "bond_role": "taker",
+        **bonds.bond_data(bond),
+    }
+    if pending:
+        data["bond_mempool_txid"] = pending[0][0]
+        data["bond_mempool_sats"] = sum(v for _, v in pending)
+    return data
 
 
 def bonds_locked(order):
