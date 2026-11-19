@@ -18,7 +18,7 @@ from django.utils import timezone
 
 from api.escrow import bip327 as M
 from api.escrow import service
-from api.escrow.taproot import derive_secret, pubkey, schnorr_sign, with_hashtype
+from api.escrow.taproot import Transaction, derive_secret, pubkey, schnorr_sign, with_hashtype
 from api.models import LNPayment, OnchainEscrow, Order
 
 REGTEST = os.environ.get("ESCROW_REGTEST") == "1"
@@ -193,7 +193,11 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
         from api.escrow import flow
         from api.escrow.bonds import penalty_message
 
-        flow.action(order, user, "bond_key", {"bond_pubkey": pubkey(keys["bond"]).hex()})
+        payload = {"bond_pubkey": pubkey(keys["bond"]).hex()}
+        ret = self._return_address(user)
+        if ret:
+            payload["return_address"] = ret
+        flow.action(order, user, "bond_key", payload)
         d = flow.order_data(order, user)
         _faucet("sendtoaddress", d["bond_address"], d["bond_required_sats"] / 1e8)
         _mine()
@@ -202,7 +206,33 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
         bond.refresh_from_db()
         self.assertEqual(bond.status, bond.Status.SIGN)
         self._sign_penalty(order, user, keys, bond)
+        if self.SIGN_AUTO_RETURN:
+            self._sign_auto_return(order, user, keys)
         return bond
+
+    # 0.9.7: automatic return of the bond (the app gives a return address and pre-signs)
+    AUTO_RETURN = False
+    SIGN_AUTO_RETURN = False
+
+    def _return_address(self, user):
+        if not self.AUTO_RETURN:
+            return None
+        if not hasattr(self, "return_addresses"):
+            self.return_addresses = {}
+        self.return_addresses.setdefault(user.id, _faucet("getnewaddress", "", "bech32m"))
+        return self.return_addresses[user.id]
+
+    def _sign_auto_return(self, order, user, keys):
+        from api.escrow import bonds, flow
+
+        d = flow.order_data(order, user)
+        if not d.get("bond_auto_return_tx"):
+            return
+        bond = flow.bond_of(order, d["bond_role"], owner=user)
+        _, msgs = bonds.auto_return_message(bond)
+        sigs = [with_hashtype(schnorr_sign(keys["bond"], m)).hex() for m in msgs]
+        flow.action(order, user, "bond_auto_return_signature", {"signatures": sigs})
+        self.assertTrue(flow.order_data(order, user)["bond_auto_return_signed"])
 
     def _sign_penalty(self, order, user, keys, bond):
         """The owner's penalty signature(s), one per coin of the bond (rl31-beta18)."""
@@ -927,3 +957,196 @@ class EscrowHybridOldPlanRegtest(EscrowHybridRegtest):
     def tearDown(self):
         self.old_plan.stop()
         super().tearDown()
+
+
+def _paid_to(txid, address):
+    info = service.rpc("getrawtransaction", [txid, True])
+    return info.get("confirmations", 0), sum(round(o["value"] * 1e8) for o in info["vout"] if o["scriptPubKey"].get("address") == address)
+
+
+@skipUnless(REGTEST, "needs the regtest lab (ESCROW_REGTEST=1)")
+class EscrowAutoReturnRegtest(EscrowOrderFlowRegtest):
+    """0.9.7: the bond goes back by itself to the return address once it is free (pre-signed
+    with the penalty, broadcast by the coordinator from release())."""
+
+    AUTO_RETURN = True
+    SIGN_AUTO_RETURN = True
+    test_happy_path_to_successful = None
+    test_fair_rescue_without_the_coordinator = None
+    test_rescue_plan_1_kept_for_old_escrows = None
+    test_collaborative_cancel = None
+    test_dispute_for_the_buyer_from_the_admin = None
+    test_dispute_return_everything_from_the_admin = None
+    test_taker_never_funds_is_penalized = None
+
+    def _make_public(self):
+        from api.models import Currency
+
+        buyer = _user()
+        now = timezone.now()
+        currency, _ = Currency.objects.get_or_create(currency=2, defaults={"exchange_rate": 100_000})
+        order = Order.objects.create(
+            currency=currency, type=Order.Types.BUY, status=Order.Status.WFB, escrow_type=Order.EscrowTypes.ONCHAIN,
+            created_at=now, expires_at=now + timezone.timedelta(hours=24), has_range=False, amount=100,
+            satoshis=1_000_000, t0_satoshis=1_000_000, last_satoshis=1_000_000, maker=buyer, bond_size=3, is_explicit=True,
+        )
+        kb = self._keys(order, "buyer")
+        bond = self._pay_bond(order, buyer, kb)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.PUB)
+        return order, buyer, kb, bond
+
+    def test_cancelled_public_order_returns_the_bond_by_itself(self):
+        from api.logics import Logics
+        from api.models import OnchainBond
+
+        order, buyer, kb, bond = self._make_public()
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, OnchainBond.Status.LOCKED)  # held: nothing broadcast
+        Logics.cancel_order(order, buyer)
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, OnchainBond.Status.RETURNED)
+        _mine()
+        conf, paid = _paid_to(bond.spend_txid, self.return_addresses[buyer.id])
+        self.assertGreaterEqual(conf, 1)
+        self.assertGreater(paid, bond.value - 3_000)  # the whole bond less the mining fee
+
+    def test_taker_bond_freed_when_the_maker_cancels(self):
+        from api.logics import Logics
+        from api.models import OnchainBond
+
+        order, buyer, seller, keys = self._make_and_take()
+        maker_bond = flow_bond(order, "maker")
+        taker_bond = flow_bond(order, "taker")
+        Logics.cancel_order(order, buyer)  # WF2: maker penalized, taker bond free
+        maker_bond.refresh_from_db()
+        taker_bond.refresh_from_db()
+        self.assertEqual(maker_bond.status, OnchainBond.Status.PENALIZED)
+        self.assertEqual(taker_bond.status, OnchainBond.Status.RETURNED)
+        _mine()
+        conf, paid = _paid_to(taker_bond.spend_txid, self.return_addresses[seller.id])
+        self.assertGreaterEqual(conf, 1)
+        self.assertGreater(paid, 0)
+
+    def test_bond_in_a_deposit_is_never_returned_again(self):
+        """The bond goes into the deposit and comes back inside the release, once."""
+        from api.logics import Logics
+        from api.models import OnchainBond
+
+        order, buyer, seller, keys = self._to_chat()
+        for role in ("maker", "taker"):
+            b = flow_bond(order, role)
+            self.assertEqual(b.status, OnchainBond.Status.IN_DEPOSIT)
+            self.assertTrue((b.auto_return or {}).get("sigs"))
+        self.assertEqual(Logics.confirm_fiat(order, buyer), (True, None))
+        order.refresh_from_db()
+        self.assertEqual(Logics.confirm_fiat(order, seller), (True, None))
+        order.refresh_from_db()
+        self._musig(order, {"seller": seller, "buyer": buyer}, keys)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.SUC)
+        for role in ("maker", "taker"):
+            b = flow_bond(order, role)
+            b.refresh_from_db()
+            self.assertEqual(b.status, OnchainBond.Status.IN_DEPOSIT)  # never RETURNED by itself
+            self.assertFalse(flow_bond_release(order, role))  # releasing again does nothing
+
+
+def flow_bond(order, role):
+    from api.escrow import flow
+
+    return flow.bond_of(order, role)
+
+
+def flow_bond_release(order, role):
+    from api.escrow import bonds, flow
+
+    return bonds.release(flow.bond_of(order, role))
+
+
+@skipUnless(REGTEST, "needs the regtest lab (ESCROW_REGTEST=1)")
+class EscrowAutoReturnFallbackRegtest(EscrowAutoReturnRegtest):
+    """0.9.7: without the pre-signed return (an old app) or with one that no longer fits, the
+    bond stays free for the manual "Get my bond back"."""
+
+    SIGN_AUTO_RETURN = False
+    test_cancelled_public_order_returns_the_bond_by_itself = None
+    test_taker_bond_freed_when_the_maker_cancels = None
+    test_bond_in_a_deposit_is_never_returned_again = None
+
+    def _manual_return(self, order, user, kb, bond):
+        from api.escrow import bonds, flow
+        from api.models import OnchainBond
+
+        back = _faucet("getnewaddress", "", "bech32m")
+        flow.action(order, user, "bond_return", {"address": back})
+        bond.refresh_from_db()
+        tx = Transaction.parse(bytes.fromhex(bond.return_tx))
+        msgs = bonds._coin_messages(bond, tx, bonds.return_coins_of(bond))
+        flow.action(order, user, "bond_return_signature",
+                    {"signatures": [with_hashtype(schnorr_sign(kb["bond"], m)).hex() for m in msgs]})
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, OnchainBond.Status.RETURNED)
+        _mine()
+        self.assertGreaterEqual(_paid_to(bond.spend_txid, back)[0], 1)
+
+    def test_unsigned_return_falls_back_to_manual(self):
+        from api.logics import Logics
+        from api.models import OnchainBond
+
+        order, buyer, kb, bond = self._make_public()
+        bond.refresh_from_db()
+        self.assertFalse((bond.auto_return or {}).get("sigs"))
+        Logics.cancel_order(order, buyer)
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, OnchainBond.Status.RETURNABLE)
+        self._manual_return(order, buyer, kb, bond)
+
+    def test_return_that_no_longer_fits_falls_back_to_manual(self):
+        """Signed, but for other coins (e.g. a bond whose coins changed): not sent."""
+        from api.logics import Logics
+        from api.models import OnchainBond
+
+        order, buyer, kb, bond = self._make_public()
+        self._sign_auto_return(order, buyer, kb)
+        bond.refresh_from_db()
+        ar = dict(bond.auto_return)
+        ar["coins"] = [[c[0], c[1], c[2] + 1] for c in ar["coins"]]  # another amount
+        bond.auto_return = ar
+        bond.save(update_fields=["auto_return"])
+        Logics.cancel_order(order, buyer)
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, OnchainBond.Status.RETURNABLE)
+        self._manual_return(order, buyer, kb, bond)
+
+
+@skipUnless(REGTEST, "needs the regtest lab (ESCROW_REGTEST=1)")
+class EscrowHybridAutoReturnRegtest(EscrowHybridRegtest):
+    """0.9.7, hybrid B: the buyer's onchain maker bond goes back by itself after the trade."""
+
+    AUTO_RETURN = True
+    SIGN_AUTO_RETURN = True
+    test_case_a_lightning_buyer_to_successful = None
+    test_case_a_small_order_one_minimum_in_total = None
+    test_case_b_proxy_return_and_penalty_onchain = None
+
+    def test_hybrid_b_success_returns_the_maker_bond_by_itself(self):
+        from unittest.mock import patch
+
+        from api.escrow import flow
+        from api.logics import Logics
+        from api.models import OnchainBond
+
+        order, buyer, seller, kb = self._make(maker_sells=False)
+        order = self._ln_take(order, seller)
+        self.assertTrue(flow.has_proxy(order))
+        bond = flow.bond_of(order, "maker")
+        self.assertEqual(bond.status, OnchainBond.Status.LOCKED)
+        with patch("api.logics.LNNode"):
+            Logics.return_bond(order.maker_bond)  # the trade went well
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, OnchainBond.Status.RETURNED)
+        _mine()
+        conf, paid = _paid_to(bond.spend_txid, self.return_addresses[buyer.id])
+        self.assertGreaterEqual(conf, 1)
+        self.assertGreater(paid, bond.value - 3_000)

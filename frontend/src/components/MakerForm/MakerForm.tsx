@@ -1,4 +1,7 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
+import { pendingReturnKey, rememberMyAddress } from '../../utils/myAddresses';
+import { systemClient } from '../../services/System';
+import { validOnchainAddress } from '../../utils/escrow/taproot';
 import { useTranslation } from 'react-i18next';
 import {
   ButtonGroup,
@@ -133,6 +136,8 @@ const MakerForm = ({
   const [openUsedRobotDialog, setOpenUsedRobotDialog] = useState<boolean>(false);
   const [usedRobotHasActiveOrder, setUsedRobotHasActiveOrder] = useState<boolean>(false);
   const [openWorldmap, setOpenWorldmap] = useState<boolean>(false);
+  const [bondReturn, setBondReturn] = useState<string>('');
+  const bondReturnError = bondReturn !== '' && !validOnchainAddress(bondReturn);
   const [submittingRequest, setSubmittingRequest] = useState<boolean>(false);
   const [changingRobot, setChangingRobot] = useState<boolean>(false);
   const [amountRangeEnabled, setAmountRangeEnabled] = useState<boolean>(true);
@@ -577,6 +582,12 @@ const MakerForm = ({
       .makeOrderWithRecovery(federation, buildOrderAttributes())
       .then((order: Order) => {
         if (order.id) {
+          // 0.9.7: the bond's return address goes with its bond key, from the order page
+          const token = garage.getSlot()?.token;
+          if (token && maker.onchainEscrow && bondReturn && !bondReturnError) {
+            systemClient.setItem(pendingReturnKey(token), bondReturn);
+            void rememberMyAddress(bondReturn);
+          }
           navigateToPage(`order/${order.shortAlias}/${order.id}`, navigate);
           clearMaker();
         } else if (order?.bad_request) {
@@ -745,7 +756,8 @@ const MakerForm = ({
     (fixedLike && !federation.getCoordinator(maker.coordinator)?.info) ||
     (!fixedLike && maker.premium !== null && typeof maker.premium !== 'number') ||
     maker.paymentMethods.length === 0 ||
-    maker.badDescription,
+    maker.badDescription ||
+    (maker.onchainEscrow && bondReturnError), // 0.9.7: fix or empty the return address
   );
 
   const clearMaker = function (): void {
@@ -1880,6 +1892,29 @@ const MakerForm = ({
             label={t('Onchain escrow (no Lightning)')}
           />
         </Tooltip>
+      ) : null}
+
+      {/* 0.9.7: where the onchain bond goes back by itself once it is free (optional) */}
+      {maker.onchainEscrow && onchainAvailable ? (
+        <TextField
+          fullWidth
+          size='small'
+          sx={{ mt: 1 }}
+          label={t('Bond return address (optional)')}
+          helperText={
+            bondReturnError
+              ? t('Use a valid segwit or taproot address')
+              : t(
+                  'Your bond comes back here by itself when it is free. Empty: your payout address.',
+                )
+          }
+          error={bondReturnError}
+          value={bondReturn}
+          onChange={(e) => {
+            setBondReturn(e.target.value.trim());
+          }}
+          slotProps={{ htmlInput: { 'data-testid': 'bond-return-address' } }}
+        />
       ) : null}
 
       <Grid container sx={{ alignItems: 'center', flexDirection: 'column' }}>

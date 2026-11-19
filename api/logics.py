@@ -1283,6 +1283,13 @@ class Logics:
         )
         cls.move_state_updated_payout_method(order)
 
+        # 0.9.7, hybrid B: the buyer's onchain bond goes back automatically to this address too
+        if escrow_flow.has_proxy(order):
+            try:
+                escrow_flow.default_bond_return(order, user, escrow_flow._spk_for_address(address), address)
+            except Exception as e:
+                order.log(f"bond return address not set from the payout address: {e}", level="WARN")
+
         return True, None
 
     @classmethod

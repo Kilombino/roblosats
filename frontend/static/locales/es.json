@@ -1240,5 +1240,10 @@
   "With this fee you would receive less than {{min}} Sats, the least an onchain payout can be. Use at most {{max}} sat/vB.": "Con esta comisión recibirías menos de {{min}} sats, lo mínimo de un pago on-chain. Usa como mucho {{max}} sat/vB.",
   "Your onchain payout": "Tu pago on-chain",
   "In the mempool, waiting for a block": "En la mempool, esperando un bloque",
-  "Queued: the coordinator sends it shortly": "En cola: el coordinador lo envía en breve"
+  "Queued: the coordinator sends it shortly": "En cola: el coordinador lo envía en breve",
+  "Bond return address (optional)": "Dirección de devolución de la fianza (opcional)",
+  "Your bond comes back here by itself when it is free. Empty: your payout address.": "Tu fianza vuelve aquí sola cuando quede libre. Vacío: tu dirección de cobro.",
+  "the automatic return does not spend exactly our bond": "la devolución automática no gasta exactamente nuestra fianza",
+  "the automatic return does not pay our address": "la devolución automática no paga a nuestra dirección",
+  "the automatic return fee is too high": "la comisión de la devolución automática es demasiado alta"
 }

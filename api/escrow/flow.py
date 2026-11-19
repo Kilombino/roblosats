@@ -61,7 +61,24 @@ def set_payout_address(order, user, address):
     data[f"{role}_payout_address"] = address
     escrow.funding_signatures = data
     escrow.save(update_fields=["funding_signatures", "updated_at"])
+    default_bond_return(order, user, spk, address)
     return escrow
+
+
+def default_bond_return(order, user, spk, address):
+    """0.9.7: a trader's payout address is also where its free bond goes back automatically,
+    unless it gave a return address of its own."""
+    from api.escrow import bonds
+    from api.models import OnchainBond
+
+    held = (OnchainBond.Status.FUNDING, OnchainBond.Status.SIGN, OnchainBond.Status.LOCKED)
+    for bond in OnchainBond.objects.filter(order=order, owner=user, status__in=held):
+        if (bond.auto_return or {}).get("address"):
+            continue
+        try:
+            bonds.set_return_address(bond, spk, address)
+        except EscrowError:
+            pass
 
 
 def min_coordinator_fee():
@@ -624,7 +641,10 @@ def bond_action(order, user, name, data):
         if role == "taker" and take_order is not None and take_order.lightning and order.taker != user \
                 and take_order.expires_at > timezone.now():
             raise EscrowError("this take pays its bond with Lightning")
-        bonds.open_bond(order, user, role, data["bond_pubkey"], take_order if role == "taker" else None)
+        bond = bonds.open_bond(order, user, role, data["bond_pubkey"], take_order if role == "taker" else None)
+        # 0.9.7: optional return address for the automatic return of the bond
+        if data.get("return_address"):
+            bonds.set_return_address(bond, _spk_for_address(data["return_address"]), data["return_address"])
         return
     bond = bond_of(order, role, owner=user)
     if bond is None:
@@ -639,6 +659,11 @@ def bond_action(order, user, name, data):
         bonds.leftover_return_tx(bond, _spk_for_address(data["address"]))
     elif name == "bond_leftover_signatures":
         bonds.submit_leftover_signatures(bond, data["signatures"])
+    elif name == "bond_return_address":
+        # 0.9.7: where the bond goes back automatically (given later: e.g. the payout address)
+        bonds.set_return_address(bond, _spk_for_address(data["address"]), data["address"])
+    elif name == "bond_auto_return_signature":
+        bonds.submit_auto_return_signature(bond, data.get("signatures") or data["signature"])
     else:
         raise EscrowError("unknown bond action")
 

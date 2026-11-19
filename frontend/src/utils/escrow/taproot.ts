@@ -345,3 +345,13 @@ export const addressToScript = (address: string): Uint8Array => {
     return concat(Uint8Array.of(0x51, 0x20), program);
   throw new Error('only segwit v0 and taproot addresses');
 };
+
+/** 0.9.7: a segwit or taproot address this app can pay (what addressToScript accepts). */
+export const validOnchainAddress = (address: string): boolean => {
+  try {
+    addressToScript(address);
+    return true;
+  } catch {
+    return false;
+  }
+};

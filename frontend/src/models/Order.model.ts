@@ -21,6 +21,8 @@ export interface SubmitActionProps {
     | 'bond_return_signature'
     | 'bond_leftover_return'
     | 'bond_leftover_signatures'
+    | 'bond_return_address'
+    | 'bond_auto_return_signature'
     | 'escrow_keys'
     | 'escrow_address'
     | 'escrow_funding_signatures'

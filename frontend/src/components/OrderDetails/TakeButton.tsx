@@ -1,3 +1,6 @@
+import { systemClient } from '../../services/System';
+import { pendingReturnKey, rememberMyAddress } from '../../utils/myAddresses';
+import { validOnchainAddress } from '../../utils/escrow/taproot';
 import React, { useState, useMemo, useEffect, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cleanNumberInput, parseNumberInput } from '../../utils/numberInput';
@@ -459,8 +462,20 @@ const TakeButton = ({
     }
   };
 
+  const [bondReturn, setBondReturn] = useState<string>('');
+
   const takeOrder = function (): void {
     const slot = garage.getSlot();
+    // 0.9.7: a return address that is not valid is fixed or emptied first
+    if (
+      isOnchainOrder &&
+      takeWith !== 'lightning' &&
+      bondReturn &&
+      !validOnchainAddress(bondReturn)
+    ) {
+      setBadRequest('Use a valid segwit or taproot address');
+      return;
+    }
 
     if (currentOrder === null || slot === null) return;
 
@@ -475,6 +490,17 @@ const TakeButton = ({
           setBadRequest(order.bad_request);
         } else {
           setBadRequest('');
+          // 0.9.7: the bond's return address goes with its bond key, from the order page
+          if (
+            isOnchainOrder &&
+            takeWith !== 'lightning' &&
+            bondReturn &&
+            validOnchainAddress(bondReturn) &&
+            slot.token
+          ) {
+            systemClient.setItem(pendingReturnKey(slot.token), bondReturn);
+            void rememberMyAddress(bondReturn);
+          }
           setCurrentOrder(order);
           navigateToPage(`order/${order.shortAlias}/${order.id}`, navigate);
         }
@@ -488,6 +514,28 @@ const TakeButton = ({
   return (
     <Box>
       {takeWithChoice()}
+      {/* 0.9.7: where the onchain bond goes back by itself once it is free (optional) */}
+      {isOnchainOrder && takeWith !== 'lightning' ? (
+        <Box sx={{ px: 1, pb: 1 }}>
+          <TextField
+            fullWidth
+            size='small'
+            label={t('Bond return address (optional)')}
+            helperText={
+              bondReturn && !validOnchainAddress(bondReturn)
+                ? t('Use a valid segwit or taproot address')
+                : t(
+                    'Your bond comes back here by itself when it is free. Empty: your payout address.',
+                  )
+            }
+            error={Boolean(bondReturn) && !validOnchainAddress(bondReturn)}
+            value={bondReturn}
+            onChange={(e) => {
+              setBondReturn(e.target.value.trim());
+            }}
+          />
+        </Box>
+      ) : null}
       <Countdown
         date={new Date(currentOrder?.penalty ?? '')}
         renderer={countdownTakeOrderRenderer}

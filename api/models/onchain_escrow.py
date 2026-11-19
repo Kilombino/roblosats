@@ -111,6 +111,10 @@ class OnchainBond(models.Model):
     leftover_tx = models.TextField(blank=True, default="")
     leftover_coins = models.JSONField(default=list, blank=True)
     leftover_txids = models.JSONField(default=list, blank=True)
+    # 0.9.7 (plan 1): the return of the bond to its owner, signed in advance by the owner when
+    # it signs the penalty: {"plan": 1, "address", "spk", "tx", "sigs", "rate"}. The coordinator
+    # broadcasts it as soon as the bond is free (bonds.release). Empty for older bonds.
+    auto_return = models.JSONField(default=dict, blank=True)
 
     def __str__(self):
         return f"BOND-{self.order_id}-{self.role}: {self.get_status_display()}"

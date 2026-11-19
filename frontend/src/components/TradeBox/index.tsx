@@ -34,6 +34,7 @@ import BondStatus from './BondStatus';
 import CancelButton from './CancelButton';
 import { defaultLightning, type LightningForm, defaultOnchain, type OnchainForm } from './Forms';
 
+import { rememberMyAddress } from '../../utils/myAddresses';
 import { type Order } from '../../models';
 import { type EncryptedChatMessage } from './EncryptedChat';
 import CollabCancelAlert from './CollabCancelAlert';
@@ -322,6 +323,7 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
 
     if (robot?.encPrivKey != null && slot?.token != null) {
       setLoadingButtons({ ...noLoadingButtons, submitAddress: true });
+      void rememberMyAddress(onchain.address); // 0.9.7: also where a free bond may go back
       void signCleartextMessage(onchain.address, robot.encPrivKey, slot.token).then(
         (signedAddress) => {
           submitAction({

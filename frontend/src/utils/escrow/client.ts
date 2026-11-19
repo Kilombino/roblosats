@@ -42,6 +42,11 @@ export interface EscrowOrderData {
   escrow_release_my_partial?: boolean;
   /** 0.9.5: we (the seller) can finish the cooperative release alone through our leaf. */
   escrow_release_leaf_ok?: boolean;
+  // 0.9.7: automatic return of the bond
+  bond_auto_return_address?: string;
+  bond_auto_return_signed?: boolean;
+  bond_auto_return_tx?: string;
+  bond_auto_return_coins?: BondCoin[];
   bond_status_code?: number;
   escrow_role?: 'seller' | 'buyer';
   escrow_coordinator_pubkey?: string;
@@ -324,6 +329,30 @@ export const signBondReturn = (
   myScript: Uint8Array,
   maxFeeSats: number,
 ): string => signBondReturns(data, keys, myScript, maxFeeSats)[0];
+
+/** 0.9.7: the automatic return of our bond, signed in advance (with the penalty or when the
+ * return address arrives): all its coins to OUR return address, at most maxFeeSats in fees.
+ * The coordinator may only broadcast it once the bond is free. */
+export const signBondAutoReturn = (
+  data: EscrowOrderData,
+  keys: EscrowKeys,
+  myScript: Uint8Array,
+  maxFeeSats: number,
+): string[] => {
+  const coins = data.bond_auto_return_coins ?? [];
+  const bond = bondCoinsOf(data);
+  // exactly the bond's coins, nothing else
+  const key = (u: BondCoin): string => `${u.txid}:${u.vout}:${u.value}`;
+  if (coins.length !== bond.length || coins.some((u) => !bond.map(key).includes(key(u))))
+    fail('the automatic return does not spend exactly our bond');
+  return signBondCoins(
+    data,
+    keys,
+    data.bond_auto_return_tx!,
+    coins,
+    paysOnlyUs(myScript, maxFeeSats, 'automatic return'),
+  );
+};
 
 /** rl31-beta18: coins at our bond address that are not the bond, back to our address. */
 export const signBondLeftover = (

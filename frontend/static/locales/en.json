@@ -1226,5 +1226,10 @@
   "With this fee you would receive less than {{min}} Sats, the least an onchain payout can be. Use at most {{max}} sat/vB.": "With this fee you would receive less than {{min}} Sats, the least an onchain payout can be. Use at most {{max}} sat/vB.",
   "Your onchain payout": "Your onchain payout",
   "In the mempool, waiting for a block": "In the mempool, waiting for a block",
-  "Queued: the coordinator sends it shortly": "Queued: the coordinator sends it shortly"
+  "Queued: the coordinator sends it shortly": "Queued: the coordinator sends it shortly",
+  "Bond return address (optional)": "Bond return address (optional)",
+  "Your bond comes back here by itself when it is free. Empty: your payout address.": "Your bond comes back here by itself when it is free. Empty: your payout address.",
+  "the automatic return does not spend exactly our bond": "the automatic return does not spend exactly our bond",
+  "the automatic return does not pay our address": "the automatic return does not pay our address",
+  "the automatic return fee is too high": "the automatic return fee is too high"
 }

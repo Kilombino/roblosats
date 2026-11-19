@@ -711,6 +711,8 @@ class UpdateOrderSerializer(serializers.Serializer):
             "bond_return_signature",
             "bond_leftover_return",
             "bond_leftover_signatures",
+            "bond_return_address",
+            "bond_auto_return_signature",
         ),
         allow_null=False,
     )

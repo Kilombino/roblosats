@@ -1240,5 +1240,10 @@
   "With this fee you would receive less than {{min}} Sats, the least an onchain payout can be. Use at most {{max}} sat/vB.": "Amb aquesta comissió rebries menys de {{min}} sats, el mínim d'un pagament on-chain. Fes servir com a molt {{max}} sat/vB.",
   "Your onchain payout": "El teu pagament on-chain",
   "In the mempool, waiting for a block": "A la mempool, esperant un bloc",
-  "Queued: the coordinator sends it shortly": "A la cua: el coordinador l'envia aviat"
+  "Queued: the coordinator sends it shortly": "A la cua: el coordinador l'envia aviat",
+  "Bond return address (optional)": "Adreça de retorn de la fiança (opcional)",
+  "Your bond comes back here by itself when it is free. Empty: your payout address.": "La teva fiança torna aquí sola quan quedi lliure. Buit: la teva adreça de cobrament.",
+  "the automatic return does not spend exactly our bond": "el retorn automàtic no gasta exactament la nostra fiança",
+  "the automatic return does not pay our address": "el retorn automàtic no paga a la nostra adreça",
+  "the automatic return fee is too high": "la comissió del retorn automàtic és massa alta"
 }

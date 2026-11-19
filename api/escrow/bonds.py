@@ -230,6 +230,7 @@ def refresh(bond, min_conf=1):
     bond.penalty_tx = tx.serialize().hex()
     bond.status = OnchainBond.Status.SIGN
     bond.save()
+    _build_auto_return(bond)  # 0.9.7: signed together with the penalty
     return bond
 
 
@@ -294,6 +295,118 @@ def submit_penalty_signature(bond, sigs):
     return bond
 
 
+# 0.9.7: automatic return of a free bond (AUTO_RETURN_PLAN 1). The owner gives a return address
+# (at make/take, or its payout address later) and signs, when it signs the penalty, the return
+# of exactly the bond's coins to that address at the penalty's fee-rate rule. The coordinator
+# broadcasts it only from release(), i.e. once the bond can no longer be penalized nor go into a
+# deposit. Anything else (no address, an old app, coins that changed, a node that refuses it)
+# falls back to the manual "Get my bond back".
+AUTO_RETURN_PLAN = 1
+
+
+def set_return_address(bond, payout_spk, address):
+    """The owner's return address. Replaces an earlier one only while nothing is signed."""
+    from api.models import OnchainBond
+
+    with transaction.atomic():
+        bond = OnchainBond.objects.select_for_update().get(pk=bond.pk)
+        if bond.status not in (OnchainBond.Status.FUNDING, OnchainBond.Status.SIGN, OnchainBond.Status.LOCKED):
+            raise EscrowError("the return address can only be set while the bond is held")
+        ar = dict(bond.auto_return or {})
+        if ar.get("sigs"):
+            if ar.get("spk") == payout_spk.hex():
+                return bond
+            raise EscrowError("the automatic return is already signed to another address")
+        ar.update({"plan": AUTO_RETURN_PLAN, "address": address, "spk": payout_spk.hex()})
+        ar.pop("tx", None)
+        bond.auto_return = ar
+        bond.save(update_fields=["auto_return", "updated_at"])
+        _build_auto_return(bond)
+    return bond
+
+
+def _build_auto_return(bond):
+    """The return to sign, once the bond's coins are fixed (SIGN or LOCKED) and an address set."""
+    from api.models import OnchainBond
+
+    ar = dict(bond.auto_return or {})
+    if not ar.get("spk") or ar.get("tx") or bond.status not in (OnchainBond.Status.SIGN, OnchainBond.Status.LOCKED):
+        return bond
+    coins = coins_of(bond)
+    if not coins:
+        return bond
+    spk = bytes.fromhex(ar["spk"])
+    from api.escrow.transactions import coins_spend_vbytes
+
+    rate = penalty_fee_rate(sum(c[2] for c in coins), len(coins), spk)
+    try:
+        tx = coins_spend_tx(coins, spk, rate)
+    except ValueError:
+        vb = coins_spend_vbytes(len(coins), spk)
+        try:
+            tx = coins_spend_tx(coins, spk, max(1.0, (bond.value - DUST_P2TR) // vb))
+        except ValueError:
+            return bond  # too small to return automatically: manual
+    ar.update({"tx": tx.serialize().hex(), "rate": rate, "coins": [list(c) for c in coins]})
+    bond.auto_return = ar
+    bond.save(update_fields=["auto_return", "updated_at"])
+    return bond
+
+
+def auto_return_message(bond):
+    ar = bond.auto_return or {}
+    tx = Transaction.parse(bytes.fromhex(ar["tx"]))
+    return tx, _coin_messages(bond, tx, [tuple(c) for c in ar.get("coins") or coins_of(bond)])
+
+
+def submit_auto_return_signature(bond, sigs):
+    """The owner's signature(s) of its automatic return (one per coin)."""
+    from api.models import OnchainBond
+
+    sigs = _as_list(sigs)
+    with transaction.atomic():
+        bond = OnchainBond.objects.select_for_update().get(pk=bond.pk)
+        ar = dict(bond.auto_return or {})
+        if not ar.get("tx"):
+            raise EscrowError("there is no automatic return to sign")
+        if bond.status not in (OnchainBond.Status.SIGN, OnchainBond.Status.LOCKED):
+            raise EscrowError("the bond is not held any more")
+        tx, msgs = auto_return_message(bond)
+        # it pays the owner's address, whole, and nothing else
+        if len(tx.outputs) != 1 or tx.outputs[0].script_pubkey.hex() != ar.get("spk"):
+            raise EscrowError("the automatic return does not pay the return address")
+        _check_owner_sigs(bond, msgs, sigs, "automatic return")
+        ar["sigs"] = sigs
+        bond.auto_return = ar
+        bond.save(update_fields=["auto_return", "updated_at"])
+    return bond
+
+
+def _broadcast_auto_return(bond):
+    """From release() only: the bond is free. True when the signed return went out."""
+    from api.models import OnchainBond
+
+    ar = bond.auto_return or {}
+    if bond.status != OnchainBond.Status.RETURNABLE or not ar.get("sigs") or not ar.get("tx"):
+        return False
+    try:
+        if [list(c) for c in coins_of(bond)] != [list(c) for c in ar.get("coins") or []]:
+            raise EscrowError("the bond's coins changed since the return was signed")
+        tx, msgs = auto_return_message(bond)
+        if len(tx.outputs) != 1 or tx.outputs[0].script_pubkey.hex() != ar.get("spk"):
+            raise EscrowError("the signed return does not pay the return address")
+        _cosign(bond, tx, msgs, ar["sigs"])
+        service.rpc("sendrawtransaction", [tx.serialize().hex()])
+    except Exception as e:
+        bond.order.log(f"Onchain {bond.role} bond: automatic return not sent ({e}); the owner takes it back by hand", level="WARN")
+        return False
+    bond.spend_txid = tx.txid()
+    bond.status = OnchainBond.Status.RETURNED
+    bond.save(update_fields=["spend_txid", "status", "updated_at"])
+    bond.order.log(f"Onchain {bond.role} bond **returned automatically** to {ar.get('address')} in {bond.spend_txid}")
+    return True
+
+
 def _coordinator_key_of(bond):
     key = coordinator_bond_key(bond.order_id, bond.role, bond.owner_pubkey)
     if pubkey(key).hex() != bond.coordinator_pubkey:
@@ -327,6 +440,7 @@ def release(bond):
     if bond.status == OnchainBond.Status.LOCKED:
         bond.status = OnchainBond.Status.RETURNABLE
         bond.save(update_fields=["status", "updated_at"])
+        _broadcast_auto_return(bond)  # 0.9.7: the return the owner signed in advance
         return True
     if bond.status in (OnchainBond.Status.FUNDING, OnchainBond.Status.SIGN):
         bond.status = OnchainBond.Status.RETURNABLE if bond.txid else OnchainBond.Status.ABANDONED
@@ -483,6 +597,16 @@ def bond_data(bond):
         data["bond_coins"] = [{"txid": t, "vout": v, "value": s} for t, v, s in coins]
     if bond.status == bond.Status.SIGN:
         data["bond_penalty_tx"] = bond.penalty_tx
+    # 0.9.7: the automatic return (address, the transaction to sign, whether it is signed)
+    ar = getattr(bond, "auto_return", None) or {}
+    if ar.get("plan"):
+        data["bond_auto_return_address"] = ar.get("address", "")
+        data["bond_auto_return_signed"] = bool(ar.get("sigs"))
+        if ar.get("tx") and not ar.get("sigs") and bond.status in (bond.Status.SIGN, bond.Status.LOCKED):
+            data["bond_auto_return_tx"] = ar["tx"]
+            data["bond_auto_return_coins"] = [
+                {"txid": c[0], "vout": int(c[1]), "value": int(c[2])} for c in ar.get("coins") or []
+            ]
     if bond.return_tx and bond.status == bond.Status.RETURNABLE:
         data["bond_return_tx"] = bond.return_tx
         data["bond_return_coins"] = [{"txid": t, "vout": v, "value": s} for t, v, s in return_coins_of(bond)]

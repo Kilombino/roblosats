@@ -26,6 +26,8 @@ import {
   releaseNonce,
   releasePartial,
   signCooperativeLeaf,
+  signBondAutoReturn,
+  bondCoinsOf,
   signBondPenalties,
   signBondReturns,
   signDeposit,
@@ -38,6 +40,7 @@ import {
   type EscrowOrderData,
 } from '../../../utils/escrow/client';
 import { saveRescue } from '../../../utils/escrow/rescue';
+import { isMyAddress, pendingReturnKey, rememberMyAddress } from '../../../utils/myAddresses';
 import { type FeeHint, formatRate, lowFeeNeeded, validHint } from '../../../utils/escrow/fees';
 import { Transaction, addressToScript, bytesToHex } from '../../../utils/escrow/taproot';
 
@@ -48,6 +51,8 @@ export type EscrowAction =
   | 'bond_return_signature'
   | 'bond_leftover_return'
   | 'bond_leftover_signatures'
+  | 'bond_return_address'
+  | 'bond_auto_return_signature'
   | 'escrow_keys'
   | 'escrow_address'
   | 'escrow_funding_signatures'
@@ -333,7 +338,44 @@ export const OnchainEscrowPrompt = ({
     setError(null);
     const pk = publicKeys(keys);
     if ((order.status === 0 || order.status === 3) && data.bond_status_code === undefined)
-      once('bond_key', () => onAction('bond_key', { bond_pubkey: pk.bond }));
+      once('bond_key', () => {
+        // 0.9.7: the return address typed when making/taking (optional)
+        if (!token) {
+          onAction('bond_key', { bond_pubkey: pk.bond });
+          return;
+        }
+        void systemClient.getItem(pendingReturnKey(token)).then((ret) => {
+          onAction(
+            'bond_key',
+            ret ? { bond_pubkey: pk.bond, return_address: ret } : { bond_pubkey: pk.bond },
+          );
+          if (ret) systemClient.deleteItem(pendingReturnKey(token));
+        });
+      });
+    // 0.9.7: pre-sign the automatic return of the bond, only to an address this app gave
+    if (
+      data.bond_auto_return_tx &&
+      !data.bond_auto_return_signed &&
+      [BOND.SIGN, BOND.LOCKED].includes(data.bond_status_code ?? -1)
+    )
+      once(`autoreturn-${data.bond_auto_return_tx}`, () => {
+        const addr = data.bond_auto_return_address ?? '';
+        void isMyAddress(addr).then((mine) => {
+          if (!mine) return;
+          try {
+            const value = bondCoinsOf(data).reduce((a, u) => a + u.value, 0);
+            const signatures = signBondAutoReturn(
+              data,
+              keys,
+              addressToScript(addr),
+              Math.max(2_000, Math.floor(value * 0.1)),
+            );
+            onAction('bond_auto_return_signature', { signatures });
+          } catch (e) {
+            setError(e instanceof EscrowCheckError ? t(e.message) : String(e));
+          }
+        });
+      });
     if (data.bond_status_code === BOND.SIGN && data.bond_penalty_tx)
       once(`penalty-${data.bond_penalty_tx}`, () => {
         // one signature per coin (a topped-up bond has several, rl31-beta18)
@@ -511,6 +553,7 @@ export const OnchainEscrowPrompt = ({
       setError(t('Use a valid segwit or taproot address'));
       return;
     }
+    void rememberMyAddress(address);
     if (name === 'escrow_address')
       onSignedAddress(address, (signed) => onAction('escrow_address', {}, signed));
     else onAction(name, { address });

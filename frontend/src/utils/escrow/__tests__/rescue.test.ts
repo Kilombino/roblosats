@@ -8,6 +8,7 @@ import {
   myBondIndexes,
   owedInRelease,
   signBondLeftover,
+  signBondAutoReturn,
   signBondPenalties,
   type EscrowOrderData,
 } from '../client';
@@ -377,6 +378,45 @@ describe('bond top-ups and coins at the bond address (rl31-beta18)', () => {
     );
     expect(() =>
       signBondPenalties({ ...d, bond_penalty_tx: bytesToHex(other.serialize()) }, buyer),
+    ).toThrow();
+  });
+
+  it('0.9.7: pre-signs the automatic return only for exactly the bond, to our address', () => {
+    const b = new BondContract(pubkey(buyer.bond), hexToBytes(coordPk), 540, 'bcrt');
+    const ret = new Transaction(
+      coins.map((c) => ({ txid: c.txid, vout: c.vout, sequence: 0xfffffffd })),
+      [{ value: BigInt(3400), script: dest }],
+      2,
+      0,
+    );
+    const d = bondData(buyer, {
+      bond_txid: coins[0].txid,
+      bond_vout: 0,
+      bond_value: 3630,
+      bond_coins: coins,
+      bond_status_code: 1,
+      bond_auto_return_tx: bytesToHex(ret.serialize()),
+      bond_auto_return_coins: coins,
+    });
+    const sigs = signBondAutoReturn(d, buyer, dest, 2000);
+    expect(sigs).toHaveLength(2);
+    const spent = coins.map((c) => ({ value: BigInt(c.value), script: b.scriptPubkey }));
+    sigs.forEach((sg, i) =>
+      expect(
+        schnorr.verify(
+          hexToBytes(sg).slice(0, 64),
+          ret.sighashUnified(i, spent, b.leafHashes[BondContract.COOPERATIVE]),
+          xonly(pubkey(buyer.bond)),
+        ),
+      ).toBe(true),
+    );
+    // to another address, too expensive, or with other coins: refused
+    expect(() =>
+      signBondAutoReturn(d, buyer, hexToBytes('0014' + '44'.repeat(20)), 2000),
+    ).toThrow();
+    expect(() => signBondAutoReturn(d, buyer, dest, 100)).toThrow();
+    expect(() =>
+      signBondAutoReturn({ ...d, bond_auto_return_coins: [coins[0]] }, buyer, dest, 2000),
     ).toThrow();
   });
 
