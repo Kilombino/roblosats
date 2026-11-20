@@ -21,6 +21,7 @@ import {
   BondContract,
   EscrowContract,
   Transaction,
+  dustThreshold,
   fundingScript,
   hexToBytes,
   p2trAddress,
@@ -264,7 +265,7 @@ export const buildEscrowRescue = (
   check((rec.escrow!.rescuePlan ?? 1) < 2, 'this escrow is rescued with the pre-signed rescue');
   const fee = feeFor(VB_BASE + VB_ESCROW_LEAF_IN + VB_OUT, feeRate);
   const value = BigInt(utxo.value) - fee;
-  check(value > BigInt(330), 'the escrow does not cover the mining fee');
+  check(value >= BigInt(dustThreshold(dest)), 'the escrow does not cover the mining fee');
   const tx = singleOutput([utxo], c.rescueCsv, dest, value);
   const spent: TxOut[] = [{ value: BigInt(utxo.value), script: c.scriptPubkey }];
   const sig = signSchnorr(
@@ -316,7 +317,7 @@ export const buildBondRefund = (
   const total = coins.reduce((a, u) => a + BigInt(u.value), BigInt(0));
   const fee = feeFor(VB_BASE + VB_LEAF_CSV_IN * coins.length + VB_OUT, feeRate);
   const value = total - fee;
-  check(value > BigInt(330), 'the bond does not cover the mining fee');
+  check(value >= BigInt(dustThreshold(dest)), 'the bond does not cover the mining fee');
   const tx = singleOutput(coins, c.refundCsv, dest, value);
   const spent: TxOut[] = coins.map((u) => ({ value: BigInt(u.value), script: c.scriptPubkey }));
   const witnesses = coins.map((_, i) => [
@@ -341,7 +342,7 @@ export const buildFundingSweep = (
   const total = utxos.reduce((a, u) => a + BigInt(u.value), BigInt(0));
   const fee = feeFor(VB_BASE + VB_KEY_IN * utxos.length + VB_OUT, feeRate);
   const value = total - fee;
-  check(value > BigInt(330), 'the funding address does not cover the mining fee');
+  check(value >= BigInt(dustThreshold(dest)), 'the funding address does not cover the mining fee');
   const tx = singleOutput(utxos, 0xfffffffd, dest, value);
   const spent: TxOut[] = utxos.map((u) => ({ value: BigInt(u.value), script }));
   const witnesses = utxos.map((_, i) => [signSchnorr(keys.funding, tx.sighashUnified(i, spent))]);

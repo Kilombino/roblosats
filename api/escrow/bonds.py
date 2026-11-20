@@ -17,7 +17,7 @@ from api.escrow.taproot import (
     schnorr_verify,
     xonly,
 )
-from api.escrow.transactions import DUST_P2TR, BondInput, Utxo, coins_spend_tx, coins_spend_vbytes
+from api.escrow.transactions import DUST_P2TR, BondInput, Utxo, coins_spend_tx, coins_spend_vbytes, dust_for
 
 # A bond can be paid in up to this many payments (rl31-beta18: a short first payment is topped
 # up with a second one). Each extra coin costs its owner one more bond input in the deposit.
@@ -344,7 +344,7 @@ def _build_auto_return(bond):
     except ValueError:
         vb = coins_spend_vbytes(len(coins), spk)
         try:
-            tx = coins_spend_tx(coins, spk, max(1.0, (bond.value - DUST_P2TR) // vb))
+            tx = coins_spend_tx(coins, spk, max(1.0, (bond.value - dust_for(spk)) // vb))
         except ValueError:
             return bond  # too small to return automatically: manual
     ar.update({"tx": tx.serialize().hex(), "rate": rate, "coins": [list(c) for c in coins]})

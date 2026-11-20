@@ -67,7 +67,7 @@ export const BondLeftoverBox = ({ order, token, onAction }: Props): React.JSX.El
     try {
       addressToScript(address);
     } catch {
-      setError(t('Use a valid segwit or taproot address'));
+      setError(t('Use a valid address: legacy (1…), P2SH (3…), segwit (bc1q…) or taproot (bc1p…)'));
       return;
     }
     setError(null);
@@ -126,6 +126,7 @@ export const BondLeftoverBox = ({ order, token, onAction }: Props): React.JSX.El
               value={address}
               onChange={(e) => setAddress(e.target.value.trim())}
               label={t('Bitcoin address')}
+              helperText={t('Accepted: 1…, 3…, bc1q… or bc1p…')}
             />
           </Grid>
           <Grid>

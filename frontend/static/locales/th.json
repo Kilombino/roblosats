@@ -1134,5 +1134,9 @@
   "Your bond was never at stake: it is not penalized.": "Your bond was never at stake: it is not penalized.",
   "Another robot took this order first": "Another robot took this order first",
   "Your take of this order is over": "Your take of this order is over",
-  "If you already paid the bond, you will be able to take it back from this order once it has 1 confirmation (Get my bond back).": "If you already paid the bond, you will be able to take it back from this order once it has 1 confirmation (Get my bond back)."
+  "If you already paid the bond, you will be able to take it back from this order once it has 1 confirmation (Get my bond back).": "If you already paid the bond, you will be able to take it back from this order once it has 1 confirmation (Get my bond back).",
+  "Pay {{amount}} Sats. Anything left over comes back by itself to your address {{address}} in the deposit (a few sats below the dust limit go to the miners). If you send less, send the rest to the same address before the order expires.": "Pay {{amount}} Sats. Anything left over comes back by itself to your address {{address}} in the deposit (a few sats below the dust limit go to the miners). If you send less, send the rest to the same address before the order expires.",
+  "Use a valid address: legacy (1…), P2SH (3…), segwit (bc1q…) or taproot (bc1p…)": "Use a valid address: legacy (1…), P2SH (3…), segwit (bc1q…) or taproot (bc1p…)",
+  "Accepted: 1…, 3…, bc1q… or bc1p…": "Accepted: 1…, 3…, bc1q… or bc1p…",
+  "Your bond comes back here by itself when it is free (1…, 3…, bc1q… or bc1p… addresses). Empty: your payout address.": "Your bond comes back here by itself when it is free (1…, 3…, bc1q… or bc1p… addresses). Empty: your payout address."
 }

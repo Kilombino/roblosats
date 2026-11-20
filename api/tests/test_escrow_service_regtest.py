@@ -278,7 +278,7 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
         order, buyer, seller, keys = self._make_and_take()
         for r, u in (("seller", seller), ("buyer", buyer)):
             flow.action(order, u, "escrow_keys", self._keys_payload(keys, r))
-            flow.action(order, u, "escrow_address", {"address": _faucet("getnewaddress", "", "bech32m")})
+            flow.action(order, u, "escrow_address", {"address": self._payout_address(r)})
         flow.advance(order)
         order.refresh_from_db()
         self.assertEqual(order.status, Order.Status.WFE)
@@ -408,10 +408,18 @@ class EscrowOrderFlowRegtest(TransactionTestCase):
     # alone through its leaf; False plays an app up to 0.9.4 (two-round MuSig2 release).
     LEAF = False
 
+    # 0.9.9: the app accepts the deposit change at its payout address; the payout address type
+    CHANGE_TO_PAYOUT = False
+
+    def _payout_address(self, role):
+        return _faucet("getnewaddress", "", "bech32m")
+
     def _keys_payload(self, keys, r):
         payload = {"escrow_pubkey": pubkey(keys[r]["escrow"]).hex(), "funding_pubkey": pubkey(keys[r]["funding"]).hex()}
         if self.LEAF:
             payload["leaf_release"] = True
+        if self.CHANGE_TO_PAYOUT:
+            payload["change_to_payout"] = True
         return payload
 
     def _leaf(self, order, users, keys):
@@ -1408,3 +1416,130 @@ class EscrowTakeRaceRegtest(EscrowHybridRegtest):
         self.assertEqual(bonds_[1].status, OnchainBond.Status.RETURNABLE)
         self.notify.delay.assert_any_call(order_id=order.id, message=f"take_lost:{takers[1][0].id}")
         self._get_bond_back(order, takers[1][0], takers[1][1], bonds_[1])
+
+
+class EscrowLegacyPayoutRegtest(EscrowOrderFlowRegtest):
+    """0.9.9: payout/refund addresses of the legacy types (Kilombino: "1…" and "3…" too) and the
+    deposit change at the seller's payout address. The buyer gets paid to a P2PKH address, the
+    seller's refund (and its deposit change) goes to a P2SH one; every release, the rescue and
+    the cancel are mined with the outputs the inherited tests expect."""
+
+    CHANGE_TO_PAYOUT = True
+    SELLER_EXTRA = 5_000  # sent on top of the recommended amount: it must come back by itself
+
+    def _payout_address(self, role):
+        return _faucet("getnewaddress", "", "legacy" if role == "buyer" else "p2sh-segwit")
+
+    def _funding_amount(self, d, role):
+        return d["escrow_funding_recommended"] + (self.SELLER_EXTRA if role == "seller" else 0)
+
+    def test_payout_scripts_are_legacy(self):
+        from api.escrow import flow
+
+        order, buyer, seller, keys = self._to_chat()
+        escrow = flow.escrow_of(order)
+        self.assertTrue(escrow.funding_signatures["buyer_payout_spk"].startswith("76a914"))  # P2PKH
+        self.assertTrue(escrow.funding_signatures["seller_payout_spk"].startswith("a914"))  # P2SH
+
+    def test_deposit_change_goes_to_the_seller_payout_address(self):
+        from api.escrow import flow
+
+        order, buyer, seller, keys = self._to_chat()
+        escrow = flow.escrow_of(order)
+        plan = escrow.funding_signatures["plan"]
+        self.assertEqual(plan["change_to"].get("seller"), "payout")
+        self.assertEqual(plan["extra_in_escrow"], {})
+        info = service.rpc("getrawtransaction", [escrow.funding_txid, True])
+        self.assertGreaterEqual(info["confirmations"], 1)
+        seller_spk = escrow.funding_signatures["seller_payout_spk"]
+        change = [round(o["value"] * 1e8) for o in info["vout"] if o["scriptPubKey"]["hex"] == seller_spk]
+        seller_in = sum(int(plan["spent"][i][0]) for i in plan["seller_inputs"])
+        self.assertEqual(change, [seller_in - plan["seller_pays"]])
+        self.assertGreater(change[0], self.SELLER_EXTRA)  # the extra and the margin, by itself
+        # nothing left at the funding address: no "Get my sats back" afterwards
+        self.assertEqual(flow.funding_leftover(order, escrow, "seller"), [])
+        self.assertTrue(flow.order_data(order, seller)["escrow_change_to_payout"])
+
+
+class EscrowFairDeadlineRegtest(EscrowOrderFlowRegtest):
+    """0.9.9: a trader that signs its part late does not leave its peer the minutes it did not
+    use: the peer gets at least an hour (ESCROW_PEER_STEP_SECONDS)."""
+
+    test_happy_path_to_successful = None
+    test_collaborative_cancel = None
+    test_dispute_for_the_buyer_from_the_admin = None
+    test_dispute_return_everything_from_the_admin = None
+    test_taker_never_funds_is_penalized = None
+    test_fair_rescue_without_the_coordinator = None
+    test_rescue_plan_1_kept_for_old_escrows = None
+
+    def _sign_rescue(self, order, users, keys):
+        from api.escrow import flow
+        from api.escrow.taproot import Transaction, TxOut
+
+        escrow = flow.escrow_of(order)
+        order.refresh_from_db()
+        self.after_build = order.expires_at
+        self.assertGreater(order.expires_at, timezone.now() + timezone.timedelta(minutes=55))
+        # the seller signs with ten minutes left: the buyer gets an hour
+        order.expires_at = timezone.now() + timezone.timedelta(minutes=10)
+        order.save(update_fields=["expires_at"])
+        for r in ("seller", "buyer"):
+            d = flow.order_data(order, users[r])
+            c = service.contract_for(escrow)
+            tx = Transaction.parse(bytes.fromhex(d["escrow_rescue_tx"]))
+            msg = tx.sighash_unified(0, [TxOut(escrow.escrow_sats, c.script_pubkey)], 0x21, c.leaf_hash(c.RESCUE))
+            flow.action(order, users[r], "escrow_rescue_signature",
+                        {"signature": with_hashtype(schnorr_sign(keys[r]["escrow"], msg)).hex()})
+            order.refresh_from_db()
+            if r == "seller":
+                self.assertGreater(order.expires_at, timezone.now() + timezone.timedelta(minutes=59))
+        escrow.refresh_from_db()
+        self.extensions = escrow.funding_signatures.get("deadline_extensions")
+        self.rescue_hex = service.signed_rescue(escrow).serialize().hex()
+        self.rescue_plan_data = escrow.funding_signatures["rescue"]
+
+    def test_the_late_signer_gives_its_peer_an_hour(self):
+        order, buyer, seller, keys = self._to_chat()
+        self.assertGreaterEqual(self.extensions, 1)
+        self.assertLessEqual(self.extensions, 6)
+
+
+class EscrowLegacyBondReturnRegtest(EscrowAutoReturnRegtest):
+    """0.9.9: a bond return to a legacy address, automatic and by hand."""
+
+    def _return_address(self, user):
+        if not hasattr(self, "return_addresses"):
+            self.return_addresses = {}
+        self.return_addresses.setdefault(user.id, _faucet("getnewaddress", "", "legacy"))
+        return self.return_addresses[user.id]
+
+    test_taker_bond_freed_when_the_maker_cancels = None
+    test_bond_in_a_deposit_is_never_returned_again = None
+
+    def test_manual_return_to_a_legacy_address(self):
+        from api.escrow import bonds, flow
+        from api.logics import Logics
+        from api.models import OnchainBond
+
+        self.SIGN_AUTO_RETURN = False
+        order, buyer, kb, bond = self._make_public()
+        Logics.cancel_order(order, buyer)
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, OnchainBond.Status.RETURNABLE)
+        back = _faucet("getnewaddress", "", "legacy")
+        flow.action(order, buyer, "bond_return", {"address": back})
+        bond.refresh_from_db()
+        tx = Transaction.parse(bytes.fromhex(bond.return_tx))
+        msgs = bonds._coin_messages(bond, tx, bonds.return_coins_of(bond))
+        flow.action(order, buyer, "bond_return_signature",
+                    {"signatures": [with_hashtype(schnorr_sign(kb["bond"], m)).hex() for m in msgs]})
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, OnchainBond.Status.RETURNED)
+        _mine()
+        conf, paid = _paid_to(bond.spend_txid, back)
+        self.assertGreaterEqual(conf, 1)
+        info = service.rpc("getrawtransaction", [bond.spend_txid, True])
+        self.assertEqual(len(info["vout"]), 1)
+        self.assertTrue(info["vout"][0]["scriptPubKey"]["hex"].startswith("76a914"))  # P2PKH
+        self.assertGreater(paid, bond.value - 3_000)

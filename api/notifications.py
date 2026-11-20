@@ -216,10 +216,16 @@ class Notifications:
 
     def onchain_seen_mempool(self, order, user_id, what, sats, short=None, low=None):
         """Roblosats onchain escrow: a payment of this robot (its bond or its funding) is in
-        the mempool, waiting for 1 confirmation."""
+        the mempool, waiting for 1 confirmation. 0.9.9: also an onchain taker that is still
+        taking the order (its bond confirms before it is order.taker)."""
         user = order.maker if order.maker_id == user_id else order.taker
         if user is None or user.id != user_id:
-            return
+            from api.models import OnchainBond
+
+            bond = OnchainBond.objects.filter(order=order, owner_id=user_id, role="taker").select_related("owner").first()
+            if bond is None:
+                return
+            user = bond.owner
         from api.step_alerts import lang_of
 
         lang = lang_of(user.robot)

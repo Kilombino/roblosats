@@ -14,6 +14,7 @@ from api.escrow.service import EscrowError
 logger = logging.getLogger(__name__)
 from api.escrow.transactions import (
     DUST_P2TR,
+    dust_for,
     VB_BOND_COOP,
     VB_OVERHEAD,
     VB_TAPROOT_KEY_INPUT,
@@ -38,11 +39,29 @@ def on_contract(order):
         service.create_escrow(order)
 
 
+# 0.9.9: receive addresses of the standard types (Kilombino: "1…" and "3…" too).
+ADDRESS_TYPES_TEXT = "use a valid address: legacy (1…), P2SH (3…), segwit (bc1q…) or taproot (bc1p…)"
+
+
 def _spk_for_address(address):
+    """The scriptPubKey of a receive address: P2PKH, P2SH, segwit v0 or taproot (0.9.9; until
+    0.9.8 only segwit and taproot). Anything else (an unknown witness version, a bare script)
+    is refused."""
     info = service.rpc("validateaddress", [address])
-    if not info.get("isvalid") or not info.get("iswitness"):
-        raise EscrowError("use a valid segwit or taproot address")
-    return bytes.fromhex(info["scriptPubKey"])
+    if not info.get("isvalid"):
+        raise EscrowError(ADDRESS_TYPES_TEXT)
+    spk = bytes.fromhex(info["scriptPubKey"])
+    if not is_receive_script(spk):
+        raise EscrowError(ADDRESS_TYPES_TEXT)
+    return spk
+
+
+def is_receive_script(spk):
+    p2pkh = len(spk) == 25 and spk[:3] == b"\x76\xa9\x14" and spk[23:] == b"\x88\xac"
+    p2sh = len(spk) == 23 and spk[:2] == b"\xa9\x14" and spk[22:] == b"\x87"
+    v0 = spk[:1] == b"\x00" and len(spk) in (22, 34) and spk[1] == len(spk) - 2
+    v1 = spk[:2] == b"\x51\x20" and len(spk) == 34
+    return p2pkh or p2sh or v0 or v1
 
 
 def set_payout_address(order, user, address):
@@ -178,7 +197,11 @@ def recommended_funding(order, escrow, role, from_bond=False):
     if frozen:
         return owed, int(frozen)
     rate = max(service.fee_rate(2) * 2, 2.0)
-    shared = VB_OVERHEAD + 3 * output_vbytes(b"\x00" * 34)
+    # 0.9.9: with the fees kept in the escrow (fee plan 2, every escrow since rl31-beta15) the
+    # deposit's only shared output is the escrow itself; counting three made the recommended
+    # amount overshoot by ~43 vB at twice the rate (#27: 536 sats left over).
+    n_shared = 1 if escrow is not None and fee_plan(escrow) >= 2 else 3
+    shared = VB_OVERHEAD + n_shared * output_vbytes(b"\x00" * 34)
     if from_bond:
         vb = VB_BOND_COOP + shared / 2
     else:
@@ -376,6 +399,9 @@ def advance(order):
                 escrow.refresh_from_db()
                 if service.rescue_plan(escrow) >= 2:
                     service.build_rescue(escrow, *_returns(escrow))
+                # 0.9.9: both have to sign now: time for both, whoever was slow to fund
+                need_sign = [r for r in service.ROLES if waiting_for(order, escrow, r)[0] == "you"]
+                give_time(order, escrow, need_sign, "the deposit was built and needs signatures")
                 order.log(
                     "Onchain deposit **built** (trade amount + "
                     + ("the onchain bond" if any(role_is_ln(order, r) for r in service.ROLES) else "both bonds")
@@ -548,7 +574,7 @@ def return_everything(order):
         escrow.save(update_fields=["status"])
     to_seller, to_buyer = _returns(escrow)
     payouts = [TxOut(to_seller, _spk(escrow, "seller"))]
-    if to_buyer >= DUST_P2TR:
+    if to_buyer >= dust_for(_spk(escrow, "buyer")):
         payouts.append(TxOut(to_buyer, _spk(escrow, "buyer")))
     elif to_buyer:
         payouts[0].value += to_buyer
@@ -581,7 +607,7 @@ def resolve_dispute(order, buyer_wins):
     penalty = bonds[loser] - reward
     # rl31-beta20: the loser's funding extra was never part of its bond: it goes back to it
     # (below dust it cannot be an output of its own and goes with the penalty)
-    if ex[loser] >= DUST_P2TR and escrow.funding_signatures.get(f"{loser}_payout_spk"):
+    if escrow.funding_signatures.get(f"{loser}_payout_spk") and ex[loser] >= dust_for(_spk(escrow, loser)):
         payouts.append(TxOut(ex[loser], _spk(escrow, loser)))
     else:
         penalty += ex[loser]
@@ -678,6 +704,9 @@ def bond_action(order, user, name, data):
         raise EscrowError("unknown bond action")
 
 
+FAIR_DEADLINE_ACTIONS = ("escrow_keys", "escrow_address", "escrow_rescue_signature", "escrow_funding_signatures")
+
+
 def action(order, user, name, data):
     """Trader actions on the onchain escrow (views: action=escrow_*)."""
     if name.startswith("bond_"):
@@ -686,9 +715,21 @@ def action(order, user, name, data):
     escrow = escrow_of(order)
     if escrow is None:
         raise EscrowError("this order has no onchain escrow")
+    _escrow_action(order, user, role, escrow, name, data)
+    if name in FAIR_DEADLINE_ACTIONS:
+        # 0.9.9: this trader finished its part: its peer gets at least an hour for its own
+        try:
+            escrow.refresh_from_db()
+            order.refresh_from_db()
+            give_time(order, escrow, peer_still_owes(order, escrow, role), f"the {role} did its part ({name})")
+        except Exception as e:  # never fails the trader's action
+            logger.warning(f"Order {order.id}: fair deadline not applied: {e}")
+
+
+def _escrow_action(order, user, role, escrow, name, data):
     if name == "escrow_keys":
         service.submit_keys(order, user, data["escrow_pubkey"], data["funding_pubkey"],
-                            bool(data.get("leaf_release")))
+                            bool(data.get("leaf_release")), bool(data.get("change_to_payout")))
     elif name == "escrow_address":
         set_payout_address(order, user, data["address"])
     elif name == "escrow_rescue_signature":
@@ -771,6 +812,8 @@ def order_data(order, user):
         # rl31-beta20: funding extras that ride in the escrow and come back with each bond
         data["escrow_extra_in_escrow"] = _extras(escrow)
     data["escrow_extra_plan"] = service.extra_plan(escrow)
+    # 0.9.9: whatever the deposit does not use comes back by itself to our payout address
+    data["escrow_change_to_payout"] = role in service.change_to_payout_roles(escrow)
     fpk = escrow.funding_signatures.get(f"{role}_funding_pubkey")
     at_release = role == "buyer" and bool(fees(order)[1]) and buyer_fee_at_release(order)
     from_bond = role == "buyer" and bool(fees(order)[1]) and not at_release and buyer_fee_from_bond(order, escrow)
@@ -1254,6 +1297,60 @@ def funding_fault(order):
     if sum(u.value for u in service.funding_utxos(escrow, "seller", 0)) < seller_owed:
         return "seller"
     return "buyer"
+
+
+def give_time(order, escrow, roles, reason):
+    """0.9.9, fair deadline: the onchain setup (keys, address, rescue, deposit) has one deadline
+    for both traders. When one finishes its part, or the coordinator asks both for signatures,
+    the other must not be left with the minutes the first one did not use and then take the
+    blame (Kilobot #26). The deadline is pushed back so that 'roles' have at least
+    ESCROW_PEER_STEP_SECONDS (1 h) from now, at most ESCROW_MAX_DEADLINE_EXTENSIONS times per
+    order (each extension at most that long): nobody can stall the order forever."""
+    from api.models import OnchainEscrow, Order
+
+    if order.status not in (Order.Status.WF2, Order.Status.WFE) or escrow is None:
+        return False
+    now = timezone.now()
+    if order.expires_at is None or order.expires_at <= now:
+        return False  # already expired: the expiry decides
+    need = timedelta(seconds=config("ESCROW_PEER_STEP_SECONDS", cast=int, default=3600))
+    if order.expires_at >= now + need:
+        return False
+    if not roles:
+        return False
+    cap = config("ESCROW_MAX_DEADLINE_EXTENSIONS", cast=int, default=6)
+    with transaction.atomic():
+        row = OnchainEscrow.objects.select_for_update().get(pk=escrow.pk)
+        data = dict(row.funding_signatures or {})
+        done = int(data.get("deadline_extensions") or 0)
+        if done >= cap:
+            return False
+        data["deadline_extensions"] = done + 1
+        row.funding_signatures = data
+        row.save(update_fields=["funding_signatures"])
+        escrow.funding_signatures = data
+    old = order.expires_at
+    order.expires_at = now + need
+    order.save(update_fields=["expires_at"])
+    order.log(
+        f"Fair deadline ({done + 1}/{cap}): {reason}; the {' and '.join(roles)} now "
+        f"{'have' if len(roles) > 1 else 'has'} until {order.expires_at:%H:%M} UTC (was {old:%H:%M})"
+    )
+    return True
+
+
+def peer_still_owes(order, escrow, role):
+    """After 'role' acted: [peer] when 'role' has nothing left to do in the onchain setup and
+    its peer still has (keys, address or a signature); else []."""
+    peer = "buyer" if role == "seller" else "seller"
+    try:
+        mine, _ = waiting_for(order, escrow, role)
+        theirs, what = waiting_for(order, escrow, peer)
+    except Exception:
+        return []
+    if mine == "you" or theirs != "you" or what == "funding":
+        return []
+    return [peer]
 
 
 def expire_funding(order):
@@ -1834,7 +1931,7 @@ def sweep_tx(order, escrow, role, payout_spk):
     total = sum(u.value for u in utxos)
     vb = math.ceil(VB_OVERHEAD + len(utxos) * VB_TAPROOT_KEY_INPUT + output_vbytes(payout_spk))
     value = total - math.ceil(vb * service.fee_rate(2))
-    if value < DUST_P2TR or not bonds.worth_recovering(total, total - value):
+    if value < dust_for(payout_spk) or not bonds.worth_recovering(total, total - value):
         raise EscrowError("not worth it right now: the mining fee would eat more than these sats")
     tx = Transaction([TxIn(u.txid, u.vout) for u in utxos], [TxOut(value, payout_spk)])
     data = dict(escrow.funding_signatures)

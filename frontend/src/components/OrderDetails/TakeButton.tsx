@@ -473,7 +473,9 @@ const TakeButton = ({
       bondReturn &&
       !validOnchainAddress(bondReturn)
     ) {
-      setBadRequest('Use a valid segwit or taproot address');
+      setBadRequest(
+        'Use a valid address: legacy (1…), P2SH (3…), segwit (bc1q…) or taproot (bc1p…)',
+      );
       return;
     }
 
@@ -523,9 +525,11 @@ const TakeButton = ({
             label={t('Bond return address (optional)')}
             helperText={
               bondReturn && !validOnchainAddress(bondReturn)
-                ? t('Use a valid segwit or taproot address')
+                ? t(
+                    'Use a valid address: legacy (1…), P2SH (3…), segwit (bc1q…) or taproot (bc1p…)',
+                  )
                 : t(
-                    'Your bond comes back here by itself when it is free. Empty: your payout address.',
+                    'Your bond comes back here by itself when it is free (1…, 3…, bc1q… or bc1p… addresses). Empty: your payout address.',
                   )
             }
             error={Boolean(bondReturn) && !validOnchainAddress(bondReturn)}

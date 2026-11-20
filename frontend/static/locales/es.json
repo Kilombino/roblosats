@@ -1257,5 +1257,9 @@
   "Your bond was never at stake: it is not penalized.": "Tu fianza nunca estuvo en juego: no se penaliza.",
   "Another robot took this order first": "Otro robot tomó esta orden antes",
   "Your take of this order is over": "Tu toma de esta orden ha terminado",
-  "If you already paid the bond, you will be able to take it back from this order once it has 1 confirmation (Get my bond back).": "Si ya pagaste la fianza, podrás recuperarla desde esta orden cuando tenga 1 confirmación (Recupera tu fianza)."
+  "If you already paid the bond, you will be able to take it back from this order once it has 1 confirmation (Get my bond back).": "Si ya pagaste la fianza, podrás recuperarla desde esta orden cuando tenga 1 confirmación (Recupera tu fianza).",
+  "Pay {{amount}} Sats. Anything left over comes back by itself to your address {{address}} in the deposit (a few sats below the dust limit go to the miners). If you send less, send the rest to the same address before the order expires.": "Paga {{amount}} Sats. Lo que sobre vuelve solo a tu dirección {{address}} en el depósito (unos pocos sats por debajo del límite de polvo van a los mineros). Si envías menos, envía lo que falta a la misma dirección antes de que caduque la orden.",
+  "Use a valid address: legacy (1…), P2SH (3…), segwit (bc1q…) or taproot (bc1p…)": "Usa una dirección válida: legacy (1…), P2SH (3…), segwit (bc1q…) o taproot (bc1p…)",
+  "Accepted: 1…, 3…, bc1q… or bc1p…": "Se aceptan: 1…, 3…, bc1q… o bc1p…",
+  "Your bond comes back here by itself when it is free (1…, 3…, bc1q… or bc1p… addresses). Empty: your payout address.": "Tu fianza vuelve aquí sola cuando quede libre (direcciones 1…, 3…, bc1q… o bc1p…). Vacío: tu dirección de cobro."
 }

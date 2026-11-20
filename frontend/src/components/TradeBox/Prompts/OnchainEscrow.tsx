@@ -389,6 +389,8 @@ export const OnchainEscrowPrompt = ({
           funding_pubkey: pk.funding,
           // 0.9.5: as seller, this app finishes a cooperative release alone (one signature)
           leaf_release: true,
+          // 0.9.9: our deposit change may go to our payout address (we check it there)
+          change_to_payout: true,
         }),
       );
     const fairRescue = (data.escrow_rescue_plan ?? 1) >= 2;
@@ -550,7 +552,7 @@ export const OnchainEscrowPrompt = ({
     try {
       addressToScript(address);
     } catch {
-      setError(t('Use a valid segwit or taproot address'));
+      setError(t('Use a valid address: legacy (1…), P2SH (3…), segwit (bc1q…) or taproot (bc1p…)'));
       return;
     }
     void rememberMyAddress(address);
@@ -847,6 +849,7 @@ export const OnchainEscrowPrompt = ({
             value={address}
             onChange={(e) => setAddress(e.target.value.trim())}
             label={t('Bitcoin address')}
+            helperText={t('Accepted: 1…, 3…, bc1q… or bc1p…')}
           />
         </Grid>
         <Grid>
@@ -925,10 +928,20 @@ export const OnchainEscrowPrompt = ({
                       'Send this amount to your funding address: your fee and the mining fee. Anything left over comes back to you.',
                     )
               }
-              note={t(
-                'Send exactly {{amount}} Sats. If you send more, the change comes back to you in the deposit; if you send less, send the rest to the same address before the order expires.',
-                { amount: pn(data.escrow_funding_recommended ?? 0) },
-              )}
+              note={
+                data.escrow_change_to_payout && data.escrow_my_payout_address
+                  ? t(
+                      'Pay {{amount}} Sats. Anything left over comes back by itself to your address {{address}} in the deposit (a few sats below the dust limit go to the miners). If you send less, send the rest to the same address before the order expires.',
+                      {
+                        amount: pn(data.escrow_funding_recommended ?? 0),
+                        address: data.escrow_my_payout_address,
+                      },
+                    )
+                  : t(
+                      'Send exactly {{amount}} Sats. If you send more, the change comes back to you in the deposit; if you send less, send the rest to the same address before the order expires.',
+                      { amount: pn(data.escrow_funding_recommended ?? 0) },
+                    )
+              }
             />
           </Grid>
           <Grid>{afterPayingNotice('deposit')}</Grid>
@@ -1025,6 +1038,7 @@ export const OnchainEscrowPrompt = ({
             value={address}
             onChange={(e) => setAddress(e.target.value.trim())}
             label={t('Bitcoin address')}
+            helperText={t('Accepted: 1…, 3…, bc1q… or bc1p…')}
           />
         </Grid>
         <Grid>
@@ -1086,6 +1100,7 @@ export const OnchainEscrowPrompt = ({
             value={address}
             onChange={(e) => setAddress(e.target.value.trim())}
             label={t('Bitcoin address')}
+            helperText={t('Accepted: 1…, 3…, bc1q… or bc1p…')}
           />
         </Grid>
         <Grid>

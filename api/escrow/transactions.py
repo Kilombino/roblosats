@@ -18,6 +18,52 @@ VB_P2TR_OUTPUT = 43.0
 VB_OUTPUT_BASE = 9.0
 
 
+# 0.9.9: receive addresses of any standard type (P2PKH 1…, P2SH 3…, P2WPKH/P2WSH bc1q…, P2TR
+# bc1p…). An output is dust, and our node refuses the transaction, below a threshold that depends
+# on its script type and the node's -dustrelayfee (sat/kvB), as Bitcoin Core computes it: the
+# output's serialized size plus the size of the input that would spend it (67 bytes for a
+# witness program, 148 for anything else) at the dust relay fee. The node's value is queried by
+# service.dust_relay_fee() (dust_relay_hook); never below DUST_P2TR, the floor every plan
+# before 0.9.9 used, so taproot and segwit outputs keep exactly the thresholds they had.
+DEFAULT_DUST_RELAY_FEE = 3000  # sat/kvB
+
+
+def _default_dust_relay():
+    return DEFAULT_DUST_RELAY_FEE
+
+
+dust_relay_hook = _default_dust_relay
+
+
+def _compact_size_len(n: int) -> int:
+    return 1 if n < 253 else 3 if n <= 0xFFFF else 5
+
+
+def is_witness_program(spk: bytes) -> bool:
+    return (
+        4 <= len(spk) <= 42
+        and (spk[0] == 0 or 0x51 <= spk[0] <= 0x60)
+        and spk[1] == len(spk) - 2
+        and 2 <= spk[1] <= 40
+    )
+
+
+def dust_threshold(spk: bytes, relay_fee: int | None = None) -> int:
+    """Core's GetDustThreshold for this script at relay_fee sat/kvB (the node's by default)."""
+    if spk[:1] == b"\x6a":  # OP_RETURN: unspendable, never dust
+        return 0
+    rate = dust_relay_hook() if relay_fee is None else relay_fee
+    size = 8 + _compact_size_len(len(spk)) + len(spk)
+    size += 32 + 4 + 1 + (107 // 4) + 4 if is_witness_program(spk) else 32 + 4 + 1 + 107 + 4
+    return size * int(rate) // 1000
+
+
+def dust_for(spk: bytes) -> int:
+    """The smallest output this coordinator creates to this script: the node's dust threshold
+    for its type, never below DUST_P2TR."""
+    return max(DUST_P2TR, dust_threshold(spk))
+
+
 def funding_script_pubkey(pk33: bytes) -> bytes:
     """rawtr(<pk>): a single-key Taproot output with no tweak, spent by the trader alone."""
     return b"\x51\x20" + xonly(pk33)
@@ -100,6 +146,7 @@ def plan_deposit(
     buyer_fee_from_bond: bool = False,
     fees_in_escrow: bool = False,
     extra_to_escrow: bool = False,
+    payout_change_roles: set | frozenset = frozenset(),
 ) -> DepositPlan:
     """Joint deposit: escrow output, coordinator fee, dev fee and each side's change.
 
@@ -118,6 +165,10 @@ def plan_deposit(
     back as change, a smaller one rides in the escrow output (extra_in_escrow) and goes back to
     its owner with its bond in every release, cancel, dispute and rescue. Only for a trader with
     an onchain bond in the deposit (it always has an output of its own to carry it).
+
+    payout_change_roles (0.9.9): for these roles the change script is their payout/refund
+    address and the excess goes there by itself (no second transaction to get it back); a
+    change below dust goes to the miners instead of riding in the escrow.
     """
     if not seller_utxos:
         raise DepositError("the seller has not funded yet")
@@ -155,13 +206,13 @@ def plan_deposit(
     extra_in_escrow = {}
 
     def change_threshold(change_spk):
-        return DUST_P2TR + math.ceil(output_vbytes(change_spk) * fee_rate)
+        return dust_for(change_spk) + math.ceil(output_vbytes(change_spk) * fee_rate)
 
     def change_for(total_in, owed, n_inputs, change_spk, bond=None, role=None):
         fee = side_fee(n_inputs, change_spk, True, bond)
         change = total_in - owed - fee
-        keep_extra = extra_to_escrow and bond is not None and role is not None
-        if change >= (change_threshold(change_spk) if keep_extra else DUST_P2TR):
+        keep_extra = extra_to_escrow and bond is not None and role is not None and role not in payout_change_roles
+        if change >= (change_threshold(change_spk) if keep_extra else dust_for(change_spk)):
             return change, fee
         fee = side_fee(n_inputs, change_spk, False, bond)
         if total_in - owed - fee < 0:
@@ -285,9 +336,9 @@ def release_tx(
         raise ValueError("the payouts must add up to the escrow")
     outs = [TxOut(p.value, p.script_pubkey) for p in payouts]
     outs[fee_payer].value -= fee
-    if outs[fee_payer].value < DUST_P2TR:
+    if outs[fee_payer].value < dust_for(outs[fee_payer].script_pubkey):
         raise ValueError("the fee leaves the payer below dust")
-    outs = [o for o in outs if o.value >= DUST_P2TR]
+    outs = [o for o in outs if o.value >= dust_for(o.script_pubkey)]
     txin = TxIn(escrow_txid, escrow_vout)
     if sequence is not None:
         txin.sequence = sequence
@@ -317,7 +368,7 @@ def coins_spend_tx(coins: list, payout_spk: bytes, fee_rate: float, refund: bool
     if not coins:
         raise ValueError("no coins to spend")
     value = sum(c[2] for c in coins) - math.ceil(coins_spend_vbytes(len(coins), payout_spk, refund) * fee_rate)
-    if value < DUST_P2TR:
+    if value < dust_for(payout_spk):
         raise ValueError("the bond is too small for this fee rate")
     seq = csv if refund else SEQUENCE_RBF
     return Transaction([TxIn(t, v, seq) for t, v, _ in coins], [TxOut(value, payout_spk)])
@@ -356,8 +407,8 @@ def rescue_tx(
     else:
         buyer_part, seller_part = 0, fee
     outs = [TxOut(to_seller - seller_part, seller_spk)]
-    if to_buyer and to_buyer - buyer_part >= DUST_P2TR:
+    if to_buyer and to_buyer - buyer_part >= dust_for(buyer_spk):
         outs.append(TxOut(to_buyer - buyer_part, buyer_spk))
-    if outs[0].value < DUST_P2TR:
+    if outs[0].value < dust_for(seller_spk):
         raise ValueError("the rescue fee leaves the seller below dust")
     return Transaction([TxIn(escrow_txid, escrow_vout, contract.seller_rescue_csv)], outs)

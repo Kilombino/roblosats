@@ -1903,9 +1903,9 @@ const MakerForm = ({
           label={t('Bond return address (optional)')}
           helperText={
             bondReturnError
-              ? t('Use a valid segwit or taproot address')
+              ? t('Use a valid address: legacy (1…), P2SH (3…), segwit (bc1q…) or taproot (bc1p…)')
               : t(
-                  'Your bond comes back here by itself when it is free. Empty: your payout address.',
+                  'Your bond comes back here by itself when it is free (1…, 3…, bc1q… or bc1p… addresses). Empty: your payout address.',
                 )
           }
           error={bondReturnError}

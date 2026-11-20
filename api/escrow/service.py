@@ -77,6 +77,41 @@ def rpc(method, params=None, wallet=None):
     return r["result"]
 
 
+_dust_relay = {"at": 0.0, "value": None}
+
+
+def dust_relay_fee():
+    """0.9.9: our node's -dustrelayfee in sat/kvB (getmempoolinfo), cached for ten minutes;
+    ESCROW_DUST_RELAY_FEE (default 3000) when the node does not say. Used for the dust
+    threshold of every output to a trader's address (transactions.dust_for)."""
+    import time
+
+    now = time.monotonic()
+    if _dust_relay["value"] is not None and now - _dust_relay["at"] < 600:
+        return _dust_relay["value"]
+    value = None
+    try:
+        info = rpc("getmempoolinfo")
+        btc_kvb = info.get("dustrelayfee") if isinstance(info, dict) else None
+        if isinstance(btc_kvb, (int, float)) and not isinstance(btc_kvb, bool) and btc_kvb > 0:
+            value = round(btc_kvb * 1e8)
+    except Exception:
+        value = None
+    if value is None:
+        value = config("ESCROW_DUST_RELAY_FEE", cast=int, default=3000)
+    _dust_relay.update(at=now, value=value)
+    return value
+
+
+def _install_dust_hook():
+    from api.escrow import transactions
+
+    transactions.dust_relay_hook = dust_relay_fee
+
+
+_install_dust_hook()
+
+
 def watch_wallet():
     name = config("ESCROW_WATCH_WALLET", default="roblosats-escrow")
     if name in rpc("listwallets"):
@@ -113,6 +148,17 @@ RESCUE_PLAN = 2
 # rl31-beta20: a funding excess too small for its own change output rides in the escrow and goes
 # back to its owner with its bond (escrows created before have no "extra_plan": as before).
 EXTRA_PLAN = 1
+
+
+def change_to_payout_roles(escrow):
+    """0.9.9: the traders whose deposit change goes to their payout/refund address (their app
+    said it accepts it when it gave its keys, and the address is known); below dust it goes to
+    the miners. The others keep the change at their funding address as before (older apps
+    check the deposit and the rescue against that)."""
+    data = escrow.funding_signatures or {}
+    if not config("ESCROW_CHANGE_TO_PAYOUT", cast=bool, default=True):
+        return set()
+    return {r for r in ROLES if data.get(f"{r}_change_to_payout") and data.get(f"{r}_payout_spk")}
 
 
 def extra_plan(escrow):
@@ -169,9 +215,10 @@ def create_escrow(order):
     return escrow
 
 
-def submit_keys(order, user, escrow_pubkey_hex, funding_pubkey_hex, leaf_release=False):
+def submit_keys(order, user, escrow_pubkey_hex, funding_pubkey_hex, leaf_release=False, change_to_payout=False):
     """A trader gives its escrow key and its funding key (both derived from its token).
-    leaf_release (0.9.5): its app signs a cooperative release alone through its leaf."""
+    leaf_release (0.9.5): its app signs a cooperative release alone through its leaf.
+    change_to_payout (0.9.9): its app accepts the deposit's change at its payout address."""
     from api.models import OnchainEscrow
 
     role = role_of(order, user)
@@ -186,6 +233,8 @@ def submit_keys(order, user, escrow_pubkey_hex, funding_pubkey_hex, leaf_release
         funding[f"{role}_funding_pubkey"] = funding_pk.hex()
         if leaf_release:
             funding[f"{role}_leaf_release"] = True
+        if change_to_payout:
+            funding[f"{role}_change_to_payout"] = True
         escrow.funding_signatures = funding
         if escrow.seller_pubkey and escrow.buyer_pubkey:
             c = contract_for(escrow)
@@ -241,16 +290,21 @@ def build_deposit(escrow, escrow_sats, seller_fee, buyer_fee, coordinator_spk, d
 
     seller = funding_utxos(escrow, "seller")
     buyer = funding_utxos(escrow, "buyer") if buyer_fee and not buyer_fee_from_bond else []
+    to_payout = change_to_payout_roles(escrow)
+    change_spk = {
+        r: bytes.fromhex(escrow.funding_signatures[f"{r}_payout_spk"]) if r in to_payout else funding_spk(escrow, r)
+        for r in ROLES
+    }
 
     def _plan(rate):
         return plan_deposit(
             seller, buyer, contract_for(escrow), escrow_sats, seller_fee, buyer_fee,
-            coordinator_spk, dev_sats, dev_spk, funding_spk(escrow, "seller"), funding_spk(escrow, "buyer"),
+            coordinator_spk, dev_sats, dev_spk, change_spk["seller"], change_spk["buyer"],
             rate,
             bond_service.bond_input(bonds["seller"]) if bonds.get("seller") else None,
             bond_service.bond_input(bonds["buyer"]) if bonds.get("buyer") else None,
             buyer_fee_from_bond=buyer_fee_from_bond, fees_in_escrow=fees_in_escrow,
-            extra_to_escrow=extra_plan(escrow) >= 1,
+            extra_to_escrow=extra_plan(escrow) >= 1, payout_change_roles=to_payout,
         )
 
     rate = fee_rate(int(config("ESCROW_DEPOSIT_TARGET_BLOCKS", default=2)))
@@ -306,6 +360,8 @@ def build_deposit(escrow, escrow_sats, seller_fee, buyer_fee, coordinator_spk, d
         "buyer_fee": buyer_fee,
         "mining_fee": plan.mining_fee,
         "extra_in_escrow": plan.extra_in_escrow or {},
+        # 0.9.9: where each side's change went ("payout": its payout/refund address)
+        "change_to": {r: "payout" for r in sorted(to_payout)},
     }
     if fees_in_escrow:  # plan 2: the fees ride in the escrow output until the release
         sigs["plan"]["fees_in_escrow"] = {"seller": seller_fee, "buyer": buyer_fee}

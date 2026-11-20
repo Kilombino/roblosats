@@ -146,6 +146,8 @@ export interface EscrowOrderData {
    * back to its owner with its bond (escrows with extra plan 1). */
   escrow_extra_in_escrow?: { seller: number; buyer: number };
   escrow_extra_plan?: number;
+  /** 0.9.9: our deposit change goes to our payout/refund address (not our funding address). */
+  escrow_change_to_payout?: boolean;
   escrow_release_coordinator_sats?: number;
   /** 2 (rl31-beta15): the coordinator fees ride in the escrow output and only the release of
    * a completed trade pays them; a collaborative cancel gives each trader its fee back. */
@@ -404,6 +406,20 @@ export const myExtraInEscrow = (data: EscrowOrderData): number => {
 export const maxExtraSats = (maxFeeRate: number): number =>
   330 + 2 * Math.ceil(43 * maxFeeRate) + 2;
 
+/** Scripts where the deposit may send our change: our funding address and (0.9.9) our
+ * payout/refund address, which this app gave. */
+export const myChangeScripts = (data: EscrowOrderData, keys: EscrowKeys): Set<string> => {
+  const out = new Set<string>([bytesToHex(fundingScript(pubkey(keys.funding)))]);
+  if (data.escrow_my_payout_address) {
+    try {
+      out.add(bytesToHex(addressToScript(data.escrow_my_payout_address)));
+    } catch {
+      // not an address we can read: only the funding address counts
+    }
+  }
+  return out;
+};
+
 /** Checks the joint deposit and signs our funding inputs (and our bond input). */
 export const signDeposit = (
   data: EscrowOrderData,
@@ -442,8 +458,10 @@ export const signDeposit = (
   const totalOut = tx.outputs.reduce((a, o) => a + o.value, BigInt(0));
   if (totalOut > totalIn) fail('outputs exceed inputs');
   const myIn = mine.reduce((a, i) => a + spent[i].value, BigInt(0)) + bondValue;
+  const backTo = myChangeScripts(data, keys);
   const myBack = tx.outputs
-    .filter((o) => bytesToHex(o.script) === bytesToHex(myFunding))
+    .slice(1)
+    .filter((o) => backTo.has(bytesToHex(o.script)))
     .reduce((a, o) => a + o.value, BigInt(0));
   // rl31-beta20: our funding excess too small for a change output rides in the escrow and
   // comes back with our bond (the release and the rescue are checked to give it back). Never
@@ -534,8 +552,11 @@ export const checkRescue = (
       myIn += spent[bi].value;
     }
   }
+  const backTo = myChangeScripts(data, keys);
+  backTo.add(myFunding);
   const myBack = deposit.outputs
-    .filter((o) => bytesToHex(o.script) === myFunding)
+    .slice(1)
+    .filter((o) => backTo.has(bytesToHex(o.script)))
     .reduce((a, o) => a + o.value, BigInt(0));
   const totalIn = spent.reduce((a, x) => a + x.value, BigInt(0));
   const depositFee = totalIn - deposit.outputs.reduce((a, o) => a + o.value, BigInt(0));

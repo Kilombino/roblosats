@@ -2,7 +2,7 @@ import { schnorr, secp256k1 } from '@noble/curves/secp256k1.js';
 import { hkdf } from '@noble/hashes/hkdf.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, hexToBytes, randomBytes } from '@noble/hashes/utils.js';
-import { bech32, bech32m } from '@scure/base';
+import { base58check, bech32, bech32m } from '@scure/base';
 
 import {
   applyTweak,
@@ -327,7 +327,31 @@ export const leafHashOf = (contract: EscrowContract | BondContract, index: numbe
 export const fundingScript = (pk33: Uint8Array): Uint8Array =>
   concat(Uint8Array.of(0x51, 0x20), xonly(pk33));
 
+// 0.9.9: legacy receive addresses. Version bytes: mainnet P2PKH 0x00 ("1…"), P2SH 0x05
+// ("3…"); testnet/regtest 0x6f/0xc4 (the coordinator checks the network when it gets it).
+const b58 = base58check(sha256);
+const P2PKH_VERSIONS = [0x00, 0x6f];
+const P2SH_VERSIONS = [0x05, 0xc4];
+
+const base58Script = (address: string): Uint8Array | null => {
+  let raw: Uint8Array;
+  try {
+    raw = b58.decode(address);
+  } catch {
+    return null;
+  }
+  if (raw.length !== 21) return null;
+  const hash = raw.slice(1);
+  if (P2PKH_VERSIONS.includes(raw[0]))
+    return concat(Uint8Array.of(0x76, 0xa9, 0x14), hash, Uint8Array.of(0x88, 0xac));
+  if (P2SH_VERSIONS.includes(raw[0]))
+    return concat(Uint8Array.of(0xa9, 0x14), hash, Uint8Array.of(0x87));
+  return null;
+};
+
 export const addressToScript = (address: string): Uint8Array => {
+  const legacy = /^[1-9A-HJ-NP-Za-km-z]{25,35}$/.test(address) ? base58Script(address) : null;
+  if (legacy) return legacy;
   const lower = address.toLowerCase() as `${string}1${string}`;
   let decoded: { words: number[] };
   let isM = false;
@@ -343,10 +367,25 @@ export const addressToScript = (address: string): Uint8Array => {
     return concat(Uint8Array.of(0, program.length), program);
   if (version === 1 && isM && program.length === 32)
     return concat(Uint8Array.of(0x51, 0x20), program);
-  throw new Error('only segwit v0 and taproot addresses');
+  throw new Error('only legacy (1…), P2SH (3…), segwit v0 and taproot addresses');
 };
 
-/** 0.9.7: a segwit or taproot address this app can pay (what addressToScript accepts). */
+/** 0.9.9: the node's dust threshold for an output to this script (Bitcoin Core's rule: the
+ * output plus the input that would spend it, 67 bytes for a witness program, 148 otherwise, at
+ * the dust relay fee; the coordinators' nodes run 3000 sat/kvB), never below 330 like the
+ * coordinator (P2PKH 546, P2SH 540, segwit and taproot 330). */
+export const dustThreshold = (script: Uint8Array, relayFee = 3000): number => {
+  const witness =
+    script.length >= 4 &&
+    script.length <= 42 &&
+    (script[0] === 0 || (script[0] >= 0x51 && script[0] <= 0x60)) &&
+    script[1] === script.length - 2;
+  const size = 8 + 1 + script.length + (witness ? 67 : 148);
+  return Math.max(330, Math.floor((size * relayFee) / 1000));
+};
+
+/** A receive address this app can pay (what addressToScript accepts): legacy 1…, P2SH 3…
+ * (0.9.9), segwit v0 bc1q… and taproot bc1p…. */
 export const validOnchainAddress = (address: string): boolean => {
   try {
     addressToScript(address);

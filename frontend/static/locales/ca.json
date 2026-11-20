@@ -1257,5 +1257,9 @@
   "Your bond was never at stake: it is not penalized.": "La teva fiança mai no ha estat en joc: no es penalitza.",
   "Another robot took this order first": "Un altre robot ha pres aquesta ordre abans",
   "Your take of this order is over": "La teva presa d'aquesta ordre ha acabat",
-  "If you already paid the bond, you will be able to take it back from this order once it has 1 confirmation (Get my bond back).": "Si ja has pagat la fiança, la podràs recuperar des d'aquesta ordre quan tingui 1 confirmació (Recupera la teva fiança)."
+  "If you already paid the bond, you will be able to take it back from this order once it has 1 confirmation (Get my bond back).": "Si ja has pagat la fiança, la podràs recuperar des d'aquesta ordre quan tingui 1 confirmació (Recupera la teva fiança).",
+  "Pay {{amount}} Sats. Anything left over comes back by itself to your address {{address}} in the deposit (a few sats below the dust limit go to the miners). If you send less, send the rest to the same address before the order expires.": "Paga {{amount}} Sats. El que sobri torna sol a la teva adreça {{address}} en el dipòsit (uns pocs sats per sota del límit de pols van als miners). Si n'envies menys, envia el que falta a la mateixa adreça abans que caduqui l'ordre.",
+  "Use a valid address: legacy (1…), P2SH (3…), segwit (bc1q…) or taproot (bc1p…)": "Fes servir una adreça vàlida: legacy (1…), P2SH (3…), segwit (bc1q…) o taproot (bc1p…)",
+  "Accepted: 1…, 3…, bc1q… or bc1p…": "S'accepten: 1…, 3…, bc1q… o bc1p…",
+  "Your bond comes back here by itself when it is free (1…, 3…, bc1q… or bc1p… addresses). Empty: your payout address.": "La teva fiança torna aquí sola quan quedi lliure (adreces 1…, 3…, bc1q… o bc1p…). Buit: la teva adreça de cobrament."
 }
