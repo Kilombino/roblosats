@@ -35,6 +35,7 @@ import {
 import { CHECK_UPDATE_EVENT, BACKGROUND_EVENT, RecentLogsDialog } from '../Dialogs';
 import { systemClient } from '../../services/System';
 import Tor from '../Icons/Tor';
+import { isKilowallet } from '../../utils/host';
 import { UseFederationStoreType, FederationContext } from '../../contexts/FederationContext';
 
 interface SettingsFormProps {
@@ -46,6 +47,7 @@ const SettingsForm = ({ dense = false }: SettingsFormProps): React.JSX.Element =
   const { settings, setSettings, client } = useContext<UseAppStoreType>(AppContext);
   const theme = useTheme();
   const { t } = useTranslation();
+  const embedded = isKilowallet();
   const [openLogs, setOpenLogs] = useState<boolean>(false);
   // 0.9.11: Tor (built-in / Orbot) and Clearnet change in place: the app used to restart (a
   // black screen). The federation reconnects through the settings effect.
@@ -304,7 +306,8 @@ const SettingsForm = ({ dense = false }: SettingsFormProps): React.JSX.Element =
         </ListItem>
       )}
 
-      {client == 'mobile' && (
+      {/* Kilowallet: always its own Tor (no Orbot inside it); Clearnet mode is the toggle below */}
+      {client == 'mobile' && !embedded && (
         <ListItem>
           <ListItemIcon sx={{ minWidth: 56 }}>
             <Tor />
@@ -363,36 +366,39 @@ const SettingsForm = ({ dense = false }: SettingsFormProps): React.JSX.Element =
           </div>
         </ListItem>
       )}
-      {/* 0.9.6: update notice, recent logs, background reliability */}
-      <ListItem>
-        <ListItemIcon sx={{ minWidth: 56 }}>
-          <SystemUpdate />
-        </ListItemIcon>
-        <ToggleButtonGroup
-          exclusive={true}
-          sx={{ width: '100%' }}
-          value={checkUpdates}
-          onChange={(_e, value) => {
-            if (value === null) return;
-            setCheckUpdates(value);
-            systemClient.setItem('settings_check_updates', String(value));
-          }}
-        >
-          <ToggleButton value={true} color='primary' sx={{ flexGrow: 1 }}>
-            {t('Check for updates')}
-          </ToggleButton>
-          <ToggleButton value={false} color='secondary' sx={{ flexGrow: 1 }}>
-            {t('Off')}
-          </ToggleButton>
-        </ToggleButtonGroup>
-        <Button
-          size='small'
-          sx={{ ml: 1, whiteSpace: 'nowrap' }}
-          onClick={() => window.dispatchEvent(new Event(CHECK_UPDATE_EVENT))}
-        >
-          {t('Check now')}
-        </Button>
-      </ListItem>
+      {/* 0.9.6: update notice, recent logs, background reliability. Inside Kilowallet the
+          client is updated only with Kilowallet's own releases: no update notice. */}
+      {embedded ? null : (
+        <ListItem>
+          <ListItemIcon sx={{ minWidth: 56 }}>
+            <SystemUpdate />
+          </ListItemIcon>
+          <ToggleButtonGroup
+            exclusive={true}
+            sx={{ width: '100%' }}
+            value={checkUpdates}
+            onChange={(_e, value) => {
+              if (value === null) return;
+              setCheckUpdates(value);
+              systemClient.setItem('settings_check_updates', String(value));
+            }}
+          >
+            <ToggleButton value={true} color='primary' sx={{ flexGrow: 1 }}>
+              {t('Check for updates')}
+            </ToggleButton>
+            <ToggleButton value={false} color='secondary' sx={{ flexGrow: 1 }}>
+              {t('Off')}
+            </ToggleButton>
+          </ToggleButtonGroup>
+          <Button
+            size='small'
+            sx={{ ml: 1, whiteSpace: 'nowrap' }}
+            onClick={() => window.dispatchEvent(new Event(CHECK_UPDATE_EVENT))}
+          >
+            {t('Check now')}
+          </Button>
+        </ListItem>
+      )}
 
       <ListItem>
         <ListItemIcon sx={{ minWidth: 56 }}>

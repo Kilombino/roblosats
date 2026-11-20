@@ -677,3 +677,4 @@ api/lightning/*.proto
 !roblosats_templates/**/*.html
 !roblosats_admin/templates/**/*.html
 !roblosats_admin/locale/**/*.mo
+frontend/build-kilowallet/

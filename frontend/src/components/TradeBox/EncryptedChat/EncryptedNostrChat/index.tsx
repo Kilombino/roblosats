@@ -24,6 +24,7 @@ import {
   parseImageMetadataJson,
 } from '../../../../utils/nip17File';
 import { playSound } from '../../../../utils/sound';
+import { mobileAssetBase } from '../../../../utils/host';
 
 interface Props {
   order: Order;
@@ -47,7 +48,7 @@ const PEER_POLL_INTERVAL_MS = 5000;
 
 const audioPath =
   getSettings().client == 'mobile'
-    ? 'file:///android_asset/static/assets/sounds'
+    ? `${mobileAssetBase}static/assets/sounds`
     : '/static/assets/sounds';
 
 const EncryptedNostrChat: React.FC<Props> = ({

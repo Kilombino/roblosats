@@ -21,10 +21,11 @@ import { useNavigate } from 'react-router-dom';
 import getSettings from '../../../utils/settings';
 import { UseFederationStoreType, FederationContext } from '../../../contexts/FederationContext';
 import { playSound as playAudio } from '../../../utils/sound';
+import { mobileAssetBase } from '../../../utils/host';
 
 const path =
   getSettings().client === 'mobile'
-    ? 'file:///android_asset/static/assets/sounds'
+    ? `${mobileAssetBase}static/assets/sounds`
     : '/static/assets/sounds';
 
 const audio = {

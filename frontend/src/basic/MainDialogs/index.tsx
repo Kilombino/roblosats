@@ -1,4 +1,5 @@
 import React, { useContext } from 'react';
+import { isKilowallet } from '../../utils/host';
 import {
   CommunityDialog,
   ExchangeDialog,
@@ -39,7 +40,8 @@ const MainDialogs = (): React.JSX.Element => {
 
   return (
     <>
-      <AppUpdateDialog />
+      {/* Kilowallet updates the client with its own releases */}
+      {isKilowallet() ? null : <AppUpdateDialog />}
       <BackgroundDialog />
       <UpdateDialog
         coordinatorVersion={federation.exchange.info.version}

@@ -31,10 +31,11 @@ import { UseAppStoreType, AppContext } from '../../../../contexts/AppContext';
 import PrivacyWarningDialog from '../PrivacyWarningDialog';
 import { ParsedFileMessage, parseImageMetadataJson } from '../../../../utils/nip17File';
 import { playSound } from '../../../../utils/sound';
+import { mobileAssetBase } from '../../../../utils/host';
 
 const audioPath =
   getSettings().client == 'mobile'
-    ? 'file:///android_asset/static/assets/sounds'
+    ? `${mobileAssetBase}static/assets/sounds`
     : '/static/assets/sounds';
 
 interface Props {
