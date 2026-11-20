@@ -21,6 +21,7 @@ import { AttachFile, Send } from '@mui/icons-material';
 import PrivacyWarningDialog from '../PrivacyWarningDialog';
 import { ParsedFileMessage, parseImageMetadataJson } from '../../../../utils/nip17File';
 import { playSound } from '../../../../utils/sound';
+import { mobileAssetBase } from '../../../../utils/host';
 
 interface ChatApiResponse {
   peer_connected?: boolean;
@@ -53,7 +54,7 @@ interface Props {
 
 const audioPath =
   getSettings().client == 'mobile'
-    ? 'file:///android_asset/static/assets/sounds'
+    ? `${mobileAssetBase}static/assets/sounds`
     : '/static/assets/sounds';
 
 const EncryptedApiChat: React.FC<Props> = ({

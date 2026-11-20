@@ -1,5 +1,5 @@
 import path from 'path';
-import { Compiler, Configuration } from 'webpack';
+import { Compiler, Configuration, DefinePlugin } from 'webpack';
 import CopyWebpackPlugin from 'copy-webpack-plugin';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import { version } from './package.json';
@@ -281,7 +281,94 @@ const configAndroid = (env: any, _argv: { mode: string }): Configuration => {
   };
 };
 
-export default (env: any, argv: { mode: string }) => [
-  configNode(env, argv),
-  configAndroid(env, argv),
-];
+// Kilowallet's ROBLO tab: the Android client without its native parts. Robot names and avatars
+// come from the WebAssembly build (as on the web), the page is served by Kilowallet from a local
+// https origin (WebViewAssetLoader's appassets.androidplatform.net) and talks to Kilowallet's
+// bridge, which reimplements AndroidAppRobosats on Kilowallet's Tor and storage. Built only with
+// `--env target=kilowallet` (scripts/kilowallet-client.sh); the regular builds are unchanged.
+export const KILOWALLET_BASE = 'https://appassets.androidplatform.net/roblo/';
+const KILOWALLET_OUT = path.resolve(__dirname, 'build-kilowallet/roblo');
+
+const configKilowallet = (env: any, _argv: { mode: string }): Configuration => {
+  const replace = (from: string, to: string) => ({
+    test: path.resolve(__dirname, from),
+    loader: 'file-replace-loader',
+    options: {
+      condition: 'if-replacement-exists',
+      replacement: path.resolve(__dirname, to),
+      async: true,
+    },
+  });
+  return {
+    ...config,
+    // Reproducible: built from a fixed folder (scripts/kilowallet-client.sh), and node_modules'
+    // symlink is not resolved, because WebAssembly file names depend on the modules' paths.
+    resolve: { ...config.resolve, symlinks: false },
+    module: {
+      ...config.module,
+      rules: [
+        ...(config?.module?.rules || []),
+        replace('src/i18n/Web.js', 'src/i18n/Mobile.js'),
+        replace('src/geo/Web.js', 'src/geo/Mobile.js'),
+        replace(
+          'src/components/RobotAvatar/placeholder.json',
+          'src/components/RobotAvatar/placeholder_highres.json',
+        ),
+      ],
+    },
+    output: {
+      path: path.resolve(KILOWALLET_OUT, 'static/frontend'),
+      filename: `main.v${version}.[contenthash].js`,
+      clean: true,
+      publicPath: 'auto',
+    },
+    plugins: [
+      new DefinePlugin({ __MOBILE_ASSET_BASE__: JSON.stringify(KILOWALLET_BASE) }),
+      new HtmlWebpackPlugin({
+        publicPath: './static/frontend/',
+        template: path.resolve(__dirname, 'templates/frontend/index.ejs'),
+        templateParameters: {
+          pro: false,
+          mobile: true,
+        },
+        filename: path.resolve(KILOWALLET_OUT, 'index.html'),
+        inject: 'body',
+        robosatsSettings: 'mobile-basic',
+        basePath: KILOWALLET_BASE,
+      }),
+      new CopyWebpackPlugin({
+        patterns: [
+          {
+            from: path.resolve(__dirname, 'static/css'),
+            to: path.resolve(KILOWALLET_OUT, 'static/css'),
+            transform(content, path) {
+              if (path.endsWith('.css')) {
+                const cssContent = content
+                  .toString()
+                  .replace(
+                    /url\(\/static\/css\/fonts\/roboto/g,
+                    `url(${KILOWALLET_BASE}static/css/fonts/roboto`,
+                  );
+                return Buffer.from(cssContent);
+              }
+              return content;
+            },
+          },
+          {
+            from: path.resolve(__dirname, 'static/assets/sounds'),
+            to: path.resolve(KILOWALLET_OUT, 'static/assets/sounds'),
+          },
+          {
+            from: path.resolve(__dirname, 'static/federation'),
+            to: path.resolve(KILOWALLET_OUT, 'static/assets/federation'),
+          },
+        ],
+      }),
+    ],
+  };
+};
+
+export default (env: any, argv: { mode: string }) =>
+  env?.target === 'kilowallet'
+    ? [configKilowallet(env, argv)]
+    : [configNode(env, argv), configAndroid(env, argv)];

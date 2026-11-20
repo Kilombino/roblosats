@@ -5,10 +5,11 @@ import { NotificationsActive } from '@mui/icons-material';
 import { actionNeeded, type ActionOrder } from '../../utils/actionNeeded';
 import getSettings from '../../utils/settings';
 import { playSound } from '../../utils/sound';
+import { mobileAssetBase } from '../../utils/host';
 
 const soundPath =
   getSettings().client === 'mobile'
-    ? 'file:///android_asset/static/assets/sounds'
+    ? `${mobileAssetBase}static/assets/sounds`
     : '/static/assets/sounds';
 
 let ding: HTMLAudioElement | null = null;

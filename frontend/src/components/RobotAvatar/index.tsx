@@ -4,6 +4,7 @@ import { SendReceiveIcon } from '../Icons';
 import placeholder from './placeholder.json';
 import { AppContext, type UseAppStoreType } from '../../contexts/AppContext';
 import { roboidentitiesClient } from '../../services/Roboidentities/Web';
+import { mobileAssetBase } from '../../utils/host';
 
 interface Props {
   shortAlias?: string;
@@ -57,7 +58,7 @@ const RobotAvatar: React.FC<Props> = ({
     if (shortAlias) {
       return client !== 'mobile'
         ? `${hostUrl}/static/federation/avatars/${shortAlias}${small ? '.small' : ''}.webp`
-        : `file:///android_asset/static/assets/federation/avatars/${shortAlias}.webp`;
+        : `${mobileAssetBase}static/assets/federation/avatars/${shortAlias}.webp`;
     }
     if (hashId) {
       return roboidentitiesClient.getRobohashFromCache(hashId, size);
