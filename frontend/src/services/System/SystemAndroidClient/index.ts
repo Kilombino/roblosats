@@ -30,13 +30,25 @@ class SystemAndroidClient implements SystemClient {
     }
   };
 
+  // 0.9.10: native answers every call; without a stored promise each answer logged "No promise
+  // found for UUID" (dozens per start in the phone's Recent logs). A failed write is logged.
   public setItem: (key: string, value: string) => void = (key, value) => {
     const uuid: string = uuidv4();
+    window.AndroidRobosats?.storePromise(
+      uuid,
+      () => {},
+      (error) => console.error(`Storage write failed (${key}):`, error),
+    );
     window.AndroidAppRobosats?.setEncryptedStorage(uuid, key, value);
   };
 
   public deleteItem: (key: string) => void = (key) => {
     const uuid: string = uuidv4();
+    window.AndroidRobosats?.storePromise(
+      uuid,
+      () => {},
+      (error) => console.error(`Storage delete failed (${key}):`, error),
+    );
     window.AndroidAppRobosats?.deleteEncryptedStorage(uuid, key);
   };
 

@@ -193,9 +193,11 @@ export const AppContextProvider = ({ children }: AppContextProviderProps): React
         const uuid: string = uuidv4();
         window.AndroidAppRobosats?.getTorStatus(uuid);
         window.AndroidRobosats?.storePromise(uuid, resolve, reject);
-      }).then((result) => {
-        setTorStatus(result);
-      });
+      })
+        .then((result) => {
+          setTorStatus(result);
+        })
+        .catch(() => {}); // 0.9.10: a refused status is not an unhandled rejection
     };
 
     if (client === 'mobile') {
