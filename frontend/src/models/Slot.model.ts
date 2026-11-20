@@ -35,6 +35,25 @@ const onchainSignature = (order: Order): string => {
   return JSON.stringify(ONCHAIN_KEYS.map((k) => o[k] ?? null));
 };
 
+/** Statuses after which the app stops following an order (it becomes the slot's last order). */
+export const FINISHED_STATUSES = [4, 5, 12, 14, 17, 18];
+
+/** 0.9.10 (#26): an onchain order that already finished (collaborative cancel, success, dispute
+ * resolved) may still have a step on chain: the escrow release in the mempool or being signed
+ * together, or a bond signature this app must make. Keep following it as the active order (at
+ * the normal pace) until that clears; then it is finished like before. */
+export const onchainStillPending = (order: Order | null | undefined): boolean => {
+  if (!order) return false;
+  const o = order as unknown as Record<string, unknown>;
+  if (o.escrow_type !== 'onchain' && o.escrow_type !== 1) return false;
+  if (![12, 14, 17, 18].includes(order.status)) return false;
+  return o.escrow_status_code === 2 || o.escrow_status_code === 4 || o.bond_status_code === 1;
+};
+
+/** Finished for good: nothing left to follow. */
+export const orderFinished = (order: Order): boolean =>
+  FINISHED_STATUSES.includes(order.status) && !onchainStillPending(order);
+
 class Slot {
   constructor(
     token: string,
@@ -140,7 +159,9 @@ class Slot {
     } else if (
       !robot.activeOrderId &&
       this.activeOrder?.shortAlias === robot.shortAlias &&
-      this.lastOrder?.id !== this.activeOrder.id
+      this.lastOrder?.id !== this.activeOrder.id &&
+      // #26: finished for the coordinator, but its release is still on its way: keep it
+      !(robot.lastOrderId === this.activeOrder.id && onchainStillPending(this.activeOrder))
     ) {
       this.activeOrder = null;
       changed = true;
@@ -150,6 +171,12 @@ class Slot {
       if (robot.lastOrderId === robot.activeOrderId) {
         // The robot reports the same id for both last and active — it is still
         // active, so leave activeOrder in place and skip updating lastOrder.
+      } else if (
+        this.activeOrder?.id === robot.lastOrderId &&
+        this.activeOrder?.shortAlias === robot.shortAlias &&
+        onchainStillPending(this.activeOrder)
+      ) {
+        // #26: still following it until its onchain step clears (updateSlotFromOrder parks it).
       } else if (this.activeOrder?.id === robot.lastOrderId) {
         // The previously-active order is now the last order: preserve the full
         // object so that status details are not lost.
@@ -251,7 +278,7 @@ class Slot {
           this.activeOrder?.bad_request !== previousBadRequest;
         if (
           this.activeOrder?.bad_request ||
-          [4, 5, 12, 14, 17, 18].includes(this.activeOrder.status) ||
+          orderFinished(this.activeOrder) ||
           // 0.9.8: lost the race for this order and its bond is settled: nothing left to follow
           this.activeOrder?.lost_take_done === true
         ) {
@@ -267,7 +294,7 @@ class Slot {
         !newOrder.bad_request &&
         this.lastOrder?.id === newOrder.id &&
         this.lastOrder?.shortAlias === newOrder.shortAlias &&
-        ![4, 5, 12, 14, 17, 18].includes(newOrder.status)
+        !orderFinished(newOrder)
       ) {
         // Parked as the last order by an error that is gone now and still running: follow it
         // again as the active order (otherwise nobody refreshes it any more).
@@ -277,7 +304,7 @@ class Slot {
         newOrder?.is_participant &&
         (this.lastOrder?.id !== newOrder.id || this.lastOrder?.shortAlias !== newOrder.shortAlias)
       ) {
-        if ([4, 5, 12, 14, 17, 18].includes(newOrder.status)) {
+        if (orderFinished(newOrder)) {
           this.lastOrder = newOrder;
           this.lastOrderStatusKnown = this.hasOrderDetails(newOrder);
         } else {
@@ -315,6 +342,10 @@ class Slot {
     const statusResolved =
       !this.lastOrder.bad_request || this.resolveBadRequestStatus(this.lastOrder);
     this.lastOrderStatusKnown = this.hasOrderDetails(this.lastOrder) && statusResolved;
+    // #26: its onchain release is still on its way (app restarted meanwhile): follow it again
+    if (!this.activeOrder && !this.lastOrder.bad_request && onchainStillPending(this.lastOrder)) {
+      this.activeOrder = this.lastOrder;
+    }
     this.onSlotUpdate();
   };
 

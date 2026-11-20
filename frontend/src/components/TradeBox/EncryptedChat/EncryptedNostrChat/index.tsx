@@ -23,6 +23,7 @@ import {
   parseFileMessage,
   parseImageMetadataJson,
 } from '../../../../utils/nip17File';
+import { playSound } from '../../../../utils/sound';
 
 interface Props {
   order: Order;
@@ -90,7 +91,7 @@ const EncryptedNostrChat: React.FC<Props> = ({
 
   useEffect(() => {
     if (messages.length > messageCount) {
-      void audio.play();
+      playSound(audio);
       setMessageCount(messages.length);
     }
   }, [messages, messageCount]);

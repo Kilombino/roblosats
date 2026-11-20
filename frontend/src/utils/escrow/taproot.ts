@@ -3,6 +3,7 @@ import { hkdf } from '@noble/hashes/hkdf.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, hexToBytes, randomBytes } from '@noble/hashes/utils.js';
 import { base58check, bech32, bech32m } from '@scure/base';
+import { DEFAULT_HRP, checkAddress } from '../address';
 
 import {
   applyTweak,
@@ -384,13 +385,8 @@ export const dustThreshold = (script: Uint8Array, relayFee = 3000): number => {
   return Math.max(330, Math.floor((size * relayFee) / 1000));
 };
 
-/** A receive address this app can pay (what addressToScript accepts): legacy 1…, P2SH 3…
- * (0.9.9), segwit v0 bc1q… and taproot bc1p…. */
-export const validOnchainAddress = (address: string): boolean => {
-  try {
-    addressToScript(address);
-    return true;
-  } catch {
-    return false;
-  }
-};
+/** A receive address this app can pay: legacy 1…, P2SH 3… (0.9.9), segwit v0 bc1q… and taproot
+ * bc1p…, 0.9.10: fully checked (checksum, bech32 vs bech32m, case) for the coordinator's
+ * network (`hrp`: "bc" mainnet, "tb" testnet, "bcrt" regtest), see utils/address.ts. */
+export const validOnchainAddress = (address: string, hrp: string = DEFAULT_HRP): boolean =>
+  checkAddress(address, hrp).ok;

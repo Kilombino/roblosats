@@ -10,6 +10,7 @@ import React, {
 } from 'react';
 
 import { defaultMaker, type Maker, Garage } from '../models';
+import { activeOrderDelay, defaultDelay } from './orderRefreshDelay';
 import { type UseAppStoreType, AppContext } from './AppContext';
 import { type UseFederationStoreType, FederationContext } from './FederationContext';
 
@@ -34,30 +35,6 @@ export const initialGarageContext: UseGarageStoreType = {
   fetchSlotActiveOrder: () => {},
   recoverAccountFromRelays: async () => {},
 };
-
-const defaultDelay = 5000;
-// Refresh delays (ms) according to Order status
-const statusToDelay = [
-  3000, // 'Waiting for maker bond'
-  35000, // 'Public'
-  180000, // 'Paused'
-  3000, // 'Waiting for taker bond'
-  999999, // 'Cancelled'
-  999999, // 'Expired'
-  8000, // 'Waiting for trade collateral and buyer invoice'
-  8000, // 'Waiting only for seller trade collateral'
-  8000, // 'Waiting only for buyer invoice'
-  10000, // 'Sending fiat - In chatroom'
-  10000, // 'Fiat sent - In chatroom'
-  100000, // 'In dispute'
-  999999, // 'Collaboratively cancelled'
-  10000, // 'Sending satoshis to buyer'
-  60000, // 'Sucessful trade'
-  30000, // 'Failed lightning network routing'
-  300000, // 'Wait for dispute resolution'
-  300000, // 'Maker lost dispute'
-  300000, // 'Taker lost dispute'
-];
 
 export const GarageContext = createContext<UseGarageStoreType>(initialGarageContext);
 
@@ -141,10 +118,7 @@ export const GarageContextProvider = ({
   const fetchSlotActiveOrder: () => void = () => {
     const slot = garage?.getSlot();
     if (slot?.activeOrder?.id) {
-      let delay =
-        slot.activeOrder.status >= 0 && slot.activeOrder.status <= 18
-          ? statusToDelay[slot.activeOrder.status]
-          : defaultDelay;
+      let delay = activeOrderDelay(slot.activeOrder);
       if (pageRef.current !== 'order') delay = delay * 5;
       // 0.9.6: the app in the background (or a hidden tab) asks much less often; the Android
       // notification service tells about new steps meanwhile

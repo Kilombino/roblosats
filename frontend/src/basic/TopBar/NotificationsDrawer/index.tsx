@@ -20,6 +20,7 @@ import { systemClient } from '../../../services/System';
 import { useNavigate } from 'react-router-dom';
 import getSettings from '../../../utils/settings';
 import { UseFederationStoreType, FederationContext } from '../../../contexts/FederationContext';
+import { playSound as playAudio } from '../../../utils/sound';
 
 const path =
   getSettings().client === 'mobile'
@@ -110,7 +111,7 @@ const NotificationsDrawer = ({ show, setShow }: NotificationsDrawerProps): React
     const soundType = soundByStatus[orderStatus] ?? 'ding';
     const sound = audio[soundType];
 
-    void sound.play();
+    playAudio(sound);
   };
 
   const handleCloseSnak = () => {

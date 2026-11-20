@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Grid, Typography, TextField, List, Divider, ListItemText, ListItem } from '@mui/material';
 import { type Order } from '../../../models';
@@ -6,12 +6,20 @@ import { LoadingButton } from '@mui/lab';
 import { pn } from '../../../utils';
 import {
   MIN_ONCHAIN_PAYOUT_SATS,
+  MIN_PAYOUT_FEE_RATE,
   PAYOUT_VBYTES,
   maxFeeRateForMinimum,
   onchainPayout,
   sellerMiningCover,
+  validPayoutFeeRate,
 } from '../../../utils/hybridSwap';
 import { numberFromInput } from '../../../utils/numberInput';
+import { hrpOfNetwork } from '../../../utils/address';
+import {
+  FederationContext,
+  type UseFederationStoreType,
+} from '../../../contexts/FederationContext';
+import { useAddressConfirm } from '../../Dialogs/AddressConfirm';
 
 export interface OnchainForm {
   address: string;
@@ -31,7 +39,8 @@ interface OnchainPayoutFormProps {
   loading: boolean;
   onchain: OnchainForm;
   setOnchain: (state: OnchainForm) => void;
-  onClickSubmit: () => void;
+  /** 0.9.10: called with the address the user confirmed */
+  onClickSubmit: (address?: string) => void;
 }
 
 export const OnchainPayoutForm = ({
@@ -42,8 +51,11 @@ export const OnchainPayoutForm = ({
   setOnchain,
 }: OnchainPayoutFormProps): React.JSX.Element => {
   const { t } = useTranslation();
+  const { federation } = useContext<UseFederationStoreType>(FederationContext);
+  const { confirmAddress, addressDialog } = useAddressConfirm();
 
-  const minMiningFee = 2;
+  // 0.9.10: 1 sat/vB (coordinators enforce PAYOUT_MIN_FEE_RATE; it was a fixed 2)
+  const minMiningFee = MIN_PAYOUT_FEE_RATE;
   const costPerVByte = PAYOUT_VBYTES;
 
   const handleMiningFeeChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
@@ -72,7 +84,24 @@ export const OnchainPayoutForm = ({
   const cover = sellerMiningCover(swapTx);
   const emptyFee = onchain.miningFee === null;
   const belowMinimum = payout.received < MIN_ONCHAIN_PAYOUT_SATS;
-  const invalidFee = emptyFee || feeRate < minMiningFee || feeRate > maxMiningFee || belowMinimum;
+  const invalidFee = !validPayoutFeeRate(onchain.miningFee, maxMiningFee) || belowMinimum;
+
+  // 0.9.10: the address fully checked for the coordinator's network, then confirmed
+  const submit = (): void => {
+    const o = order as unknown as { escrow_hrp?: string; bond_hrp?: string };
+    const problem = confirmAddress({
+      address: onchain.address,
+      hrp: o.escrow_hrp ?? o.bond_hrp ?? hrpOfNetwork(federation?.network),
+      message: t('Your payout of {{amount}} Sats will go to:', {
+        amount: pn(Math.max(0, payout.received)),
+      }),
+      onConfirm: (checked) => {
+        setOnchain({ ...onchain, address: checked, badAddress: '' });
+        onClickSubmit(checked);
+      },
+    });
+    if (problem) setOnchain({ ...onchain, badAddress: problem });
+  };
 
   return (
     <Grid
@@ -160,14 +189,17 @@ export const OnchainPayoutForm = ({
               fullWidth
               maxRows={1}
               onChange={(e) => {
-                setOnchain({ ...onchain, address: e.target.value });
+                setOnchain({ ...onchain, address: e.target.value.trim(), badAddress: '' });
               }}
             />
           </Grid>
           <Grid size={5}>
             <TextField
               error={invalidFee}
-              helperText={t('Max {{max}} sat/vB', { max: maxMiningFee })}
+              helperText={t('Min {{min}}, max {{max}} sat/vB', {
+                min: minMiningFee,
+                max: maxMiningFee,
+              })}
               label={t('Mining Fee')}
               required
               fullWidth={true}
@@ -200,8 +232,8 @@ export const OnchainPayoutForm = ({
       <Grid style={{ marginTop: 16 }}>
         <LoadingButton
           loading={loading}
-          onClick={onClickSubmit}
-          disabled={invalidFee}
+          onClick={submit}
+          disabled={invalidFee || onchain.address.trim() === ''}
           variant='outlined'
           color='primary'
           size='large'
@@ -209,6 +241,7 @@ export const OnchainPayoutForm = ({
           {t('Submit')}
         </LoadingButton>
       </Grid>
+      {addressDialog}
     </Grid>
   );
 };

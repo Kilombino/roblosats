@@ -26,7 +26,7 @@ interface RoutingFailedPromptProps {
   lightning: LightningForm;
   loadingLightning: boolean;
   setLightning: (state: LightningForm) => void;
-  onClickSubmitAddress: () => void;
+  onClickSubmitAddress: (address?: string) => void;
   onchain: OnchainForm;
   setOnchain: (state: OnchainForm) => void;
   loadingOnchain: boolean;

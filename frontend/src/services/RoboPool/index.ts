@@ -38,6 +38,9 @@ interface NotificationSubscriptionState {
 }
 
 const DEFAULT_NOTIFICATION_BACKFILL_SECONDS = 48 * 60 * 60;
+// 0.9.10 (#29): a relay socket that closes is opened again, 2 s, 4 s … at most 60 s apart.
+export const RECONNECT_MIN_MS = 2000;
+export const RECONNECT_MAX_MS = 60000;
 const DEFAULT_NOTIFICATION_EOSE_TIMEOUT_MS = 5000;
 
 class RoboPool {
@@ -56,6 +59,12 @@ class RoboPool {
     new Map();
   private notificationSubscriptionId = 0;
   private notificationSubscriptionParams?: UpdateNotificationSubscriptionsParams;
+  // 0.9.10 (#29): the open subscriptions (REQ by id), sent again to a relay that reconnects.
+  // Before, a socket that dropped (a Tor circuit, the relay restarting) was never opened again
+  // and its subscriptions were lost: the phone's chat stayed empty for the rest of the session.
+  public readonly activeRequests: Map<string, string> = new Map();
+  private readonly reconnectTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+  private readonly reconnectDelays: Map<string, number> = new Map();
   private readonly notificationTimeouts = new Set<ReturnType<typeof setTimeout>>();
   private readonly accountRecoverySubscriptions = new Map<
     string,
@@ -95,31 +104,60 @@ class RoboPool {
 
       this.webSockets[url] = null;
 
-      const connectRelay = (): void => {
-        void websocketClient.open(url).then((connection) => {
-          if (sockets !== this.webSockets) {
-            connection.close();
-            return;
-          }
-          console.log(`Connected to ${url}`);
+      const scheduleReconnect = (): void => {
+        if (sockets !== this.webSockets || this.reconnectTimers.has(url)) return;
+        const delay = this.reconnectDelays.get(url) ?? RECONNECT_MIN_MS;
+        this.reconnectDelays.set(url, Math.min(delay * 2, RECONNECT_MAX_MS));
+        const timer = setTimeout(() => {
+          this.reconnectTimers.delete(url);
+          if (sockets !== this.webSockets) return;
+          connectRelay(true);
+        }, delay);
+        this.reconnectTimers.set(url, timer);
+      };
 
-          connection.onMessage((event) => {
-            if (sockets !== this.webSockets) return;
-            this.messageHandlers.forEach((handler) => {
-              handler(url, event as unknown as MessageEvent<unknown>);
+      const connectRelay = (again = false): void => {
+        websocketClient
+          .open(url)
+          .then((connection) => {
+            if (sockets !== this.webSockets) {
+              connection.close();
+              return;
+            }
+            console.log(`${again ? 'Reconnected' : 'Connected'} to ${url}`);
+            let dropped = false;
+            const drop = (why: string): void => {
+              if (dropped) return;
+              dropped = true;
+              console.log(`Disconnected from ${url} (${why})`);
+              if (sockets !== this.webSockets || this.webSockets[url] !== connection) return;
+              this.webSockets[url] = null;
+              scheduleReconnect();
+            };
+
+            connection.onMessage((event) => {
+              if (sockets !== this.webSockets) return;
+              this.messageHandlers.forEach((handler) => {
+                handler(url, event as unknown as MessageEvent<unknown>);
+              });
             });
-          });
 
-          connection.onError((error) => {
-            console.error(`WebSocket error on ${url}:`, error);
-          });
+            connection.onError((error) => {
+              console.error(`WebSocket error on ${url}:`, error);
+              drop('error');
+            });
 
-          connection.onClose(() => {
-            console.log(`Disconnected from ${url}`);
-          });
+            connection.onClose(() => drop('closed'));
 
-          this.webSockets[url] = connection;
-        });
+            this.webSockets[url] = connection;
+            this.reconnectDelays.delete(url);
+            // a new socket after a drop knows nothing: subscribe again to what is open
+            if (again) this.activeRequests.forEach((req) => connection.send(req));
+          })
+          .catch(() => {
+            if (sockets !== this.webSockets) return;
+            scheduleReconnect();
+          });
       };
       connectRelay();
     });
@@ -134,9 +172,25 @@ class RoboPool {
   private disconnect = (): void => {
     const sockets = this.webSockets;
     this.webSockets = {};
+    this.reconnectTimers.forEach((timer) => clearTimeout(timer));
+    this.reconnectTimers.clear();
+    this.reconnectDelays.clear();
     Object.values(sockets).forEach((ws) => {
       ws?.close();
     });
+  };
+
+  /** Remembers REQs (by subscription id) until their CLOSE, to send them again on reconnect. */
+  private trackRequest = (message: string): void => {
+    if (!message.startsWith('["REQ"') && !message.startsWith('["CLOSE"')) return;
+    try {
+      const parsed = JSON.parse(message) as unknown[];
+      const subId = String(parsed[1]);
+      if (parsed[0] === 'REQ') this.activeRequests.set(subId, message);
+      else this.activeRequests.delete(subId);
+    } catch {
+      // not ours to track
+    }
   };
 
   private removeMessageHandler = (handler: (url: string, event: MessageEvent) => void): void => {
@@ -147,6 +201,7 @@ class RoboPool {
   };
 
   sendMessage = (message: string, isActive?: () => boolean): void => {
+    this.trackRequest(message);
     const sockets = this.webSockets;
     const send = (url: string, message: string): void => {
       if (sockets !== this.webSockets || (isActive && !isActive())) return;

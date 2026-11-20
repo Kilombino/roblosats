@@ -18,7 +18,7 @@ export const onchainEscrowStep = (order: Order): boolean => {
   if (o.status === 13) return true;
   // A cooperative return being signed (collaborative cancel in the chat).
   if ([9, 10, 11, 12].includes(o.status) && o.escrow_status_code === 4) return true;
-  if ([17, 18].includes(o.status) && o.escrow_status_code === 4) return true;
+  if ([14, 17, 18].includes(o.status) && o.escrow_status_code === 4) return true;
   if ([4, 5, 12, 14, 17, 18].includes(o.status) && o.bond_status_code === 5) return true;
   // Sats left on our funding address after the order ended: offer to send them back.
   if (

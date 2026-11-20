@@ -11,6 +11,8 @@ import {
   type EscrowOrderData,
 } from '../../../utils/escrow/client';
 import { addressToScript, bytesToHex } from '../../../utils/escrow/taproot';
+import { DEFAULT_HRP } from '../../../utils/address';
+import { useAddressConfirm } from '../../Dialogs/AddressConfirm';
 import { RecoveredLine, type EscrowAction } from './OnchainEscrow';
 
 interface Props {
@@ -36,6 +38,7 @@ export const BondLeftoverBox = ({ order, token, onAction }: Props): React.JSX.El
   const [error, setError] = useState<string | null>(null);
   const sent = useRef<Set<string>>(new Set());
   const left = data.bond_leftover_sats ?? 0;
+  const { confirmAddress, addressDialog } = useAddressConfirm();
 
   useEffect(() => {
     if (!token || !data.escrow_alias || !data.bond_leftover_tx || left <= 0 || !address) return;
@@ -63,15 +66,26 @@ export const BondLeftoverBox = ({ order, token, onAction }: Props): React.JSX.El
 
   if (left <= 0 && !data.bond_leftover_txid) return null;
 
+  // 0.9.10: fully checked for the coordinator's network; a typed address is confirmed first
+  // (our payout address, filled in for us and already confirmed when it was given, is not)
+  const send = (checked: string): void => {
+    setError(null);
+    setAddress(checked);
+    onAction('bond_leftover_return', { address: checked });
+  };
   const ask = (): void => {
-    try {
-      addressToScript(address);
-    } catch {
-      setError(t('Use a valid address: legacy (1…), P2SH (3…), segwit (bc1q…) or taproot (bc1p…)'));
+    const hrp = data.bond_hrp ?? data.escrow_hrp ?? DEFAULT_HRP;
+    if (address === data.escrow_my_payout_address) {
+      send(address);
       return;
     }
-    setError(null);
-    onAction('bond_leftover_return', { address });
+    const problem = confirmAddress({
+      address,
+      hrp,
+      message: t('Your {{amount}} Sats will go back to:', { amount: pn(left) }),
+      onConfirm: send,
+    });
+    if (problem) setError(problem);
   };
 
   const fee = data.bond_leftover_fee_sats ?? 0;
@@ -146,6 +160,7 @@ export const BondLeftoverBox = ({ order, token, onAction }: Props): React.JSX.El
           <Alert severity='error'>{error}</Alert>
         </Grid>
       ) : null}
+      {addressDialog}
     </Grid>
   );
 };

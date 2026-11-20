@@ -1,7 +1,8 @@
 import { systemClient } from '../../services/System';
 import { pendingReturnKey, rememberMyAddress } from '../../utils/myAddresses';
-import { validOnchainAddress } from '../../utils/escrow/taproot';
-import React, { useState, useMemo, useEffect, useContext } from 'react';
+import { addressErrorText, checkAddress, hrpOfNetwork } from '../../utils/address';
+import { useAddressConfirm } from '../Dialogs/AddressConfirm';
+import React, { useState, useMemo, useEffect, useContext, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cleanNumberInput, parseNumberInput } from '../../utils/numberInput';
 import {
@@ -463,19 +464,34 @@ const TakeButton = ({
   };
 
   const [bondReturn, setBondReturn] = useState<string>('');
+  // 0.9.10: fully checked for the coordinator's network and confirmed before taking
+  const orderHrp = (currentOrder as unknown as { bond_hrp?: string; escrow_hrp?: string } | null)
+    ?.bond_hrp;
+  const bondReturnHrp = orderHrp ?? hrpOfNetwork(federation.network);
+  const bondReturnCheck = bondReturn ? checkAddress(bondReturn, bondReturnHrp) : null;
+  const bondReturnUsed = isOnchainOrder && takeWith !== 'lightning' && bondReturnCheck !== null;
+  const confirmedBondReturn = useRef<string>('');
+  const { confirmAddress, addressDialog } = useAddressConfirm();
 
   const takeOrder = function (): void {
     const slot = garage.getSlot();
     // 0.9.7: a return address that is not valid is fixed or emptied first
-    if (
-      isOnchainOrder &&
-      takeWith !== 'lightning' &&
-      bondReturn &&
-      !validOnchainAddress(bondReturn)
-    ) {
-      setBadRequest(
-        'Use a valid address: legacy (1…), P2SH (3…), segwit (bc1q…) or taproot (bc1p…)',
-      );
+    if (bondReturnUsed && bondReturnCheck && !bondReturnCheck.ok) {
+      setBadRequest(addressErrorText(bondReturnCheck.error, t, bondReturnHrp));
+      setLoadingTake(false);
+      return;
+    }
+    if (bondReturnUsed && confirmedBondReturn.current !== bondReturn) {
+      confirmAddress({
+        address: bondReturn,
+        hrp: bondReturnHrp,
+        message: t('Your bond will come back to:'),
+        onConfirm: () => {
+          confirmedBondReturn.current = bondReturn;
+          takeOrder();
+        },
+        onCancel: () => setLoadingTake(false),
+      });
       return;
     }
 
@@ -493,15 +509,9 @@ const TakeButton = ({
         } else {
           setBadRequest('');
           // 0.9.7: the bond's return address goes with its bond key, from the order page
-          if (
-            isOnchainOrder &&
-            takeWith !== 'lightning' &&
-            bondReturn &&
-            validOnchainAddress(bondReturn) &&
-            slot.token
-          ) {
-            systemClient.setItem(pendingReturnKey(slot.token), bondReturn);
-            void rememberMyAddress(bondReturn);
+          if (bondReturnUsed && bondReturnCheck?.ok && slot.token) {
+            systemClient.setItem(pendingReturnKey(slot.token), bondReturnCheck.address);
+            void rememberMyAddress(bondReturnCheck.address);
           }
           setCurrentOrder(order);
           navigateToPage(`order/${order.shortAlias}/${order.id}`, navigate);
@@ -524,15 +534,13 @@ const TakeButton = ({
             size='small'
             label={t('Bond return address (optional)')}
             helperText={
-              bondReturn && !validOnchainAddress(bondReturn)
-                ? t(
-                    'Use a valid address: legacy (1…), P2SH (3…), segwit (bc1q…) or taproot (bc1p…)',
-                  )
+              bondReturnCheck && !bondReturnCheck.ok
+                ? addressErrorText(bondReturnCheck.error, t, bondReturnHrp)
                 : t(
                     'Your bond comes back here by itself when it is free (1…, 3…, bc1q… or bc1p… addresses). Empty: your payout address.',
                   )
             }
-            error={Boolean(bondReturn) && !validOnchainAddress(bondReturn)}
+            error={Boolean(bondReturnCheck && !bondReturnCheck.ok)}
             value={bondReturn}
             onChange={(e) => {
               setBondReturn(e.target.value.trim());
@@ -568,14 +576,15 @@ const TakeButton = ({
           setOpen({ ...open, confirmation: false });
         }}
         onClickDone={() => {
-          takeOrder();
           setLoadingTake(true);
           setOpen(closeAll);
+          takeOrder();
         }}
         hasRobot={Boolean(garage.getSlot()?.hashId)}
         onClickGenerateRobot={onClickGenerateRobot}
       />
 
+      {addressDialog}
       <UsedRobotDialog
         open={openUsedRobotDialog}
         action='take'

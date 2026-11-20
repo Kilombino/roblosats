@@ -1,7 +1,8 @@
 import { nip59, type Event } from 'nostr-tools';
 import Garage from '../Garage.model';
 import GarageKey from '../GarageKey.model';
-import Slot from '../Slot.model';
+import Slot, { onchainStillPending } from '../Slot.model';
+import { activeOrderDelay } from '../../contexts/orderRefreshDelay';
 import Order from '../Order.model';
 import type Federation from '../Federation.model';
 import { apiClient } from '../../services/api';
@@ -284,4 +285,88 @@ it('generateRobot reuses an existing garageKey and does not overwrite it', async
 
   expect(garage.getGarageKey()).toBe(originalKey);
   expect(garage.currentSlot).toBe(originalKey!.deriveRobotToken(originalKey!.currentAccountIndex));
+});
+
+// #26 (0.9.10): the buyer stayed on "Releasing the onchain escrow…" after the release went out
+// because a finished status stopped the refresh while the release was still on its way.
+describe('finished onchain order with a pending onchain step', () => {
+  const onchain = (status: number, extra: object = {}) => ({
+    id: 1,
+    status,
+    maker: 1,
+    escrow_type: 'onchain',
+    ...extra,
+  });
+
+  it.each([
+    [12, { escrow_status_code: 4 }],
+    [14, { escrow_status_code: 4 }],
+    [17, { escrow_status_code: 2 }],
+    [18, { escrow_status_code: 4 }],
+    [14, { escrow_status_code: 5, bond_status_code: 1 }],
+  ])('keeps following status %s with %j, then parks it once it clears', async (status, extra) => {
+    const { slot } = await garageWithSlot();
+    slot.activeOrder = new Order({ id: 1, shortAlias: 'test', maker: 1, status: 13 });
+    const get = jest.spyOn(apiClient, 'get').mockResolvedValue(onchain(status, extra));
+    await slot.fetchActiveOrder(federation);
+    expect(slot.activeOrder?.status).toBe(status);
+    expect(slot.lastOrder).toBeNull();
+    expect(activeOrderDelay(slot.activeOrder!)).toBe(10000);
+
+    // A robot refresh (the coordinator already lists it as the last order) does not drop it.
+    get.mockResolvedValueOnce({ earned_rewards: 0, last_order_id: 1 });
+    await slot.fetchRobot(federation);
+    expect(slot.activeOrder?.id).toBe(1);
+
+    get.mockResolvedValue(onchain(status, { escrow_status_code: 5, bond_status_code: 6 }));
+    await slot.fetchActiveOrder(federation);
+    expect(slot.activeOrder).toBeNull();
+    expect(slot.lastOrder?.status).toBe(status);
+    const finishedDelay: Record<number, number> = { 12: 999999, 14: 60000, 17: 300000, 18: 300000 };
+    expect(activeOrderDelay(slot.lastOrder!)).toBe(finishedDelay[status]);
+  });
+
+  it('repaints when only the escrow step changes', async () => {
+    const { slot } = await garageWithSlot();
+    slot.activeOrder = new Order({ id: 1, shortAlias: 'test', maker: 1, status: 13 });
+    jest.spyOn(apiClient, 'get').mockResolvedValue(onchain(14, { escrow_status_code: 4 }));
+    await slot.fetchActiveOrder(federation);
+    jest.mocked(slot.onSlotUpdate).mockClear();
+    jest
+      .spyOn(apiClient, 'get')
+      .mockResolvedValue(
+        onchain(14, { escrow_status_code: 4, escrow_release_txid: 'ab'.repeat(32) }),
+      );
+    await slot.fetchActiveOrder(federation);
+    expect(slot.activeOrder?.status).toBe(14);
+    expect(slot.onSlotUpdate).toHaveBeenCalled();
+  });
+
+  it('does not keep a Lightning order or an unrelated status', () => {
+    expect(
+      onchainStillPending(new Order({ id: 1, status: 14, escrow_status_code: 4 } as object)),
+    ).toBe(false);
+    expect(onchainStillPending(new Order(onchain(5, { escrow_status_code: 4 })))).toBe(false);
+    expect(onchainStillPending(new Order(onchain(14, { escrow_status_code: 5 })))).toBe(false);
+    expect(onchainStillPending(new Order(onchain(17, { bond_status_code: 1 })))).toBe(true);
+    expect(activeOrderDelay(new Order(onchain(14, { escrow_status_code: 5 })))).toBe(60000);
+  });
+
+  it('follows again a parked last order whose release is still pending', async () => {
+    const { slot } = await garageWithSlot();
+    slot.lastOrder = new Order({ id: 1, shortAlias: 'test' });
+    jest.spyOn(apiClient, 'get').mockResolvedValue(onchain(14, { escrow_status_code: 4 }));
+    await slot.ensureLastOrderStatus(federation);
+    expect(slot.activeOrder?.id).toBe(1);
+    expect(slot.isReusable()).toBe(false);
+  });
+
+  it('follows again a parked order seen from the order page', async () => {
+    const { slot } = await garageWithSlot();
+    slot.lastOrder = new Order({ id: 1, shortAlias: 'test', status: 14 });
+    const fresh = new Order({ id: 1, shortAlias: 'test' });
+    fresh.update({ ...onchain(14, { escrow_status_code: 4 }), is_participant: true });
+    slot.updateSlotFromOrder(fresh);
+    expect(slot.activeOrder).toBe(fresh);
+  });
 });

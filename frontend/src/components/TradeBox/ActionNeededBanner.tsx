@@ -4,6 +4,7 @@ import { Alert } from '@mui/material';
 import { NotificationsActive } from '@mui/icons-material';
 import { actionNeeded, type ActionOrder } from '../../utils/actionNeeded';
 import getSettings from '../../utils/settings';
+import { playSound } from '../../utils/sound';
 
 const soundPath =
   getSettings().client === 'mobile'
@@ -14,7 +15,7 @@ let ding: HTMLAudioElement | null = null;
 const playDing = (): void => {
   try {
     ding = ding ?? new Audio(`${soundPath}/locked-invoice.mp3`);
-    void ding.play().catch(() => {});
+    playSound(ding);
   } catch {
     // no audio (tests, old webviews)
   }

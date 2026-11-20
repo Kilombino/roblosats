@@ -11,6 +11,8 @@ import currencies from '../../utils/currencies';
 import { summaryAmountText } from '../../utils/spamAmounts';
 import { systemClient } from '../../services/System';
 import { TxLine } from '../TradeBox/Prompts/OnchainEscrow';
+import { groupAddress } from '../../utils/address';
+import { bondStateOf } from './bondState';
 
 export interface FinalSummaryData {
   order_id: number;
@@ -33,6 +35,8 @@ export interface FinalSummaryData {
   bond_sats?: number;
   bond_state?: string;
   bond_returned_sats?: number;
+  /** 0.9.10: the address the bond came back to ("" if unknown) */
+  bond_returned_to?: string;
   /** rl31-beta18: sats at the bond address that were not the bond, still there / sent back */
   bond_extra_sats?: number;
   bond_extra_returned_sats?: number;
@@ -199,7 +203,8 @@ const FinalSummary = ({
     s.bond_kind === 'onchain' ? t('Your bond (onchain)') : t('Your bond (Lightning)');
   const lost = (s.bond_lost_sats ?? 0) > 0;
   let bondState = '';
-  switch (s.bond_state) {
+  const bondStateCode = bondStateOf(s);
+  switch (bondStateCode) {
     case 'returned':
       bondState =
         (s.bond_returned_sats ?? 0) > 0 && (s.bond_returned_sats ?? 0) < (s.bond_sats ?? 0)
@@ -278,8 +283,21 @@ const FinalSummary = ({
         <Row
           label={t('Bond')}
           value={bondState}
-          color={lost ? 'error.main' : s.bond_state === 'recoverable' ? 'warning.main' : undefined}
+          color={lost ? 'error.main' : bondStateCode === 'recoverable' ? 'warning.main' : undefined}
         />
+      ) : null}
+      {s.bond_returned_to ? (
+        <Box sx={{ mt: 0.25 }} data-testid='bond-returned-to'>
+          <Typography variant='body2' color='text.secondary'>
+            {t('Bond returned to')}
+          </Typography>
+          <Typography
+            variant='body2'
+            sx={{ fontFamily: 'monospace', overflowWrap: 'anywhere', textAlign: 'right' }}
+          >
+            {groupAddress(s.bond_returned_to)}
+          </Typography>
+        </Box>
       ) : null}
       {(s.bond_extra_sats ?? 0) > 0 ? (
         <Row
@@ -313,7 +331,7 @@ const FinalSummary = ({
           {t('Why')}: {lostReason(s.bond_lost_reason, t)}
         </Typography>
       ) : null}
-      {s.fee_from_bond && s.bond_state === 'returned' ? (
+      {s.fee_from_bond && bondStateCode === 'returned' ? (
         <Typography variant='caption' color='text.secondary' sx={{ display: 'block' }}>
           {t('Your fee and your share of the deposit mining fee came out of your bond.')}
         </Typography>

@@ -208,12 +208,29 @@ class WebAppInterface(private val context: MainActivity, private val webView: We
                     onWsMessage(path, bytes.hex())
                 }
 
+                // 0.9.10 (#29): the map is keyed by URL and the app reconnects to the same URL,
+                // so only the socket that is still the current one for its URL may remove itself
+                // and tell JS; an old socket closing late used to drop the live one. A failure
+                // after the socket was open (a Tor circuit dropping) now tells JS too: before,
+                // JS believed it was still open and the chat never received anything again.
+                private fun dropIfCurrent(webSocket: WebSocket): Boolean {
+                    synchronized(webSockets) {
+                        if (webSockets[path] === webSocket) {
+                            webSockets.remove(path)
+                            return true
+                        }
+                        return false
+                    }
+                }
+
                 override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
                     Log.d(TAG, "WebSocket closing: " + reason)
-                    onWsClose(path)
-                    synchronized(webSockets) {
-                        webSockets.remove(path) // Remove the WebSocket instance by URL
-                    }
+                    webSocket.close(1000, null)
+                    if (dropIfCurrent(webSocket)) onWsClose(path)
+                }
+
+                override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                    if (dropIfCurrent(webSocket)) onWsClose(path)
                 }
 
                 override fun onFailure(
@@ -222,8 +239,11 @@ class WebAppInterface(private val context: MainActivity, private val webView: We
                     response: Response?
                 ) {
                     Log.d(TAG, "WebSocket error: " + t.message)
-                    onWsError(path)
-                    rejectPromise(uuid, "false")
+                    if (dropIfCurrent(webSocket)) {
+                        onWsError(path)
+                    } else {
+                        rejectPromise(uuid, "false")
+                    }
                 }
             }
 

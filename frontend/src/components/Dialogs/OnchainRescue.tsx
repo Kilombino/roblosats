@@ -38,7 +38,8 @@ import {
   type RescueRecord,
   type Utxo,
 } from '../../utils/escrow/rescue';
-import { addressToScript } from '../../utils/escrow/taproot';
+import { checkAddress } from '../../utils/address';
+import { useAddressConfirm } from './AddressConfirm';
 
 interface Props {
   open: boolean;
@@ -83,6 +84,7 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
   // rl31-beta20: the explorer's fee rate, to warn before a leftover the miners would eat
   const [rate, setRate] = useState<number | null>(null);
   const [override, setOverride] = useState<Record<string, boolean>>({});
+  const { confirmAddress, addressDialog } = useAddressConfirm();
 
   useEffect(() => {
     if (!open || !token) return;
@@ -225,7 +227,27 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
     }
   };
 
-  const recover = async (it: Item): Promise<void> => {
+  /** 0.9.10: the destination fully checked for the order's network and confirmed first. */
+  const askRecover = (it: Item): void => {
+    if (it.kind === 'fair') {
+      void recover(it);
+      return;
+    }
+    setError('');
+    const problem = confirmAddress({
+      address: dest,
+      hrp: it.rec.hrp,
+      message: t('The rescue will send {{amount}} Sats (minus the mining fee) to:', {
+        amount: pn(it.sats),
+      }),
+      onConfirm: (checked) => {
+        void recover(it, checked);
+      },
+    });
+    if (problem) setError(problem);
+  };
+
+  const recover = async (it: Item, checked?: string): Promise<void> => {
     if (!token) return;
     setBusy(true);
     setError('');
@@ -238,12 +260,9 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
         setDone((d) => ({ ...d, [`${it.rec.orderId}-${it.kind}${it.key ?? ''}`]: built }));
         return;
       }
-      let script: Uint8Array;
-      try {
-        script = addressToScript(dest.trim());
-      } catch {
-        throw new RescueError('Write a valid Bitcoin address of yours first');
-      }
+      const check = checkAddress(checked ?? '', it.rec.hrp);
+      if (!check.ok) throw new RescueError('Write a valid Bitcoin address of yours first');
+      const script = check.script;
       const rate = await ex.feeRate();
       const keys = keysOf(token, it.rec);
       const built =
@@ -425,7 +444,7 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
                           (cost(it) !== null && !override[key])
                         }
                         onClick={() => {
-                          void recover(it);
+                          askRecover(it);
                         }}
                       >
                         {t('Recover')}
@@ -480,6 +499,7 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
           </Box>
         ) : null}
       </DialogContent>
+      {addressDialog}
       <DialogActions>
         <Button onClick={onClose}>{t('Close')}</Button>
         <Button

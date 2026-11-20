@@ -20,6 +20,7 @@ import getSettings from '../../../../utils/settings';
 import { AttachFile, Send } from '@mui/icons-material';
 import PrivacyWarningDialog from '../PrivacyWarningDialog';
 import { ParsedFileMessage, parseImageMetadataJson } from '../../../../utils/nip17File';
+import { playSound } from '../../../../utils/sound';
 
 interface ChatApiResponse {
   peer_connected?: boolean;
@@ -93,7 +94,7 @@ const EncryptedApiChat: React.FC<Props> = ({
 
   useEffect(() => {
     if (messages.length > messageCount) {
-      void audio.play();
+      playSound(audio);
       setMessageCount(messages.length);
     }
   }, [messages, messageCount]);

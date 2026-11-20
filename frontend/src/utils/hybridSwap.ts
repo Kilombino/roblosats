@@ -51,6 +51,9 @@ export const onchainPayout = ({
 
 /** 0.9.7: the coordinator refuses an onchain payout that leaves less than this (error 4003). */
 export const MIN_ONCHAIN_PAYOUT_SATS = 20_000;
+/** 0.9.10: the lowest mining fee rate (sat/vB) for an onchain swap payout; the coordinators
+ * enforce PAYOUT_MIN_FEE_RATE, default 1 (it was a fixed 2). */
+export const MIN_PAYOUT_FEE_RATE = 1;
 /** vbytes the coordinator counts for the payout transaction (tx.mining_fee_sats = rate × 280). */
 export const PAYOUT_VBYTES = 280;
 
@@ -77,3 +80,8 @@ export const sellerMiningCover = ({
   const sats = Math.max(0, Math.floor(paidBySeller - swapFee));
   return { sats, rate: Math.floor((sats / PAYOUT_VBYTES) * 100) / 100 };
 };
+
+/** 0.9.10: a payout fee rate the form may send: given, at least MIN_PAYOUT_FEE_RATE and at most
+ * `max` (the highest rate that still leaves the minimum payout, capped at 500). */
+export const validPayoutFeeRate = (rate: number | null | undefined, max: number): boolean =>
+  rate != null && Number.isFinite(rate) && rate >= MIN_PAYOUT_FEE_RATE && rate <= max;

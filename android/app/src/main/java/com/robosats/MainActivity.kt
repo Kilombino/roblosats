@@ -525,6 +525,10 @@ class MainActivity : AppCompatActivity() {
         // 3. Disable database access
         webSettings.databaseEnabled = false
         webSettings.domStorageEnabled = true // Required for most modern web apps
+        // 0.9.10: the order's sounds (new chat message, "the order needs you") are bundled assets
+        // played when the order changes, not on a tap: WebView refused them ("play() can only be
+        // initiated by a user gesture") and the rejection was reported as the last crash.
+        webSettings.mediaPlaybackRequiresUserGesture = false
 
         // 4. File access settings - must allow cross-origin access for our use case
         webSettings.allowFileAccess = true // Needed for loading internal HTML

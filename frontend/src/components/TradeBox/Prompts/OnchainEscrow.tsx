@@ -43,6 +43,8 @@ import { saveRescue } from '../../../utils/escrow/rescue';
 import { isMyAddress, pendingReturnKey, rememberMyAddress } from '../../../utils/myAddresses';
 import { type FeeHint, formatRate, lowFeeNeeded, validHint } from '../../../utils/escrow/fees';
 import { Transaction, addressToScript, bytesToHex } from '../../../utils/escrow/taproot';
+import { DEFAULT_HRP } from '../../../utils/address';
+import { useAddressConfirm } from '../../Dialogs/AddressConfirm';
 
 export type EscrowAction =
   | 'bond_key'
@@ -286,6 +288,7 @@ export const OnchainEscrowPrompt = ({
   const [address, setAddress] = useState<string>('');
   const sent = useRef<Set<string>>(new Set());
   const secnonce = useRef<Uint8Array | null>(null);
+  const { confirmAddress, addressDialog } = useAddressConfirm();
 
   const keys: EscrowKeys | null =
     token && data.escrow_alias ? escrowKeys(token, data.escrow_alias, order.id) : null;
@@ -548,17 +551,36 @@ export const OnchainEscrowPrompt = ({
     address,
   ]);
 
+  // 0.9.10: fully checked for the coordinator's network and confirmed by the user first
   const submitAddress = (name: 'escrow_address' | 'bond_return' | 'escrow_sweep'): void => {
-    try {
-      addressToScript(address);
-    } catch {
-      setError(t('Use a valid address: legacy (1…), P2SH (3…), segwit (bc1q…) or taproot (bc1p…)'));
-      return;
-    }
-    void rememberMyAddress(address);
-    if (name === 'escrow_address')
-      onSignedAddress(address, (signed) => onAction('escrow_address', {}, signed));
-    else onAction(name, { address });
+    const bondSats = (data.bond_value ?? 0) + (data.bond_extra_sats ?? 0);
+    const leftover = data.escrow_leftover_sats ?? 0;
+    const message =
+      name === 'escrow_address'
+        ? data.escrow_role === 'buyer'
+          ? t('Your payout (and your bond back) will go to:')
+          : t('Your bond back (and your refund if the trade is cancelled) will go to:')
+        : name === 'bond_return'
+          ? bondSats > 0
+            ? t('Your bond of {{amount}} Sats will come back to:', { amount: pn(bondSats) })
+            : t('Your bond will come back to:')
+          : leftover > 0
+            ? t('Your {{amount}} Sats will go back to:', { amount: pn(leftover) })
+            : t('Your sats will go back to:');
+    const problem = confirmAddress({
+      address,
+      hrp: data.escrow_hrp ?? data.bond_hrp ?? DEFAULT_HRP,
+      message,
+      onConfirm: (checked) => {
+        setError(null);
+        setAddress(checked);
+        void rememberMyAddress(checked);
+        if (name === 'escrow_address')
+          onSignedAddress(checked, (signed) => onAction('escrow_address', {}, signed));
+        else onAction(name, { address: checked });
+      },
+    });
+    if (problem) setError(problem);
   };
 
   // 0.9.3: the app signs the onchain steps by itself, but only while this order is open in the
@@ -1160,6 +1182,7 @@ export const OnchainEscrowPrompt = ({
           <Alert severity='error'>{error}</Alert>
         </Grid>
       ) : null}
+      {addressDialog}
     </Grid>
   );
 };

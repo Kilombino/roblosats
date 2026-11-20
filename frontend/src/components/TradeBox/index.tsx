@@ -317,22 +317,23 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
     }
   };
 
-  const updateAddress = function (): void {
+  // 0.9.10: the form passes the address it checked and the user confirmed (the state may not
+  // have it yet: setOnchain and this call happen in the same click)
+  const updateAddress = function (checked?: string): void {
     const slot = garage.getSlot();
     const robot = slot?.getRobot();
+    const address = checked ?? onchain.address;
 
     if (robot?.encPrivKey != null && slot?.token != null) {
       setLoadingButtons({ ...noLoadingButtons, submitAddress: true });
-      void rememberMyAddress(onchain.address); // 0.9.7: also where a free bond may go back
-      void signCleartextMessage(onchain.address, robot.encPrivKey, slot.token).then(
-        (signedAddress) => {
-          submitAction({
-            action: 'update_address',
-            address: signedAddress,
-            mining_fee_rate: onchain.miningFee ?? undefined,
-          });
-        },
-      );
+      void rememberMyAddress(address); // 0.9.7: also where a free bond may go back
+      void signCleartextMessage(address, robot.encPrivKey, slot.token).then((signedAddress) => {
+        submitAction({
+          action: 'update_address',
+          address: signedAddress,
+          mining_fee_rate: onchain.miningFee ?? undefined,
+        });
+      });
     }
   };
 

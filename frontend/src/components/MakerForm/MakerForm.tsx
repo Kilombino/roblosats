@@ -1,7 +1,8 @@
-import React, { useContext, useEffect, useMemo, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { pendingReturnKey, rememberMyAddress } from '../../utils/myAddresses';
 import { systemClient } from '../../services/System';
-import { validOnchainAddress } from '../../utils/escrow/taproot';
+import { addressErrorText, checkAddress, hrpOfNetwork } from '../../utils/address';
+import { useAddressConfirm } from '../Dialogs/AddressConfirm';
 import { useTranslation } from 'react-i18next';
 import {
   ButtonGroup,
@@ -137,7 +138,12 @@ const MakerForm = ({
   const [usedRobotHasActiveOrder, setUsedRobotHasActiveOrder] = useState<boolean>(false);
   const [openWorldmap, setOpenWorldmap] = useState<boolean>(false);
   const [bondReturn, setBondReturn] = useState<string>('');
-  const bondReturnError = bondReturn !== '' && !validOnchainAddress(bondReturn);
+  // 0.9.10: fully checked for the coordinators' network and confirmed before the order is made
+  const bondReturnHrp = hrpOfNetwork(federation.network);
+  const bondReturnCheck = bondReturn === '' ? null : checkAddress(bondReturn, bondReturnHrp);
+  const bondReturnError = bondReturnCheck !== null && !bondReturnCheck.ok;
+  const confirmedBondReturn = useRef<string>('');
+  const { confirmAddress, addressDialog } = useAddressConfirm();
   const [submittingRequest, setSubmittingRequest] = useState<boolean>(false);
   const [changingRobot, setChangingRobot] = useState<boolean>(false);
   const [amountRangeEnabled, setAmountRangeEnabled] = useState<boolean>(true);
@@ -584,9 +590,9 @@ const MakerForm = ({
         if (order.id) {
           // 0.9.7: the bond's return address goes with its bond key, from the order page
           const token = garage.getSlot()?.token;
-          if (token && maker.onchainEscrow && bondReturn && !bondReturnError) {
-            systemClient.setItem(pendingReturnKey(token), bondReturn);
-            void rememberMyAddress(bondReturn);
+          if (token && maker.onchainEscrow && bondReturnCheck?.ok) {
+            systemClient.setItem(pendingReturnKey(token), bondReturnCheck.address);
+            void rememberMyAddress(bondReturnCheck.address);
           }
           navigateToPage(`order/${order.shortAlias}/${order.id}`, navigate);
           clearMaker();
@@ -603,6 +609,25 @@ const MakerForm = ({
 
   const handleCreateOrder = function (): void {
     const slot = garage.getSlot();
+
+    if (
+      !disableRequest &&
+      maker.onchainEscrow &&
+      bondReturnCheck?.ok &&
+      confirmedBondReturn.current !== bondReturn
+    ) {
+      setOpenStoreToken(false);
+      confirmAddress({
+        address: bondReturn,
+        hrp: bondReturnHrp,
+        message: t('Your bond will come back to:'),
+        onConfirm: () => {
+          confirmedBondReturn.current = bondReturn;
+          handleCreateOrder();
+        },
+      });
+      return;
+    }
 
     if (!disableRequest && maker.coordinator && slot) {
       setSubmittingRequest(true);
@@ -1004,6 +1029,7 @@ const MakerForm = ({
           })
         }
       />
+      {addressDialog}
       <StoreTokenDialog
         open={openStoreToken}
         onClose={() => {
@@ -1902,8 +1928,8 @@ const MakerForm = ({
           sx={{ mt: 1 }}
           label={t('Bond return address (optional)')}
           helperText={
-            bondReturnError
-              ? t('Use a valid address: legacy (1…), P2SH (3…), segwit (bc1q…) or taproot (bc1p…)')
+            bondReturnCheck && !bondReturnCheck.ok
+              ? addressErrorText(bondReturnCheck.error, t, bondReturnHrp)
               : t(
                   'Your bond comes back here by itself when it is free (1…, 3…, bc1q… or bc1p… addresses). Empty: your payout address.',
                 )

@@ -34,3 +34,21 @@ describe('onchain escrow steps with a Lightning taker (rl31-beta10)', () => {
     expect(hybridBondStep(order({ escrow_type: 0, is_maker: true, status: 14 }))).toBe(false);
   });
 });
+
+// #26 (0.9.10): a release still being signed after the order finished keeps the onchain step.
+describe('release still being signed after the order finished', () => {
+  it.each([12, 14, 17, 18])(
+    'status %s with the escrow releasing shows the onchain step',
+    (status) => {
+      expect(
+        onchainEscrowStep(order({ escrow_type: 'onchain', status, escrow_status_code: 4 })),
+      ).toBe(true);
+    },
+  );
+
+  it('a released escrow at 14 does not', () => {
+    expect(
+      onchainEscrowStep(order({ escrow_type: 'onchain', status: 14, escrow_status_code: 5 })),
+    ).toBe(false);
+  });
+});
