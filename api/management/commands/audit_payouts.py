@@ -27,6 +27,28 @@ def _corrected(order, proxy):
         return c.fetchone() is not None
 
 
+LEDGER_KINDS_NOT_IN_LOGS = ("swap_surcharge_back", "dispute_bond_back")
+
+
+def ledger_credits(kinds):
+    """{robot_id: sats} credited in coord_reward_ledger with these kinds ({} without the table)."""
+    from django.db import connection, transaction
+
+    out = defaultdict(int)
+    try:
+        with transaction.atomic(), connection.cursor() as c:
+            c.execute(
+                "SELECT robot_id, SUM(amount) FROM coord_reward_ledger WHERE kind = ANY(%s) AND amount > 0 "
+                "GROUP BY robot_id",
+                [list(kinds)],
+            )
+            for rid, sats in c.fetchall():
+                out[int(rid)] += int(sats)
+    except Exception:
+        return {}
+    return out
+
+
 class Command(BaseCommand):
     help = (
         "Read-only audit of past rewards and payouts against the payout safety rules: "
@@ -92,6 +114,13 @@ class Command(BaseCommand):
                         report(
                             f"order {order.id}: bond {bond.payment_hash} is SETTLED in the database but not in the lightning node"
                         )
+
+        # 0.9.10: other legitimate credits that are not in the order logs: the unused part of a
+        # hybrid B swap surcharge going back to the seller, and a Lightning taker bond credited
+        # back after an onchain dispute (robot 370: 616 sats of swap_surcharge_back showed as a
+        # withdrawal nobody had credited).
+        for rid, sats in ledger_credits(LEDGER_KINDS_NOT_IN_LOGS).items():
+            credited[rid] += sats
 
         self.stdout.write(
             "Reward withdrawals against what was credited (admin credits are not in the logs: check those by hand):"

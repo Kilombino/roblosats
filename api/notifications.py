@@ -15,6 +15,14 @@ from api.tasks import nostr_send_notification_event
 logger = logging.getLogger("api.notifications")
 
 
+def clearnet_order_url(order):
+    """0.9.10: the order on the coordinator's clearnet web client, or "" (CLEARNET_ORDER_URL)."""
+    base = str(config("CLEARNET_ORDER_URL", default="") or "").strip().rstrip("/")
+    if not base.startswith("https://"):
+        return ""
+    return f"{base}/{order.id}"
+
+
 class Notifications:
     """Simple telegram messages using TG's API"""
 
@@ -42,8 +50,12 @@ class Notifications:
         return context
 
     def order_url(self, order):
-        """Builds the frontend order URL with the federation shortAlias route segment"""
-        return f"http://{self.site}/order/{get_federation_short_alias()}/{order.id}"
+        """Builds the frontend order URL with the federation shortAlias route segment.
+        0.9.10: plus the clearnet one when the coordinator has a web client on clearnet
+        (CLEARNET_ORDER_URL, e.g. https://roblosats.kilombino.com/order/kilobot; empty = none)."""
+        onion = f"http://{self.site}/order/{get_federation_short_alias()}/{order.id}"
+        clearnet = clearnet_order_url(order)
+        return f"{onion} · {clearnet}" if clearnet else onion
 
     def send_message(
         self,
@@ -58,8 +70,10 @@ class Notifications:
         action (0.9.4): the trader must do something now (Nostr tag, webhook field)."""
         self.save_message(order, robot, title, description)
         if robot.nostr_pubkey:
+            # 0.9.10: the links (onion and clearnet) go in the Nostr DM too
+            text = f"{title}\n{description}".strip() if "://" in (description or "") else title
             nostr_send_notification_event.delay(
-                robot_id=robot.id, order_id=order.id, text=title, action=bool(action)
+                robot_id=robot.id, order_id=order.id, text=text, action=bool(action)
             )
         if robot.telegram_enabled and robot.telegram_chat_id:
             self.send_telegram_message(robot.telegram_chat_id, title, description)

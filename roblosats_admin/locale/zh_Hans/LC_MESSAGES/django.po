@@ -2226,3 +2226,51 @@ msgstr "交易者地址"
 msgctxt "roblosats-admin"
 msgid "On-chain resolution"
 msgstr "链上裁决"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s)."
+msgstr "卖家 %(nick)s 在 %(address)s 取回 %(sats)s sats（%(parts)s）。"
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats at its fee address: the penalized bond less the reward share."
+msgstr "协调员在其手续费地址收到 %(sats)s sats：被罚没的保证金减去奖励部分。"
+
+msgctxt "roblosats-admin"
+msgid "The release's mining fee comes out of the coordinator's output."
+msgstr "释放交易的矿工费从协调员的输出中扣除。"
+
+msgctxt "roblosats-admin"
+msgid "The release's mining fee comes out of the seller's output."
+msgstr "释放交易的矿工费从卖家的输出中扣除。"
+
+msgctxt "roblosats-admin"
+msgid "There is no trade: the trade fees are given back and nobody receives sats they did not pay for."
+msgstr "没有交易：交易手续费退还，任何人都不会收到未付款的 sats。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(nick)s receives %(sats)s sats at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
+msgstr "买家 %(nick)s 在 %(address)s 收到 %(sats)s sats（%(parts)s），减去释放交易的矿工费，该费用从此输出中扣除。"
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats at its fee address: the trade fees."
+msgstr "协调员在其手续费地址收到 %(sats)s sats：交易手续费。"
+
+msgctxt "roblosats-admin"
+msgid "The order ends as a successful trade once the release is broadcast."
+msgstr "释放交易广播后，订单以交易成功结束。"
+
+msgctxt "roblosats-admin"
+msgid "unknown decision"
+msgstr "未知的决定"
+
+msgctxt "roblosats-admin"
+msgid "%(sats)s for %(spam)s Spamsats"
+msgstr "%(sats)s 换 %(spam)s Spamsats"
+
+msgctxt "roblosats-admin"
+msgid "%(sats)s for %(total)s %(currency)s"
+msgstr "%(sats)s 换 %(total)s %(currency)s"
+
+msgctxt "roblosats-admin"
+msgid "The node refused the transaction (%(reason)s)."
+msgstr "节点拒绝了该交易（%(reason)s）。"

@@ -418,6 +418,32 @@ def _apply_onchain_trade(s, order, user, role_in_order):
     cancel = bool(escrow.funding_signatures.get("cancel"))
     K = OnchainEscrow.ReleaseKind
     kind = escrow.release_kind
+    outcome = flow.dispute_outcome(escrow)
+    if outcome == "completed":  # 0.9.10: released as the cooperative release would have been
+        kind = K.COOPERATIVE
+    elif outcome.startswith("penalize_"):  # 0.9.10: no trade, the guilty side's bond penalized
+        guilty = outcome.split("_", 1)[1]
+        data = escrow.funding_signatures
+        if data.get("release_fee_payer", "seller") == erole:
+            s["mining_fee_sats"] += max(0, int(release_mining))
+        my_bond_in = bonds.get(erole, 0)
+        reward = int(data.get("dispute_reward_sats") or 0)
+        if erole == guilty:
+            if s["bond_kind"] == "onchain":
+                s["bond_lost_sats"] += my_bond_in
+                if s["bond_state"] == "in_escrow":
+                    s["bond_state"] = "lost"
+        else:
+            if s["bond_kind"] == "onchain":
+                s["bond_returned_sats"] += my_bond_in
+                s["bond_returned_to"] = data.get(f"{erole}_payout_address", "")
+                if s["bond_state"] == "in_escrow":
+                    s["bond_state"] = "returned"
+            s["rewards_sats"] += reward
+        if erole == "seller":
+            back = received - s.get("fee_refunded_sats", 0) - (0 if erole == guilty else my_bond_in + reward)
+            s["returned_sats"] = int(max(0, back))
+        return
     if kind == K.SELLER_WINS and cancel and s["outcome"] == "collab_cancelled":
         s["outcome"] = "dispute_returned"  # a dispute solved by giving everything back
     # payouts[0] paid the release's mining fee: the winner / the buyer on a normal release,

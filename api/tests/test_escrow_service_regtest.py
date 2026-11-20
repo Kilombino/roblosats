@@ -1671,3 +1671,82 @@ class EscrowDisputePageRegtest(EscrowOrderFlowRegtest):
         text = " ".join(plan["lines"])
         self.assertIn(fmt_sats(dict(outs_plan)["buyer"]), text)
         self.assertIn(fmt_sats(dict(outs_plan)["coordinator"]), text)
+
+    # 0.9.10: penalize with no trade and a dispute solved as a completed trade, from the page
+    def _opened(self, by="buyer"):
+        from api.logics import Logics
+
+        order, buyer, seller, keys = self._to_chat()
+        order.expires_at = timezone.now()
+        order.save()
+        self.assertEqual(Logics.open_dispute(order, buyer if by == "buyer" else seller), (True, None))
+        return order, buyer, seller, keys
+
+    def _sign(self, order, user, keys, role):
+        from api.escrow import flow
+
+        escrow = flow.escrow_of(order)
+        _, msg = service.release_message(escrow)
+        flow.action(order, user, "escrow_leaf_signature",
+                    {"signature": with_hashtype(schnorr_sign(keys[role]["escrow"], msg)).hex()})
+        escrow.refresh_from_db()
+        return escrow
+
+    def _check_penalize(self, guilty):
+        from api.escrow import flow
+
+        order, buyer, seller, keys = self._opened()
+        plan, msgs, client, page = self._page(order, f"penalize_{guilty}")
+        # BUY order: the maker buys
+        self.assertEqual(order.status, Order.Status.MLD if guilty == "buyer" else Order.Status.TLD)
+        escrow = flow.escrow_of(order)
+        self.assertEqual(escrow.release_kind, OnchainEscrow.ReleaseKind.SELLER_WINS)
+        self.assertEqual(flow.order_data(order, seller)["escrow_waiting_for"], "you")
+        self.assertEqual(flow.order_data(order, buyer)["escrow_waiting_for"], "peer")
+        split, info = flow.penalize_split(order, escrow, guilty)
+        escrow = self._sign(order, seller, keys, "seller")
+        outs, mining = self._release_outputs(escrow)
+        want = dict(split)
+        payer = escrow.funding_signatures["release_fee_payer"]
+        want[payer] -= mining
+        self.assertEqual(outs, {k: v for k, v in want.items() if v >= 330})
+        from roblosats_admin.disputes import fmt_sats
+
+        text = " ".join(plan["lines"])
+        for who, sats in split:
+            self.assertIn(fmt_sats(sats), text, who)
+        self.assertEqual(flow.proceeds(order), 0)  # no trade: no fee
+        return order, buyer, seller, info
+
+    def test_penalize_seller_from_the_page(self):
+        order, buyer, seller, info = self._check_penalize("seller")
+        s = __import__("api.order_summary", fromlist=["x"]).final_summary(order, buyer)
+        self.assertEqual((s["bond_state"], s["rewards_sats"]), ("returned", info["reward"]))
+        s = __import__("api.order_summary", fromlist=["x"]).final_summary(order, seller)
+        self.assertEqual(s["bond_state"], "lost")
+
+    def test_penalize_buyer_from_the_page(self):
+        order, buyer, seller, info = self._check_penalize("buyer")
+        s = __import__("api.order_summary", fromlist=["x"]).final_summary(order, buyer)
+        self.assertEqual(s["bond_state"], "lost")
+
+    def test_completed_from_the_page(self):
+        from api.escrow import flow
+
+        order, buyer, seller, keys = self._opened(by="seller")
+        plan, msgs, client, page = self._page(order, "completed")
+        self.assertEqual(order.status, Order.Status.PAY)
+        escrow = flow.escrow_of(order)
+        self.assertEqual(escrow.release_kind, OnchainEscrow.ReleaseKind.BUYER_WINS)
+        split, info = flow.completed_split(order, escrow)
+        escrow = self._sign(order, buyer, keys, "buyer")
+        outs, mining = self._release_outputs(escrow)
+        want = dict(split)
+        want["buyer"] -= mining
+        self.assertEqual(outs, want)
+        flow.advance(order)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.SUC)
+        self.assertEqual(flow.proceeds(order), info["coordinator"])
+        s = __import__("api.order_summary", fromlist=["x"]).final_summary(order, seller)
+        self.assertEqual(s["bond_state"], "returned")

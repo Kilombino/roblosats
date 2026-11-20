@@ -63,7 +63,9 @@ def current_rates():
         balance = BalanceLog.objects.create()
     swap_rate = float(Logics.compute_swap_fee_rate(balance))
     mining = float(get_minning_fee("suggested", 100_000))
-    mining = min(1000.0, max(2.05, mining))
+    from api.logics import payout_min_fee_rate
+
+    mining = min(1000.0, max(payout_min_fee_rate(), mining))
     return swap_rate, mining
 
 

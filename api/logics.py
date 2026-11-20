@@ -60,6 +60,12 @@ def release_order_lock(order_id, space=7391):
         c.execute("SELECT pg_advisory_unlock(%s, %s)", [space, int(order_id)])
 
 
+def payout_min_fee_rate():
+    """0.9.10: lowest sat/vB for an onchain swap payout (PAYOUT_MIN_FEE_RATE, default 1).
+    LND's SendCoins takes whole sat/vB and lifts 1 to its own floor of 253 sat/kw."""
+    return max(1.0, config("PAYOUT_MIN_FEE_RATE", cast=float, default=1.0))
+
+
 @contextmanager
 def order_lock(order_id, space=7391):
     """Serializes everything done to one order (user actions and expiry) with a
@@ -1056,7 +1062,9 @@ class Logics:
         if suggested_mining_fee_rate > 1000:
             suggested_mining_fee_rate = 1000
 
-        onchain_payment.suggested_mining_fee_rate = max(2.05, suggested_mining_fee_rate)
+        # 0.9.10: the floor is PAYOUT_MIN_FEE_RATE (1 sat/vB; it was a fixed 2.05 that made every
+        # swap payout pay twice what the BLAKE2b mempool needs). LND sends whole sat/vB (int()).
+        onchain_payment.suggested_mining_fee_rate = max(payout_min_fee_rate(), suggested_mining_fee_rate)
         onchain_payment.swap_fee_rate = cls.compute_swap_fee_rate(
             onchain_payment.balance
         )
@@ -1231,7 +1239,7 @@ class Logics:
             # not a valid mining fee
             min_mining_fee_rate = get_minning_fee("minimum", num_satoshis)
 
-            min_mining_fee_rate = max(2, min_mining_fee_rate)
+            min_mining_fee_rate = max(payout_min_fee_rate(), min_mining_fee_rate)
 
             if float(mining_fee_rate) < min_mining_fee_rate:
                 order.log(

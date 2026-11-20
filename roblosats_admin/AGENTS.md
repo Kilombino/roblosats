@@ -143,7 +143,12 @@ It patches the already-registered `api` admin classes in `ready()` instead of ed
   something else. It says who signs (winner's leaf; "return everything" = seller's leaf), who gets
   how many sats at which address (the first output pays the mining fee), what the coordinator
   keeps (penalty + held fees, or nothing on a return in fee plan 2) and the Lightning bond of
-  hybrid A. "Penalize" and "Trade completed" are not possible on chain (no action does them).
+  hybrid A. 0.9.10: "Penalize the seller/buyer (no trade)" and "Trade completed" are on chain
+  too (`flow.penalize_split` / `penalize_dispute`: seller's leaf, each fee back, the innocent
+  side its bond + the reward share, the coordinator the rest of the guilty bond and the mining
+  fee from its output when it can; `flow.completed_split` / `complete_dispute`: buyer's leaf, the
+  cooperative release, order to PAY and SUC when broadcast). `escrow.funding_signatures`
+  `dispute_outcome` says which (the summary and the robots' notices use it).
 - Hybrid B (`escrow_type` Lightning, maker bond behind a proxy) keeps the Lightning plan plus
   `hybrid_b_note` (the on-chain bond was penalized when the dispute opened).
 - `resolve` runs the action inside `Logics.order_lock` (same advisory key as the action's

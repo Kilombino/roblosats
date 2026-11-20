@@ -2226,3 +2226,51 @@ msgstr "トレーダーのアドレス"
 msgctxt "roblosats-admin"
 msgid "On-chain resolution"
 msgstr "オンチェーンでの解決"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s)."
+msgstr "売り手 %(nick)s は %(address)s で %(sats)s sats を取り戻します（%(parts)s）。"
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats at its fee address: the penalized bond less the reward share."
+msgstr "コーディネーターは手数料アドレスで %(sats)s sats を受け取ります：没収された保証金から報酬分を引いた額。"
+
+msgctxt "roblosats-admin"
+msgid "The release's mining fee comes out of the coordinator's output."
+msgstr "リリースのマイニング手数料はコーディネーターの出力から差し引かれます。"
+
+msgctxt "roblosats-admin"
+msgid "The release's mining fee comes out of the seller's output."
+msgstr "リリースのマイニング手数料は売り手の出力から差し引かれます。"
+
+msgctxt "roblosats-admin"
+msgid "There is no trade: the trade fees are given back and nobody receives sats they did not pay for."
+msgstr "取引はありません：取引手数料は返金され、誰も支払っていない sats を受け取りません。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(nick)s receives %(sats)s sats at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
+msgstr "買い手 %(nick)s は %(address)s で %(sats)s sats を受け取ります（%(parts)s）。リリースのマイニング手数料はこの出力から差し引かれます。"
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats at its fee address: the trade fees."
+msgstr "コーディネーターは手数料アドレスで %(sats)s sats を受け取ります：取引手数料。"
+
+msgctxt "roblosats-admin"
+msgid "The order ends as a successful trade once the release is broadcast."
+msgstr "リリースがブロードキャストされると、注文は取引成功として終了します。"
+
+msgctxt "roblosats-admin"
+msgid "unknown decision"
+msgstr "不明な決定"
+
+msgctxt "roblosats-admin"
+msgid "%(sats)s for %(spam)s Spamsats"
+msgstr "%(sats)s で %(spam)s Spamsats"
+
+msgctxt "roblosats-admin"
+msgid "%(sats)s for %(total)s %(currency)s"
+msgstr "%(sats)s で %(total)s %(currency)s"
+
+msgctxt "roblosats-admin"
+msgid "The node refused the transaction (%(reason)s)."
+msgstr "ノードがトランザクションを拒否しました（%(reason)s）。"

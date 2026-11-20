@@ -13,13 +13,17 @@ Kinds (roblosats_admin.onchain.kind):
 - HYBRID B: the order became a Lightning order; only the maker's bond is on chain, behind a
   proxy LNPayment. The Lightning plan applies, plus a note (hybrid_b_note).
 
+0.9.10: "Penalize the seller/buyer (no trade)" (flow.penalize_split: the seller's leaf, the
+guilty bond less the reward share to the coordinator) and "Trade completed" (flow.completed_split:
+the buyer's leaf, the cooperative release) exist on chain too.
+
 Nothing here moves money: the buttons still call the actions of api/admin.py.
 """
 
 from roblosats_admin.disputes import fmt_sats, is_open_dispute, role_name
 from roblosats_admin.i18n import _
 
-ONCHAIN_DECISIONS = ("buyer", "seller", "return")
+ONCHAIN_DECISIONS = ("buyer", "seller", "return", "penalize_seller", "penalize_buyer", "completed")
 
 
 def applies(order):
@@ -94,6 +98,13 @@ def _need_address(escrow, role, missing):
 
 def _signer_line(order, role, what):
     nick = _nick(_users(order)[role])
+    if what == "penalize":
+        text = _(
+            "It goes out on chain through the seller's leaf with the coordinator: the seller's "
+            "app (%(nick)s) must sign the release, then the coordinator adds its signature and "
+            "broadcasts it. The buyer does not sign anything."
+        )
+        return text % {"nick": nick}
     if what == "return":
         text = _(
             "It goes out on chain through the seller's leaf with the coordinator: the seller's "
@@ -116,7 +127,15 @@ def _signer_line(order, role, what):
 
 
 def _parts(items):
-    return " + ".join(f"{label} {fmt_sats(sats)}" for label, sats in items if sats)
+    out = ""
+    for label, sats in items:
+        if not sats:
+            continue
+        if sats < 0:
+            out += f" − {label} {fmt_sats(-sats)}"
+        else:
+            out += (" + " if out else "") + f"{label} {fmt_sats(sats)}"
+    return out.strip()
 
 
 def _winner_plan(order, escrow, decision, lines, missing):
@@ -302,6 +321,130 @@ def _return_plan(order, escrow, lines, missing):
     lines.append(_("The order ends as collaboratively cancelled."))
 
 
+def _penalize_plan(order, escrow, guilty, lines, missing):
+    """0.9.10: penalize with no trade (flow.penalize_split), through the seller's leaf."""
+    from api.escrow import flow
+    from api.escrow.service import EscrowError
+
+    _need_address(escrow, "seller", missing)
+    if missing:
+        return
+    try:
+        outs, info = flow.penalize_split(order, escrow, guilty)
+    except EscrowError:
+        _need_address(escrow, "buyer", missing)
+        return
+    innocent = info["innocent"]
+    users = _users(order)
+    lines.append(_signer_line(order, "seller", "penalize"))
+    for who, sats in outs:
+        if who == "seller":
+            items = [(_("their escrow back"), info["trade"]), (_("their fee"), info["held"]["seller"]),
+                     (_("leftover of their deposit"), info["extras"]["seller"])]
+            if innocent == "seller":
+                items[1:1] = [(_("their bond"), info["bonds"]["seller"]), (_("reward from the other bond"), info["reward"])]
+            text = _("The seller %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s).")
+        elif who == "buyer":
+            items = [(_("their fee"), info["held"]["buyer"]), (_("leftover of their deposit"), info["extras"]["buyer"])]
+            if innocent == "buyer":
+                items[0:0] = [(_("their bond"), info["bonds"]["buyer"]), (_("reward from the other bond"), info["reward"])]
+            text = _("The buyer %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s).")
+        else:
+            lines.append(
+                _("The coordinator receives %(sats)s sats at its fee address: the penalized bond less the reward share.")
+                % {"sats": fmt_sats(sats)}
+            )
+            continue
+        lines.append(text % {"nick": _nick(users[who]), "sats": fmt_sats(sats), "address": _address(escrow, who),
+                             "parts": _parts(items)})
+    payer = outs[info["fee_payer"]][0]
+    lines.append(
+        _("The release's mining fee comes out of the coordinator's output.")
+        if payer == "coordinator"
+        else _("The release's mining fee comes out of the seller's output.")
+    )
+    if info["bonds"][guilty]:
+        lines.append(
+            _("The %(role)s %(nick)s loses their on-chain bond (%(bond)s sats).")
+            % {"role": role_name(guilty), "nick": _nick(users[guilty]), "bond": fmt_sats(info["bonds"][guilty])}
+        )
+    ln = _ln_bond(order, guilty)
+    if ln is not None:
+        import decouple
+
+        split = decouple.config("SLASHED_BOND_REWARD_SPLIT", cast=float, default=0.5)
+        lines.append(
+            _(
+                "The %(role)s's bond is a Lightning bond (%(sats)s sats), settled when the "
+                "dispute opened: the coordinator keeps it and credits %(reward)s sats of it to "
+                "the %(winner)s as a reward, withdrawn from the app."
+            )
+            % {"role": role_name(guilty), "sats": fmt_sats(ln.num_satoshis),
+               "reward": fmt_sats(int(ln.num_satoshis * split)), "winner": role_name(innocent)}
+        )
+    ln = _ln_bond(order, innocent)
+    if ln is not None:
+        lines.append(
+            _(
+                "The %(role)s's Lightning bond (%(sats)s sats), settled when the dispute opened, "
+                "is credited back to them as a reward, withdrawn from the app."
+            )
+            % {"role": role_name(innocent), "sats": fmt_sats(ln.num_satoshis)}
+        )
+    lines.append(_("There is no trade: the trade fees are given back and nobody receives sats they did not pay for."))
+
+
+def _completed_plan(order, escrow, lines, missing):
+    """0.9.10: a completed trade (flow.completed_split), through the buyer's leaf."""
+    from api.escrow import flow
+
+    _need_address(escrow, "buyer", missing)
+    bonds, _trade = flow._bond_values(escrow)
+    if bonds["seller"] and not _address(escrow, "seller"):
+        _need_address(escrow, "seller", missing)
+    if missing:
+        return
+    outs, info = flow.completed_split(order, escrow)
+    users = _users(order)
+    lines.append(_signer_line(order, "buyer", "completed"))
+    for who, sats in outs:
+        if who == "buyer":
+            lines.append(
+                _(
+                    "The buyer %(nick)s receives %(sats)s sats at %(address)s (%(parts)s), minus the "
+                    "release's mining fee, which comes out of this output."
+                )
+                % {"nick": _nick(users["buyer"]), "sats": fmt_sats(sats), "address": _address(escrow, "buyer"),
+                   "parts": _parts([(_("trade amount"), info["trade"]), (_("their bond"), info["bonds"]["buyer"]),
+                                    (_("leftover of their deposit"), info["extras"]["buyer"]),
+                                    (_("their fee"), -info["fee_later"])])}
+            )
+        elif who == "seller":
+            lines.append(
+                _("The seller %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s).")
+                % {"nick": _nick(users["seller"]), "sats": fmt_sats(sats), "address": _address(escrow, "seller"),
+                   "parts": _parts([(_("their bond"), info["bonds"]["seller"]),
+                                    (_("leftover of their deposit"), info["extras"]["seller"])])}
+            )
+        elif who == "coordinator":
+            lines.append(
+                _("The coordinator receives %(sats)s sats at its fee address: the trade fees.")
+                % {"sats": fmt_sats(sats)}
+            )
+        elif who == "dev":
+            lines.append(_("The development fund receives %(sats)s sats.") % {"sats": fmt_sats(sats)})
+    ln = _ln_bond(order, "buyer") or _ln_bond(order, "seller")
+    if ln is not None:
+        lines.append(
+            _(
+                "The taker's Lightning bond (%(sats)s sats) goes back to them: credited as a "
+                "reward if it was already settled when the dispute opened, unlocked otherwise."
+            )
+            % {"sats": fmt_sats(ln.num_satoshis)}
+        )
+    lines.append(_("The order ends as a successful trade once the release is broadcast."))
+
+
 def plan(order, decision):
     """Same shape as disputes.plan: {lines, missing, warning, possible}."""
     from api.escrow import flow
@@ -311,21 +454,15 @@ def plan(order, decision):
     missing = _missing_common(order, escrow)
     lines, warning = [], ""
     if decision not in ONCHAIN_DECISIONS:
-        if decision == "completed":
-            missing.append(
-                _("not possible with an on-chain escrow: to pay the buyer use “Buyer wins”")
-            )
-        else:
-            missing.append(
-                _(
-                    "not possible with an on-chain escrow: it can only go to the buyer, to the "
-                    "seller, or back to each party"
-                )
-            )
+        missing.append(_("unknown decision"))
     elif not missing:
         try:
             if decision == "return":
                 _return_plan(order, escrow, lines, missing)
+            elif decision.startswith("penalize_"):
+                _penalize_plan(order, escrow, decision.split("_", 1)[1], lines, missing)
+            elif decision == "completed":
+                _completed_plan(order, escrow, lines, missing)
             else:
                 _winner_plan(order, escrow, decision, lines, missing)
         except Exception as e:  # noqa: BLE001 (a broken escrow record must not break the page)

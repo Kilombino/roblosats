@@ -2226,3 +2226,51 @@ msgstr "Adreça del trader"
 msgctxt "roblosats-admin"
 msgid "On-chain resolution"
 msgstr "Resolució on-chain"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s)."
+msgstr "El venedor %(nick)s recupera %(sats)s sats a %(address)s (%(parts)s)."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats at its fee address: the penalized bond less the reward share."
+msgstr "El coordinador rep %(sats)s sats a la seva adreça de comissions: la fiança penalitzada menys la part de recompensa."
+
+msgctxt "roblosats-admin"
+msgid "The release's mining fee comes out of the coordinator's output."
+msgstr "La comissió de mineria de l'alliberament surt de la sortida del coordinador."
+
+msgctxt "roblosats-admin"
+msgid "The release's mining fee comes out of the seller's output."
+msgstr "La comissió de mineria de l'alliberament surt de la sortida del venedor."
+
+msgctxt "roblosats-admin"
+msgid "There is no trade: the trade fees are given back and nobody receives sats they did not pay for."
+msgstr "No hi ha intercanvi: es tornen les comissions de l'intercanvi i ningú rep sats que no va pagar."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(nick)s receives %(sats)s sats at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
+msgstr "El comprador %(nick)s rep %(sats)s sats a %(address)s (%(parts)s), menys la comissió de mineria de l'alliberament, que surt d'aquesta sortida."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats at its fee address: the trade fees."
+msgstr "El coordinador rep %(sats)s sats a la seva adreça de comissions: les comissions de l'intercanvi."
+
+msgctxt "roblosats-admin"
+msgid "The order ends as a successful trade once the release is broadcast."
+msgstr "L'ordre acaba com a intercanvi completat quan s'emeti l'alliberament."
+
+msgctxt "roblosats-admin"
+msgid "unknown decision"
+msgstr "decisió desconeguda"
+
+msgctxt "roblosats-admin"
+msgid "%(sats)s for %(spam)s Spamsats"
+msgstr "%(sats)s per %(spam)s Spamsats"
+
+msgctxt "roblosats-admin"
+msgid "%(sats)s for %(total)s %(currency)s"
+msgstr "%(sats)s per %(total)s %(currency)s"
+
+msgctxt "roblosats-admin"
+msgid "The node refused the transaction (%(reason)s)."
+msgstr "El node ha rebutjat la transacció (%(reason)s)."

@@ -40,7 +40,10 @@ def on_contract(order):
 
 
 # 0.9.9: receive addresses of the standard types (Kilombino: "1…" and "3…" too).
-ADDRESS_TYPES_TEXT = "use a valid address: legacy (1…), P2SH (3…), segwit (bc1q…) or taproot (bc1p…)"
+ADDRESS_TYPES_TEXT = (
+    "this address is not valid (a typo or a missing character?): use a valid address: "
+    "legacy (1…), P2SH (3…), segwit (bc1q…) or taproot (bc1p…)"
+)
 
 
 def _spk_for_address(address):
@@ -688,6 +691,136 @@ def resolve_dispute(order, buyer_wins):
     _record_release(escrow, **extra)
     ln_bond_dispute_credit(order, buyer_wins)
     order.log(f"Dispute resolved onchain for the {info['winner']}: waiting for its signature on the release")
+
+
+def penalize_split(order, escrow, guilty):
+    """0.9.10: who gets what when a dispute is solved by penalizing 'seller' or 'buyer' with no
+    trade, as [(who, sats)] plus info. Nobody gets trade sats they did not pay for: the seller
+    gets its escrow amount back, each trader its fee (no trade, nothing charged) and its funding
+    extra; the innocent side its bond plus the reward share of the guilty bond
+    (SLASHED_BOND_REWARD_SPLIT, as when a dispute has a winner); the coordinator the rest of the
+    guilty bond. The guilty side's extra or fee below its dust goes with the penalty.
+    The release goes through the SELLER's leaf (the seller always gets the trade amount back, so
+    its app signs, as for "return everything"); the coordinator's penalty output pays the mining
+    fee when there is one (info["fee_payer"]), else the seller's."""
+    innocent = "buyer" if guilty == "seller" else "seller"
+    bonds, trade = _bond_values(escrow)
+    held = fees_held(escrow)
+    ex = _extras(escrow)
+    reward = int(bonds[guilty] * config("SLASHED_BOND_REWARD_SPLIT", cast=float, default=0.5))
+    penalty = bonds[guilty] - reward
+    got = {
+        "seller": trade + held["seller"] + ex["seller"],
+        "buyer": held["buyer"] + ex["buyer"],
+    }
+    got[innocent] += bonds[innocent] + reward
+    outs = [["seller", got["seller"]]]
+    if got["buyer"]:
+        spk = escrow.funding_signatures.get("buyer_payout_spk")
+        if spk and got["buyer"] >= dust_for(bytes.fromhex(spk)):
+            outs.append(["buyer", got["buyer"]])
+        elif guilty == "buyer":
+            penalty += got["buyer"]
+        elif not spk:
+            raise EscrowError("the buyer has not given a release address yet")
+        else:  # the innocent buyer's part below its dust (it had no onchain bond): to the seller
+            outs[0][1] += got["buyer"]
+    fee_payer = 0
+    if penalty:
+        outs.append(["coordinator", penalty])
+        fee_payer = len(outs) - 1  # penalize_dispute falls back to the seller if it cannot pay
+    info = {"guilty": guilty, "innocent": innocent, "reward": reward, "penalty": penalty,
+            "fee_payer": fee_payer, "bonds": bonds, "trade": trade, "extras": ex, "held": held}
+    return [tuple(o) for o in outs], info
+
+
+def penalize_dispute(order, guilty):
+    """0.9.10: Lightning's "penalize maker/taker (no trade)" for an onchain escrow."""
+    from api.escrow.taproot import TxOut
+    from api.models import OnchainEscrow
+
+    escrow = escrow_of(order)
+    if escrow.status == OnchainEscrow.Status.RELEASING:
+        escrow.status = OnchainEscrow.Status.LOCKED
+        escrow.save(update_fields=["status"])
+    outs, info = penalize_split(order, escrow, guilty)
+    payouts = [TxOut(sats, coordinator_fee_spk() if who == "coordinator" else _spk(escrow, who)) for who, sats in outs]
+    try:
+        service.start_release(escrow, payouts, OnchainEscrow.ReleaseKind.SELLER_WINS, info["fee_payer"])
+    except ValueError:  # the penalty cannot pay the mining fee and stay an output: the seller pays
+        info["fee_payer"] = 0
+        service.start_release(escrow, payouts, OnchainEscrow.ReleaseKind.SELLER_WINS, 0)
+    _record_release(escrow, release_fee_payer=outs[info["fee_payer"]][0])
+    _record_release(escrow, cancel=True, dispute_outcome=f"penalize_{guilty}", dispute_coordinator_sats=info["penalty"],
+                    dispute_reward_sats=info["reward"], release_coordinator_sats=0, release_fee_sats=0, release_dev_sats=0)
+    # hybrid A: the Lightning taker bond was settled when the dispute opened
+    ln_bond_dispute_credit(order, buyer_wins=info["innocent"] == "buyer")
+    order.log(f"Dispute solved onchain by **penalizing the {guilty}** (no trade): waiting for the seller's "
+              "signature on the release")
+
+
+def completed_split(order, escrow):
+    """0.9.10: a dispute solved as a completed trade, the release a cooperative one would have
+    been: the buyer the trade amount and its bond (less a hybrid A fee taken at release), the
+    seller its bond, the coordinator its fees (and the dev share). [(who, sats)] plus info; the
+    buyer's output pays the mining fee. Goes through the BUYER's leaf (the buyer gets the trade
+    amount, so its app signs; the seller may be gone)."""
+    bonds, trade = _bond_values(escrow)
+    ex = _extras(escrow)
+    fee_later = int(escrow.funding_signatures.get("plan", {}).get("buyer_fee_at_release") or 0)
+    dev_sats, dev_spk, coord = 0, None, 0
+    if fee_plan(escrow) >= 2:
+        held = fees_held(escrow)
+        total = held["seller"] + held["buyer"] + fee_later
+        if total > 0:
+            dev_sats, dev_spk = dev_fee(order, total)
+            coord = total - dev_sats
+    else:
+        if fee_later < DUST_P2TR:
+            fee_later = 0
+        coord = fee_later
+    outs = [("buyer", trade + bonds["buyer"] + ex["buyer"] - fee_later)]
+    if bonds["seller"] + ex["seller"]:
+        outs.append(("seller", bonds["seller"] + ex["seller"]))
+    if coord:
+        outs.append(("coordinator", coord))
+    if dev_sats:
+        outs.append(("dev", dev_sats))
+    return outs, {"fee_later": fee_later, "coordinator": coord, "dev": dev_sats, "dev_spk": dev_spk,
+                  "bonds": bonds, "trade": trade, "extras": ex}
+
+
+def complete_dispute(order):
+    """0.9.10: Lightning's "successful trade" for an onchain escrow. The order goes to PAY and
+    advance() completes it when the release is broadcast (as after a cooperative release)."""
+    from api.escrow.taproot import TxOut
+    from api.models import OnchainEscrow, Order
+
+    escrow = escrow_of(order)
+    if escrow.status == OnchainEscrow.Status.RELEASING:
+        escrow.status = OnchainEscrow.Status.LOCKED
+        escrow.save(update_fields=["status"])
+    outs, info = completed_split(order, escrow)
+    payouts = []
+    for who, sats in outs:
+        spk = coordinator_fee_spk() if who == "coordinator" else info["dev_spk"] if who == "dev" else _spk(escrow, who)
+        payouts.append(TxOut(sats, spk))
+    tx = service.start_release(escrow, payouts, OnchainEscrow.ReleaseKind.BUYER_WINS, 0)
+    values = {"dispute_outcome": "completed", "release_coordinator_sats": info["fee_later"]}
+    if fee_plan(escrow) >= 2:
+        values.update(release_fee_sats=_paid_to_coordinator(tx), release_dev_sats=info["dev"])
+    _record_release(escrow, **values)
+    if order.taker_lightning and order.taker_bond is not None:  # hybrid A: both bonds back
+        ln_bond_return_everything(order)
+    order.update_status(Order.Status.PAY)
+    order.contract_finalization_time = timezone.now()
+    order.save(update_fields=["contract_finalization_time"])
+    order.log("Dispute solved as a **completed trade**: waiting for the buyer's signature on the release")
+
+
+def dispute_outcome(escrow):
+    """'penalize_seller' / 'penalize_buyer' / 'completed' for the 0.9.10 dispute releases, else ''."""
+    return str((escrow.funding_signatures or {}).get("dispute_outcome") or "") if escrow is not None else ""
 
 
 def proceeds(order):

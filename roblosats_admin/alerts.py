@@ -416,7 +416,8 @@ def build_text(cfg, event, order, extra):
         if event == "coordinator_message" and extra.get("text"):
             lines.append(f"«{extra['text']}»")
         if event == "bond_manual" and extra.get("reason"):
-            lines.append(f"({extra['reason']})")
+            # 0.9.10: the node's error is technical English; say what it means in the language
+            lines.append(_("The node refused the transaction (%(reason)s).") % {"reason": extra["reason"]})
     if event == "onchain" and order is not None:
         lines.extend(onchain_destinations(order, extra))
     if event in ("onchain", "wallet"):
@@ -431,6 +432,12 @@ def build_text(cfg, event, order, extra):
         path = order_path(order)
         if path:
             lines.append(base_url(cfg) + path)
+        # 0.9.10: the order on the coordinator's clearnet web client (CLEARNET_ORDER_URL)
+        from api.notifications import clearnet_order_url
+
+        public = clearnet_order_url(order)
+        if public:
+            lines.append(public)
     return "\n".join(lines)
 
 

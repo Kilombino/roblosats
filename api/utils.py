@@ -113,7 +113,9 @@ def validate_onchain_address(address):
     try:
         validation = bitcoind_rpc("validateaddress", [address])
         if not validation["isvalid"]:
-            return False, {"bad_address": "Invalid address"}
+            # 0.9.10: say why (a typo, a missing character, another network)
+            why = str(validation.get("error") or "").strip()
+            return False, {"bad_address": f"Invalid address ({why})" if why else "Invalid address"}
     except Exception as e:
         logger.error(e)
         return False, {

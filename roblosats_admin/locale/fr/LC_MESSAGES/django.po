@@ -2226,3 +2226,51 @@ msgstr "Adresse du trader"
 msgctxt "roblosats-admin"
 msgid "On-chain resolution"
 msgstr "Résolution on-chain"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s)."
+msgstr "Le vendeur %(nick)s récupère %(sats)s sats à %(address)s (%(parts)s)."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats at its fee address: the penalized bond less the reward share."
+msgstr "Le coordinateur reçoit %(sats)s sats à son adresse de frais : la caution pénalisée moins la part de récompense."
+
+msgctxt "roblosats-admin"
+msgid "The release's mining fee comes out of the coordinator's output."
+msgstr "Les frais de minage de la libération sont pris sur la sortie du coordinateur."
+
+msgctxt "roblosats-admin"
+msgid "The release's mining fee comes out of the seller's output."
+msgstr "Les frais de minage de la libération sont pris sur la sortie du vendeur."
+
+msgctxt "roblosats-admin"
+msgid "There is no trade: the trade fees are given back and nobody receives sats they did not pay for."
+msgstr "Il n'y a pas d'échange : les frais d'échange sont rendus et personne ne reçoit des sats qu'il n'a pas payés."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(nick)s receives %(sats)s sats at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
+msgstr "L'acheteur %(nick)s reçoit %(sats)s sats à %(address)s (%(parts)s), moins les frais de minage de la libération, pris sur cette sortie."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats at its fee address: the trade fees."
+msgstr "Le coordinateur reçoit %(sats)s sats à son adresse de frais : les frais d'échange."
+
+msgctxt "roblosats-admin"
+msgid "The order ends as a successful trade once the release is broadcast."
+msgstr "L'ordre se termine comme échange réussi une fois la libération diffusée."
+
+msgctxt "roblosats-admin"
+msgid "unknown decision"
+msgstr "décision inconnue"
+
+msgctxt "roblosats-admin"
+msgid "%(sats)s for %(spam)s Spamsats"
+msgstr "%(sats)s pour %(spam)s Spamsats"
+
+msgctxt "roblosats-admin"
+msgid "%(sats)s for %(total)s %(currency)s"
+msgstr "%(sats)s pour %(total)s %(currency)s"
+
+msgctxt "roblosats-admin"
+msgid "The node refused the transaction (%(reason)s)."
+msgstr "Le nœud a refusé la transaction (%(reason)s)."

@@ -412,6 +412,26 @@ class OrderAdmin(AdminChangeLinksMixin, admin.ModelAdmin):
         stays with the coordinator. Unlike "maker/taker wins", nobody gets trade sats
         they did not pay for (e.g. a seller who never answers the buyer)."""
         for order in queryset:
+            if escrow_flow.is_onchain(order):  # 0.9.10
+                locked = _lock_disputed_onchain(order)
+                if locked is None:
+                    self.message_user(request, f"Order {order.id} is not in a disputed state, or its onchain escrow is not locked", messages.ERROR)
+                    continue
+                guilty_user = locked.maker if guilty == "maker" else locked.taker
+                role = "seller" if Logics.is_seller(locked, guilty_user) else "buyer"
+                try:
+                    escrow_flow.penalize_dispute(locked, role)
+                except escrow_flow.EscrowError as e:
+                    self.message_user(request, f"Order {order.id}: {e}", messages.ERROR)
+                    continue
+                locked.update_status(Order.Status.MLD if guilty == "maker" else Order.Status.TLD)
+                self.message_user(
+                    request,
+                    f"Order {order.id}: {guilty} penalized onchain (no trade): the release goes out when the seller signs",
+                    messages.SUCCESS,
+                )
+                send_notification.delay(order_id=order.id, message="dispute_closed")
+                continue
             locked = _lock_disputed(order)
             if locked is None:
                 self.message_user(
@@ -456,6 +476,22 @@ class OrderAdmin(AdminChangeLinksMixin, admin.ModelAdmin):
         returns both bonds (added as compensations) and triggers the payout.
         """
         for order in queryset:
+            if escrow_flow.is_onchain(order):  # 0.9.10
+                locked = _lock_disputed_onchain(order)
+                if locked is None:
+                    self.message_user(request, f"Order {order.id} is not in a disputed state, or its onchain escrow is not locked", messages.ERROR)
+                    continue
+                try:
+                    escrow_flow.complete_dispute(locked)
+                except escrow_flow.EscrowError as e:
+                    self.message_user(request, f"Order {order.id}: {e}", messages.ERROR)
+                    continue
+                self.message_user(
+                    request,
+                    f"Dispute of order {order.id} solved as successful trade onchain: the release goes out when the buyer signs",
+                    messages.SUCCESS,
+                )
+                continue
             locked = _lock_disputed(order)
             if locked is not None:
                 order = locked

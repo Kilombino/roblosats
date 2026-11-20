@@ -306,6 +306,37 @@ TEXTS = {
         "⚖️ Orden {n}: la disputa se ha resuelto a tu favor. El depósito vuelve a ti; revisa la página de la orden.",
         "⚖️ Ordre {n}: la disputa s'ha resolt a favor teu. El dipòsit torna a tu; revisa la pàgina de l'ordre.",
     ),
+    # 0.9.10: onchain dispute decisions with no trade, and a dispute solved as a completed trade
+    "dispute_penalized_seller": (
+        "⚖️ Order {n}: the dispute was resolved with no trade and you were penalized: your bond goes to the coordinator. Your escrow amount comes back to you: keep the order open so your app signs the release.",
+        "⚖️ Orden {n}: la disputa se ha resuelto sin intercambio y se te ha penalizado: tu fianza va al coordinador. El importe de tu depósito vuelve a ti: deja la orden abierta para que tu app firme la liberación.",
+        "⚖️ Ordre {n}: la disputa s'ha resolt sense intercanvi i se t'ha penalitzat: la teva fiança va al coordinador. L'import del teu dipòsit torna a tu: deixa l'ordre oberta perquè la teva app signi l'alliberament.",
+    ),
+    "dispute_penalized_buyer": (
+        "⚖️ Order {n}: the dispute was resolved with no trade and you were penalized: your bond goes to the coordinator. You do not receive the trade sats; check the order page.",
+        "⚖️ Orden {n}: la disputa se ha resuelto sin intercambio y se te ha penalizado: tu fianza va al coordinador. No recibes los sats del intercambio; revisa la página de la orden.",
+        "⚖️ Ordre {n}: la disputa s'ha resolt sense intercanvi i se t'ha penalitzat: la teva fiança va al coordinador. No reps els sats de l'intercanvi; revisa la pàgina de l'ordre.",
+    ),
+    "dispute_other_penalized_buyer": (
+        "⚖️ Order {n}: the dispute was resolved with no trade: the seller was penalized. Your bond comes back to you with a share of theirs, once the seller's app signs the release.",
+        "⚖️ Orden {n}: la disputa se ha resuelto sin intercambio: se ha penalizado al vendedor. Tu fianza vuelve a ti con una parte de la suya, cuando la app del vendedor firme la liberación.",
+        "⚖️ Ordre {n}: la disputa s'ha resolt sense intercanvi: s'ha penalitzat el venedor. La teva fiança torna a tu amb una part de la seva, quan l'app del venedor signi l'alliberament.",
+    ),
+    "dispute_other_penalized_seller": (
+        "⚖️ Order {n}: the dispute was resolved with no trade: the buyer was penalized. Your escrow and your bond come back to you with a share of theirs: keep the order open so your app signs the release.",
+        "⚖️ Orden {n}: la disputa se ha resuelto sin intercambio: se ha penalizado al comprador. Tu depósito y tu fianza vuelven a ti con una parte de la suya: deja la orden abierta para que tu app firme la liberación.",
+        "⚖️ Ordre {n}: la disputa s'ha resolt sense intercanvi: s'ha penalitzat el comprador. El teu dipòsit i la teva fiança tornen a tu amb una part de la seva: deixa l'ordre oberta perquè la teva app signi l'alliberament.",
+    ),
+    "dispute_completed_buyer": (
+        "⚖️ Order {n}: the dispute was resolved as a completed trade. The sats and your bond are released to your address: keep the order open so your app signs the release.",
+        "⚖️ Orden {n}: la disputa se ha resuelto como intercambio completado. Los sats y tu fianza se liberan a tu dirección: deja la orden abierta para que tu app firme la liberación.",
+        "⚖️ Ordre {n}: la disputa s'ha resolt com a intercanvi completat. Els sats i la teva fiança s'alliberen a la teva adreça: deixa l'ordre oberta perquè la teva app signi l'alliberament.",
+    ),
+    "dispute_completed_seller": (
+        "⚖️ Order {n}: the dispute was resolved as a completed trade. The buyer receives the sats; your bond comes back to you in the same release, which the buyer's app signs.",
+        "⚖️ Orden {n}: la disputa se ha resuelto como intercambio completado. El comprador recibe los sats; tu fianza vuelve a ti en la misma liberación, que firma la app del comprador.",
+        "⚖️ Ordre {n}: la disputa s'ha resolt com a intercanvi completat. El comprador rep els sats; la teva fiança torna a tu en el mateix alliberament, que signa l'app del comprador.",
+    ),
     "dispute_lost": (
         "⚖️ Order {n}: the dispute was resolved against you. Your bond was lost; see the order page for the details.",
         "⚖️ Orden {n}: la disputa se ha resuelto en tu contra. Has perdido tu fianza; mira los detalles en la página de la orden.",
@@ -522,6 +553,15 @@ def _payout_sats(order):
 # --- order status steps --------------------------------------------------------------------
 
 
+def _dispute_outcome(order):
+    try:
+        from api.escrow import flow
+
+        return flow.dispute_outcome(flow.escrow_of(order))
+    except Exception:
+        return ""
+
+
 def on_status(order, old, new, taker_id=None):
     """The notices of one order status change (from the order_status_changed signal)."""
     from api.models import Order
@@ -601,11 +641,22 @@ def on_status(order, old, new, taker_id=None):
 
     if new in (S.MLD, S.TLD):
         loser, winner = ("maker", "taker") if new == S.MLD else ("taker", "maker")
+        outcome = _dispute_outcome(order) if onchain else ""
+        if outcome.startswith("penalize_"):  # 0.9.10: no trade, the guilty side penalized
+            guilty = role_name(order, r[loser])
+            innocent = role_name(order, r[winner])
+            tell_(loser, f"dispute_penalized_{guilty}", action=guilty == "seller")
+            tell_(winner, f"dispute_other_penalized_{innocent}", action=innocent == "seller")
+            return
         tell_(loser, "dispute_lost")
         tell_(winner, f"dispute_won_{role_name(order, r[winner])}")
         return
 
     if new == S.PAY:
+        if onchain and old in (S.DIS, S.WFR):  # 0.9.10: a dispute solved as a completed trade
+            tell_("buyer", "dispute_completed_buyer", action=True)
+            tell_("seller", "dispute_completed_seller")
+            return
         if order.payout is not None or not onchain:
             tell_("buyer", "paying_ln", sats=_payout_sats(order))
         else:

@@ -179,14 +179,18 @@ def trade_text(order):
                 except Exception:
                     total = None
                 spam = None if total is None else round(total * 100_000_000)
-            return f"{sats} for {_commas(spam)} Spamsats" if spam is not None else sats
+            if spam is None:
+                return sats
+            # 0.9.10: in the alerts' language (it was always English)
+            return _("%(sats)s for %(spam)s Spamsats") % {"sats": sats, "spam": _commas(spam)}
         try:
             total = Logics.exchange_total(order, order.last_satoshis or order.amount)
         except Exception:
             total = None
         if total is None:
             return sats
-        return f"{sats} for {total:,.2f} {currency_text(order)}"
+        return _("%(sats)s for %(total)s %(currency)s") % {
+            "sats": sats, "total": f"{total:,.2f}", "currency": currency_text(order)}
     return f"{amount_text(order)} {currency_text(order)}"
 
 

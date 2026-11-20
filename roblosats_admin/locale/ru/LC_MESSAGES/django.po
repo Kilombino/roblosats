@@ -2226,3 +2226,51 @@ msgstr "Адрес участника"
 msgctxt "roblosats-admin"
 msgid "On-chain resolution"
 msgstr "Ончейн-решение"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s)."
+msgstr "Продавец %(nick)s получает обратно %(sats)s sats на %(address)s (%(parts)s)."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats at its fee address: the penalized bond less the reward share."
+msgstr "Координатор получает %(sats)s sats на свой адрес комиссий: оштрафованный залог за вычетом доли вознаграждения."
+
+msgctxt "roblosats-admin"
+msgid "The release's mining fee comes out of the coordinator's output."
+msgstr "Комиссия майнерам за выпуск берётся из выхода координатора."
+
+msgctxt "roblosats-admin"
+msgid "The release's mining fee comes out of the seller's output."
+msgstr "Комиссия майнерам за выпуск берётся из выхода продавца."
+
+msgctxt "roblosats-admin"
+msgid "There is no trade: the trade fees are given back and nobody receives sats they did not pay for."
+msgstr "Сделки нет: торговые комиссии возвращаются, и никто не получает sats, за которые не платил."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(nick)s receives %(sats)s sats at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
+msgstr "Покупатель %(nick)s получает %(sats)s sats на %(address)s (%(parts)s), за вычетом комиссии майнерам за выпуск, которая берётся из этого выхода."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats at its fee address: the trade fees."
+msgstr "Координатор получает %(sats)s sats на свой адрес комиссий: торговые комиссии."
+
+msgctxt "roblosats-admin"
+msgid "The order ends as a successful trade once the release is broadcast."
+msgstr "Ордер завершается как успешная сделка, когда выпуск будет отправлен в сеть."
+
+msgctxt "roblosats-admin"
+msgid "unknown decision"
+msgstr "неизвестное решение"
+
+msgctxt "roblosats-admin"
+msgid "%(sats)s for %(spam)s Spamsats"
+msgstr "%(sats)s за %(spam)s Spamsats"
+
+msgctxt "roblosats-admin"
+msgid "%(sats)s for %(total)s %(currency)s"
+msgstr "%(sats)s за %(total)s %(currency)s"
+
+msgctxt "roblosats-admin"
+msgid "The node refused the transaction (%(reason)s)."
+msgstr "Узел отклонил транзакцию (%(reason)s)."

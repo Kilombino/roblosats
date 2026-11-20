@@ -124,13 +124,62 @@ class OnchainPlanTest(TestCase):
         for who, sats in outs:
             self.assertIn(disputes.fmt_sats(sats), self.text(disputes.plan(order, "buyer")), who)
 
-    def test_lightning_only_decisions_are_refused(self):
+    def test_penalize_seller_on_chain(self):
+        """0.9.10: no trade, the seller penalized: it gets its escrow amount back, the buyer its
+        bond + half the seller's, the coordinator the other half; the seller's app signs."""
+        from api.escrow import flow
+
         order = onchain_order(self.maker, self.taker)
-        for decision in ("penalize_seller", "penalize_buyer", "completed"):
-            p = disputes.plan(order, decision)
-            self.assertFalse(p["possible"], decision)
-            self.assertIn("on-chain escrow", p["missing"][-1])
-        self.assertIn("Buyer wins", disputes.plan(order, "completed")["missing"][-1])
+        p = disputes.plan(order, "penalize_seller")
+        self.assertTrue(p["possible"], p["missing"])
+        t = self.text(p)
+        self.assertIn("seller's app (SellerBot) must sign the release", t)
+        self.assertIn(f"{disputes.fmt_sats(1_000_000 + 200 + 362)} sats at {SELLER_ADDR}", t)
+        self.assertIn(f"{disputes.fmt_sats(27_896 + 15_000 + 1_701)} sats at {BUYER_ADDR}", t)
+        self.assertIn(disputes.fmt_sats(15_000), t)
+        self.assertIn("mining fee comes out of the coordinator's output", t)
+        escrow = flow.escrow_of(order)
+        outs, info = flow.penalize_split(order, escrow, "seller")
+        self.assertEqual(sum(v for _w, v in outs), escrow.escrow_sats)
+        self.assertEqual(dict(outs)["coordinator"], 15_000)
+        self.assertEqual(info["fee_payer"], 2)
+
+    def test_penalize_buyer_on_chain(self):
+        from api.escrow import flow
+
+        order = onchain_order(self.maker, self.taker)
+        p = disputes.plan(order, "penalize_buyer")
+        self.assertTrue(p["possible"], p["missing"])
+        t = self.text(p)
+        escrow = flow.escrow_of(order)
+        outs, info = flow.penalize_split(order, escrow, "buyer")
+        # the seller: escrow amount + its bond + half of the buyer's + its fee + its extra
+        self.assertEqual(dict(outs)["seller"], 1_000_000 + 30_000 + 13_948 + 200 + 362)
+        # the buyer keeps only its fee back (1 701 > dust)
+        self.assertEqual(dict(outs)["buyer"], 1_701)
+        self.assertEqual(dict(outs)["coordinator"], 27_896 - 13_948)
+        self.assertEqual(sum(v for _w, v in outs), escrow.escrow_sats)
+        self.assertIn(disputes.fmt_sats(dict(outs)["seller"]), t)
+        self.assertIn("loses their on-chain bond", t)
+
+    def test_completed_on_chain(self):
+        from api.escrow import flow
+
+        order = onchain_order(self.maker, self.taker)
+        p = disputes.plan(order, "completed")
+        self.assertTrue(p["possible"], p["missing"])
+        t = self.text(p)
+        self.assertIn("buyer's app (BuyerBot) must sign the release", t)
+        escrow = flow.escrow_of(order)
+        outs, info = flow.completed_split(order, escrow)
+        self.assertEqual(dict(outs), {"buyer": 1_000_000 + 27_896, "seller": 30_000 + 362, "coordinator": 1_901})
+        self.assertIn(f"{disputes.fmt_sats(1_027_896)} sats at {BUYER_ADDR}", t)
+        self.assertIn(f"{disputes.fmt_sats(30_362)} sats at {SELLER_ADDR}", t)
+        self.assertIn("successful trade", t)
+
+    def test_unknown_decision_refused(self):
+        order = onchain_order(self.maker, self.taker)
+        self.assertFalse(disputes.plan(order, "nonsense")["possible"])
 
     def test_missing_address_and_unconfirmed_escrow(self):
         order = onchain_order(self.maker, self.taker, addresses=("seller",))
@@ -175,7 +224,11 @@ class OnchainPlanTest(TestCase):
         p = disputes.plan(order, "return")
         self.assertTrue(p["possible"])
         self.assertIn(f"taker's Lightning bond ({disputes.fmt_sats(30_000)} sats) goes back", self.text(p))
-        self.assertFalse(disputes.plan(order, "penalize_buyer")["possible"])
+        p = disputes.plan(order, "penalize_buyer")  # 0.9.10: the Lightning buyer penalized
+        self.assertTrue(p["possible"], p["missing"])
+        self.assertIn(f"credits {disputes.fmt_sats(15_000)} sats of it to the seller", self.text(p))
+        p = disputes.plan(order, "completed")
+        self.assertTrue(p["possible"], p["missing"])
 
     def test_hybrid_a_without_the_lightning_bond(self):
         order = onchain_order(self.maker, self.taker, hybrid_a=True)
@@ -339,7 +392,10 @@ class OnchainDisputePageTest(TestCase):
 
     @patch("api.escrow.flow.return_everything")
     def test_refused_decision_does_nothing(self, ret):
-        r = self.client.post(self.page, {"action": "resolve", "decision": "penalize_seller", "confirmed": "yes",
+        escrow = self.order.onchain_escrow
+        escrow.funding_signatures = {k: v for k, v in escrow.funding_signatures.items() if not k.startswith("seller_payout")}
+        escrow.save()
+        r = self.client.post(self.page, {"action": "resolve", "decision": "return", "confirmed": "yes",
                                          "status": str(self.order.status)})
         self.assertEqual(r.status_code, 302)
         ret.assert_not_called()
@@ -375,3 +431,106 @@ class SpamcoinPriceTextTest(TestCase):
         o = SimpleNamespace(currency_id=2, currency="EUR", sats_denominated=False, fixed_price=90000.5,
                             contract_price=None)
         self.assertIn("90,000.50 EUR/BTC", onchain.price_text(o))
+
+
+class OnchainPenalizeCompletedPageTest(TestCase):
+    """0.9.10: the page's penalize and completed buttons run the new onchain admin actions."""
+
+    def setUp(self):
+        DUST.start()
+        self.addCleanup(DUST.stop)
+        self.maker, self.taker = make_user("SellerBot"), make_user("BuyerBot")
+        self.order = onchain_order(self.maker, self.taker)
+        self.admin = User.objects.create_superuser("panel-admin", "a@example.org", "pw")
+        self.client = Client()
+        self.client.force_login(self.admin)
+        self.page = reverse("admin:api_order_dispute", args=[self.order.pk])
+
+    def post(self, decision):
+        return self.client.post(self.page, {"action": "resolve", "decision": decision, "confirmed": "yes",
+                                            "status": str(self.order.status)})
+
+    @patch("api.admin.send_notification")
+    @patch("api.escrow.flow.penalize_dispute")
+    def test_penalize_seller(self, pen, _n):
+        self.post("penalize_seller")
+        pen.assert_called_once()
+        self.assertEqual(pen.call_args.args[1], "seller")
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.Status.MLD)  # the maker (seller) is guilty
+
+    @patch("api.admin.send_notification")
+    @patch("api.escrow.flow.penalize_dispute")
+    def test_penalize_buyer(self, pen, _n):
+        self.post("penalize_buyer")
+        self.assertEqual(pen.call_args.args[1], "buyer")
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.Status.TLD)
+
+    @patch("api.escrow.flow.complete_dispute")
+    def test_completed(self, comp):
+        r = self.post("completed")
+        comp.assert_called_once()
+        msgs = [str(m) for m in r.wsgi_request._messages]
+        self.assertTrue(any("successful trade onchain" in m for m in msgs), msgs)
+
+    def test_confirmation_pages_render_in_es_ca(self):
+        for lang, needle in (("es", "Penalizar al vendedor"), ("ca", "Penalitzar el venedor")):
+            self.client.cookies["django_language"] = lang
+            for d in ("penalize_seller", "penalize_buyer", "completed"):
+                r = self.client.get(f"{self.page}?confirm={d}")
+                self.assertEqual(r.status_code, 200)
+            self.assertIn(needle, r.content.decode())
+
+
+class DisputeSummaryTest(TestCase):
+    """0.9.10: the final summary of the new dispute releases, per side."""
+
+    def setUp(self):
+        DUST.start()
+        self.addCleanup(DUST.stop)
+        self.maker, self.taker = make_user("SellerBot"), make_user("BuyerBot")
+
+    def released(self, outcome, outs, kind, status, payer="seller", reward=0):
+        from api.escrow.taproot import Transaction, TxIn, TxOut
+
+        order = onchain_order(self.maker, self.taker, status=status)
+        escrow = order.onchain_escrow
+        spk = {"buyer": SPK, "seller": SPK2, "coordinator": "5120" + "99" * 32}
+        tx = Transaction([TxIn("ab" * 32, 0)], [TxOut(v, bytes.fromhex(spk[w])) for w, v in outs])
+        data = dict(escrow.funding_signatures)
+        data.update(dispute_outcome=outcome, release_fee_payer=payer, dispute_reward_sats=reward,
+                    cancel=outcome.startswith("penalize"), funding_txid="cd" * 32)
+        data["plan"] = {**data["plan"], "seller_fee": 200, "buyer_fee": 1_701}
+        escrow.funding_signatures = data
+        escrow.release_tx = tx.serialize().hex()
+        escrow.release_txid = tx.txid()
+        escrow.release_kind = kind
+        escrow.status = OnchainEscrow.Status.REFUNDED
+        escrow.save()
+        return order
+
+    @patch("api.order_summary.tx_status", return_value="confirmed")
+    def test_penalize_seller(self, _st):
+        from api.order_summary import final_summary
+
+        order = self.released("penalize_seller", [("seller", 1_000_562 - 400), ("buyer", 44_597), ("coordinator", 15_000 - 0)],
+                              OnchainEscrow.ReleaseKind.SELLER_WINS, Order.Status.MLD, payer="seller", reward=15_000)
+        b = final_summary(order, self.taker)
+        self.assertEqual((b["bond_state"], b["bond_returned_sats"], b["rewards_sats"]), ("returned", 27_896, 15_000))
+        self.assertEqual(b["bond_returned_to"], BUYER_ADDR)
+        s = final_summary(order, self.maker)
+        self.assertEqual((s["bond_state"], s["bond_lost_sats"]), ("lost", 30_000))
+        self.assertEqual(s["returned_sats"], 1_000_000 - 400)
+
+    @patch("api.order_summary.tx_status", return_value="confirmed")
+    def test_completed(self, _st):
+        from api.order_summary import final_summary
+
+        order = self.released("completed", [("buyer", 1_027_896 - 300), ("seller", 30_362), ("coordinator", 1_901)],
+                              OnchainEscrow.ReleaseKind.BUYER_WINS, Order.Status.SUC)
+        b = final_summary(order, self.taker)
+        self.assertEqual(b["received_sats"], 1_000_000 - 300)
+        self.assertEqual(b["bond_state"], "returned")
+        s = final_summary(order, self.maker)
+        self.assertEqual((s["bond_state"], s["bond_lost_sats"]), ("returned", 0))
