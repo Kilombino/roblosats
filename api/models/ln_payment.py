@@ -1,6 +1,6 @@
-from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator
+from api.models.validators import MaxFromSetting
 from django.db import models
 from django.template.defaultfilters import truncatechars
 
@@ -79,7 +79,7 @@ class LNPayment(models.Model):
     num_satoshis = models.PositiveBigIntegerField(
         validators=[
             MinValueValidator(100),
-            MaxValueValidator(1.5 * settings.MAX_TRADE),
+            MaxFromSetting("MAX_TRADE", factor=1.5),
         ]
     )
     # Routing budget in PPM

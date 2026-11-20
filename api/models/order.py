@@ -7,6 +7,7 @@ from decouple import config
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator
+from api.models.validators import MaxFromSetting, MinFromSetting
 from django.db import models
 from django.db.models.signals import pre_delete
 from django.dispatch import Signal, receiver
@@ -138,8 +139,8 @@ class Order(models.Model):
     satoshis = models.PositiveBigIntegerField(
         null=True,
         validators=[
-            MinValueValidator(settings.MIN_TRADE),
-            MaxValueValidator(settings.MAX_TRADE),
+            MinFromSetting("MIN_TRADE"),
+            MaxFromSetting("MAX_TRADE"),
         ],
         blank=True,
     )
@@ -224,14 +225,14 @@ class Order(models.Model):
     t0_satoshis = models.PositiveBigIntegerField(
         null=True,
         validators=[
-            MinValueValidator(settings.MIN_TRADE),
-            MaxValueValidator(settings.MAX_TRADE),
+            MinFromSetting("MIN_TRADE"),
+            MaxFromSetting("MAX_TRADE"),
         ],
         blank=True,
     )  # sats at creation
     last_satoshis = models.PositiveBigIntegerField(
         null=True,
-        validators=[MinValueValidator(0), MaxValueValidator(settings.MAX_TRADE * 2)],
+        validators=[MinValueValidator(0), MaxFromSetting("MAX_TRADE", factor=2)],
         blank=True,
     )  # sats last time checked. Weird if 2* trade max...
     # timestamp of last_satoshis

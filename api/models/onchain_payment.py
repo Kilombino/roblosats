@@ -1,7 +1,7 @@
 from decimal import Decimal
-from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator
+from api.models.validators import MaxFromSetting
 from django.db import models
 from django.template.defaultfilters import truncatechars
 from django.utils import timezone
@@ -46,11 +46,11 @@ class OnchainPayment(models.Model):
 
     num_satoshis = models.PositiveBigIntegerField(
         null=True,
-        validators=[MinValueValidator(0), MaxValueValidator(1.5 * settings.MAX_TRADE)],
+        validators=[MinValueValidator(0), MaxFromSetting("MAX_TRADE", factor=1.5)],
     )
     sent_satoshis = models.PositiveBigIntegerField(
         null=True,
-        validators=[MinValueValidator(0), MaxValueValidator(1.5 * settings.MAX_TRADE)],
+        validators=[MinValueValidator(0), MaxFromSetting("MAX_TRADE", factor=1.5)],
     )
     # fee in sats/vbyte with mSats decimals fee_msat
     suggested_mining_fee_rate = models.DecimalField(

@@ -1,7 +1,7 @@
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import MinValueValidator
+from api.models.validators import MaxFromSetting
 from django.contrib.auth.models import User
 from django.db import models
-from django.conf import settings
 
 
 class TakeOrder(models.Model):
@@ -36,7 +36,7 @@ class TakeOrder(models.Model):
     last_satoshis = models.PositiveBigIntegerField(
         null=True,
         default=None,
-        validators=[MinValueValidator(0), MaxValueValidator(settings.MAX_TRADE * 2)],
+        validators=[MinValueValidator(0), MaxFromSetting("MAX_TRADE", factor=2)],
         blank=True,
     )
     # timestamp of last_satoshis
