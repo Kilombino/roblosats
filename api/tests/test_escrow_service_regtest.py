@@ -1543,3 +1543,27 @@ class EscrowLegacyBondReturnRegtest(EscrowAutoReturnRegtest):
         self.assertEqual(len(info["vout"]), 1)
         self.assertTrue(info["vout"][0]["scriptPubKey"]["hex"].startswith("76a914"))  # P2PKH
         self.assertGreater(paid, bond.value - 3_000)
+
+
+class EscrowLegacyPayoutSwappedRegtest(EscrowLegacyPayoutRegtest):
+    """0.9.9, the other way round: the buyer is paid to a P2SH ("3…") address and the seller's
+    refund is P2PKH ("1…"): a dispute won by the buyer releases to the 3… address and "return
+    everything" refunds the seller to the 1… one (both mined, outputs exact)."""
+
+    test_payout_scripts_are_legacy = None
+    test_deposit_change_goes_to_the_seller_payout_address = None
+    test_fair_rescue_without_the_coordinator = None
+    test_rescue_plan_1_kept_for_old_escrows = None
+    test_collaborative_cancel = None
+    test_taker_never_funds_is_penalized = None
+
+    def _payout_address(self, role):
+        return _faucet("getnewaddress", "", "p2sh-segwit" if role == "buyer" else "legacy")
+
+    def test_scripts(self):
+        from api.escrow import flow
+
+        order, buyer, seller, keys = self._to_chat()
+        escrow = flow.escrow_of(order)
+        self.assertTrue(escrow.funding_signatures["buyer_payout_spk"].startswith("a914"))
+        self.assertTrue(escrow.funding_signatures["seller_payout_spk"].startswith("76a914"))

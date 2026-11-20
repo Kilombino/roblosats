@@ -73,6 +73,102 @@ def tx_links(txids):
     return format_html_join(" ", "{}", ((tx_link(t),) for t in txids))
 
 
+ADDRESS_EXPLORER = "https://mempool.kilombino.com/address/"
+
+
+def address_link(address):
+    """0.9.9: a receive address of any type (1…, 3…, bc1q…, bc1p…), whole (copyable) and linked."""
+    if not address:
+        return ""
+    return format_html(
+        '<a href="{}{}" target="_blank" rel="noopener noreferrer"><code style="word-break:break-all">{}</code></a>',
+        ADDRESS_EXPLORER,
+        address,
+        address,
+    )
+
+
+def _hrp():
+    from api.escrow import service
+
+    try:
+        return service.network_hrp()
+    except Exception:  # noqa: BLE001
+        return "bc"
+
+
+def spk_row(spk_hex, label="", sats=None):
+    """{label, address (linked), type, sats} of an output script (0.9.9: also 1… and 3…)."""
+    from api.escrow.addresses import script_to_address, script_type
+
+    try:
+        spk = bytes.fromhex(spk_hex or "")
+    except ValueError:
+        spk = b""
+    address = script_to_address(spk, _hrp()) if spk else ""
+    return {
+        "label": label,
+        "address": address_link(address) if address else format_html("<code>{}</code>", spk_hex or "—"),
+        "plain": address,
+        "type": script_type(spk) or "?",
+        "sats": fmt_sats(sats) if sats is not None else "",
+    }
+
+
+def _labels(escrow):
+    from api.escrow import flow
+
+    data = escrow.funding_signatures or {}
+    names = {}
+    for role, what in (("buyer", _("buyer payout")), ("seller", _("seller refund"))):
+        if data.get(f"{role}_payout_spk"):
+            names[data[f"{role}_payout_spk"]] = what
+    for role, what in (("buyer", _("buyer funding")), ("seller", _("seller funding"))):
+        pk = data.get(f"{role}_funding_pubkey")
+        if pk:
+            try:
+                from api.escrow.transactions import funding_script_pubkey
+
+                names.setdefault(funding_script_pubkey(bytes.fromhex(pk)).hex(), what)
+            except Exception:  # noqa: BLE001
+                pass
+    try:
+        names.setdefault(flow.coordinator_fee_spk().hex(), _("coordinator"))
+    except Exception:  # noqa: BLE001
+        pass
+    if escrow.script_pubkey:
+        names.setdefault(escrow.script_pubkey, _("escrow"))
+    return names
+
+
+def tx_outputs(escrow, tx_hex):
+    """The outputs of a deposit or release as rows: who (buyer payout, seller refund, escrow,
+    coordinator…), address and type, sats."""
+    from api.escrow.taproot import Transaction
+
+    if not tx_hex:
+        return []
+    try:
+        tx = Transaction.parse(bytes.fromhex(tx_hex))
+    except Exception:  # noqa: BLE001
+        return []
+    names = _labels(escrow)
+    return [spk_row(o.script_pubkey.hex(), names.get(o.script_pubkey.hex(), ""), o.value) for o in tx.outputs]
+
+
+def payout_rows(escrow):
+    """0.9.9: the traders' payout/refund addresses, whatever their type."""
+    data = escrow.funding_signatures or {}
+    rows = []
+    for role, what in (("buyer", _("buyer payout")), ("seller", _("seller refund"))):
+        if data.get(f"{role}_payout_spk"):
+            row = spk_row(data[f"{role}_payout_spk"], what)
+            if data.get(f"{role}_change_to_payout"):
+                row["note"] = _("its deposit change comes back here")
+            rows.append(row)
+    return rows
+
+
 def _escrow(order):
     try:
         return order.onchain_escrow
@@ -374,7 +470,15 @@ def order_section(order, now=None):
             "rescue_to_seller": fmt_sats(rescue.get("to_seller") or 0) if rescue else "",
             "rescue_to_buyer": fmt_sats(rescue.get("to_buyer") or 0) if rescue else "",
             "sweeps": sweeps,
+            # 0.9.9: payout/refund addresses of any type, and where the deposit and release paid
+            "payouts": payout_rows(escrow),
+            "deposit_outputs": tx_outputs(escrow, escrow.funding_tx),
+            "release_outputs": tx_outputs(escrow, escrow.release_tx),
         }
+        section["escrow"]["outputs_tables"] = [
+            (_("Deposit outputs"), section["escrow"]["deposit_outputs"]),
+            (_("Release outputs"), section["escrow"]["release_outputs"]),
+        ]
     section["flags"] = flags(order, now=now, with_mempool=True)
     return section
 

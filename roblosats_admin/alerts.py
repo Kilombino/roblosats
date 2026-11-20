@@ -351,6 +351,48 @@ def wallet_headline(extra):
     return texts.get(k, _("Your wallet: on-chain event")) % v
 
 
+def onchain_destinations(order, extra):
+    """0.9.9: where an on-chain release, bond return or payout went, address by address (any
+    type: 1…, 3…, bc1q…, bc1p…) with its sats: "→ buyer payout 1BvBM… (P2PKH): 1,029,000 sats"."""
+    from roblosats_admin import onchain
+
+    k = extra.get("kind") or ""
+    rows = []
+    try:
+        if k in ("release_sent", "release_confirmed", "rescue_sent"):
+            escrow = onchain._escrow(order)
+            if escrow is not None:
+                rows = [r for r in onchain.tx_outputs(escrow, escrow.release_tx) if r["plain"]]
+        elif k in ("return_sent", "return_confirmed"):
+            from api.models import OnchainBond
+
+            role = extra.get("role") or ""
+            for b in OnchainBond.objects.filter(order=order).order_by("created_at"):
+                ar = b.auto_return or {}
+                if ar.get("spk") and (not role or role in (b.role, "")):
+                    rows.append(onchain.spk_row(ar["spk"], _("bond return")))
+        elif k in ("payout_sent", "payout_confirmed") and getattr(order, "payout_tx", None):
+            from api.escrow.addresses import script_type
+            from api.escrow.flow import _spk_for_address
+
+            addr = order.payout_tx.address or ""
+            if addr:
+                try:
+                    t = script_type(_spk_for_address(addr))
+                except Exception:  # noqa: BLE001
+                    t = ""
+                rows.append({"label": _("buyer payout"), "plain": addr, "type": t or "?", "sats": ""})
+    except Exception:  # noqa: BLE001 (an alert never fails for its details)
+        return []
+    out = []
+    for r in rows:
+        line = f"→ {r['label'] or '?'} {r['plain']} ({r['type']})"
+        if r.get("sats"):
+            line += f": {r['sats']} sats"
+        out.append(line)
+    return out
+
+
 def build_text(cfg, event, order, extra):
     from api.models import Order
     from roblosats_admin import disputes
@@ -376,6 +418,8 @@ def build_text(cfg, event, order, extra):
             lines.append(f"«{extra['text']}»")
         if event == "bond_manual" and extra.get("reason"):
             lines.append(f"({extra['reason']})")
+    if event == "onchain" and order is not None:
+        lines.extend(onchain_destinations(order, extra))
     if event in ("onchain", "wallet"):
         from roblosats_admin.onchain import EXPLORER
 

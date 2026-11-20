@@ -16,6 +16,14 @@
       <small>{% if e.rescue_left is not None %}{% if e.rescue_left > 0 %}{{ e.rescue_left }} {% translate "blocks left" context "roblosats-admin" %}{% else %}{% translate "timelock reached" context "roblosats-admin" %}{% endif %}{% endif %}{% if e.rescue_to_seller %} · {% translate "seller" context "roblosats-admin" %} {{ e.rescue_to_seller }} / {% translate "buyer" context "roblosats-admin" %} {{ e.rescue_to_buyer }}{% endif %}</small></div>
   </div>
   <p class="rsd-note" style="margin-top:.4rem">{% translate "Escrow address" context "roblosats-admin" %}: <code>{{ e.address|default:"—" }}</code></p>
+  {% if e.payouts %}<div class="rsd-scroll" style="margin-top:.5rem"><table class="rsd-table">
+    <tr><th>{% translate "Trader address" context "roblosats-admin" %}</th><th>{% translate "Type" context "roblosats-admin" %}</th><th>{% translate "Address" context "roblosats-admin" %}</th></tr>
+    {% for p in e.payouts %}<tr><td>{{ p.label }}{% if p.note %}<br><small>{{ p.note }}</small>{% endif %}</td><td>{{ p.type }}</td><td>{{ p.address }}</td></tr>{% endfor %}
+  </table></div>{% endif %}
+  {% for title, rows in e.outputs_tables %}{% if rows %}<div class="rsd-scroll" style="margin-top:.5rem"><table class="rsd-table">
+    <tr><th>{{ title }}</th><th>{% translate "Type" context "roblosats-admin" %}</th><th>{% translate "Address" context "roblosats-admin" %}</th><th>sats</th></tr>
+    {% for o in rows %}<tr><td>{{ o.label|default:"—" }}</td><td>{{ o.type }}</td><td>{{ o.address }}</td><td>{{ o.sats }}</td></tr>{% endfor %}
+  </table></div>{% endif %}{% endfor %}
   {% for sw in e.sweeps %}<p class="rsd-note">{% translate "Funding leftover sent back" context "roblosats-admin" %} ({{ sw.role }}): {{ sw.sats }} sats {{ sw.tx }}</p>{% endfor %}
   {% endwith %}{% endif %}
   {% if oc.bonds %}<div class="rsd-scroll" style="margin-top:.75rem"><table class="rsd-table">
