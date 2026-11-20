@@ -155,6 +155,41 @@ def currency_text(order):
     return "Spamcoin" if order.currency_id == SPAMCOIN else str(order.currency)
 
 
+def _commas(n):
+    return f"{int(n):,}"
+
+
+def trade_text(order):
+    """0.9.9: what the order trades, for the coordinator's alerts. A "丰 sat" order is in sats
+    (its amount is BTC sats) for what is paid in exchange: "1,000,000 sats for 2,100 Spamsats"
+    (it said "1000000 Spamcoin"); any other order, "<amount> <currency>"."""
+    if getattr(order, "sats_denominated", False) is True:
+        from api.logics import Logics
+
+        if order.has_range and order.amount is None:
+            sats = f"{_commas(order.min_amount)}–{_commas(order.max_amount)} sats"
+        else:
+            sats = f"{_commas(order.last_satoshis or order.amount or 0)} sats"
+        code = getattr(getattr(order, "currency", None), "currency", order.currency_id)
+        if order.currency_id == SPAMCOIN or code == SPAMCOIN:
+            spam = order.spamcoin_sats
+            if spam is None:
+                try:
+                    total = Logics.exchange_total(order, order.last_satoshis or order.amount)
+                except Exception:
+                    total = None
+                spam = None if total is None else round(total * 100_000_000)
+            return f"{sats} for {_commas(spam)} Spamsats" if spam is not None else sats
+        try:
+            total = Logics.exchange_total(order, order.last_satoshis or order.amount)
+        except Exception:
+            total = None
+        if total is None:
+            return sats
+        return f"{sats} for {total:,.2f} {currency_text(order)}"
+    return f"{amount_text(order)} {currency_text(order)}"
+
+
 def amount_text(order):
     if order.has_range and order.amount is None:
         return f"{order.min_amount:g}–{order.max_amount:g}"

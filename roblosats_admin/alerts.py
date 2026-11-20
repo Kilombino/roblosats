@@ -361,10 +361,14 @@ def build_text(cfg, event, order, extra):
     if order is not None:
         kind = _("BUY") if order.type == Order.Types.BUY else _("SELL")
         sats = order.last_satoshis or order.satoshis or order.t0_satoshis
-        detail = (
-            f"{kind} {disputes.amount_text(order)} "
-            f"{disputes.currency_text(order)} · {disputes.fmt_sats(sats)} sats"
-        )
+        if getattr(order, "sats_denominated", False) is True:
+            # 0.9.9: "SELL 1,000,000 sats for 2,100 Spamsats" (it said "1000000 Spamcoin")
+            detail = f"{kind} {disputes.trade_text(order)}"
+        else:
+            detail = (
+                f"{kind} {disputes.amount_text(order)} "
+                f"{disputes.currency_text(order)} · {disputes.fmt_sats(sats)} sats"
+            )
         if order.payment_method:
             detail += f" · {order.payment_method}"
         lines.append(detail)
