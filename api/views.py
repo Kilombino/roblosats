@@ -747,6 +747,12 @@ class OrderView(viewsets.ViewSet):
                     show = bool(esc and esc.release_txid)
                 else:
                     show = not data.get("is_buyer")
+            elif escrow_flow.is_onchain(order):
+                # 0.9.9-1: a cancel or a dispute decision whose onchain release is not broadcast
+                # yet is not final (#26: "Bond: inside the escrow" next to the signing step)
+                esc = escrow_flow.escrow_of(order)
+                if esc is not None and esc.status == esc.Status.RELEASING and not esc.release_txid:
+                    show = False
             if show:
                 try:
                     data["final_summary"] = order_summary.final_summary(order, request.user)

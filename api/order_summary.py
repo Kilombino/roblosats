@@ -175,6 +175,7 @@ def _base(order, user, role, former_taker):
         "bond_sats": 0,
         "bond_state": "none",
         "bond_returned_sats": 0,
+        "bond_returned_to": "",
         "bond_lost_sats": 0,
         "bond_lost_reason": "",
         "bond_extra_sats": 0,
@@ -453,6 +454,9 @@ def _apply_onchain_trade(s, order, user, role_in_order):
             s["returned_sats"] = 0
     if lost_in_release and s["bond_kind"] == "onchain":
         s["bond_lost_sats"] += lost_in_release
+    elif my_bond_in and received and s["bond_kind"] == "onchain":
+        # 0.9.9-1: where the bond came back with the release (the trader's payout address)
+        s["bond_returned_to"] = escrow.funding_signatures.get(f"{erole}_payout_address", "")
     # Bonds that went into the deposit: settled by the release.
     if s["bond_state"] == "in_escrow" and s["bond_kind"] == "onchain":
         s["bond_state"] = "lost" if lost_in_release else "returned"
