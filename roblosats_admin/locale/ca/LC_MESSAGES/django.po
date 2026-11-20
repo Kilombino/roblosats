@@ -8,6 +8,1886 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 msgctxt "roblosats-admin"
+msgid "Dispute"
+msgstr "Disputa"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the maker's bond"
+msgstr "Esperant la fiança del creador"
+
+msgctxt "roblosats-admin"
+msgid "Public in the order book"
+msgstr "Pública al llibre"
+
+msgctxt "roblosats-admin"
+msgid "Paused"
+msgstr "En pausa"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the taker's bond"
+msgstr "Esperant la fiança del prenedor"
+
+msgctxt "roblosats-admin"
+msgid "Cancelled"
+msgstr "Cancel·lada"
+
+msgctxt "roblosats-admin"
+msgid "Expired"
+msgstr "Caducada"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the seller's escrow and the buyer's invoice"
+msgstr "Esperant el dipòsit del venedor i la factura del comprador"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the seller's escrow"
+msgstr "Esperant el dipòsit del venedor"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the buyer's invoice"
+msgstr "Esperant la factura del comprador"
+
+msgctxt "roblosats-admin"
+msgid "In the chat: the buyer has to pay"
+msgstr "Al xat: el comprador ha de pagar"
+
+msgctxt "roblosats-admin"
+msgid "In the chat: the buyer says they have paid"
+msgstr "Al xat: el comprador diu que ja ha pagat"
+
+msgctxt "roblosats-admin"
+msgid "In dispute: collecting statements"
+msgstr "En disputa: recollint les declaracions"
+
+msgctxt "roblosats-admin"
+msgid "Collaboratively cancelled"
+msgstr "Cancel·lada de mutu acord"
+
+msgctxt "roblosats-admin"
+msgid "Paying the sats to the buyer"
+msgstr "Pagant els sats al comprador"
+
+msgctxt "roblosats-admin"
+msgid "Completed successfully"
+msgstr "Completada amb èxit"
+
+msgctxt "roblosats-admin"
+msgid "Lightning payment to the buyer failed"
+msgstr "Ha fallat el pagament Lightning al comprador"
+
+msgctxt "roblosats-admin"
+msgid "In dispute: both statements are in, waiting for your decision"
+msgstr "En disputa: ja hi són les dues declaracions, falta la teva decisió"
+
+msgctxt "roblosats-admin"
+msgid "Dispute resolved: the maker lost"
+msgstr "Disputa resolta: el creador ha perdut"
+
+msgctxt "roblosats-admin"
+msgid "Dispute resolved: the taker lost"
+msgstr "Disputa resolta: el prenedor ha perdut"
+
+msgctxt "roblosats-admin"
+msgid "invoice generated, unpaid"
+msgstr "factura generada, sense pagar"
+
+msgctxt "roblosats-admin"
+msgid "locked (held)"
+msgstr "bloquejat (retingut)"
+
+msgctxt "roblosats-admin"
+msgid "settled by the coordinator"
+msgstr "cobrat pel coordinador"
+
+msgctxt "roblosats-admin"
+msgid "returned"
+msgstr "retornat"
+
+msgctxt "roblosats-admin"
+msgid "cancelled"
+msgstr "cancel·lat"
+
+msgctxt "roblosats-admin"
+msgid "expired"
+msgstr "caducat"
+
+msgctxt "roblosats-admin"
+msgid "valid invoice"
+msgstr "factura vàlida"
+
+msgctxt "roblosats-admin"
+msgid "payment in flight"
+msgstr "pagament en curs"
+
+msgctxt "roblosats-admin"
+msgid "paid"
+msgstr "pagat"
+
+msgctxt "roblosats-admin"
+msgid "payment failed"
+msgstr "ha fallat el pagament"
+
+msgctxt "roblosats-admin"
+msgid "Buyer wins"
+msgstr "Guanya el comprador"
+
+msgctxt "roblosats-admin"
+msgid "Seller wins"
+msgstr "Guanya el venedor"
+
+msgctxt "roblosats-admin"
+msgid "Return everything"
+msgstr "Retornar-ho tot"
+
+msgctxt "roblosats-admin"
+msgid "Trade completed (pay the buyer)"
+msgstr "Operació completada (pagar al comprador)"
+
+msgctxt "roblosats-admin"
+msgid "Open"
+msgstr "Obertes"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for your decision"
+msgstr "Esperant la teva decisió"
+
+msgctxt "roblosats-admin"
+msgid "History"
+msgstr "Historial"
+
+msgctxt "roblosats-admin"
+msgid "Disputes"
+msgstr "Disputes"
+
+msgctxt "roblosats-admin"
+msgid "Disputes waiting for your decision"
+msgstr "Disputes que esperen la teva decisió"
+
+msgctxt "roblosats-admin"
+msgid "Dispute history"
+msgstr "Historial de disputes"
+
+msgctxt "roblosats-admin"
+msgid "%(m)s min"
+msgstr "%(m)s min"
+
+msgctxt "roblosats-admin"
+msgid "%(d)s d %(h)s h"
+msgstr "%(d)s d %(h)s h"
+
+msgctxt "roblosats-admin"
+msgid "%(h)s h %(m)s min"
+msgstr "%(h)s h %(m)s min"
+
+msgctxt "roblosats-admin"
+msgid "the order is no longer in dispute"
+msgstr "l'ordre ja no està en disputa"
+
+msgctxt "roblosats-admin"
+msgid "the seller's escrow has not been settled by the coordinator"
+msgstr "el coordinador no ha cobrat el dipòsit del venedor"
+
+msgctxt "roblosats-admin"
+msgid "a bond is missing"
+msgstr "falta alguna fiança"
+
+msgctxt "roblosats-admin"
+msgid "Dispute of order %(id)s"
+msgstr "Disputa de l'ordre %(id)s"
+
+msgctxt "roblosats-admin"
+msgid "BUY"
+msgstr "COMPRA"
+
+msgctxt "roblosats-admin"
+msgid "SELL"
+msgstr "VENDA"
+
+msgctxt "roblosats-admin"
+msgid "the maker buys sats"
+msgstr "el creador compra sats"
+
+msgctxt "roblosats-admin"
+msgid "the maker sells sats"
+msgstr "el creador ven sats"
+
+msgctxt "roblosats-admin"
+msgid "Unknown action."
+msgstr "Acció desconeguda."
+
+msgctxt "roblosats-admin"
+msgid "buyer"
+msgstr "comprador"
+
+msgctxt "roblosats-admin"
+msgid "seller"
+msgstr "venedor"
+
+msgctxt "roblosats-admin"
+msgid "maker"
+msgstr "creador"
+
+msgctxt "roblosats-admin"
+msgid "taker"
+msgstr "prenedor"
+
+msgctxt "roblosats-admin"
+msgid " and "
+msgstr " i "
+
+msgctxt "roblosats-admin"
+msgid "opened automatically (the chat deadline expired)"
+msgstr "s'ha obert sola (ha vençut el termini del xat)"
+
+msgctxt "roblosats-admin"
+msgid "unknown"
+msgstr "desconegut"
+
+msgctxt "roblosats-admin"
+msgid "the buyer never submitted a payout invoice or address"
+msgstr "el comprador no va arribar a donar factura ni adreça de cobrament"
+
+msgctxt "roblosats-admin"
+msgid "Unknown decision"
+msgstr "Decisió desconeguda"
+
+msgctxt "roblosats-admin"
+msgid "(nobody)"
+msgstr "(ningú)"
+
+msgctxt "roblosats-admin"
+msgid "no response"
+msgstr "sense resposta"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s is credited %(total)s sats as a reward (their bond of %(buyer_bond)s + %(trade)s from the trade). They withdraw it from the app."
+msgstr "Al comprador %(buyer)s se li abonen %(total)s sats com a recompensa (la seva fiança de %(buyer_bond)s + %(trade)s de l'operació). Els retira ell des de l'app."
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s gets nothing back: they lose their bond (%(seller_bond)s) and their escrow (%(escrow)s)."
+msgstr "El venedor %(seller)s no recupera res: perd la seva fiança (%(seller_bond)s) i el seu dipòsit (%(escrow)s)."
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s is credited %(total)s sats as a reward (their bond of %(seller_bond)s + their escrow of %(escrow)s). They withdraw it from the app."
+msgstr "Al venedor %(seller)s se li abonen %(total)s sats com a recompensa (la seva fiança de %(seller_bond)s + el seu dipòsit de %(escrow)s). Els retira ell des de l'app."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets nothing and loses their bond (%(buyer_bond)s)."
+msgstr "El comprador %(buyer)s no rep res i perd la seva fiança (%(buyer_bond)s)."
+
+msgctxt "roblosats-admin"
+msgid "The order ends as collaboratively cancelled."
+msgstr "L'ordre queda com a cancel·lada de mutu acord."
+
+msgctxt "roblosats-admin"
+msgid "%(t)s left"
+msgstr "queden %(t)s"
+
+msgctxt "roblosats-admin"
+msgid "expired %(t)s ago"
+msgstr "ha vençut fa %(t)s"
+
+msgctxt "roblosats-admin"
+msgid "winner: %(role)s"
+msgstr "ha guanyat: %(role)s"
+
+msgctxt "roblosats-admin"
+msgid "Choose who the message is for."
+msgstr "Tria a qui va el missatge."
+
+msgctxt "roblosats-admin"
+msgid "The decision was not confirmed. Nothing was done."
+msgstr "La decisió no s'ha confirmat. No s'ha fet res."
+
+msgctxt "roblosats-admin"
+msgid "The order changed status while you were confirming. Nothing was done: review it again."
+msgstr "L'ordre ha canviat d'estat mentre confirmaves. No s'ha fet res: revisa-la una altra vegada."
+
+msgctxt "roblosats-admin"
+msgid "deadline expired"
+msgstr "termini vençut"
+
+msgctxt "roblosats-admin"
+msgid "Each party gets back what they put in, credited as a reward to withdraw from the app: the buyer %(buyer)s their bond (%(buyer_bond)s); the seller %(seller)s their bond (%(seller_bond)s) and their escrow (%(escrow)s)."
+msgstr "Cada part recupera el que hi va posar, abonat com a recompensa per retirar des de l'app: el comprador %(buyer)s la seva fiança (%(buyer_bond)s); el venedor %(seller)s la seva fiança (%(seller_bond)s) i el seu dipòsit (%(escrow)s)."
+
+msgctxt "roblosats-admin"
+msgid "The message is empty: nothing was sent."
+msgstr "El missatge és buit: no s'ha enviat res."
+
+msgctxt "roblosats-admin"
+msgid "It cannot be resolved this way right now: %(why)s. Nothing was done."
+msgstr "Ara mateix no es pot resoldre així: %(why)s. No s'ha fet res."
+
+msgctxt "roblosats-admin"
+msgid "Done: “%(decision)s” on order %(id)s. (%(detail)s)"
+msgstr "Fet: «%(decision)s» a l'ordre %(id)s. (%(detail)s)"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s could not be resolved. Response: %(detail)s"
+msgstr "No s'ha pogut resoldre l'ordre %(id)s. Resposta: %(detail)s"
+
+msgctxt "roblosats-admin"
+msgid "The buyer's invoice has already expired: the payment will probably fail and you will have to ask them for a new one."
+msgstr "La factura del comprador ja ha caducat: és probable que el pagament falli i calgui demanar-li'n una de nova."
+
+msgctxt "roblosats-admin"
+msgid "Both bonds are credited back as rewards: %(buyer_bond)s to the buyer and %(seller_bond)s to the seller %(seller)s."
+msgstr "Les dues fiances tornen com a recompensa: %(buyer_bond)s al comprador i %(seller_bond)s al venedor %(seller)s."
+
+msgctxt "roblosats-admin"
+msgid "The message has %(n)s characters; the limit is %(max)s. Nothing was sent."
+msgstr "El missatge té %(n)s caràcters; el màxim és %(max)s. No s'ha enviat res."
+
+msgctxt "roblosats-admin"
+msgid "There is nobody to send it to."
+msgstr "No hi ha ningú a qui enviar-lo."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s is paid %(trade)s sats on-chain, to the address they gave."
+msgstr "Es paguen al comprador %(buyer)s %(trade)s sats on-chain, a l'adreça que va donar."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s is paid %(trade)s sats right now over Lightning, to the invoice they gave."
+msgstr "Es paguen ara mateix al comprador %(buyer)s %(trade)s sats per Lightning, a la factura que va donar."
+
+msgctxt "roblosats-admin"
+msgid "Message sent to %(names)s (app, plus Nostr and Telegram if they use them)."
+msgstr "Missatge enviat a %(names)s (app, i Nostr i Telegram si els fan servir)."
+
+msgctxt "roblosats-admin"
+msgid "Send a message to maker / taker"
+msgstr "Escriure al creador / prenedor"
+
+msgctxt "roblosats-admin"
+msgid "nobody"
+msgstr "ningú"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: message sent to %(names)s."
+msgstr "Ordre %(id)s: missatge enviat a %(names)s."
+
+msgctxt "roblosats-admin"
+msgid "This order has or had a dispute."
+msgstr "Aquesta ordre té o ha tingut una disputa."
+
+msgctxt "roblosats-admin"
+msgid "Open the dispute page"
+msgstr "Obrir la pàgina de la disputa"
+
+msgctxt "roblosats-admin"
+msgid "chat, statements, messages and resolution"
+msgstr "xat, declaracions, missatges i resolució"
+
+msgctxt "roblosats-admin"
+msgid "Contact they left"
+msgstr "Contacte que ha deixat"
+
+msgctxt "roblosats-admin"
+msgid "Only the chat was attached, with no text of their own."
+msgstr "Només ha adjuntat el xat, sense text propi."
+
+msgctxt "roblosats-admin"
+msgid "Chat attached"
+msgstr "Xat adjunt"
+
+msgctxt "roblosats-admin"
+msgid "No chat attached."
+msgstr "No ha adjuntat el xat."
+
+msgctxt "roblosats-admin"
+msgid "No statement submitted yet."
+msgstr "Encara no ha enviat la seva declaració."
+
+msgctxt "roblosats-admin"
+msgid "Trades"
+msgstr "Operacions"
+
+msgctxt "roblosats-admin"
+msgid "Lost"
+msgstr "Perdudes"
+
+msgctxt "roblosats-admin"
+msgid "Your messages reach them via"
+msgstr "Els teus missatges li arriben per"
+
+msgctxt "roblosats-admin"
+msgid "app"
+msgstr "app"
+
+msgctxt "roblosats-admin"
+msgid "Statement"
+msgstr "Declaració"
+
+msgctxt "roblosats-admin"
+msgid "submitted"
+msgstr "enviada"
+
+msgctxt "roblosats-admin"
+msgid "not submitted yet"
+msgstr "encara no enviada"
+
+msgctxt "roblosats-admin"
+msgid "none"
+msgstr "no n'hi ha"
+
+msgctxt "roblosats-admin"
+msgid "All disputes"
+msgstr "Totes les disputes"
+
+msgctxt "roblosats-admin"
+msgid "Order"
+msgstr "Ordre"
+
+msgctxt "roblosats-admin"
+msgid "Amount"
+msgstr "Import"
+
+msgctxt "roblosats-admin"
+msgid "Payment method"
+msgstr "Mètode de pagament"
+
+msgctxt "roblosats-admin"
+msgid "Trade sats"
+msgstr "Sats de l'operació"
+
+msgctxt "roblosats-admin"
+msgid "Premium"
+msgstr "Prima"
+
+msgctxt "roblosats-admin"
+msgid "Did the buyer mark the fiat as sent?"
+msgstr "El comprador ha marcat el fiat com a enviat?"
+
+msgctxt "roblosats-admin"
+msgid "Yes"
+msgstr "Sí"
+
+msgctxt "roblosats-admin"
+msgid "No"
+msgstr "No"
+
+msgctxt "roblosats-admin"
+msgid "Dispute opened by"
+msgstr "Ha obert la disputa"
+
+msgctxt "roblosats-admin"
+msgid "not in the log"
+msgstr "no consta a l'historial"
+
+msgctxt "roblosats-admin"
+msgid "Deadline for statements"
+msgstr "Termini per a les declaracions"
+
+msgctxt "roblosats-admin"
+msgid "When the deadline passes nothing is resolved automatically: the decision is always yours."
+msgstr "Quan venç el termini no es resol res sol: la decisió sempre és teva."
+
+msgctxt "roblosats-admin"
+msgid "Conversation between them"
+msgstr "Conversa entre ells"
+
+msgctxt "roblosats-admin"
+msgid "Neither party has attached the chat to their statement."
+msgstr "Cap de les dues parts no ha adjuntat el xat a la seva declaració."
+
+msgctxt "roblosats-admin"
+msgid "Chat attached to the statements. Buyer on the left, seller on the right."
+msgstr "Xat adjuntat a les declaracions. Comprador a l'esquerra, venedor a la dreta."
+
+msgctxt "roblosats-admin"
+msgid "Buyer"
+msgstr "Comprador"
+
+msgctxt "roblosats-admin"
+msgid "attached"
+msgstr "adjuntat"
+
+msgctxt "roblosats-admin"
+msgid "not attached"
+msgstr "no adjuntat"
+
+msgctxt "roblosats-admin"
+msgid "Seller"
+msgstr "Venedor"
+
+msgctxt "roblosats-admin"
+msgid "Signature NOT valid: this message may not be authentic."
+msgstr "Signatura NO vàlida: aquest missatge pot no ser autèntic."
+
+msgctxt "roblosats-admin"
+msgid "The two copies do not match. The other one says:"
+msgstr "Les dues còpies no coincideixen. L'altra diu:"
+
+msgctxt "roblosats-admin"
+msgid "provided by"
+msgstr "l'aporta"
+
+msgctxt "roblosats-admin"
+msgid "What each party says"
+msgstr "El que explica cada part"
+
+msgctxt "roblosats-admin"
+msgid "Messages you have already sent them"
+msgstr "Missatges que ja els has enviat"
+
+msgctxt "roblosats-admin"
+msgid "To"
+msgstr "Per a"
+
+msgctxt "roblosats-admin"
+msgid "You have not written to them from the coordinator yet."
+msgstr "Encara no els has escrit des del coordinador."
+
+msgctxt "roblosats-admin"
+msgid "Write to them"
+msgstr "Escriure'ls"
+
+msgctxt "roblosats-admin"
+msgid "Prefix added to every message"
+msgstr "Prefix que s'afegeix a cada missatge"
+
+msgctxt "roblosats-admin"
+msgid "Write to the buyer"
+msgstr "Escriure al comprador"
+
+msgctxt "roblosats-admin"
+msgid "Write to the seller"
+msgstr "Escriure al venedor"
+
+msgctxt "roblosats-admin"
+msgid "Write to both"
+msgstr "Escriure als dos"
+
+msgctxt "roblosats-admin"
+msgid "Resolve the dispute"
+msgstr "Resoldre la disputa"
+
+msgctxt "roblosats-admin"
+msgid "Are you sure?"
+msgstr "N'estàs segur?"
+
+msgctxt "roblosats-admin"
+msgid "This cannot be undone."
+msgstr "Això no es pot desfer."
+
+msgctxt "roblosats-admin"
+msgid "Yes, resolve it this way"
+msgstr "Sí, resoldre-ho així"
+
+msgctxt "roblosats-admin"
+msgid "Cancel"
+msgstr "Cancel·lar"
+
+msgctxt "roblosats-admin"
+msgid "Not possible"
+msgstr "No es pot"
+
+msgctxt "roblosats-admin"
+msgid "Back"
+msgstr "Tornar"
+
+msgctxt "roblosats-admin"
+msgid "This order is no longer in dispute; there is nothing to resolve."
+msgstr "Aquesta ordre ja no està en disputa; no hi ha res a resoldre."
+
+msgctxt "roblosats-admin"
+msgid "Not available"
+msgstr "No disponible"
+
+msgctxt "roblosats-admin"
+msgid "Nothing happens until you confirm, and the confirmation shows who receives how many sats. Rewards are credited to the robot, which withdraws them from the app."
+msgstr "No passa res fins que confirmis, i la confirmació mostra qui rep quants sats. Les recompenses s'abonen al robot, que les retira des de l'app."
+
+msgctxt "roblosats-admin"
+msgid "Your user can see this dispute but has no permission to change orders."
+msgstr "El teu usuari pot veure aquesta disputa però no té permís per canviar ordres."
+
+msgctxt "roblosats-admin"
+msgid "Technical details"
+msgstr "Dades tècniques"
+
+msgctxt "roblosats-admin"
+msgid "Open the full order record (all fields)"
+msgstr "Obrir la fitxa completa de l'ordre (tots els camps)"
+
+msgctxt "roblosats-admin"
+msgid "Locked funds"
+msgstr "Diners bloquejats"
+
+msgctxt "roblosats-admin"
+msgid "Item"
+msgstr "Concepte"
+
+msgctxt "roblosats-admin"
+msgid "Sats"
+msgstr "Sats"
+
+msgctxt "roblosats-admin"
+msgid "Status"
+msgstr "Estat"
+
+msgctxt "roblosats-admin"
+msgid "Expires"
+msgstr "Caduca"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's bond"
+msgstr "Fiança del comprador"
+
+msgctxt "roblosats-admin"
+msgid "Seller's bond"
+msgstr "Fiança del venedor"
+
+msgctxt "roblosats-admin"
+msgid "Seller's escrow"
+msgstr "Dipòsit del venedor"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's payout invoice"
+msgstr "Factura de cobrament del comprador"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's on-chain payout"
+msgstr "Cobrament on-chain del comprador"
+
+msgctxt "roblosats-admin"
+msgid "Order log"
+msgstr "Historial de l'ordre"
+
+msgctxt "roblosats-admin"
+msgid "No log saved."
+msgstr "No hi ha historial desat."
+
+msgctxt "roblosats-admin"
+msgid "Up to %(max)s characters. It arrives as an app notification, a Nostr DM and a Telegram message if they use them. It is sent as written: write it in the reader's language."
+msgstr "Fins a %(max)s caràcters. Arriba com a notificació a l'app, missatge directe de Nostr i missatge de Telegram si els fan servir. S'envia tal com està escrit: escriu-lo en l'idioma de qui el llegirà."
+
+msgctxt "roblosats-admin"
+msgid "Waiting for your decision (both statements submitted)"
+msgstr "Esperant la teva decisió (les dues declaracions enviades)"
+
+msgctxt "roblosats-admin"
+msgid "Open disputes"
+msgstr "Disputes obertes"
+
+msgctxt "roblosats-admin"
+msgid "statement submitted"
+msgstr "declaració enviada"
+
+msgctxt "roblosats-admin"
+msgid "no statement"
+msgstr "sense declaració"
+
+msgctxt "roblosats-admin"
+msgid "No dispute has both statements yet."
+msgstr "Encara cap disputa no té les dues declaracions."
+
+msgctxt "roblosats-admin"
+msgid "There are no open disputes."
+msgstr "No hi ha cap disputa oberta."
+
+msgctxt "roblosats-admin"
+msgid "Past disputes"
+msgstr "Disputes anteriors"
+
+msgctxt "roblosats-admin"
+msgid "Trade"
+msgstr "Operació"
+
+msgctxt "roblosats-admin"
+msgid "Buyer / seller"
+msgstr "Comprador / venedor"
+
+msgctxt "roblosats-admin"
+msgid "Outcome"
+msgstr "Com ha acabat"
+
+msgctxt "roblosats-admin"
+msgid "Created"
+msgstr "Creada"
+
+msgctxt "roblosats-admin"
+msgid "None yet."
+msgstr "Encara cap."
+
+msgctxt "roblosats-admin"
+msgid "Orders"
+msgstr "Ordres"
+
+msgctxt "roblosats-admin"
+msgid "Send to"
+msgstr "Enviar a"
+
+msgctxt "roblosats-admin"
+msgid "both"
+msgstr "els dos"
+
+msgctxt "roblosats-admin"
+msgid "Send"
+msgstr "Enviar"
+
+msgctxt "roblosats-admin"
+msgid "In progress"
+msgstr "En curs"
+
+msgctxt "roblosats-admin"
+msgid "bonds, chat or fiat sent"
+msgstr "fiances, xat o fiat enviat"
+
+msgctxt "roblosats-admin"
+msgid "In the book"
+msgstr "Al llibre"
+
+msgctxt "roblosats-admin"
+msgid "waiting for a taker"
+msgstr "esperant que algú les prengui"
+
+msgctxt "roblosats-admin"
+msgid "open and to be resolved"
+msgstr "obertes i per resoldre"
+
+msgctxt "roblosats-admin"
+msgid "Completed"
+msgstr "Completades"
+
+msgctxt "roblosats-admin"
+msgid "all time"
+msgstr "històric"
+
+msgctxt "roblosats-admin"
+msgid "by the maker or by both · expired: %(n)s"
+msgstr "pel creador o de mutu acord · caducades: %(n)s"
+
+msgctxt "roblosats-admin"
+msgid "All orders"
+msgstr "Totes les ordres"
+
+msgctxt "roblosats-admin"
+msgid "Robots"
+msgstr "Robots"
+
+msgctxt "roblosats-admin"
+msgid "Lightning payments"
+msgstr "Pagaments Lightning"
+
+msgctxt "roblosats-admin"
+msgid "On-chain payments"
+msgstr "Pagaments on-chain"
+
+msgctxt "roblosats-admin"
+msgid "Telegram alerts"
+msgstr "Avisos per Telegram"
+
+msgctxt "roblosats-admin"
+msgid "View"
+msgstr "Veure"
+
+msgctxt "roblosats-admin"
+msgid "Order page"
+msgstr "Fitxa"
+
+msgctxt "roblosats-admin"
+msgid "Order published in the order book"
+msgstr "Ordre publicada al llibre"
+
+msgctxt "roblosats-admin"
+msgid "Order taken (the taker's bond is locked)"
+msgstr "Ordre presa (la fiança del prenedor està bloquejada)"
+
+msgctxt "roblosats-admin"
+msgid "Escrow and buyer's invoice in: the fiat exchange starts"
+msgstr "Dipòsit i factura del comprador a punt: comença l'intercanvi fiat"
+
+msgctxt "roblosats-admin"
+msgid "Order finished successfully"
+msgstr "Ordre acabada amb èxit"
+
+msgctxt "roblosats-admin"
+msgid "Order cancelled or expired"
+msgstr "Ordre cancel·lada o caducada"
+
+msgctxt "roblosats-admin"
+msgid "Dispute opened"
+msgstr "Disputa oberta"
+
+msgctxt "roblosats-admin"
+msgid "Chat message from a party in a disputed order"
+msgstr "Missatge de xat d'una part en una ordre en disputa"
+
+msgctxt "roblosats-admin"
+msgid "Message sent from the coordinator"
+msgstr "Missatge enviat des del coordinador"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s is public in the order book"
+msgstr "L'ordre %(id)s és pública al llibre"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s is public in the order book again"
+msgstr "L'ordre %(id)s torna a ser pública al llibre"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s was taken: the taker's bond is locked"
+msgstr "S'ha pres l'ordre %(id)s: la fiança del prenedor està bloquejada"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: escrow and buyer's invoice are in, the fiat exchange starts"
+msgstr "Ordre %(id)s: dipòsit i factura del comprador a punt, comença l'intercanvi fiat"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s finished successfully"
+msgstr "L'ordre %(id)s ha acabat amb èxit"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: %(status)s"
+msgstr "Ordre %(id)s: %(status)s"
+
+msgctxt "roblosats-admin"
+msgid "Dispute opened on order %(id)s"
+msgstr "S'ha obert una disputa a l'ordre %(id)s"
+
+msgctxt "roblosats-admin"
+msgid "New chat message from %(who)s on disputed order %(id)s"
+msgstr "Missatge nou de %(who)s a l'ordre en disputa %(id)s"
+
+msgctxt "roblosats-admin"
+msgid "You wrote to %(names)s on order %(id)s"
+msgstr "Has escrit a %(names)s a l'ordre %(id)s"
+
+msgctxt "roblosats-admin"
+msgid "Test message: the coordinator's alerts reach this chat."
+msgstr "Missatge de prova: els avisos del coordinador arriben a aquest xat."
+
+msgctxt "roblosats-admin"
+msgid "The bot token does not look like a Telegram token."
+msgstr "El token no sembla un token de bot de Telegram."
+
+msgctxt "roblosats-admin"
+msgid "The chat id must be a number (groups start with -) or a @channel name."
+msgstr "L'id del xat ha de ser un número (els grups comencen per -) o un @canal."
+
+msgctxt "roblosats-admin"
+msgid "The panel address must look like https://host or http://host:port, with nothing after it."
+msgstr "L'adreça del panell ha de ser com https://host o http://host:port, sense res al darrere."
+
+msgctxt "roblosats-admin"
+msgid "Telegram alerts saved."
+msgstr "Avisos per Telegram desats."
+
+msgctxt "roblosats-admin"
+msgid "Save a bot token and a chat id first: there is nowhere to send it."
+msgstr "Desa abans un token i un id de xat: no hi ha on enviar-lo."
+
+msgctxt "roblosats-admin"
+msgid "Test message sent. Check the Telegram chat."
+msgstr "Missatge de prova enviat. Mira el xat de Telegram."
+
+msgctxt "roblosats-admin"
+msgid "Telegram did not accept the message: %(why)s"
+msgstr "Telegram no ha acceptat el missatge: %(why)s"
+
+msgctxt "roblosats-admin"
+msgid "nobody took it"
+msgstr "ningú no l'ha presa"
+
+msgctxt "roblosats-admin"
+msgid "the maker's bond was not locked"
+msgstr "no s'ha bloquejat la fiança del creador"
+
+msgctxt "roblosats-admin"
+msgid "the seller's escrow was not locked"
+msgstr "no s'ha bloquejat el dipòsit del venedor"
+
+msgctxt "roblosats-admin"
+msgid "the buyer's invoice was not submitted"
+msgstr "el comprador no ha enviat la seva factura"
+
+msgctxt "roblosats-admin"
+msgid "neither the escrow nor the invoice arrived"
+msgstr "no han arribat ni el dipòsit ni la factura"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s"
+msgstr "Ordre %(id)s"
+
+msgctxt "roblosats-admin"
+msgid "Coordinator panel"
+msgstr "Panell del coordinador"
+
+msgctxt "roblosats-admin"
+msgid "ready to send"
+msgstr "a punt per enviar"
+
+msgctxt "roblosats-admin"
+msgid "not configured"
+msgstr "sense configurar"
+
+msgctxt "roblosats-admin"
+msgid "The coordinator's bot writes to your chat when something happens to an order. Changes apply right away: no restart needed. If Telegram fails, the orders carry on as usual."
+msgstr "El bot del coordinador t'escriu quan passa alguna cosa en una ordre. Els canvis s'apliquen al moment, sense reiniciar. Si Telegram falla, les ordres segueixen el seu curs igualment."
+
+msgctxt "roblosats-admin"
+msgid "Bot and chat"
+msgstr "Bot i xat"
+
+msgctxt "roblosats-admin"
+msgid "Bot token"
+msgstr "Token del bot"
+
+msgctxt "roblosats-admin"
+msgid "saved"
+msgstr "desat"
+
+msgctxt "roblosats-admin"
+msgid "A token is saved"
+msgstr "Hi ha un token desat"
+
+msgctxt "roblosats-admin"
+msgid "Leave the field empty to keep it."
+msgstr "Deixa el camp buit per conservar-lo."
+
+msgctxt "roblosats-admin"
+msgid "Remove the saved token"
+msgstr "Esborrar el token desat"
+
+msgctxt "roblosats-admin"
+msgid "None saved here: the TELEGRAM_TOKEN of the environment is used"
+msgstr "No n'hi ha cap de desat aquí: es fa servir el TELEGRAM_TOKEN de l'entorn"
+
+msgctxt "roblosats-admin"
+msgid "Create a bot with @BotFather and paste its token. It stays on the server and is never shown again in full."
+msgstr "Crea un bot amb @BotFather i enganxa'n el token. Es queda al servidor i no es torna a mostrar sencer."
+
+msgctxt "roblosats-admin"
+msgid "Chat id"
+msgstr "Id del xat"
+
+msgctxt "roblosats-admin"
+msgid "Your user id, a group id (starts with -) or a @channel where the bot can write. Send a message to the bot first, or add it to the group."
+msgstr "El teu id d'usuari, l'id d'un grup (comença per -) o un @canal on el bot pugui escriure. Escriu abans al bot, o afegeix-lo al grup."
+
+msgctxt "roblosats-admin"
+msgid "Empty: the TELEGRAM_COORDINATOR_CHAT_ID of the environment is used"
+msgstr "Buit: es fa servir el TELEGRAM_COORDINATOR_CHAT_ID de l'entorn"
+
+msgctxt "roblosats-admin"
+msgid "Language of the alerts"
+msgstr "Idioma dels avisos"
+
+msgctxt "roblosats-admin"
+msgid "Panel address for the links"
+msgstr "Adreça del panell per als enllaços"
+
+msgctxt "roblosats-admin"
+msgid "Each alert links to the order's page in this panel. Empty: the coordinator's HOST_NAME is used"
+msgstr "Cada avís enllaça amb la fitxa de l'ordre en aquest panell. Buit: es fa servir el HOST_NAME del coordinador"
+
+msgctxt "roblosats-admin"
+msgid "What to be told about"
+msgstr "De què vols assabentar-te"
+
+msgctxt "roblosats-admin"
+msgid "Chat messages in a dispute are encrypted between the parties: the alert only says who wrote, at most once every few minutes per order. Cancellations do not include orders whose maker never locked the bond."
+msgstr "Els missatges del xat en una disputa van xifrats entre les parts: l'avís només diu qui ha escrit, com a molt un cop cada pocs minuts per ordre. Les cancel·lacions no inclouen les ordres el creador de les quals no va bloquejar mai la fiança."
+
+msgctxt "roblosats-admin"
+msgid "Save"
+msgstr "Desar"
+
+msgctxt "roblosats-admin"
+msgid "Try it"
+msgstr "Provar"
+
+msgctxt "roblosats-admin"
+msgid "Sends a message with the saved settings. Save first if you changed something."
+msgstr "Envia un missatge amb la configuració desada. Desa abans si has canviat alguna cosa."
+
+msgctxt "roblosats-admin"
+msgid "Send test message"
+msgstr "Enviar missatge de prova"
+
+msgctxt "roblosats-admin"
+msgid "This order is in dispute."
+msgstr "Aquesta ordre està en disputa."
+
+msgctxt "roblosats-admin"
+msgid "This order went through a dispute."
+msgstr "Aquesta ordre ha passat per una disputa."
+
+msgctxt "roblosats-admin"
+msgid "Spamcoin sats"
+msgstr "Sats de Spamcoin"
+
+msgctxt "roblosats-admin"
+msgid "Bond"
+msgstr "Fiança"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's payout"
+msgstr "Cobrament del comprador"
+
+msgctxt "roblosats-admin"
+msgid "on-chain"
+msgstr "on-chain"
+
+msgctxt "roblosats-admin"
+msgid "Contract formalized"
+msgstr "Contracte formalitzat"
+
+msgctxt "roblosats-admin"
+msgid "Deadline of the current step"
+msgstr "Termini del pas actual"
+
+msgctxt "roblosats-admin"
+msgid "Chat messages"
+msgstr "Missatges de xat"
+
+msgctxt "roblosats-admin"
+msgid "encrypted between them"
+msgstr "xifrats entre ells"
+
+msgctxt "roblosats-admin"
+msgid "Bonds, escrow and payout"
+msgstr "Fiances, dipòsit i cobrament"
+
+msgctxt "roblosats-admin"
+msgid "Timeline"
+msgstr "Cronologia"
+
+msgctxt "roblosats-admin"
+msgid "Links"
+msgstr "Enllaços"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's robot"
+msgstr "Robot del comprador"
+
+msgctxt "roblosats-admin"
+msgid "Seller's robot"
+msgstr "Robot del venedor"
+
+msgctxt "roblosats-admin"
+msgid "Order in the app"
+msgstr "Ordre a l'app"
+
+msgctxt "roblosats-admin"
+msgid "Needs your decision"
+msgstr "Requereix la teva decisió"
+
+msgctxt "roblosats-admin"
+msgid "Live trades"
+msgstr "Operacions en curs"
+
+msgctxt "roblosats-admin"
+msgid "Type"
+msgstr "Tipus"
+
+msgctxt "roblosats-admin"
+msgid "Since"
+msgstr "Des de"
+
+msgctxt "roblosats-admin"
+msgid "Until"
+msgstr "Fins a"
+
+msgctxt "roblosats-admin"
+msgid "No trade in progress right now."
+msgstr "Ara mateix no hi ha cap operació en curs."
+
+msgctxt "roblosats-admin"
+msgid "Disputes waiting: %(n)s"
+msgstr "Disputes en espera: %(n)s"
+
+msgctxt "roblosats-admin"
+msgid "Coordinator %(alias)s · RoboSats %(version)s · node %(node)s · channels: %(local)s sats local / %(remote)s remote"
+msgstr "Coordinador %(alias)s · RoboSats %(version)s · node %(node)s · canals: %(local)s sats locals / %(remote)s remots"
+
+msgctxt "roblosats-admin"
+msgid "Back to the coordinator panel"
+msgstr "Tornar al panell del coordinador"
+
+msgctxt "roblosats-admin"
+msgid "Coordinator"
+msgstr "Coordinador"
+
+msgctxt "roblosats-admin"
+msgid "Home"
+msgstr "Inici"
+
+msgctxt "roblosats-admin"
+msgid "Orders in progress"
+msgstr "Ordres en curs"
+
+msgctxt "roblosats-admin"
+msgid "In the book (public)"
+msgstr "Al llibre (públiques)"
+
+msgctxt "roblosats-admin"
+msgid "Paying the buyer"
+msgstr "Pagant al comprador"
+
+msgctxt "roblosats-admin"
+msgid "Money"
+msgstr "Diners"
+
+msgctxt "roblosats-admin"
+msgid "People and market"
+msgstr "Gent i mercat"
+
+msgctxt "roblosats-admin"
+msgid "Users"
+msgstr "Usuaris"
+
+msgctxt "roblosats-admin"
+msgid "Currencies"
+msgstr "Divises"
+
+msgctxt "roblosats-admin"
+msgid "Market prices"
+msgstr "Preus de mercat"
+
+msgctxt "roblosats-admin"
+msgid "Cancelled orders"
+msgstr "Cancel·lades"
+
+msgctxt "roblosats-admin"
+msgid "created, no address yet"
+msgstr "creat, encara sense adreça"
+
+msgctxt "roblosats-admin"
+msgid "address submitted"
+msgstr "adreça enviada"
+
+msgctxt "roblosats-admin"
+msgid "in the mempool"
+msgstr "a la mempool"
+
+msgctxt "roblosats-admin"
+msgid "confirmed"
+msgstr "confirmat"
+
+msgctxt "roblosats-admin"
+msgid "queued to be sent"
+msgstr "a la cua per enviar-se"
+
+msgctxt "roblosats-admin"
+msgid "(unknown)"
+msgstr "(desconegut)"
+
+msgctxt "roblosats-admin"
+msgid "the buyer won"
+msgstr "ha guanyat el comprador"
+
+msgctxt "roblosats-admin"
+msgid "the seller won"
+msgstr "ha guanyat el venedor"
+
+msgctxt "roblosats-admin"
+msgid "Coordinator's earnings"
+msgstr "Guany del coordinador"
+
+msgctxt "roblosats-admin"
+msgid "Routing fee of the payment to the buyer: %(fee)s sats."
+msgstr "Comissió d'enrutament del pagament al comprador: %(fee)s sats."
+
+msgctxt "roblosats-admin"
+msgid "Transaction"
+msgstr "Transacció"
+
+msgctxt "roblosats-admin"
+msgid "Mining fee"
+msgstr "Comissió de mineria"
+
+msgctxt "roblosats-admin"
+msgid "Chat between them"
+msgstr "Xat entre ells"
+
+msgctxt "roblosats-admin"
+msgid "The chat could not be read."
+msgstr "No s'ha pogut llegir el xat."
+
+msgctxt "roblosats-admin"
+msgid "First message"
+msgstr "Primer missatge"
+
+msgctxt "roblosats-admin"
+msgid "Last message"
+msgstr "Últim missatge"
+
+msgctxt "roblosats-admin"
+msgid "When each one wrote"
+msgstr "Quan ha escrit cadascú"
+
+msgctxt "roblosats-admin"
+msgid "Who"
+msgstr "Qui"
+
+msgctxt "roblosats-admin"
+msgid "Time"
+msgstr "Hora"
+
+msgctxt "roblosats-admin"
+msgid "No chat messages are stored on the coordinator."
+msgstr "No hi ha missatges de xat desats al coordinador."
+
+msgctxt "roblosats-admin"
+msgid "The messages are encrypted between them: here you only see how many, who wrote them and when. Since Roblosats 0.8.8-rl25 a copy of every message reaches the coordinator, also in the app's Nostr chat mode. In orders chatted before that, only the first Nostr message may have arrived, so a low count there does not mean they did not talk."
+msgstr "Van xifrats entre ells: aquí només es veu quants n'hi ha, qui els ha escrit i quan. Des de Roblosats 0.8.8-rl25 arriba al coordinador una còpia de cada missatge, també en el mode de xat Nostr de l'app. En ordres amb xat anterior, pot ser que només arribés el primer missatge per Nostr, així que un recompte baix allà no vol dir que no parlessin."
+
+msgctxt "roblosats-admin"
+msgid "Payment"
+msgstr "Pagament"
+
+msgctxt "roblosats-admin"
+msgid "Failed payouts"
+msgstr "Pagaments fallits"
+
+msgctxt "roblosats-admin"
+msgid "Lightning payment to the buyer not arriving"
+msgstr "el pagament Lightning al comprador no arriba"
+
+msgctxt "roblosats-admin"
+msgid "Penalize the seller (no trade)"
+msgstr "Penalitzar el venedor (sense operació)"
+
+msgctxt "roblosats-admin"
+msgid "Penalize the buyer (no trade)"
+msgstr "Penalitzar el comprador (sense operació)"
+
+msgctxt "roblosats-admin"
+msgid "won the dispute: their bond + the trade amount"
+msgstr "ha guanyat la disputa: la seva fiança + l'import de l'operació"
+
+msgctxt "roblosats-admin"
+msgid "their bond is returned"
+msgstr "se li retorna la fiança"
+
+msgctxt "roblosats-admin"
+msgid "their escrow is returned"
+msgstr "se li retorna el dipòsit"
+
+msgctxt "roblosats-admin"
+msgid "their bond"
+msgstr "la seva fiança"
+
+msgctxt "roblosats-admin"
+msgid "their escrow"
+msgstr "el seu dipòsit"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s gets their escrow (%(escrow)s) back as a reward, but LOSES their bond (%(seller_bond)s), which the coordinator keeps."
+msgstr "El venedor %(seller)s recupera el seu dipòsit (%(escrow)s) com a recompensa, però PERD la seva fiança (%(seller_bond)s), que es queda el coordinador."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets their bond (%(buyer_bond)s) back as a reward. They do not receive the trade sats."
+msgstr "El comprador %(buyer)s recupera la seva fiança (%(buyer_bond)s) com a recompensa. No rep els sats de l'operació."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s LOSES their bond (%(buyer_bond)s), which the coordinator keeps."
+msgstr "El comprador %(buyer)s PERD la seva fiança (%(buyer_bond)s), que es queda el coordinador."
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s gets their bond (%(seller_bond)s) and their escrow (%(escrow)s) back as a reward."
+msgstr "El venedor %(seller)s recupera la seva fiança (%(seller_bond)s) i el seu dipòsit (%(escrow)s) com a recompensa."
+
+msgctxt "roblosats-admin"
+msgid "There is no trade: nobody takes what they did not pay for. Rewards are withdrawn from the app."
+msgstr "No hi ha operació: ningú no s'emporta el que no ha pagat. Les recompenses es retiren des de l'app."
+
+msgctxt "roblosats-admin"
+msgid "Failing now"
+msgstr "Fallant ara"
+
+msgctxt "roblosats-admin"
+msgid "Ran out of time (%(s)s s) looking for a route, with routes still left to try"
+msgstr "S'ha acabat el temps (%(s)s s) buscant ruta, i encara quedaven rutes per provar"
+
+msgctxt "roblosats-admin"
+msgid "No route reached their wallet (all failed, or there was none)"
+msgstr "No s'ha trobat cap ruta que arribés al seu moneder (totes han fallat o no n'hi havia cap)"
+
+msgctxt "roblosats-admin"
+msgid "Non-recoverable error while paying"
+msgstr "Error irrecuperable en intentar el pagament"
+
+msgctxt "roblosats-admin"
+msgid "The invoice does not work for this payment (unknown hash, wrong amount or CLTV)"
+msgstr "La factura no serveix per a aquest pagament (hash desconegut, import o CLTV incorrectes)"
+
+msgctxt "roblosats-admin"
+msgid "The coordinator's node did not have enough balance in its channels"
+msgstr "El node del coordinador no tenia prou saldo als seus canals"
+
+msgctxt "roblosats-admin"
+msgid "unknown reason"
+msgstr "motiu desconegut"
+
+msgctxt "roblosats-admin"
+msgid "not in the database"
+msgstr "no és a la base de dades"
+
+msgctxt "roblosats-admin"
+msgid "Failed payouts: history"
+msgstr "Pagaments fallits: historial"
+
+msgctxt "roblosats-admin"
+msgid "Failed payouts to the buyer"
+msgstr "Pagaments fallits al comprador"
+
+msgctxt "roblosats-admin"
+msgid "Outcome of the dispute"
+msgstr "Resultat de la disputa"
+
+msgctxt "roblosats-admin"
+msgid "What each party was credited as a reward, withdrawn from the app with a Lightning invoice, and what they lost. “Pending” is everything the robot still has to withdraw."
+msgstr "El que s'ha abonat a cada part com a recompensa, que retira des de l'app amb una factura Lightning, i el que ha perdut. «Pendent» és tot el que al robot encara li queda per retirar."
+
+msgctxt "roblosats-admin"
+msgid "Receives"
+msgstr "Rep"
+
+msgctxt "roblosats-admin"
+msgid "Already withdrawn: nothing pending"
+msgstr "Ja retirat: no li queda res pendent"
+
+msgctxt "roblosats-admin"
+msgid "Pending withdrawal"
+msgstr "Pendent de retirar"
+
+msgctxt "roblosats-admin"
+msgid "withdrawn in total"
+msgstr "retirat en total"
+
+msgctxt "roblosats-admin"
+msgid "Can be withdrawn from"
+msgstr "Es pot retirar des del"
+
+msgctxt "roblosats-admin"
+msgid "Loses"
+msgstr "Perd"
+
+msgctxt "roblosats-admin"
+msgid "No change"
+msgstr "Sense canvis"
+
+msgctxt "roblosats-admin"
+msgid "Orders that went through a failed payout"
+msgstr "Ordres que han passat per un pagament fallit"
+
+msgctxt "roblosats-admin"
+msgid "Payments to the buyer that have failed"
+msgstr "Pagaments al comprador que han fallat"
+
+msgctxt "roblosats-admin"
+msgid "Sats to pay"
+msgstr "Sats per pagar"
+
+msgctxt "roblosats-admin"
+msgid "Invoices / attempts"
+msgstr "Factures / intents"
+
+msgctxt "roblosats-admin"
+msgid "Last attempt"
+msgstr "Últim intent"
+
+msgctxt "roblosats-admin"
+msgid "Last error"
+msgstr "Últim error"
+
+msgctxt "roblosats-admin"
+msgid "Where the invoice goes"
+msgstr "On va la factura"
+
+msgctxt "roblosats-admin"
+msgid "How it ended"
+msgstr "Com ha acabat"
+
+msgctxt "roblosats-admin"
+msgid "invoices"
+msgstr "factures"
+
+msgctxt "roblosats-admin"
+msgid "failed attempts"
+msgstr "intents fallits"
+
+msgctxt "roblosats-admin"
+msgid "“Route hint”: the public node through which the buyer’s wallet says it can be reached (private channel). Hover over the short key to see it in full."
+msgstr "«Pista de ruta»: el node públic pel qual el moneder del comprador diu que s'hi pot arribar (canal privat). Passa el ratolí per sobre de la clau curta per veure-la sencera."
+
+msgctxt "roblosats-admin"
+msgid "No order has gone through a failed payout."
+msgstr "Cap ordre no ha passat per un pagament fallit."
+
+msgctxt "roblosats-admin"
+msgid "No payment to the buyer is failing right now."
+msgstr "Ara mateix no hi ha cap pagament al comprador que falli."
+
+msgctxt "roblosats-admin"
+msgid "Orders that were in “Lightning payment to the buyer failed” and have left it. Taken from each order’s log (the %(history_limit)s most recent)."
+msgstr "Ordres que han estat a «Ha fallat el pagament Lightning al comprador» i ja n'han sortit. Surt de l'historial de cada ordre (les %(history_limit)s més recents)."
+
+msgctxt "roblosats-admin"
+msgid "The seller already received the fiat and the escrow is settled: the sats belong to the buyer, but the Lightning payment to their invoice does not arrive. The order stays like this until the buyer submits an invoice that can be paid; each attempt lasts at most %(timeout)s s."
+msgstr "El venedor ja ha cobrat el seu fiat i el dipòsit està liquidat: els sats són del comprador, però el pagament Lightning a la seva factura no arriba. L'ordre es queda així fins que el comprador enviï una factura que es pugui pagar; cada intent dura com a molt %(timeout)s s."
+
+msgctxt "roblosats-admin"
+msgid "The payment to the buyer is failing"
+msgstr "El pagament al comprador està fallant"
+
+msgctxt "roblosats-admin"
+msgid "The payment to the buyer failed before succeeding"
+msgstr "El pagament al comprador ha fallat abans de sortir bé"
+
+msgctxt "roblosats-admin"
+msgid "Sats to pay (current invoice)"
+msgstr "Sats per pagar (factura actual)"
+
+msgctxt "roblosats-admin"
+msgid "Invoices submitted"
+msgstr "Factures que ha enviat"
+
+msgctxt "roblosats-admin"
+msgid "Failed attempts"
+msgstr "Intents fallits"
+
+msgctxt "roblosats-admin"
+msgid "Where the current invoice goes"
+msgstr "On va la factura actual"
+
+msgctxt "roblosats-admin"
+msgid "Routing fee budget (last invoice)"
+msgstr "Pressupost de comissió d'enrutament (última factura)"
+
+msgctxt "roblosats-admin"
+msgid "All their invoices go to the same node."
+msgstr "Totes les seves factures van al mateix node."
+
+msgctxt "roblosats-admin"
+msgid "See their invoices"
+msgstr "Veure les seves factures"
+
+msgctxt "roblosats-admin"
+msgid "Submitted"
+msgstr "Enviada"
+
+msgctxt "roblosats-admin"
+msgid "Routing budget"
+msgstr "Pressupost d'enrutament"
+
+msgctxt "roblosats-admin"
+msgid "Failures"
+msgstr "Errors"
+
+msgctxt "roblosats-admin"
+msgid "Last failure"
+msgstr "Últim error"
+
+msgctxt "roblosats-admin"
+msgid "Destination"
+msgstr "Destinació"
+
+msgctxt "roblosats-admin"
+msgid "current"
+msgstr "actual"
+
+msgctxt "roblosats-admin"
+msgid "All failed payouts"
+msgstr "Tots els pagaments fallits"
+
+msgctxt "roblosats-admin"
+msgid "Their invoices have gone to %(n)s different nodes."
+msgstr "Les seves factures han anat a %(n)s nodes diferents."
+
+msgctxt "roblosats-admin"
+msgid "What to do: the sats wait in the coordinator and the buyer can submit another invoice from the app at any time. If the invoices keep going to the same destination they will most likely fail the same way: ask for an invoice from another wallet or node (with more inbound liquidity), or to wait and retry later. Each attempt lasts at most %(s)s s."
+msgstr "Què fer: els sats esperen al coordinador i el comprador pot enviar una altra factura des de l'app quan vulgui. Si les factures continuen anant a la mateixa destinació, el més normal és que fallin igual: demana-li una factura d'un altre moneder o node (amb més liquiditat d'entrada) o que esperi i ho torni a provar més tard. Cada intent dura com a molt %(s)s s."
+
+msgctxt "roblosats-admin"
+msgid "route hint via"
+msgstr "pista de ruta per"
+
+msgctxt "roblosats-admin"
+msgid "The buyer is not getting paid"
+msgstr "Al comprador no li arriba el pagament"
+
+msgctxt "roblosats-admin"
+msgid "Failed payouts: %(n)s"
+msgstr "Pagaments fallits: %(n)s"
+
+msgctxt "roblosats-admin"
+msgid "On-chain"
+msgstr "On-chain"
+
+msgctxt "roblosats-admin"
+msgid "Price"
+msgstr "Preu"
+
+msgctxt "roblosats-admin"
+msgid "Swap paid by the Lightning seller"
+msgstr "Swap pagat pel venedor Lightning"
+
+msgctxt "roblosats-admin"
+msgid "given back"
+msgstr "retornat"
+
+msgctxt "roblosats-admin"
+msgid "Escrow"
+msgstr "Dipòsit"
+
+msgctxt "roblosats-admin"
+msgid "collaborative cancel"
+msgstr "cancel·lació col·laborativa"
+
+msgctxt "roblosats-admin"
+msgid "Escrow sats"
+msgstr "Sats en dipòsit"
+
+msgctxt "roblosats-admin"
+msgid "Fee plan / rescue plan"
+msgstr "Pla de comissió / pla de rescat"
+
+msgctxt "roblosats-admin"
+msgid "Coordinator fee (seller / buyer)"
+msgstr "Comissió del coordinador (venedor / comprador)"
+
+msgctxt "roblosats-admin"
+msgid "received"
+msgstr "rebut"
+
+msgctxt "roblosats-admin"
+msgid "Deposit"
+msgstr "Dipòsit (tx)"
+
+msgctxt "roblosats-admin"
+msgid "block"
+msgstr "bloc"
+
+msgctxt "roblosats-admin"
+msgid "Release"
+msgstr "Alliberament"
+
+msgctxt "roblosats-admin"
+msgid "Rescue without the coordinator"
+msgstr "Rescat sense el coordinador"
+
+msgctxt "roblosats-admin"
+msgid "blocks after confirmation"
+msgstr "blocs després de la confirmació"
+
+msgctxt "roblosats-admin"
+msgid "blocks left"
+msgstr "blocs restants"
+
+msgctxt "roblosats-admin"
+msgid "timelock reached"
+msgstr "termini complert"
+
+msgctxt "roblosats-admin"
+msgid "Escrow address"
+msgstr "Adreça del dipòsit"
+
+msgctxt "roblosats-admin"
+msgid "Funding leftover sent back"
+msgstr "Sobrant de l'aportació retornat"
+
+msgctxt "roblosats-admin"
+msgid "On-chain bond"
+msgstr "Fiança on-chain"
+
+msgctxt "roblosats-admin"
+msgid "Required / received"
+msgstr "Demanada / rebuda"
+
+msgctxt "roblosats-admin"
+msgid "Funding"
+msgstr "Pagament"
+
+msgctxt "roblosats-admin"
+msgid "Penalty / return"
+msgstr "Penalització / devolució"
+
+msgctxt "roblosats-admin"
+msgid "Leftovers"
+msgstr "Sobrants"
+
+msgctxt "roblosats-admin"
+msgid "payments"
+msgstr "pagaments"
+
+msgctxt "roblosats-admin"
+msgid "penalty"
+msgstr "penalització"
+
+msgctxt "roblosats-admin"
+msgid "inside the deposit"
+msgstr "dins del dipòsit"
+
+msgctxt "roblosats-admin"
+msgid "pending"
+msgstr "pendent"
+
+msgctxt "roblosats-admin"
+msgid "trades in progress"
+msgstr "intercanvis en curs"
+
+msgctxt "roblosats-admin"
+msgid "open orders"
+msgstr "ordres obertes"
+
+msgctxt "roblosats-admin"
+msgid "in escrow"
+msgstr "en dipòsits"
+
+msgctxt "roblosats-admin"
+msgid "in bonds"
+msgstr "en fiances"
+
+msgctxt "roblosats-admin"
+msgid "Last 24 h"
+msgstr "Últimes 24 h"
+
+msgctxt "roblosats-admin"
+msgid "penalties"
+msgstr "penalitzacions"
+
+msgctxt "roblosats-admin"
+msgid "fees"
+msgstr "comissions"
+
+msgctxt "roblosats-admin"
+msgid "last 30 days"
+msgstr "últims 30 dies"
+
+msgctxt "roblosats-admin"
+msgid "Needs attention"
+msgstr "Requereix atenció"
+
+msgctxt "roblosats-admin"
+msgid "Lightning"
+msgstr "Lightning"
+
+msgctxt "roblosats-admin"
+msgid "Hybrid A (Lightning buyer)"
+msgstr "Mixta A (comprador Lightning)"
+
+msgctxt "roblosats-admin"
+msgid "Hybrid B (Lightning seller)"
+msgstr "Mixta B (venedor Lightning)"
+
+msgctxt "roblosats-admin"
+msgid "fixed %(p)s %(c)s/BTC"
+msgstr "fix %(p)s %(c)s/BTC"
+
+msgctxt "roblosats-admin"
+msgid "%(p)s %(c)s/BTC at contract"
+msgstr "%(p)s %(c)s/BTC en contractar"
+
+msgctxt "roblosats-admin"
+msgid "deposit window ends in %(m)s min"
+msgstr "el termini de pagament acaba d'aquí a %(m)s min"
+
+msgctxt "roblosats-admin"
+msgid "rescue signature missing: %(who)s"
+msgstr "falta signatura de rescat: %(who)s"
+
+msgctxt "roblosats-admin"
+msgid "deposit signature missing: %(who)s"
+msgstr "falta signatura del dipòsit: %(who)s"
+
+msgctxt "roblosats-admin"
+msgid "release signature missing: %(who)s"
+msgstr "falta signatura de l'alliberament: %(who)s"
+
+msgctxt "roblosats-admin"
+msgid "release waits for the winner's signature"
+msgstr "l'alliberament espera la signatura del guanyador"
+
+msgctxt "roblosats-admin"
+msgid "rescue timelock reached (block %(h)s)"
+msgstr "termini de rescat complert (bloc %(h)s)"
+
+msgctxt "roblosats-admin"
+msgid "%(what)s of the %(role)s in the mempool at %(r)s sat/vB (1 hour needs %(n)s)"
+msgstr "%(what)s del %(role)s a la mempool a %(r)s sat/vB (per a 1 hora en calen %(n)s)"
+
+msgctxt "roblosats-admin"
+msgid "bonds only"
+msgstr "només fiances"
+
+msgctxt "roblosats-admin"
+msgid "escrow"
+msgstr "dipòsit"
+
+msgctxt "roblosats-admin"
+msgid "on-chain escrow status"
+msgstr "estat del dipòsit on-chain"
+
+msgctxt "roblosats-admin"
+msgid "On-chain bonds"
+msgstr "Fiances on-chain"
+
+msgctxt "roblosats-admin"
+msgid "On-chain escrow"
+msgstr "Dipòsit on-chain"
+
+msgctxt "roblosats-admin"
+msgid "not set: the owner takes it back by hand"
+msgstr "sense configurar: el propietari la recupera a mà"
+
+msgctxt "roblosats-admin"
+msgid "sent by itself to %(a)s"
+msgstr "enviada sola a %(a)s"
+
+msgctxt "roblosats-admin"
+msgid "to %(a)s, not signed yet: the owner takes it back by hand"
+msgstr "a %(a)s, encara sense signar: el propietari la recupera a mà"
+
+msgctxt "roblosats-admin"
+msgid "signed to %(a)s but not sent (see the log): the owner takes it back by hand"
+msgstr "signada a %(a)s però no enviada (mira el registre): el propietari la recupera a mà"
+
+msgctxt "roblosats-admin"
+msgid "signed: goes back by itself to %(a)s when the bond is free"
+msgstr "signada: torna sola a %(a)s quan la fiança quedi lliure"
+
+msgctxt "roblosats-admin"
+msgid "seller's leaf: the seller signed alone, with the coordinator"
+msgstr "fulla del venedor: ha signat només el venedor, amb el coordinador"
+
+msgctxt "roblosats-admin"
+msgid "key path: both traders signed together (MuSig2)"
+msgstr "ruta de clau: han signat els dos junts (MuSig2)"
+
+msgctxt "roblosats-admin"
+msgid "the seller's app can sign it alone (one signature)"
+msgstr "l'app del venedor la pot signar sola (una signatura)"
+
+msgctxt "roblosats-admin"
+msgid "both traders sign together (MuSig2)"
+msgstr "signen els dos junts (MuSig2)"
+
+msgctxt "roblosats-admin"
+msgid "release waits for the seller's signature (one signature)"
+msgstr "l'alliberament espera la signatura del venedor (una signatura)"
+
+msgctxt "roblosats-admin"
+msgid "On-chain bond not returned by itself: its owner takes it back by hand"
+msgstr "Fiança on-chain que no ha tornat sola: el seu propietari la recupera a mà"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's on-chain bond is free but did not go back by itself; their app shows the button to take it back"
+msgstr "Ordre %(id)s: la fiança on-chain del %(role)s és lliure però no ha tornat sola; la seva app li mostra el botó per recuperar-la"
+
+msgctxt "roblosats-admin"
+msgid "hybrid"
+msgstr "híbrid"
+
+msgctxt "roblosats-admin"
+msgid "the Lightning buyer signs nothing on-chain"
+msgstr "el comprador Lightning no signa res on-chain"
+
+msgctxt "roblosats-admin"
+msgid "Automatic return"
+msgstr "Devolució automàtica"
+
+msgctxt "roblosats-admin"
+msgid "On-chain payouts not sent yet"
+msgstr "Pagaments on-chain encara sense enviar"
+
+msgctxt "roblosats-admin"
+msgid "Orders whose Lightning seller paid and whose buyer chose an on-chain payout, still queued more than 15 minutes after the trade finished: your wallet has not sent it (funds or node). The app shows it to the buyer as queued."
+msgstr "Ordres amb venedor Lightning el comprador de les quals ha triat cobrar on-chain i que continuen a la cua més de 15 minuts després d'acabar l'intercanvi: el teu moneder no l'ha enviat (fons o node). L'app li ho mostra al comprador com a la cua."
+
+msgctxt "roblosats-admin"
+msgid "Address"
+msgstr "Adreça"
+
+msgctxt "roblosats-admin"
+msgid "Queued since"
+msgstr "A la cua des de"
+
+msgctxt "roblosats-admin"
+msgid "cooperative"
+msgstr "cooperativa"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the traders' escrow keys"
+msgstr "Esperant les claus del dipòsit dels dos"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the funding transaction signatures"
+msgstr "Esperant les signatures de la transacció de dipòsit"
+
+msgctxt "roblosats-admin"
+msgid "Funding transaction in the mempool"
+msgstr "Dipòsit a la mempool"
+
+msgctxt "roblosats-admin"
+msgid "Escrow confirmed"
+msgstr "Dipòsit confirmat"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the release signatures"
+msgstr "Esperant les signatures de l'alliberament"
+
+msgctxt "roblosats-admin"
+msgid "Released to the buyer"
+msgstr "Alliberat al comprador"
+
+msgctxt "roblosats-admin"
+msgid "Returned to the seller"
+msgstr "Retornat al venedor"
+
+msgctxt "roblosats-admin"
+msgid "Recovered by the seller after the timelock"
+msgstr "Recuperat pel venedor després del termini"
+
+msgctxt "roblosats-admin"
+msgid "Never funded"
+msgstr "No s'ha pagat mai"
+
+msgctxt "roblosats-admin"
+msgid "Buyer and coordinator"
+msgstr "Comprador i coordinador"
+
+msgctxt "roblosats-admin"
+msgid "Seller and coordinator"
+msgstr "Venedor i coordinador"
+
+msgctxt "roblosats-admin"
+msgid "Seller after the timelock"
+msgstr "Venedor després del termini"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the bond on chain"
+msgstr "Esperant la fiança on-chain"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the owner's penalty signature"
+msgstr "Esperant la signatura de penalització del propietari"
+
+msgctxt "roblosats-admin"
+msgid "Bond locked"
+msgstr "Fiança bloquejada"
+
+msgctxt "roblosats-admin"
+msgid "Moved into the escrow deposit"
+msgstr "Dins del dipòsit"
+
+msgctxt "roblosats-admin"
+msgid "Penalty broadcast"
+msgstr "Penalització emesa"
+
+msgctxt "roblosats-admin"
+msgid "Free to return to its owner"
+msgstr "Lliure per tornar al seu propietari"
+
+msgctxt "roblosats-admin"
+msgid "Returned to its owner"
+msgstr "Retornada al seu propietari"
+
+msgctxt "roblosats-admin"
 msgid "On-chain orders: bonds and deposits in the mempool and confirmed, deposit signed, release, automatic bond returns, swap payouts and rescues"
 msgstr "Ordres on-chain: fiances i dipòsits a la mempool i confirmats, dipòsit signat, alliberament, devolucions automàtiques de fiances, pagaments on-chain del swap i rescats"
 
@@ -148,153 +2028,201 @@ msgid "Alerts already sent"
 msgstr "Avisos ja enviats"
 
 msgctxt "roblosats-admin"
-msgid "Order published in the order book"
-msgstr "Ordre publicada al llibre"
+msgid "the order has no on-chain escrow"
+msgstr "l'ordre no té dipòsit on-chain"
 
 msgctxt "roblosats-admin"
-msgid "Order taken (the taker's bond is locked)"
-msgstr "Ordre presa (la fiança del prenedor està bloquejada)"
+msgid "the on-chain escrow is not confirmed and unspent (status: %(status)s)"
+msgstr "el dipòsit on-chain no està confirmat i sense gastar (estat: %(status)s)"
 
 msgctxt "roblosats-admin"
-msgid "Escrow and buyer's invoice in: the fiat exchange starts"
-msgstr "Dipòsit i factura del comprador a punt: comença l'intercanvi fiat"
+msgid "the %(role)s's bond is not in the escrow"
+msgstr "la fiança del %(role)s no és al dipòsit"
 
 msgctxt "roblosats-admin"
-msgid "Order finished successfully"
-msgstr "Ordre acabada amb èxit"
+msgid "the bonds of the escrow cannot be read"
+msgstr "no es poden llegir les fiances del dipòsit"
 
 msgctxt "roblosats-admin"
-msgid "Order cancelled or expired"
-msgstr "Ordre cancel·lada o caducada"
+msgid "the buyer has not given an on-chain address to receive the sats"
+msgstr "el comprador no ha donat cap adreça on-chain per rebre els sats"
 
 msgctxt "roblosats-admin"
-msgid "Dispute opened"
-msgstr "Disputa oberta"
+msgid "the seller has not given an on-chain refund address"
+msgstr "el venedor no ha donat cap adreça on-chain de devolució"
 
 msgctxt "roblosats-admin"
-msgid "Chat message from a party in a disputed order"
-msgstr "Missatge de xat d'una part en una ordre en disputa"
+msgid "It goes out on chain through the seller's leaf with the coordinator: the seller's app (%(nick)s) must sign the return, then the coordinator adds its signature and broadcasts it. The buyer does not sign anything."
+msgstr "Surt a la cadena per la fulla del venedor amb el coordinador: l'app del venedor (%(nick)s) ha de signar la devolució; després el coordinador hi afegeix la seva signatura i l'emet. El comprador no signa res."
 
 msgctxt "roblosats-admin"
-msgid "Message sent from the coordinator"
-msgstr "Missatge enviat des del coordinador"
+msgid "It goes out on chain through the buyer's leaf with the coordinator: the buyer's app (%(nick)s) must sign the release, then the coordinator adds its signature and broadcasts it. The seller does not sign anything."
+msgstr "Surt a la cadena per la fulla del comprador amb el coordinador: l'app del comprador (%(nick)s) ha de signar l'alliberament; després el coordinador hi afegeix la seva signatura i l'emet. El venedor no signa res."
 
 msgctxt "roblosats-admin"
-msgid "On-chain bond not returned by itself: its owner takes it back by hand"
-msgstr "Fiança on-chain que no ha tornat sola: el seu propietari la recupera a mà"
+msgid "It goes out on chain through the seller's leaf with the coordinator: the seller's app (%(nick)s) must sign the release, then the coordinator adds its signature and broadcasts it. The buyer does not sign anything."
+msgstr "Surt a la cadena per la fulla del venedor amb el coordinador: l'app del venedor (%(nick)s) ha de signar l'alliberament; després el coordinador hi afegeix la seva signatura i l'emet. El comprador no signa res."
 
 msgctxt "roblosats-admin"
-msgid "Order %(id)s is public in the order book"
-msgstr "L'ordre %(id)s és pública al llibre"
+msgid "trade amount"
+msgstr "import de l'intercanvi"
 
 msgctxt "roblosats-admin"
-msgid "Order %(id)s is public in the order book again"
-msgstr "L'ordre %(id)s torna a ser pública al llibre"
+msgid "their escrow back"
+msgstr "el seu dipòsit de tornada"
 
 msgctxt "roblosats-admin"
-msgid "Order %(id)s was taken: the taker's bond is locked"
-msgstr "S'ha pres l'ordre %(id)s: la fiança del prenedor està bloquejada"
+msgid "reward from the other bond"
+msgstr "recompensa de l'altra fiança"
 
 msgctxt "roblosats-admin"
-msgid "Order %(id)s: escrow and buyer's invoice are in, the fiat exchange starts"
-msgstr "Ordre %(id)s: dipòsit i factura del comprador a punt, comença l'intercanvi fiat"
+msgid "leftover of their deposit"
+msgstr "sobrant de la seva aportació"
 
 msgctxt "roblosats-admin"
-msgid "Order %(id)s finished successfully"
-msgstr "L'ordre %(id)s ha acabat amb èxit"
+msgid "The %(role)s %(nick)s receives %(sats)s sats at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
+msgstr "El %(role)s %(nick)s rep %(sats)s sats a %(address)s (%(parts)s), menys la comissió de mineria de l'alliberament, que surt d'aquesta sortida."
 
 msgctxt "roblosats-admin"
-msgid "Order %(id)s: %(status)s"
-msgstr "Ordre %(id)s: %(status)s"
+msgid "The %(role)s %(nick)s only gets back the leftover of their deposit, %(sats)s sats at %(address)s."
+msgstr "El %(role)s %(nick)s només recupera el sobrant de la seva aportació, %(sats)s sats a %(address)s."
 
 msgctxt "roblosats-admin"
-msgid "Dispute opened on order %(id)s"
-msgstr "S'ha obert una disputa a l'ordre %(id)s"
+msgid "The coordinator receives %(sats)s sats at its fee address: %(penalty)s kept from the loser's bond + %(fees)s of trade fees."
+msgstr "El coordinador rep %(sats)s sats a la seva adreça de comissions: %(penalty)s retinguts de la fiança del perdedor + %(fees)s de comissions de l'intercanvi."
 
 msgctxt "roblosats-admin"
-msgid "New chat message from %(who)s on disputed order %(id)s"
-msgstr "Missatge nou de %(who)s a l'ordre en disputa %(id)s"
+msgid "The development fund receives %(sats)s sats."
+msgstr "El fons de desenvolupament rep %(sats)s sats."
 
 msgctxt "roblosats-admin"
-msgid " and "
-msgstr " i "
+msgid "The %(role)s %(nick)s loses their on-chain bond (%(bond)s sats)."
+msgstr "El %(role)s %(nick)s perd la seva fiança on-chain (%(bond)s sats)."
 
 msgctxt "roblosats-admin"
-msgid "You wrote to %(names)s on order %(id)s"
-msgstr "Has escrit a %(names)s a l'ordre %(id)s"
+msgid "The coordinator receives nothing on chain."
+msgstr "El coordinador no rep res a la cadena."
 
 msgctxt "roblosats-admin"
-msgid "Order %(id)s: the %(role)s's on-chain bond is free but did not go back by itself; their app shows the button to take it back"
-msgstr "Ordre %(id)s: la fiança on-chain del %(role)s és lliure però no ha tornat sola; la seva app li mostra el botó per recuperar-la"
+msgid "The %(role)s's bond is a Lightning bond (%(sats)s sats), settled when the dispute opened: the coordinator keeps it and credits %(reward)s sats of it to the %(winner)s as a reward, withdrawn from the app."
+msgstr "La fiança del %(role)s és una fiança Lightning (%(sats)s sats), liquidada quan es va obrir la disputa: el coordinador se la queda i n'abona %(reward)s sats al %(winner)s com a recompensa, que es retira des de l'app."
 
 msgctxt "roblosats-admin"
-msgid "Test message: the coordinator's alerts reach this chat."
-msgstr "Missatge de prova: els avisos del coordinador arriben a aquest xat."
+msgid "The %(role)s's Lightning bond (%(sats)s sats), settled when the dispute opened, is credited back to them as a reward, withdrawn from the app."
+msgstr "La fiança Lightning del %(role)s (%(sats)s sats), liquidada quan es va obrir la disputa, se li torna com a recompensa, que es retira des de l'app."
 
 msgctxt "roblosats-admin"
-msgid "BUY"
-msgstr "COMPRA"
+msgid "their fee"
+msgstr "la seva comissió"
 
 msgctxt "roblosats-admin"
-msgid "SELL"
-msgstr "VENDA"
+msgid "The seller %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s), minus the mining fee of the return, which comes out of this output."
+msgstr "El venedor %(nick)s recupera %(sats)s sats a %(address)s (%(parts)s), menys la comissió de mineria de la devolució, que surt d'aquesta sortida."
 
 msgctxt "roblosats-admin"
-msgid "buyer"
-msgstr "comprador"
+msgid "The buyer %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s)."
+msgstr "El comprador %(nick)s recupera %(sats)s sats a %(address)s (%(parts)s)."
 
 msgctxt "roblosats-admin"
-msgid "seller"
-msgstr "venedor"
+msgid "The buyer's part (%(sats)s sats) is below the dust limit of their address: it cannot be an output of its own and goes with the seller's."
+msgstr "La part del comprador (%(sats)s sats) és per sota del límit de pols de la seva adreça: no pot ser una sortida pròpia i va amb la del venedor."
 
 msgctxt "roblosats-admin"
-msgid "maker"
-msgstr "creador"
+msgid "The coordinator charges nothing: the trade fees are given back."
+msgstr "El coordinador no cobra res: es tornen les comissions de l'intercanvi."
 
 msgctxt "roblosats-admin"
-msgid "taker"
-msgstr "prenedor"
+msgid "The coordinator keeps only the fee already paid in the deposit (%(sats)s sats)."
+msgstr "El coordinador només es queda la comissió ja pagada al dipòsit (%(sats)s sats)."
 
 msgctxt "roblosats-admin"
-msgid "Waiting for the maker's bond"
-msgstr "Esperant la fiança del creador"
+msgid "The taker's Lightning bond (%(sats)s sats) goes back to them: credited as a reward if it was already settled when the dispute opened, unlocked otherwise."
+msgstr "La fiança Lightning del prenedor (%(sats)s sats) se li torna: abonada com a recompensa si ja es va liquidar quan es va obrir la disputa, desbloquejada si no."
 
 msgctxt "roblosats-admin"
-msgid "Public in the order book"
-msgstr "Pública al llibre"
+msgid "not possible with an on-chain escrow: to pay the buyer use “Buyer wins”"
+msgstr "no és possible amb un dipòsit on-chain: per pagar al comprador fes servir «Guanya el comprador»"
 
 msgctxt "roblosats-admin"
-msgid "Paused"
-msgstr "En pausa"
+msgid "not possible with an on-chain escrow: it can only go to the buyer, to the seller, or back to each party"
+msgstr "no és possible amb un dipòsit on-chain: només pot anar al comprador, al venedor o tornar a cada part"
 
 msgctxt "roblosats-admin"
-msgid "Waiting for the taker's bond"
-msgstr "Esperant la fiança del prenedor"
+msgid "the release cannot be planned: %(error)s"
+msgstr "no es pot preparar l'alliberament: %(error)s"
 
 msgctxt "roblosats-admin"
-msgid "Cancelled"
-msgstr "Cancel·lada"
+msgid "A cooperative release had already been prepared (never broadcast): this decision replaces it."
+msgstr "Ja s'havia preparat un alliberament cooperatiu (mai emès): aquesta decisió el substitueix."
 
 msgctxt "roblosats-admin"
-msgid "Expired"
-msgstr "Caducada"
+msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). It was penalized on chain when the dispute opened: the coordinator got %(got)s sats from it and the rest went to the miners. What the maker gets back is credited as a Lightning reward."
+msgstr "La fiança del creador és a la cadena (%(bond)s sats, darrere d'un substitut Lightning). Es va penalitzar a la cadena quan es va obrir la disputa: el coordinador en va rebre %(got)s sats i la resta va anar als miners. El que el creador recuperi se li abona com a recompensa Lightning."
 
 msgctxt "roblosats-admin"
-msgid "Collaboratively cancelled"
-msgstr "Cancel·lada de mutu acord"
+msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). What the maker gets back is credited as a Lightning reward."
+msgstr "La fiança del creador és a la cadena (%(bond)s sats, darrere d'un substitut Lightning). El que el creador recuperi se li abona com a recompensa Lightning."
 
 msgctxt "roblosats-admin"
-msgid "Completed successfully"
-msgstr "Completada amb èxit"
+msgid "The %(role)s signed and the coordinator broadcast the release."
+msgstr "El %(role)s ha signat i el coordinador ha emès l'alliberament."
 
 msgctxt "roblosats-admin"
-msgid "Dispute resolved: the maker lost"
-msgstr "Disputa resolta: el creador ha perdut"
+msgid "Waiting for the %(role)s's signature (%(nick)s): their app signs the release when they open the order. The coordinator then adds its signature and broadcasts it; nothing else is needed from you."
+msgstr "Esperant la signatura del %(role)s (%(nick)s): la seva app signa l'alliberament quan obre l'ordre. Després el coordinador hi afegeix la seva signatura i l'emet; no cal res més per part teva."
 
 msgctxt "roblosats-admin"
-msgid "Dispute resolved: the taker lost"
-msgstr "Disputa resolta: el prenedor ha perdut"
+msgid "bond return"
+msgstr "devolució de fiança"
 
 msgctxt "roblosats-admin"
-msgid "Telegram alerts"
-msgstr "Avisos per Telegram"
+msgid "buyer payout"
+msgstr "cobrament del comprador"
+
+msgctxt "roblosats-admin"
+msgid "seller refund"
+msgstr "devolució al venedor"
+
+msgctxt "roblosats-admin"
+msgid "buyer funding"
+msgstr "aportació del comprador"
+
+msgctxt "roblosats-admin"
+msgid "seller funding"
+msgstr "aportació del venedor"
+
+msgctxt "roblosats-admin"
+msgid "coordinator"
+msgstr "coordinador"
+
+msgctxt "roblosats-admin"
+msgid "its deposit change comes back here"
+msgstr "el canvi de la seva aportació torna aquí"
+
+msgctxt "roblosats-admin"
+msgid "Deposit payment"
+msgstr "Pagament d'aportació"
+
+msgctxt "roblosats-admin"
+msgid "Deposit outputs"
+msgstr "Sortides del dipòsit"
+
+msgctxt "roblosats-admin"
+msgid "Release outputs"
+msgstr "Sortides de l'alliberament"
+
+msgctxt "roblosats-admin"
+msgid "extra plan"
+msgstr "pla de sobrants"
+
+msgctxt "roblosats-admin"
+msgid "dev fund"
+msgstr "fons de desenvolupament"
+
+msgctxt "roblosats-admin"
+msgid "Trader address"
+msgstr "Adreça del trader"
+
+msgctxt "roblosats-admin"
+msgid "On-chain resolution"
+msgstr "Resolució on-chain"

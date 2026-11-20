@@ -2026,3 +2026,203 @@ msgstr "Bereits gesendeter Hinweis"
 msgctxt "roblosats-admin"
 msgid "Alerts already sent"
 msgstr "Bereits gesendete Hinweise"
+
+msgctxt "roblosats-admin"
+msgid "the order has no on-chain escrow"
+msgstr "die Order hat keine On-Chain-Treuhand"
+
+msgctxt "roblosats-admin"
+msgid "the on-chain escrow is not confirmed and unspent (status: %(status)s)"
+msgstr "die On-Chain-Treuhand ist nicht bestätigt und unausgegeben (Status: %(status)s)"
+
+msgctxt "roblosats-admin"
+msgid "the %(role)s's bond is not in the escrow"
+msgstr "die %(role)s-Kaution ist nicht in der Treuhand"
+
+msgctxt "roblosats-admin"
+msgid "the bonds of the escrow cannot be read"
+msgstr "die Kautionen der Treuhand können nicht gelesen werden"
+
+msgctxt "roblosats-admin"
+msgid "the buyer has not given an on-chain address to receive the sats"
+msgstr "der Käufer hat keine On-Chain-Adresse zum Empfang der Sats angegeben"
+
+msgctxt "roblosats-admin"
+msgid "the seller has not given an on-chain refund address"
+msgstr "der Verkäufer hat keine On-Chain-Rückerstattungsadresse angegeben"
+
+msgctxt "roblosats-admin"
+msgid "It goes out on chain through the seller's leaf with the coordinator: the seller's app (%(nick)s) must sign the return, then the coordinator adds its signature and broadcasts it. The buyer does not sign anything."
+msgstr "Es geht on-chain über das Blatt des Verkäufers mit dem Koordinator hinaus: Die App des Verkäufers (%(nick)s) muss die Rückgabe signieren, dann fügt der Koordinator seine Signatur hinzu und sendet sie ins Netz. Der Käufer signiert nichts."
+
+msgctxt "roblosats-admin"
+msgid "It goes out on chain through the buyer's leaf with the coordinator: the buyer's app (%(nick)s) must sign the release, then the coordinator adds its signature and broadcasts it. The seller does not sign anything."
+msgstr "Es geht on-chain über das Blatt des Käufers mit dem Koordinator hinaus: Die App des Käufers (%(nick)s) muss die Freigabe signieren, dann fügt der Koordinator seine Signatur hinzu und sendet sie ins Netz. Der Verkäufer signiert nichts."
+
+msgctxt "roblosats-admin"
+msgid "It goes out on chain through the seller's leaf with the coordinator: the seller's app (%(nick)s) must sign the release, then the coordinator adds its signature and broadcasts it. The buyer does not sign anything."
+msgstr "Es geht on-chain über das Blatt des Verkäufers mit dem Koordinator hinaus: Die App des Verkäufers (%(nick)s) muss die Freigabe signieren, dann fügt der Koordinator seine Signatur hinzu und sendet sie ins Netz. Der Käufer signiert nichts."
+
+msgctxt "roblosats-admin"
+msgid "trade amount"
+msgstr "Handelsbetrag"
+
+msgctxt "roblosats-admin"
+msgid "their escrow back"
+msgstr "die eigene Treuhand zurück"
+
+msgctxt "roblosats-admin"
+msgid "reward from the other bond"
+msgstr "Belohnung aus der anderen Kaution"
+
+msgctxt "roblosats-admin"
+msgid "leftover of their deposit"
+msgstr "Rest der eigenen Einzahlung"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s receives %(sats)s sats at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
+msgstr "Der %(role)s %(nick)s erhält %(sats)s Sats an %(address)s (%(parts)s), abzüglich der Mining-Gebühr der Freigabe, die von diesem Output abgeht."
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s only gets back the leftover of their deposit, %(sats)s sats at %(address)s."
+msgstr "Der %(role)s %(nick)s erhält nur den Rest seiner Einzahlung zurück, %(sats)s Sats an %(address)s."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats at its fee address: %(penalty)s kept from the loser's bond + %(fees)s of trade fees."
+msgstr "Der Koordinator erhält %(sats)s Sats an seine Gebührenadresse: %(penalty)s einbehalten aus der Kaution des Verlierers + %(fees)s Handelsgebühren."
+
+msgctxt "roblosats-admin"
+msgid "The development fund receives %(sats)s sats."
+msgstr "Der Entwicklungsfonds erhält %(sats)s Sats."
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s loses their on-chain bond (%(bond)s sats)."
+msgstr "Der %(role)s %(nick)s verliert seine On-Chain-Kaution (%(bond)s Sats)."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives nothing on chain."
+msgstr "Der Koordinator erhält on-chain nichts."
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s's bond is a Lightning bond (%(sats)s sats), settled when the dispute opened: the coordinator keeps it and credits %(reward)s sats of it to the %(winner)s as a reward, withdrawn from the app."
+msgstr "Die %(role)s-Kaution ist eine Lightning-Kaution (%(sats)s Sats), eingezogen bei Eröffnung des Streitfalls: Der Koordinator behält sie und schreibt dem %(winner)s davon %(reward)s Sats als Belohnung gut, abhebbar in der App."
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s's Lightning bond (%(sats)s sats), settled when the dispute opened, is credited back to them as a reward, withdrawn from the app."
+msgstr "Die Lightning-Kaution des %(role)s-Teilnehmers (%(sats)s Sats), eingezogen bei Eröffnung des Streitfalls, wird ihm als Belohnung zurückgebucht, abhebbar in der App."
+
+msgctxt "roblosats-admin"
+msgid "their fee"
+msgstr "die eigene Gebühr"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s), minus the mining fee of the return, which comes out of this output."
+msgstr "Der Verkäufer %(nick)s erhält %(sats)s Sats an %(address)s zurück (%(parts)s), abzüglich der Mining-Gebühr der Rückgabe, die von diesem Output abgeht."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s)."
+msgstr "Der Käufer %(nick)s erhält %(sats)s Sats an %(address)s zurück (%(parts)s)."
+
+msgctxt "roblosats-admin"
+msgid "The buyer's part (%(sats)s sats) is below the dust limit of their address: it cannot be an output of its own and goes with the seller's."
+msgstr "Der Anteil des Käufers (%(sats)s Sats) liegt unter der Dust-Grenze seiner Adresse: Er kann kein eigener Output sein und geht mit dem des Verkäufers."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator charges nothing: the trade fees are given back."
+msgstr "Der Koordinator berechnet nichts: Die Handelsgebühren werden zurückgegeben."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator keeps only the fee already paid in the deposit (%(sats)s sats)."
+msgstr "Der Koordinator behält nur die bereits in der Einzahlung bezahlte Gebühr (%(sats)s Sats)."
+
+msgctxt "roblosats-admin"
+msgid "The taker's Lightning bond (%(sats)s sats) goes back to them: credited as a reward if it was already settled when the dispute opened, unlocked otherwise."
+msgstr "Die Lightning-Kaution des Takers (%(sats)s Sats) geht an ihn zurück: als Belohnung gutgeschrieben, wenn sie bei Eröffnung des Streitfalls schon eingezogen war, sonst freigegeben."
+
+msgctxt "roblosats-admin"
+msgid "not possible with an on-chain escrow: to pay the buyer use “Buyer wins”"
+msgstr "mit einer On-Chain-Treuhand nicht möglich: Um den Käufer zu bezahlen, nutze „Käufer gewinnt“"
+
+msgctxt "roblosats-admin"
+msgid "not possible with an on-chain escrow: it can only go to the buyer, to the seller, or back to each party"
+msgstr "mit einer On-Chain-Treuhand nicht möglich: Sie kann nur an den Käufer, an den Verkäufer oder an jede Partei zurück gehen"
+
+msgctxt "roblosats-admin"
+msgid "the release cannot be planned: %(error)s"
+msgstr "die Freigabe kann nicht vorbereitet werden: %(error)s"
+
+msgctxt "roblosats-admin"
+msgid "A cooperative release had already been prepared (never broadcast): this decision replaces it."
+msgstr "Es war bereits eine kooperative Freigabe vorbereitet (nie gesendet): Diese Entscheidung ersetzt sie."
+
+msgctxt "roblosats-admin"
+msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). It was penalized on chain when the dispute opened: the coordinator got %(got)s sats from it and the rest went to the miners. What the maker gets back is credited as a Lightning reward."
+msgstr "Die Kaution des Makers liegt on-chain (%(bond)s Sats, hinter einem Lightning-Platzhalter). Sie wurde bei Eröffnung des Streitfalls on-chain bestraft: Der Koordinator erhielt %(got)s Sats davon, der Rest ging an die Miner. Was der Maker zurückbekommt, wird als Lightning-Belohnung gutgeschrieben."
+
+msgctxt "roblosats-admin"
+msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). What the maker gets back is credited as a Lightning reward."
+msgstr "Die Kaution des Makers liegt on-chain (%(bond)s Sats, hinter einem Lightning-Platzhalter). Was der Maker zurückbekommt, wird als Lightning-Belohnung gutgeschrieben."
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s signed and the coordinator broadcast the release."
+msgstr "Der %(role)s hat signiert und der Koordinator hat die Freigabe ins Netz gesendet."
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the %(role)s's signature (%(nick)s): their app signs the release when they open the order. The coordinator then adds its signature and broadcasts it; nothing else is needed from you."
+msgstr "Warten auf die Signatur des %(role)s-Teilnehmers (%(nick)s): Seine App signiert die Freigabe, wenn er die Order öffnet. Dann fügt der Koordinator seine Signatur hinzu und sendet sie ins Netz; von dir ist nichts weiter nötig."
+
+msgctxt "roblosats-admin"
+msgid "bond return"
+msgstr "Kautionsrückgabe"
+
+msgctxt "roblosats-admin"
+msgid "buyer payout"
+msgstr "Auszahlung an den Käufer"
+
+msgctxt "roblosats-admin"
+msgid "seller refund"
+msgstr "Rückerstattung an den Verkäufer"
+
+msgctxt "roblosats-admin"
+msgid "buyer funding"
+msgstr "Einzahlung des Käufers"
+
+msgctxt "roblosats-admin"
+msgid "seller funding"
+msgstr "Einzahlung des Verkäufers"
+
+msgctxt "roblosats-admin"
+msgid "coordinator"
+msgstr "Koordinator"
+
+msgctxt "roblosats-admin"
+msgid "its deposit change comes back here"
+msgstr "das Wechselgeld seiner Einzahlung kommt hierher zurück"
+
+msgctxt "roblosats-admin"
+msgid "Deposit payment"
+msgstr "Zahlung der Einzahlung"
+
+msgctxt "roblosats-admin"
+msgid "Deposit outputs"
+msgstr "Outputs der Einzahlung"
+
+msgctxt "roblosats-admin"
+msgid "Release outputs"
+msgstr "Outputs der Freigabe"
+
+msgctxt "roblosats-admin"
+msgid "extra plan"
+msgstr "Restplan"
+
+msgctxt "roblosats-admin"
+msgid "dev fund"
+msgstr "Entwicklungsfonds"
+
+msgctxt "roblosats-admin"
+msgid "Trader address"
+msgstr "Händleradresse"
+
+msgctxt "roblosats-admin"
+msgid "On-chain resolution"
+msgstr "On-Chain-Lösung"

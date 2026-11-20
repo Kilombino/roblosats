@@ -1567,3 +1567,107 @@ class EscrowLegacyPayoutSwappedRegtest(EscrowLegacyPayoutRegtest):
         escrow = flow.escrow_of(order)
         self.assertTrue(escrow.funding_signatures["buyer_payout_spk"].startswith("a914"))
         self.assertTrue(escrow.funding_signatures["seller_payout_spk"].startswith("76a914"))
+
+
+@skipUnless(REGTEST, "needs the regtest lab (ESCROW_REGTEST=1)")
+class EscrowDisputePageRegtest(EscrowOrderFlowRegtest):
+    """0.9.9-1: an on-chain dispute resolved from the coordinator's DISPUTE PAGE (not the
+    changelist action): until 0.9.9 the page refused every on-chain dispute ("the seller's
+    escrow has not been settled by the coordinator"). The page's resolve path runs the action
+    under the order lock; the signer's app signs; the release is mined with what the page said."""
+
+    test_happy_path_to_successful = None
+    test_collaborative_cancel = None
+    test_dispute_for_the_buyer_from_the_admin = None
+    test_dispute_return_everything_from_the_admin = None
+    test_taker_never_funds_is_penalized = None
+
+    def _page(self, order, decision):
+        from unittest.mock import patch
+
+        from django.test import Client
+        from django.urls import reverse
+
+        from roblosats_admin import disputes
+
+        admin = User.objects.create_superuser(f"panel-{uuid.uuid4().hex[:6]}", "a@example.org", "pw")
+        client = Client()
+        client.force_login(admin)
+        page = reverse("admin:api_order_dispute", args=[order.pk])
+        order.refresh_from_db()
+        plan = disputes.plan(order, decision)
+        self.assertTrue(plan["possible"], plan["missing"])
+        body = client.get(f"{page}?confirm={decision}", HTTP_ACCEPT_LANGUAGE="en").content.decode()
+        self.assertNotIn("has not been settled by the coordinator", body)
+        with patch("api.admin.send_notification"):
+            r = client.post(page, {"action": "resolve", "decision": decision, "confirmed": "yes",
+                                   "status": str(order.status)})
+        self.assertEqual(r.status_code, 302)
+        msgs = [str(m) for m in r.wsgi_request._messages]
+        self.assertTrue(any(m.startswith("Done:") for m in msgs), msgs)
+        order.refresh_from_db()
+        return plan, msgs, client, page
+
+    def test_return_everything_from_the_page(self):
+        from api.escrow import flow
+        from api.logics import Logics
+
+        order, buyer, seller, keys = self._to_chat()
+        order.expires_at = timezone.now()
+        order.save()
+        self.assertEqual(Logics.open_dispute(order, buyer), (True, None))
+        plan, msgs, client, page = self._page(order, "return")
+        self.assertEqual(order.status, Order.Status.CCA)
+        self.assertTrue(any("Waiting for the seller's signature" in m for m in msgs), msgs)
+        escrow = flow.escrow_of(order)
+        self.assertEqual((escrow.status, escrow.release_kind),
+                         (OnchainEscrow.Status.RELEASING, OnchainEscrow.ReleaseKind.SELLER_WINS))
+        # #26: the buyer waits for the seller, not for "the coordinator"/"together"
+        self.assertEqual(flow.order_data(order, buyer)["escrow_waiting_for"], "peer")
+        self.assertEqual(flow.order_data(order, seller)["escrow_waiting_for"], "you")
+        _, msg = service.release_message(escrow)
+        flow.action(order, seller, "escrow_leaf_signature",
+                    {"signature": with_hashtype(schnorr_sign(keys["seller"]["escrow"], msg)).hex()})
+        outs, mining = self._release_outputs(escrow)
+        want_seller = 1_000_000 + 30_000 + self.seller_fee + self.extra["seller"]
+        want_buyer = self.buyer_in + self.buyer_fee + self.extra["buyer"]
+        self.assertEqual(outs, {"seller": want_seller - mining, "buyer": want_buyer})
+        # what the page announced is what was paid (the seller's line is before the mining fee)
+        text = " ".join(plan["lines"])
+        from roblosats_admin.disputes import fmt_sats
+
+        self.assertIn(fmt_sats(want_seller), text)
+        self.assertIn(fmt_sats(want_buyer), text)
+        self.assertIn(escrow.funding_signatures["buyer_payout_address"], text)
+        # the page now says it was broadcast; the buyer's summary says where its bond went
+        self.assertIn("broadcast the release", client.get(page, HTTP_ACCEPT_LANGUAGE="en").content.decode())
+        s = __import__("api.order_summary", fromlist=["x"]).final_summary(order, buyer)
+        self.assertEqual(s["bond_state"], "returned")
+        self.assertEqual(s["bond_returned_to"], escrow.funding_signatures["buyer_payout_address"])
+
+    def test_buyer_wins_from_the_page(self):
+        from api.escrow import flow
+        from api.logics import Logics
+
+        order, buyer, seller, keys = self._to_chat()
+        order.expires_at = timezone.now()
+        order.save()
+        self.assertEqual(Logics.open_dispute(order, seller), (True, None))
+        plan, msgs, client, page = self._page(order, "buyer")
+        self.assertEqual(order.status, Order.Status.TLD)  # the taker (seller) lost
+        escrow = flow.escrow_of(order)
+        self.assertEqual(escrow.release_kind, OnchainEscrow.ReleaseKind.BUYER_WINS)
+        self.assertEqual(flow.order_data(order, seller)["escrow_waiting_for"], "peer")
+        _, msg = service.release_message(escrow)
+        flow.action(order, buyer, "escrow_leaf_signature",
+                    {"signature": with_hashtype(schnorr_sign(keys["buyer"]["escrow"], msg)).hex()})
+        outs, mining = self._release_outputs(escrow)
+        outs_plan, info = flow.dispute_split(order, escrow, True)
+        want = dict(outs_plan)
+        want["buyer"] -= mining
+        self.assertEqual(outs, want)
+        from roblosats_admin.disputes import fmt_sats
+
+        text = " ".join(plan["lines"])
+        self.assertIn(fmt_sats(dict(outs_plan)["buyer"]), text)
+        self.assertIn(fmt_sats(dict(outs_plan)["coordinator"]), text)

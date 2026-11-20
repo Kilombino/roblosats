@@ -16,7 +16,7 @@ from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 from django.utils.html import format_html, format_html_join
 
-from roblosats_admin.disputes import currency_text, fmt_sats, fmt_time
+from roblosats_admin.disputes import currency_text, fmt_sats, fmt_time, role_name, side_name
 from roblosats_admin.i18n import _, _lazy
 
 EXPLORER = "https://mempool.kilombino.com/tx/"
@@ -227,10 +227,18 @@ def price_text(order):
     currency = currency_text(order)
     if getattr(order, "sats_denominated", False):
         parts.append("丰 sat")
+    def price(value):
+        # 0.9.9-1: a Spamcoin price is written in Spamsats (0.0021 Spamcoin/BTC showed "0.00")
+        if getattr(order, "currency_id", None) == 1000:
+            return f"{float(value) * 100_000_000:,.0f}", "Spamsats"
+        return f"{float(value):,.2f}", currency
+
     if getattr(order, "fixed_price", None) is not None:
-        parts.append(_("fixed %(p)s %(c)s/BTC") % {"p": f"{float(order.fixed_price):,.2f}", "c": currency})
+        p, c = price(order.fixed_price)
+        parts.append(_("fixed %(p)s %(c)s/BTC") % {"p": p, "c": c})
     elif getattr(order, "contract_price", None) is not None and getattr(order, "sats_denominated", False):
-        parts.append(_("%(p)s %(c)s/BTC at contract") % {"p": f"{float(order.contract_price):,.2f}", "c": currency})
+        p, c = price(order.contract_price)
+        parts.append(_("%(p)s %(c)s/BTC at contract") % {"p": p, "c": c})
     return " · ".join(parts)
 
 
@@ -263,10 +271,10 @@ def flags(order, now=None, height=None, with_mempool=False, hint=None):
             if service.rescue_plan(escrow) >= 2 and data.get("rescue"):
                 missing = [r for r in service.ROLES if not data.get(f"{r}_rescue_sig")]
                 if missing:
-                    out.append(_("rescue signature missing: %(who)s") % {"who": ", ".join(missing)})
+                    out.append(_("rescue signature missing: %(who)s") % {"who": ", ".join(role_name(r) for r in missing)})
             missing = [r for r in service.ROLES if f"{r}_inputs" in (data.get("plan") or {}) and not data.get(f"{r}_sigs")]
             if missing:
-                out.append(_("deposit signature missing: %(who)s") % {"who": ", ".join(missing)})
+                out.append(_("deposit signature missing: %(who)s") % {"who": ", ".join(role_name(r) for r in missing)})
         if escrow.status == OnchainEscrow.Status.RELEASING and not escrow.release_txid:
             if escrow.release_kind == OnchainEscrow.ReleaseKind.COOPERATIVE:
                 from api.escrow import flow as flow_
@@ -276,7 +284,7 @@ def flags(order, now=None, height=None, with_mempool=False, hint=None):
                     out.append(_("release waits for the seller's signature (one signature)"))
                 else:
                     missing = [r for r in service.ROLES if r not in (escrow.release_partial_sigs or {})]
-                    out.append(_("release signature missing: %(who)s") % {"who": ", ".join(missing) or "?"})
+                    out.append(_("release signature missing: %(who)s") % {"who": ", ".join(role_name(r) for r in missing) or "?"})
             else:
                 out.append(_("release waits for the winner's signature"))
         due = rescue_height(escrow)
@@ -299,7 +307,8 @@ def flags(order, now=None, height=None, with_mempool=False, hint=None):
                 if needed is not None:
                     out.append(
                         _("%(what)s of the %(role)s in the mempool at %(r)s sat/vB (1 hour needs %(n)s)")
-                        % {"what": item["what"], "role": item["role"], "r": f"{item['fee_rate']:g}", "n": f"{needed:g}"}
+                        % {"what": {"bond": _("Bond"), "funding": _("Deposit payment")}.get(item["what"], item["what"]),
+                           "role": role_name(side_name(item["role"])), "r": f"{item['fee_rate']:g}", "n": f"{needed:g}"}
                     )
         except Exception:  # noqa: BLE001 (node down: no mempool check)
             pass
@@ -339,7 +348,7 @@ def _bond_row(bond):
     returned = bond.spend_txid if bond.status in (OnchainBond.Status.RETURNED, OnchainBond.Status.IN_DEPOSIT) else ""
     return {
         "id": bond.pk,
-        "role": bond.role,
+        "role": side_name(bond.role),
         "owner": bond.owner.username if bond.owner_id else "",
         "status": _(bond.get_status_display()),  # model labels, translated in locale/
         "required": fmt_sats(bond.required_sats),
@@ -432,7 +441,7 @@ def order_section(order, now=None):
         height = tip() if due else None
         rescue = data.get("rescue") or {}
         sweeps = [
-            {"role": r, "tx": tx_link(data.get(f"sweep_{r}_txid")), "sats": fmt_sats(data.get(f"sweep_{r}_sats") or 0)}
+            {"role": role_name(r), "tx": tx_link(data.get(f"sweep_{r}_txid")), "sats": fmt_sats(data.get(f"sweep_{r}_sats") or 0)}
             for r in service.ROLES
             if data.get(f"sweep_{r}_txid")
         ]

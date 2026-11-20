@@ -2026,3 +2026,203 @@ msgstr "已发送的提醒"
 msgctxt "roblosats-admin"
 msgid "Alerts already sent"
 msgstr "已发送的提醒"
+
+msgctxt "roblosats-admin"
+msgid "the order has no on-chain escrow"
+msgstr "该订单没有链上托管资金"
+
+msgctxt "roblosats-admin"
+msgid "the on-chain escrow is not confirmed and unspent (status: %(status)s)"
+msgstr "链上托管资金未确认或已被花费（状态：%(status)s）"
+
+msgctxt "roblosats-admin"
+msgid "the %(role)s's bond is not in the escrow"
+msgstr "%(role)s的保证金不在托管资金中"
+
+msgctxt "roblosats-admin"
+msgid "the bonds of the escrow cannot be read"
+msgstr "无法读取托管资金中的保证金"
+
+msgctxt "roblosats-admin"
+msgid "the buyer has not given an on-chain address to receive the sats"
+msgstr "买方没有提供用于接收聪的链上地址"
+
+msgctxt "roblosats-admin"
+msgid "the seller has not given an on-chain refund address"
+msgstr "卖方没有提供链上退款地址"
+
+msgctxt "roblosats-admin"
+msgid "It goes out on chain through the seller's leaf with the coordinator: the seller's app (%(nick)s) must sign the return, then the coordinator adds its signature and broadcasts it. The buyer does not sign anything."
+msgstr "通过卖方与协调者的叶子在链上发出：卖方的应用（%(nick)s）必须签署退还交易，然后协调者加上自己的签名并广播。买方无需签署任何内容。"
+
+msgctxt "roblosats-admin"
+msgid "It goes out on chain through the buyer's leaf with the coordinator: the buyer's app (%(nick)s) must sign the release, then the coordinator adds its signature and broadcasts it. The seller does not sign anything."
+msgstr "通过买方与协调者的叶子在链上发出：买方的应用（%(nick)s）必须签署释放交易，然后协调者加上自己的签名并广播。卖方无需签署任何内容。"
+
+msgctxt "roblosats-admin"
+msgid "It goes out on chain through the seller's leaf with the coordinator: the seller's app (%(nick)s) must sign the release, then the coordinator adds its signature and broadcasts it. The buyer does not sign anything."
+msgstr "通过卖方与协调者的叶子在链上发出：卖方的应用（%(nick)s）必须签署释放交易，然后协调者加上自己的签名并广播。买方无需签署任何内容。"
+
+msgctxt "roblosats-admin"
+msgid "trade amount"
+msgstr "交易金额"
+
+msgctxt "roblosats-admin"
+msgid "their escrow back"
+msgstr "退回其托管资金"
+
+msgctxt "roblosats-admin"
+msgid "reward from the other bond"
+msgstr "来自另一方保证金的奖励"
+
+msgctxt "roblosats-admin"
+msgid "leftover of their deposit"
+msgstr "其存入的剩余部分"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s receives %(sats)s sats at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
+msgstr "%(role)s %(nick)s 在 %(address)s 收到 %(sats)s 聪（%(parts)s），扣除释放交易的矿工费，该费用从此输出中支付。"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s only gets back the leftover of their deposit, %(sats)s sats at %(address)s."
+msgstr "%(role)s %(nick)s 只能取回其存入的剩余部分：%(sats)s 聪，至 %(address)s。"
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats at its fee address: %(penalty)s kept from the loser's bond + %(fees)s of trade fees."
+msgstr "协调者在其手续费地址收到 %(sats)s 聪：从败诉方保证金中扣留的 %(penalty)s + %(fees)s 交易手续费。"
+
+msgctxt "roblosats-admin"
+msgid "The development fund receives %(sats)s sats."
+msgstr "开发基金收到 %(sats)s 聪。"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s loses their on-chain bond (%(bond)s sats)."
+msgstr "%(role)s %(nick)s 失去其链上保证金（%(bond)s 聪）。"
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives nothing on chain."
+msgstr "协调者在链上不收取任何款项。"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s's bond is a Lightning bond (%(sats)s sats), settled when the dispute opened: the coordinator keeps it and credits %(reward)s sats of it to the %(winner)s as a reward, withdrawn from the app."
+msgstr "%(role)s的保证金是闪电保证金（%(sats)s 聪），在争议开启时已被收取：协调者保留它，并从中向%(winner)s记入 %(reward)s 聪作为奖励，可在应用中提取。"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s's Lightning bond (%(sats)s sats), settled when the dispute opened, is credited back to them as a reward, withdrawn from the app."
+msgstr "%(role)s的闪电保证金（%(sats)s 聪）在争议开启时已被收取，现作为奖励退还给该方，可在应用中提取。"
+
+msgctxt "roblosats-admin"
+msgid "their fee"
+msgstr "其手续费"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s), minus the mining fee of the return, which comes out of this output."
+msgstr "卖方 %(nick)s 在 %(address)s 取回 %(sats)s 聪（%(parts)s），扣除退还交易的矿工费，该费用从此输出中支付。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s)."
+msgstr "买方 %(nick)s 在 %(address)s 取回 %(sats)s 聪（%(parts)s）。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer's part (%(sats)s sats) is below the dust limit of their address: it cannot be an output of its own and goes with the seller's."
+msgstr "买方的部分（%(sats)s 聪）低于其地址的粉尘限额：无法作为单独的输出，将并入卖方的输出。"
+
+msgctxt "roblosats-admin"
+msgid "The coordinator charges nothing: the trade fees are given back."
+msgstr "协调者不收取任何费用：交易手续费将被退还。"
+
+msgctxt "roblosats-admin"
+msgid "The coordinator keeps only the fee already paid in the deposit (%(sats)s sats)."
+msgstr "协调者只保留已在存入交易中支付的手续费（%(sats)s 聪）。"
+
+msgctxt "roblosats-admin"
+msgid "The taker's Lightning bond (%(sats)s sats) goes back to them: credited as a reward if it was already settled when the dispute opened, unlocked otherwise."
+msgstr "吃单方的闪电保证金（%(sats)s 聪）将退还给他：若在争议开启时已被收取，则作为奖励记入；否则直接解锁。"
+
+msgctxt "roblosats-admin"
+msgid "not possible with an on-chain escrow: to pay the buyer use “Buyer wins”"
+msgstr "链上托管资金无法这样处理：要支付买方，请使用“买方胜诉”"
+
+msgctxt "roblosats-admin"
+msgid "not possible with an on-chain escrow: it can only go to the buyer, to the seller, or back to each party"
+msgstr "链上托管资金无法这样处理：资金只能给买方、给卖方，或退还给各方"
+
+msgctxt "roblosats-admin"
+msgid "the release cannot be planned: %(error)s"
+msgstr "无法准备释放交易：%(error)s"
+
+msgctxt "roblosats-admin"
+msgid "A cooperative release had already been prepared (never broadcast): this decision replaces it."
+msgstr "之前已准备好一笔协作释放交易（从未广播）：本裁决将替换它。"
+
+msgctxt "roblosats-admin"
+msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). It was penalized on chain when the dispute opened: the coordinator got %(got)s sats from it and the rest went to the miners. What the maker gets back is credited as a Lightning reward."
+msgstr "挂单方的保证金在链上（%(bond)s 聪，由闪电替身代表）。争议开启时它已在链上被处罚：协调者从中获得 %(got)s 聪，其余归矿工。挂单方能取回的部分将作为闪电奖励记入。"
+
+msgctxt "roblosats-admin"
+msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). What the maker gets back is credited as a Lightning reward."
+msgstr "挂单方的保证金在链上（%(bond)s 聪，由闪电替身代表）。挂单方能取回的部分将作为闪电奖励记入。"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s signed and the coordinator broadcast the release."
+msgstr "%(role)s已签名，协调者已广播释放交易。"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the %(role)s's signature (%(nick)s): their app signs the release when they open the order. The coordinator then adds its signature and broadcasts it; nothing else is needed from you."
+msgstr "等待%(role)s的签名（%(nick)s）：其应用会在打开订单时签署释放交易。随后协调者加上自己的签名并广播；你无需再做任何操作。"
+
+msgctxt "roblosats-admin"
+msgid "bond return"
+msgstr "保证金退还"
+
+msgctxt "roblosats-admin"
+msgid "buyer payout"
+msgstr "买方收款"
+
+msgctxt "roblosats-admin"
+msgid "seller refund"
+msgstr "卖方退款"
+
+msgctxt "roblosats-admin"
+msgid "buyer funding"
+msgstr "买方存入"
+
+msgctxt "roblosats-admin"
+msgid "seller funding"
+msgstr "卖方存入"
+
+msgctxt "roblosats-admin"
+msgid "coordinator"
+msgstr "协调者"
+
+msgctxt "roblosats-admin"
+msgid "its deposit change comes back here"
+msgstr "其存入的找零退回到这里"
+
+msgctxt "roblosats-admin"
+msgid "Deposit payment"
+msgstr "存入付款"
+
+msgctxt "roblosats-admin"
+msgid "Deposit outputs"
+msgstr "存入交易的输出"
+
+msgctxt "roblosats-admin"
+msgid "Release outputs"
+msgstr "释放交易的输出"
+
+msgctxt "roblosats-admin"
+msgid "extra plan"
+msgstr "剩余分配方案"
+
+msgctxt "roblosats-admin"
+msgid "dev fund"
+msgstr "开发基金"
+
+msgctxt "roblosats-admin"
+msgid "Trader address"
+msgstr "交易者地址"
+
+msgctxt "roblosats-admin"
+msgid "On-chain resolution"
+msgstr "链上裁决"

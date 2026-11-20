@@ -505,6 +505,26 @@ def is_open_dispute(order):
 
 
 def plan(order, decision):
+    """What a decision does, or why it is not possible: {lines, missing, warning, possible}.
+    0.9.9-1: an on-chain escrow (also hybrid A) is checked and explained on chain
+    (dispute_onchain); a hybrid B order is a Lightning order plus a note on the maker's
+    on-chain bond."""
+    from roblosats_admin import dispute_onchain
+
+    if dispute_onchain.applies(order):
+        return dispute_onchain.plan(order, decision)
+    result = _plan_lightning(order, decision)
+    note = ""
+    try:
+        note = dispute_onchain.hybrid_b_note(order)
+    except Exception:  # noqa: BLE001 (extra information, never break the page)
+        note = ""
+    if note and result["lines"]:
+        result["lines"].append(note)
+    return result
+
+
+def _plan_lightning(order, decision):
     from api.models import LNPayment
 
     r = roles(order)
@@ -671,6 +691,10 @@ class _MessageCollector:
 
 
 def resolve(order_admin, order, decision, user):
+    """Runs the admin action under the order's lock (Logics.order_lock, the same advisory key
+    the action's own transaction takes, so no user action or expiry interleaves between the
+    page's check and the action)."""
+    from api.logics import order_lock
     from api.models import Order
 
     name = action_for(order, decision)
@@ -680,7 +704,8 @@ def resolve(order_admin, order, decision, user):
     fake = SimpleNamespace(
         _messages=collector, META={}, user=user, POST={}, method="POST"
     )
-    getattr(order_admin, name)(fake, Order.objects.filter(pk=order.pk))
+    with order_lock(order.pk):
+        getattr(order_admin, name)(fake, Order.objects.filter(pk=order.pk))
     ok = any(level == messages.SUCCESS for level, _text in collector.items)
     return ok, [text for _level, text in collector.items]
 
@@ -889,6 +914,7 @@ def _context(order_admin, request, order, confirm=None):
         "payout": _payment(order.payout) if not order.is_swap else None,
         "payout_tx": _onchain_payout(order) if order.is_swap else None,
         "onchain": _onchain_section(order),
+        "onchain_next": _onchain_next(order),
         "fiat_sent": order.is_fiat_sent,
         "can_change": order_admin.has_change_permission(request, order),
         "languages": _languages(request),
@@ -912,6 +938,16 @@ def _onchain_section(order):
         from roblosats_admin import onchain
 
         return onchain.order_section(order)
+    except Exception:  # noqa: BLE001 (never break the dispute page)
+        return None
+
+
+def _onchain_next(order):
+    """0.9.9-1: after an on-chain decision, who still has to sign or where the release is."""
+    try:
+        from roblosats_admin import dispute_onchain
+
+        return dispute_onchain.next_step(order)
     except Exception:  # noqa: BLE001 (never break the dispute page)
         return None
 
@@ -956,7 +992,21 @@ def dispute_view(order_admin, request, order_id):
                     ),
                 )
                 return HttpResponseRedirect(page + "#resolve")
-            current = plan(order, decision)
+            from api.logics import order_lock
+
+            # checked again under the order's lock: the page may be minutes old
+            with order_lock(order.pk):
+                order.refresh_from_db()
+                current = plan(order, decision)
+                still = request.POST.get("status") == str(order.status)
+            if not still:
+                messages.error(
+                    request,
+                    _(
+                        "The order changed status while you were confirming. Nothing was done: review it again."
+                    ),
+                )
+                return HttpResponseRedirect(page + "#resolve")
             if not current["possible"]:
                 messages.error(
                     request,
@@ -978,6 +1028,12 @@ def dispute_view(order_admin, request, order_id):
                         "detail": detail,
                     },
                 )
+                from roblosats_admin import dispute_onchain
+
+                order.refresh_from_db()
+                step = dispute_onchain.next_step(order)
+                if step:
+                    messages.info(request, step["text"])
             else:
                 messages.error(
                     request,

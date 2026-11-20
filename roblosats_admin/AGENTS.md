@@ -130,3 +130,27 @@ It patches the already-registered `api` admin classes in `ready()` instead of ed
   ClosedChannels; `ALERT_NOTABLE_FEE_SATS` (2000) flags high mining fees. LND down: wallet
   skipped, orders still watched. Alerts can be in Catalan (`ALERT_LANGUAGES`, locale/ca holds
   only the alert texts).
+
+## 0.9.9-1: on-chain disputes on the dispute page (`dispute_onchain.py`)
+- `disputes.plan` sends on-chain escrows (pure and hybrid A, `flow.is_onchain`) to
+  `dispute_onchain.plan`; until 0.9.9 every on-chain dispute was refused with the Lightning
+  preconditions. It checks: open dispute, escrow LOCKED (or RELEASING: a cooperative release that
+  was never broadcast, replaced, with a warning), each role's bond in `plan.bond_ids` or the
+  hybrid A Lightning taker bond, and the payout/refund address the release needs
+  (`<role>_payout_address` in `funding_signatures`).
+- The amounts come from `flow.dispute_split` / `flow.return_split`, the SAME functions
+  `resolve_dispute` / `return_everything` build the release from, so the page cannot announce
+  something else. It says who signs (winner's leaf; "return everything" = seller's leaf), who gets
+  how many sats at which address (the first output pays the mining fee), what the coordinator
+  keeps (penalty + held fees, or nothing on a return in fee plan 2) and the Lightning bond of
+  hybrid A. "Penalize" and "Trade completed" are not possible on chain (no action does them).
+- Hybrid B (`escrow_type` Lightning, maker bond behind a proxy) keeps the Lightning plan plus
+  `hybrid_b_note` (the on-chain bond was penalized when the dispute opened).
+- `resolve` runs the action inside `Logics.order_lock` (same advisory key as the action's
+  transaction lock) and the POST re-checks the plan and the status under it. After an on-chain
+  decision the page shows `next_step` (whose signature is missing, or the release txid and
+  status) and adds it to the success message.
+- `flow.return_everything` on hybrid A now gives the settled Lightning taker bond back as rewards
+  (`ln_bond_return_everything`; before, `return_bond` on a settled invoice returned nothing).
+- Catalan is a panel language (`PANEL_LANGUAGES`); `locale/ca` has every string and
+  `CatalogTest` checks it with the others.

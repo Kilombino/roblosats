@@ -286,6 +286,8 @@ class DisputePageTest(TestCase):
 
     def test_language_follows_browser_and_selector(self):
         response = self.client.get(self.page, HTTP_ACCEPT_LANGUAGE="ca,es;q=0.8")
+        self.assertIn("Guanya el comprador", response.content.decode())  # 0.9.9-1: Catalan
+        response = self.client.get(self.page, HTTP_ACCEPT_LANGUAGE="gl,es;q=0.8")
         self.assertIn("Gana el comprador", response.content.decode())
         response = self.client.get(self.page + "?lang=de")
         self.assertEqual(response.status_code, 302)
@@ -294,7 +296,7 @@ class DisputePageTest(TestCase):
         self.assertIn("Käufer gewinnt", response.content.decode())
 
     def test_every_language_renders(self):
-        for lang in ("en", "es", "de", "fr", "it", "pt", "ru", "zh-hans", "ja"):
+        for lang in ("en", "es", "ca", "de", "fr", "it", "pt", "ru", "zh-hans", "ja"):
             self.client.cookies["django_language"] = lang
             response = self.client.get(self.page + "?confirm=return")
             self.assertEqual(response.status_code, 200, lang)

@@ -2026,3 +2026,203 @@ msgstr "送信済みの通知"
 msgctxt "roblosats-admin"
 msgid "Alerts already sent"
 msgstr "送信済みの通知"
+
+msgctxt "roblosats-admin"
+msgid "the order has no on-chain escrow"
+msgstr "この注文にはオンチェーンのエスクローがありません"
+
+msgctxt "roblosats-admin"
+msgid "the on-chain escrow is not confirmed and unspent (status: %(status)s)"
+msgstr "オンチェーンのエスクローが未承認または使用済みです（状態: %(status)s）"
+
+msgctxt "roblosats-admin"
+msgid "the %(role)s's bond is not in the escrow"
+msgstr "%(role)sの保証金がエスクローに入っていません"
+
+msgctxt "roblosats-admin"
+msgid "the bonds of the escrow cannot be read"
+msgstr "エスクローの保証金を読み取れません"
+
+msgctxt "roblosats-admin"
+msgid "the buyer has not given an on-chain address to receive the sats"
+msgstr "買い手がsatsを受け取るオンチェーンアドレスを指定していません"
+
+msgctxt "roblosats-admin"
+msgid "the seller has not given an on-chain refund address"
+msgstr "売り手がオンチェーンの返金アドレスを指定していません"
+
+msgctxt "roblosats-admin"
+msgid "It goes out on chain through the seller's leaf with the coordinator: the seller's app (%(nick)s) must sign the return, then the coordinator adds its signature and broadcasts it. The buyer does not sign anything."
+msgstr "売り手とコーディネーターのリーフを通じてオンチェーンで出金されます：売り手のアプリ（%(nick)s）が返却に署名し、その後コーディネーターが自分の署名を加えてブロードキャストします。買い手は何も署名しません。"
+
+msgctxt "roblosats-admin"
+msgid "It goes out on chain through the buyer's leaf with the coordinator: the buyer's app (%(nick)s) must sign the release, then the coordinator adds its signature and broadcasts it. The seller does not sign anything."
+msgstr "買い手とコーディネーターのリーフを通じてオンチェーンで出金されます：買い手のアプリ（%(nick)s）がリリースに署名し、その後コーディネーターが自分の署名を加えてブロードキャストします。売り手は何も署名しません。"
+
+msgctxt "roblosats-admin"
+msgid "It goes out on chain through the seller's leaf with the coordinator: the seller's app (%(nick)s) must sign the release, then the coordinator adds its signature and broadcasts it. The buyer does not sign anything."
+msgstr "売り手とコーディネーターのリーフを通じてオンチェーンで出金されます：売り手のアプリ（%(nick)s）がリリースに署名し、その後コーディネーターが自分の署名を加えてブロードキャストします。買い手は何も署名しません。"
+
+msgctxt "roblosats-admin"
+msgid "trade amount"
+msgstr "取引金額"
+
+msgctxt "roblosats-admin"
+msgid "their escrow back"
+msgstr "自分のエスクローの返却分"
+
+msgctxt "roblosats-admin"
+msgid "reward from the other bond"
+msgstr "相手の保証金からの報酬"
+
+msgctxt "roblosats-admin"
+msgid "leftover of their deposit"
+msgstr "自分のデポジットの残り"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s receives %(sats)s sats at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
+msgstr "%(role)s %(nick)s は %(address)s で %(sats)s sats を受け取ります（%(parts)s）。リリースのマイニング手数料はこのアウトプットから差し引かれます。"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s only gets back the leftover of their deposit, %(sats)s sats at %(address)s."
+msgstr "%(role)s %(nick)s が取り戻すのは自分のデポジットの残りだけです：%(sats)s sats を %(address)s へ。"
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats at its fee address: %(penalty)s kept from the loser's bond + %(fees)s of trade fees."
+msgstr "コーディネーターは手数料アドレスで %(sats)s sats を受け取ります：敗者の保証金から差し引いた %(penalty)s + 取引手数料 %(fees)s。"
+
+msgctxt "roblosats-admin"
+msgid "The development fund receives %(sats)s sats."
+msgstr "開発基金は %(sats)s sats を受け取ります。"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s loses their on-chain bond (%(bond)s sats)."
+msgstr "%(role)s %(nick)s はオンチェーン保証金（%(bond)s sats）を失います。"
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives nothing on chain."
+msgstr "コーディネーターはオンチェーンでは何も受け取りません。"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s's bond is a Lightning bond (%(sats)s sats), settled when the dispute opened: the coordinator keeps it and credits %(reward)s sats of it to the %(winner)s as a reward, withdrawn from the app."
+msgstr "%(role)sの保証金はLightning保証金（%(sats)s sats）で、紛争開始時に受領済みです：コーディネーターがこれを保持し、そのうち %(reward)s sats を報酬として%(winner)sに付与します。報酬はアプリから引き出します。"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s's Lightning bond (%(sats)s sats), settled when the dispute opened, is credited back to them as a reward, withdrawn from the app."
+msgstr "紛争開始時に受領済みの%(role)sのLightning保証金（%(sats)s sats）は、報酬として本人に返されます。報酬はアプリから引き出します。"
+
+msgctxt "roblosats-admin"
+msgid "their fee"
+msgstr "自分の手数料"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s), minus the mining fee of the return, which comes out of this output."
+msgstr "売り手 %(nick)s は %(address)s で %(sats)s sats を取り戻します（%(parts)s）。返却のマイニング手数料はこのアウトプットから差し引かれます。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s)."
+msgstr "買い手 %(nick)s は %(address)s で %(sats)s sats を取り戻します（%(parts)s）。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer's part (%(sats)s sats) is below the dust limit of their address: it cannot be an output of its own and goes with the seller's."
+msgstr "買い手の取り分（%(sats)s sats）はそのアドレスのダスト上限を下回るため、独立したアウトプットにできず、売り手の分と一緒になります。"
+
+msgctxt "roblosats-admin"
+msgid "The coordinator charges nothing: the trade fees are given back."
+msgstr "コーディネーターは何も受け取りません：取引手数料は返却されます。"
+
+msgctxt "roblosats-admin"
+msgid "The coordinator keeps only the fee already paid in the deposit (%(sats)s sats)."
+msgstr "コーディネーターはデポジットで支払い済みの手数料（%(sats)s sats）のみを保持します。"
+
+msgctxt "roblosats-admin"
+msgid "The taker's Lightning bond (%(sats)s sats) goes back to them: credited as a reward if it was already settled when the dispute opened, unlocked otherwise."
+msgstr "テイカーのLightning保証金（%(sats)s sats）は本人に返されます：紛争開始時にすでに受領済みなら報酬として付与、そうでなければロック解除されます。"
+
+msgctxt "roblosats-admin"
+msgid "not possible with an on-chain escrow: to pay the buyer use “Buyer wins”"
+msgstr "オンチェーンのエスクローでは不可能です：買い手に支払うには「買い手の勝ち」を使ってください"
+
+msgctxt "roblosats-admin"
+msgid "not possible with an on-chain escrow: it can only go to the buyer, to the seller, or back to each party"
+msgstr "オンチェーンのエスクローでは不可能です：送れるのは買い手か売り手、または各当事者への返却のみです"
+
+msgctxt "roblosats-admin"
+msgid "the release cannot be planned: %(error)s"
+msgstr "リリースを準備できません：%(error)s"
+
+msgctxt "roblosats-admin"
+msgid "A cooperative release had already been prepared (never broadcast): this decision replaces it."
+msgstr "協調リリースがすでに準備されていました（未ブロードキャスト）：この判断で置き換えられます。"
+
+msgctxt "roblosats-admin"
+msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). It was penalized on chain when the dispute opened: the coordinator got %(got)s sats from it and the rest went to the miners. What the maker gets back is credited as a Lightning reward."
+msgstr "メイカーの保証金はオンチェーンにあります（%(bond)s sats、Lightningの代替の裏側）。紛争開始時にオンチェーンでペナルティが科されました：コーディネーターがそこから %(got)s sats を受け取り、残りはマイナーに渡りました。メイカーが取り戻す分はLightning報酬として付与されます。"
+
+msgctxt "roblosats-admin"
+msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). What the maker gets back is credited as a Lightning reward."
+msgstr "メイカーの保証金はオンチェーンにあります（%(bond)s sats、Lightningの代替の裏側）。メイカーが取り戻す分はLightning報酬として付与されます。"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s signed and the coordinator broadcast the release."
+msgstr "%(role)sが署名し、コーディネーターがリリースをブロードキャストしました。"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the %(role)s's signature (%(nick)s): their app signs the release when they open the order. The coordinator then adds its signature and broadcasts it; nothing else is needed from you."
+msgstr "%(role)sの署名待ちです（%(nick)s）：注文を開くとアプリがリリースに署名します。その後コーディネーターが自分の署名を加えてブロードキャストします。あなたの側で必要な操作はありません。"
+
+msgctxt "roblosats-admin"
+msgid "bond return"
+msgstr "保証金の返却"
+
+msgctxt "roblosats-admin"
+msgid "buyer payout"
+msgstr "買い手への支払い"
+
+msgctxt "roblosats-admin"
+msgid "seller refund"
+msgstr "売り手への返金"
+
+msgctxt "roblosats-admin"
+msgid "buyer funding"
+msgstr "買い手のデポジット"
+
+msgctxt "roblosats-admin"
+msgid "seller funding"
+msgstr "売り手のデポジット"
+
+msgctxt "roblosats-admin"
+msgid "coordinator"
+msgstr "コーディネーター"
+
+msgctxt "roblosats-admin"
+msgid "its deposit change comes back here"
+msgstr "デポジットのお釣りはここに戻ります"
+
+msgctxt "roblosats-admin"
+msgid "Deposit payment"
+msgstr "デポジットの支払い"
+
+msgctxt "roblosats-admin"
+msgid "Deposit outputs"
+msgstr "デポジットのアウトプット"
+
+msgctxt "roblosats-admin"
+msgid "Release outputs"
+msgstr "リリースのアウトプット"
+
+msgctxt "roblosats-admin"
+msgid "extra plan"
+msgstr "残余の分配プラン"
+
+msgctxt "roblosats-admin"
+msgid "dev fund"
+msgstr "開発基金"
+
+msgctxt "roblosats-admin"
+msgid "Trader address"
+msgstr "トレーダーのアドレス"
+
+msgctxt "roblosats-admin"
+msgid "On-chain resolution"
+msgstr "オンチェーンでの解決"

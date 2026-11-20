@@ -9,6 +9,7 @@ ADMIN_PREFIX = "/coordinator/"
 PANEL_LANGUAGES = [
     ("en", "English"),
     ("es", "Español"),
+    ("ca", "Català"),
     ("de", "Deutsch"),
     ("fr", "Français"),
     ("it", "Italiano"),

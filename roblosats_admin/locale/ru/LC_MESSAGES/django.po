@@ -2026,3 +2026,203 @@ msgstr "Уже отправленное оповещение"
 msgctxt "roblosats-admin"
 msgid "Alerts already sent"
 msgstr "Уже отправленные оповещения"
+
+msgctxt "roblosats-admin"
+msgid "the order has no on-chain escrow"
+msgstr "у ордера нет ончейн-эскроу"
+
+msgctxt "roblosats-admin"
+msgid "the on-chain escrow is not confirmed and unspent (status: %(status)s)"
+msgstr "ончейн-эскроу не подтверждён или уже потрачен (статус: %(status)s)"
+
+msgctxt "roblosats-admin"
+msgid "the %(role)s's bond is not in the escrow"
+msgstr "залога стороны «%(role)s» нет в эскроу"
+
+msgctxt "roblosats-admin"
+msgid "the bonds of the escrow cannot be read"
+msgstr "не удаётся прочитать залоги эскроу"
+
+msgctxt "roblosats-admin"
+msgid "the buyer has not given an on-chain address to receive the sats"
+msgstr "покупатель не указал ончейн-адрес для получения сатоши"
+
+msgctxt "roblosats-admin"
+msgid "the seller has not given an on-chain refund address"
+msgstr "продавец не указал ончейн-адрес для возврата"
+
+msgctxt "roblosats-admin"
+msgid "It goes out on chain through the seller's leaf with the coordinator: the seller's app (%(nick)s) must sign the return, then the coordinator adds its signature and broadcasts it. The buyer does not sign anything."
+msgstr "Выходит ончейн через лист продавца с координатором: приложение продавца (%(nick)s) должно подписать возврат, затем координатор добавляет свою подпись и отправляет транзакцию в сеть. Покупатель ничего не подписывает."
+
+msgctxt "roblosats-admin"
+msgid "It goes out on chain through the buyer's leaf with the coordinator: the buyer's app (%(nick)s) must sign the release, then the coordinator adds its signature and broadcasts it. The seller does not sign anything."
+msgstr "Выходит ончейн через лист покупателя с координатором: приложение покупателя (%(nick)s) должно подписать выпуск, затем координатор добавляет свою подпись и отправляет транзакцию в сеть. Продавец ничего не подписывает."
+
+msgctxt "roblosats-admin"
+msgid "It goes out on chain through the seller's leaf with the coordinator: the seller's app (%(nick)s) must sign the release, then the coordinator adds its signature and broadcasts it. The buyer does not sign anything."
+msgstr "Выходит ончейн через лист продавца с координатором: приложение продавца (%(nick)s) должно подписать выпуск, затем координатор добавляет свою подпись и отправляет транзакцию в сеть. Покупатель ничего не подписывает."
+
+msgctxt "roblosats-admin"
+msgid "trade amount"
+msgstr "сумма сделки"
+
+msgctxt "roblosats-admin"
+msgid "their escrow back"
+msgstr "свой эскроу обратно"
+
+msgctxt "roblosats-admin"
+msgid "reward from the other bond"
+msgstr "вознаграждение из другого залога"
+
+msgctxt "roblosats-admin"
+msgid "leftover of their deposit"
+msgstr "остаток своего депозита"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s receives %(sats)s sats at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
+msgstr "%(nick)s (%(role)s) получает %(sats)s сат на %(address)s (%(parts)s) за вычетом комиссии майнерам за выпуск, которая берётся из этого выхода."
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s only gets back the leftover of their deposit, %(sats)s sats at %(address)s."
+msgstr "%(nick)s (%(role)s) получает обратно только остаток своего депозита: %(sats)s сат на %(address)s."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats at its fee address: %(penalty)s kept from the loser's bond + %(fees)s of trade fees."
+msgstr "Координатор получает %(sats)s сат на свой адрес комиссий: %(penalty)s удержано из залога проигравшего + %(fees)s комиссий сделки."
+
+msgctxt "roblosats-admin"
+msgid "The development fund receives %(sats)s sats."
+msgstr "Фонд разработки получает %(sats)s сат."
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s loses their on-chain bond (%(bond)s sats)."
+msgstr "%(nick)s (%(role)s) теряет свой ончейн-залог (%(bond)s сат)."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives nothing on chain."
+msgstr "Координатор ничего не получает ончейн."
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s's bond is a Lightning bond (%(sats)s sats), settled when the dispute opened: the coordinator keeps it and credits %(reward)s sats of it to the %(winner)s as a reward, withdrawn from the app."
+msgstr "Залог стороны «%(role)s» — это Lightning-залог (%(sats)s сат), полученный при открытии спора: координатор оставляет его себе и начисляет из него %(reward)s сат победителю (%(winner)s) как вознаграждение, которое выводится в приложении."
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s's Lightning bond (%(sats)s sats), settled when the dispute opened, is credited back to them as a reward, withdrawn from the app."
+msgstr "Lightning-залог стороны «%(role)s» (%(sats)s сат), полученный при открытии спора, возвращается ей как вознаграждение, которое выводится в приложении."
+
+msgctxt "roblosats-admin"
+msgid "their fee"
+msgstr "своя комиссия"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s), minus the mining fee of the return, which comes out of this output."
+msgstr "Продавец %(nick)s получает обратно %(sats)s сат на %(address)s (%(parts)s) за вычетом комиссии майнерам за возврат, которая берётся из этого выхода."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s)."
+msgstr "Покупатель %(nick)s получает обратно %(sats)s сат на %(address)s (%(parts)s)."
+
+msgctxt "roblosats-admin"
+msgid "The buyer's part (%(sats)s sats) is below the dust limit of their address: it cannot be an output of its own and goes with the seller's."
+msgstr "Доля покупателя (%(sats)s сат) ниже порога пыли (dust) для его адреса: она не может быть отдельным выходом и идёт вместе с долей продавца."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator charges nothing: the trade fees are given back."
+msgstr "Координатор ничего не берёт: комиссии сделки возвращаются."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator keeps only the fee already paid in the deposit (%(sats)s sats)."
+msgstr "Координатор оставляет себе только комиссию, уже оплаченную в депозите (%(sats)s сат)."
+
+msgctxt "roblosats-admin"
+msgid "The taker's Lightning bond (%(sats)s sats) goes back to them: credited as a reward if it was already settled when the dispute opened, unlocked otherwise."
+msgstr "Lightning-залог тейкера (%(sats)s сат) возвращается ему: начисляется как вознаграждение, если уже был получен при открытии спора, иначе разблокируется."
+
+msgctxt "roblosats-admin"
+msgid "not possible with an on-chain escrow: to pay the buyer use “Buyer wins”"
+msgstr "невозможно с ончейн-эскроу: чтобы заплатить покупателю, используйте «Побеждает покупатель»"
+
+msgctxt "roblosats-admin"
+msgid "not possible with an on-chain escrow: it can only go to the buyer, to the seller, or back to each party"
+msgstr "невозможно с ончейн-эскроу: средства могут уйти только покупателю, продавцу или вернуться каждой стороне"
+
+msgctxt "roblosats-admin"
+msgid "the release cannot be planned: %(error)s"
+msgstr "не удаётся подготовить выпуск: %(error)s"
+
+msgctxt "roblosats-admin"
+msgid "A cooperative release had already been prepared (never broadcast): this decision replaces it."
+msgstr "Совместный выпуск уже был подготовлен (но не отправлен в сеть): это решение его заменяет."
+
+msgctxt "roblosats-admin"
+msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). It was penalized on chain when the dispute opened: the coordinator got %(got)s sats from it and the rest went to the miners. What the maker gets back is credited as a Lightning reward."
+msgstr "Залог мейкера находится ончейн (%(bond)s сат, за Lightning-заменителем). При открытии спора он был оштрафован ончейн: координатор получил из него %(got)s сат, а остальное ушло майнерам. То, что мейкер получает обратно, начисляется как Lightning-вознаграждение."
+
+msgctxt "roblosats-admin"
+msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). What the maker gets back is credited as a Lightning reward."
+msgstr "Залог мейкера находится ончейн (%(bond)s сат, за Lightning-заменителем). То, что мейкер получает обратно, начисляется как Lightning-вознаграждение."
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s signed and the coordinator broadcast the release."
+msgstr "Сторона «%(role)s» подписала, и координатор отправил выпуск в сеть."
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the %(role)s's signature (%(nick)s): their app signs the release when they open the order. The coordinator then adds its signature and broadcasts it; nothing else is needed from you."
+msgstr "Ожидается подпись стороны «%(role)s» (%(nick)s): её приложение подписывает выпуск при открытии ордера. Затем координатор добавляет свою подпись и отправляет транзакцию в сеть; от вас больше ничего не нужно."
+
+msgctxt "roblosats-admin"
+msgid "bond return"
+msgstr "возврат залога"
+
+msgctxt "roblosats-admin"
+msgid "buyer payout"
+msgstr "выплата покупателю"
+
+msgctxt "roblosats-admin"
+msgid "seller refund"
+msgstr "возврат продавцу"
+
+msgctxt "roblosats-admin"
+msgid "buyer funding"
+msgstr "депозит покупателя"
+
+msgctxt "roblosats-admin"
+msgid "seller funding"
+msgstr "депозит продавца"
+
+msgctxt "roblosats-admin"
+msgid "coordinator"
+msgstr "координатор"
+
+msgctxt "roblosats-admin"
+msgid "its deposit change comes back here"
+msgstr "сдача с его депозита возвращается сюда"
+
+msgctxt "roblosats-admin"
+msgid "Deposit payment"
+msgstr "Оплата депозита"
+
+msgctxt "roblosats-admin"
+msgid "Deposit outputs"
+msgstr "Выходы депозита"
+
+msgctxt "roblosats-admin"
+msgid "Release outputs"
+msgstr "Выходы выпуска"
+
+msgctxt "roblosats-admin"
+msgid "extra plan"
+msgstr "план остатков"
+
+msgctxt "roblosats-admin"
+msgid "dev fund"
+msgstr "фонд разработки"
+
+msgctxt "roblosats-admin"
+msgid "Trader address"
+msgstr "Адрес участника"
+
+msgctxt "roblosats-admin"
+msgid "On-chain resolution"
+msgstr "Ончейн-решение"

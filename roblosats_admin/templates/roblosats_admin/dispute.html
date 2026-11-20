@@ -39,6 +39,14 @@
 
 {% include "roblosats_admin/_onchain.html" %}
 
+{% if onchain_next %}
+<section class="rsd-sec" id="onchain-next">
+  <h2>⛓️ {% translate "On-chain resolution" context "roblosats-admin" %}</h2>
+  <p class="{% if onchain_next.done %}rsd-good{% else %}rsd-bad{% endif %}"><b>{{ onchain_next.text }}</b></p>
+  {% if onchain_next.link %}<p class="rsd-note">{% translate "Release" context "roblosats-admin" %}: {{ onchain_next.link }}{% if onchain_next.status %} · {{ onchain_next.status }}{% endif %}</p>{% endif %}
+</section>
+{% endif %}
+
 {% if outcome %}
 <section class="rsd-sec" id="outcome">
   <h2>{% translate "Outcome of the dispute" context "roblosats-admin" %}</h2>

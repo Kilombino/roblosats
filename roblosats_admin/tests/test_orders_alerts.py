@@ -12,7 +12,7 @@ from roblosats_admin import alerts, disputes
 from roblosats_admin.models import EVENT_FIELDS, TelegramAlerts
 from roblosats_admin.tests.test_disputes import make_disputed_order, make_user
 
-LANGS = ("en", "es", "de", "fr", "it", "pt", "ru", "zh-hans", "ja")
+LANGS = ("en", "es", "ca", "de", "fr", "it", "pt", "ru", "zh-hans", "ja")
 TOKEN = "123456789:AAH" + "x" * 32 + "SECRET"
 
 
@@ -488,7 +488,7 @@ class CatalogTest(TestCase):
 
         english = catalog("en")
         self.assertGreater(len(english), 250)
-        for lang in ("es", "de", "fr", "it", "pt", "ru", "zh_Hans", "ja"):
+        for lang in ("es", "ca", "de", "fr", "it", "pt", "ru", "zh_Hans", "ja"):
             other = catalog(lang)
             self.assertEqual(set(other), set(english), lang)
             empty = [k for k, v in other.items() if not v]

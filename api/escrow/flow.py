@@ -560,11 +560,32 @@ def collaborative_cancel(order):
               + (" (coordinator fees refunded)" if fee_plan(escrow) >= 2 else ""))
 
 
+def return_split(escrow):
+    """0.9.9-1: who gets what in a "return everything" dispute release, as [(who, sats)] with
+    who 'seller'/'buyer'; the first output pays the mining fee. Shared by return_everything and
+    the admin dispute page's preview, so what the page says is what the release does. The
+    buyer's part below the dust of its address goes to the seller's output (it cannot be an
+    output of its own); without a buyer address that part can only be returned if it is 0."""
+    to_seller, to_buyer = _returns(escrow)
+    outs = [["seller", to_seller]]
+    if to_buyer:
+        buyer_spk = escrow.funding_signatures.get("buyer_payout_spk")
+        if buyer_spk and to_buyer >= dust_for(bytes.fromhex(buyer_spk)):
+            outs.append(["buyer", to_buyer])
+        elif buyer_spk:
+            outs[0][1] += to_buyer
+        else:
+            raise EscrowError("the buyer has not given a release address yet")
+    return [tuple(o) for o in outs]
+
+
 def return_everything(order):
     """Dispute solved with no winner: the seller gets the trade amount and its bond back, the
     buyer its bond (what is left of it in the escrow), plan 2: each its fee too, as a
     collaborative cancel; through the seller's leaf with the coordinator, so it works even if
-    the buyer is gone. A Lightning taker bond is unlocked."""
+    the buyer is gone. A Lightning taker bond (hybrid A) goes back too: unlocked while still
+    held, credited as rewards when it was already settled (it is settled when the dispute
+    opens; until 0.9.9-1 the settled bond was simply kept)."""
     from api.escrow.taproot import TxOut
     from api.models import OnchainEscrow
 
@@ -572,19 +593,68 @@ def return_everything(order):
     if escrow.status == OnchainEscrow.Status.RELEASING:
         escrow.status = OnchainEscrow.Status.LOCKED
         escrow.save(update_fields=["status"])
-    to_seller, to_buyer = _returns(escrow)
-    payouts = [TxOut(to_seller, _spk(escrow, "seller"))]
-    if to_buyer >= dust_for(_spk(escrow, "buyer")):
-        payouts.append(TxOut(to_buyer, _spk(escrow, "buyer")))
-    elif to_buyer:
-        payouts[0].value += to_buyer
+    payouts = [TxOut(sats, _spk(escrow, who)) for who, sats in return_split(escrow)]
     service.start_release(escrow, payouts, OnchainEscrow.ReleaseKind.SELLER_WINS, 0)
     _record_release(escrow, cancel=True, release_coordinator_sats=0, release_fee_sats=0, release_dev_sats=0)
     if order.taker_lightning and order.taker_bond is not None:
-        from api.logics import Logics
-
-        Logics.return_bond(order.taker_bond)
+        ln_bond_return_everything(order)
     order.log("Dispute solved with **everything returned**: waiting for the seller's signature on the return")
+
+
+def ln_bond_return_everything(order):
+    """Hybrid A, "return everything": the Lightning taker bond goes back to the taker."""
+    from api.logics import Logics, ledger_credit
+    from api.models import LNPayment
+
+    bond = order.taker_bond
+    bond.refresh_from_db(fields=["status"])
+    if bond.status != LNPayment.Status.SETLED:
+        Logics.return_bond(bond)
+        bond.refresh_from_db(fields=["status"])
+        if bond.status != LNPayment.Status.SETLED:
+            order.log("Lightning taker bond **unlocked** (dispute: everything returned)")
+            return
+    ledger_credit(order.taker.robot, bond.num_satoshis, "dispute_bond_back",
+                  f"dispute_bond_back:{order.id}:{bond.payment_hash}", order_id=order.id)
+    order.log(f"Dispute solved with everything returned: the Lightning taker bond of {bond.num_satoshis} Sats "
+              "is credited back as rewards")
+
+
+def dispute_split(order, escrow, buyer_wins):
+    """0.9.9-1: who gets what in a dispute release with a winner, as ([(who, sats)], info); who
+    is 'buyer'/'seller'/'coordinator'/'dev' and the first output (the winner) pays the mining
+    fee. Shared by resolve_dispute and the admin dispute page's preview. info: winner, loser,
+    reward (share of the loser's bond for the winner), penalty (what the coordinator keeps of
+    the loser's bond), fees (coordinator fees held in the escrow), dev, dev_spk."""
+    winner = "buyer" if buyer_wins else "seller"
+    loser = "seller" if buyer_wins else "buyer"
+    bonds, trade = _bond_values(escrow)
+    reward = int(bonds[loser] * config("SLASHED_BOND_REWARD_SPLIT", cast=float, default=0.5))
+    ex = _extras(escrow)
+    outs = [(winner, trade + bonds[winner] + reward + ex[winner])]
+    penalty = bonds[loser] - reward
+    # rl31-beta20: the loser's funding extra was never part of its bond: it goes back to it
+    # (below dust it cannot be an output of its own and goes with the penalty)
+    loser_spk = escrow.funding_signatures.get(f"{loser}_payout_spk")
+    if loser_spk and ex[loser] >= dust_for(bytes.fromhex(loser_spk)):
+        outs.append((loser, ex[loser]))
+    else:
+        penalty += ex[loser]
+    held = fees_held(escrow)
+    fee_sats = held["seller"] + held["buyer"]
+    dev_sats, dev_spk = 0, None
+    if fee_plan(escrow) >= 2 and fee_sats:
+        dev_sats, dev_spk = dev_fee(order, fee_sats)
+        if penalty + fee_sats - dev_sats:
+            outs.append(("coordinator", penalty + fee_sats - dev_sats))
+        if dev_sats:
+            outs.append(("dev", dev_sats))
+    elif penalty:
+        outs.append(("coordinator", penalty))
+    info = {"winner": winner, "loser": loser, "reward": reward, "penalty": penalty,
+            "fees": fee_sats if fee_plan(escrow) >= 2 else 0, "dev": dev_sats, "dev_spk": dev_spk,
+            "bonds": bonds, "trade": trade, "extras": ex}
+    return outs, info
 
 
 def resolve_dispute(order, buyer_wins):
@@ -595,41 +665,29 @@ def resolve_dispute(order, buyer_wins):
     from api.models import OnchainEscrow
 
     escrow = escrow_of(order)
-    winner = "buyer" if buyer_wins else "seller"
-    loser = "seller" if buyer_wins else "buyer"
     if escrow.status == OnchainEscrow.Status.RELEASING:
         escrow.status = OnchainEscrow.Status.LOCKED
         escrow.save(update_fields=["status"])
-    bonds, trade = _bond_values(escrow)
-    reward = int(bonds[loser] * config("SLASHED_BOND_REWARD_SPLIT", cast=float, default=0.5))
-    ex = _extras(escrow)
-    payouts = [TxOut(trade + bonds[winner] + reward + ex[winner], _spk(escrow, winner))]
-    penalty = bonds[loser] - reward
-    # rl31-beta20: the loser's funding extra was never part of its bond: it goes back to it
-    # (below dust it cannot be an output of its own and goes with the penalty)
-    if escrow.funding_signatures.get(f"{loser}_payout_spk") and ex[loser] >= dust_for(_spk(escrow, loser)):
-        payouts.append(TxOut(ex[loser], _spk(escrow, loser)))
-    else:
-        penalty += ex[loser]
-    held = fees_held(escrow)
-    fee_sats = held["seller"] + held["buyer"]
-    dev_sats = 0
-    if fee_plan(escrow) >= 2 and fee_sats:
-        dev_sats, dev_spk = dev_fee(order, fee_sats)
-        if penalty + fee_sats - dev_sats:
-            payouts.append(TxOut(penalty + fee_sats - dev_sats, coordinator_fee_spk()))
-        if dev_sats:
-            payouts.append(TxOut(dev_sats, dev_spk))
-    elif penalty:
-        payouts.append(TxOut(penalty, coordinator_fee_spk()))
+    outs, info = dispute_split(order, escrow, buyer_wins)
+    spks = {"coordinator": coordinator_fee_spk if any(w == "coordinator" for w, _ in outs) else None}
+    payouts = []
+    for who, sats in outs:
+        if who == "coordinator":
+            spk = spks["coordinator"]()
+        elif who == "dev":
+            spk = info["dev_spk"]
+        else:
+            spk = _spk(escrow, who)
+        payouts.append(TxOut(sats, spk))
     kind = OnchainEscrow.ReleaseKind.BUYER_WINS if buyer_wins else OnchainEscrow.ReleaseKind.SELLER_WINS
     service.start_release(escrow, payouts, kind, 0)
-    extra = {"dispute_coordinator_sats": penalty}
+    extra = {"dispute_coordinator_sats": info["penalty"]}
     if fee_plan(escrow) >= 2:
-        extra.update(release_coordinator_sats=0, release_fee_sats=fee_sats - dev_sats, release_dev_sats=dev_sats)
+        fee_sats = info["fees"]
+        extra.update(release_coordinator_sats=0, release_fee_sats=fee_sats - info["dev"], release_dev_sats=info["dev"])
     _record_release(escrow, **extra)
     ln_bond_dispute_credit(order, buyer_wins)
-    order.log(f"Dispute resolved onchain for the {winner}: waiting for its signature on the release")
+    order.log(f"Dispute resolved onchain for the {info['winner']}: waiting for its signature on the release")
 
 
 def proceeds(order):
@@ -1210,6 +1268,12 @@ def waiting_for(order, escrow, role):
     if escrow.status == S.MEMPOOL:
         return "confirmation", "deposit"
     if escrow.status == S.RELEASING:
+        # 0.9.9-1: a dispute release (a winner, or "return everything" = the seller's leaf) waits
+        # for ONE trader's signature, not for the coordinator: the other one only waits (#26: the
+        # buyer saw "signing the release together with your peer" with a spinner)
+        if escrow.release_kind in (escrow.ReleaseKind.BUYER_WINS, escrow.ReleaseKind.SELLER_WINS):
+            signer = "buyer" if escrow.release_kind == escrow.ReleaseKind.BUYER_WINS else "seller"
+            return ("you" if role == signer else "peer"), "release_signature"
         if escrow.release_kind != escrow.ReleaseKind.COOPERATIVE:
             return "coordinator", "release"
         # 0.9.5: the seller's app finishes it alone through its leaf with the coordinator

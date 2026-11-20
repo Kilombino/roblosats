@@ -14,9 +14,8 @@ from django.utils import translation
 from roblosats_admin.i18n import _, _lazy
 from roblosats_admin.middleware import PANEL_LANGUAGES, panel_language
 
-# 0.9.7: the alerts also speak Catalan (only the alert texts are in locale/ca; the panel
-# itself is not translated to Catalan).
-ALERT_LANGUAGES = PANEL_LANGUAGES + [("ca", "Català")]
+# 0.9.7: the alerts also speak Catalan; since 0.9.9-1 the whole panel does (locale/ca complete).
+ALERT_LANGUAGES = list(PANEL_LANGUAGES)
 
 
 def alert_language(code):
