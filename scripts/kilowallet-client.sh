@@ -22,14 +22,16 @@ if [ -n "$(git status --porcelain -- frontend scripts)" ]; then
   echo "frontend/ or scripts/ has uncommitted changes: the zip would not match $COMMIT" >&2
   exit 1
 fi
-# Built from a copy of the commit in a fixed folder: webpack names the WebAssembly files after
-# the modules' paths, so the same commit built from two different folders differed there.
+# Built from a copy of the commit (and of node_modules, installed with npm ci from the lock file)
+# in a fixed folder: webpack names the WebAssembly files and the modules after their paths.
 BUILDROOT=${ROBLO_BUILDROOT:-/tmp/roblo-client-build}
 NM="$ROOT/frontend/node_modules"
 test -d "$NM" || { echo "install frontend/node_modules first (npm ci)" >&2; exit 1; }
 rm -rf "$BUILDROOT"; mkdir -p "$BUILDROOT"
 git archive "$COMMIT" frontend LICENSE | tar -x -C "$BUILDROOT"
-ln -s "$(readlink -f "$NM")" "$BUILDROOT/frontend/node_modules"
+# A copy, not a link: webpack puts the loaders' real paths into the module ids, so node_modules
+# must really be inside the fixed folder for two machines to build the same bundle.
+cp -a "$(readlink -f "$NM")" "$BUILDROOT/frontend/node_modules"
 cd "$BUILDROOT/frontend"
 BASE=${ROBLO_BASE:-}
 BASEARG=()
