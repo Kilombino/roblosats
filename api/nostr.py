@@ -61,6 +61,17 @@ class Nostr:
         await client.send_event(event)
         print(f"Nostr ORDER event sent: {event.as_json()}")
 
+        # 0.9.11: an order that left the book is also deleted by its coordinate (NIP-09), so
+        # relays that missed or refused the update (an expiration already past, #28) drop it
+        if not self.is_listed(order):
+            deletion = await (
+                EventBuilder(Kind(5), "order no longer in the book")
+                .tags(self.deletion_tags(order, keys.public_key().to_hex()))
+                .finalize_async(keys)
+            )
+            await client.send_event(deletion)
+            print(f"Nostr ORDER deletion sent: {deletion.as_json()}")
+
     async def send_notification_event(self, robot, order, text, action=False):
         """Creates the notification event and sends it to the coordinator relay"""
         if config("NOSTR_NSEC", cast=str, default="") == "":
@@ -175,15 +186,46 @@ class Nostr:
             "sats": sats,
         }
 
-    def generate_tags(self, order, robot_name, robot_hash_id, currency, pricing=None):
+    # 0.9.11: the event that takes an order out of the book must outlive its publication. It
+    # carried order.expires_at, already past for an expired order, and strfry refused it (NIP-40)
+    # in silence: the old "pending" event stayed listed until its own expiration (#28).
+    CLOSED_EVENT_TTL = 3600
+
+    @staticmethod
+    def is_listed(order):
+        return order.status == Order.Status.PUB
+
+    @staticmethod
+    def d_tag(order):
         hashed_id = hashlib.md5(
             f"{config('COORDINATOR_ALIAS', cast=str)}{order.id}".encode("utf-8")
         ).hexdigest()
+        return str(uuid.UUID(hashed_id))
+
+    def expiration_of(self, order, now=None):
+        """NIP-40 expiration: the order's own while it is listed; once it left the book, never
+        less than an hour from now (the replacement must be accepted, then it may go)."""
+        import time
+
+        now = int(now if now is not None else time.time())
+        expires = int(order.expires_at.timestamp()) if order.expires_at else now
+        if self.is_listed(order):
+            return expires
+        ttl = config("NOSTR_CLOSED_EVENT_TTL", cast=int, default=self.CLOSED_EVENT_TTL)
+        return max(expires, now + max(60, ttl))
+
+    def deletion_tags(self, order, pubkey_hex):
+        return [
+            Tag.parse(["a", f"38383:{pubkey_hex}:{self.d_tag(order)}"]),
+            Tag.parse(["k", "38383"]),
+        ]
+
+    def generate_tags(self, order, robot_name, robot_hash_id, currency, pricing=None):
 
         if pricing is None:
             pricing = self.pricing_tags(order)
         tags = [
-            Tag.parse(["d", str(uuid.UUID(hashed_id))]),
+            Tag.parse(["d", self.d_tag(order)]),
             Tag.parse(["name", robot_name, robot_hash_id]),
             Tag.parse(["k", "sell" if order.type == Order.Types.SELL else "buy"]),
             Tag.parse(["f", currency]),
@@ -210,7 +252,7 @@ class Nostr:
             Tag.parse(
                 [
                     "expiration",
-                    str(int(order.expires_at.timestamp())),
+                    str(self.expiration_of(order)),
                     str(order.escrow_duration),
                 ]
             ),
@@ -234,10 +276,17 @@ class Nostr:
         return tags
 
     def get_status_tag(self, order):
-        if order.status == Order.Status.PUB:
+        """NIP-69 status. Until 0.9.11 everything but PUB was "success" (an expired order too)."""
+        S = Order.Status
+        if order.status == S.PUB:
             return "pending"
-        else:
+        if order.status == S.EXP:
+            return "expired"
+        if order.status in (S.UCA, S.CCA, S.PAU, S.WFB):
+            return "canceled"
+        if order.status in (S.SUC, S.MLD, S.TLD):
             return "success"
+        return "in-progress"
 
     def sign_message(text: str) -> str:
         try:

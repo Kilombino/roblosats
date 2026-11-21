@@ -890,7 +890,7 @@ def bond_action(order, user, name, data):
         # 0.9.7: where the bond goes back automatically (given later: e.g. the payout address)
         bonds.set_return_address(bond, _spk_for_address(data["address"]), data["address"])
     elif name == "bond_auto_return_signature":
-        bonds.submit_auto_return_signature(bond, data.get("signatures") or data["signature"])
+        bonds.submit_auto_return_signature(bond, data.get("signatures") or data["signature"], data.get("ladder"))
     else:
         raise EscrowError("unknown bond action")
 

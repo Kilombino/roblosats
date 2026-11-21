@@ -3,7 +3,7 @@ Unit tests for api/nostr.py — pure-logic, no relay required.
 
 Coverage:
 - generate_tags: tag construction and NIP-69 field values
-- get_status_tag: PUB → "pending", everything else → "success"
+- get_status_tag: NIP-69 statuses (0.9.11: an expired order is "expired", not "success")
 - sign_message: Schnorr signature shape, determinism, bad-key fallback
 
 Network tests (send_order_event, send_notification_event, initialize_client)
@@ -265,16 +265,52 @@ class TestNostrGetStatusTag(TestCase):
         order = _make_order(status=Order.Status.PUB)
         self.assertEqual(self.nostr.get_status_tag(order), "pending")
 
-    def test_non_pub_status_returns_success(self):
-        for status in (
-            Order.Status.WFB,
-            Order.Status.CHA,
-            Order.Status.SUC,
-            Order.Status.DIS,
-        ):
+    def test_nip69_statuses(self):
+        """0.9.11: an expired order said "success"; each status now has its NIP-69 meaning."""
+        S = Order.Status
+        want = {
+            S.EXP: "expired", S.UCA: "canceled", S.CCA: "canceled", S.PAU: "canceled",
+            S.TAK: "in-progress", S.WF2: "in-progress", S.CHA: "in-progress", S.DIS: "in-progress",
+            S.SUC: "success", S.MLD: "success", S.TLD: "success",
+        }
+        for status, tag in want.items():
+            with self.subTest(status=status):
+                self.assertEqual(self.nostr.get_status_tag(_make_order(status=status)), tag)
+
+
+class TestNostrClosedOrderExpiration(TestCase):
+    """0.9.11 (#28): the event taking an order out of the book carried order.expires_at, already
+    past for an expired order; strfry refused it and the old "pending" one stayed listed."""
+
+    def setUp(self):
+        self.nostr = Nostr()
+
+    def test_listed_order_keeps_its_expiration(self):
+        order = _make_order(status=Order.Status.PUB)
+        order.expires_at = datetime(2030, 1, 1, tzinfo=timezone.utc)
+        self.assertEqual(self.nostr.expiration_of(order, now=1_800_000_000), int(order.expires_at.timestamp()))
+
+    def test_closed_order_expiration_is_in_the_future(self):
+        for status in (Order.Status.EXP, Order.Status.UCA, Order.Status.TAK, Order.Status.SUC):
             with self.subTest(status=status):
                 order = _make_order(status=status)
-                self.assertEqual(self.nostr.get_status_tag(order), "success")
+                order.expires_at = datetime(2026, 11, 20, tzinfo=timezone.utc)  # long past
+                now = int(datetime(2026, 11, 21, tzinfo=timezone.utc).timestamp())
+                self.assertEqual(self.nostr.expiration_of(order, now=now), now + 3600)
+
+    @patch("api.nostr.config")
+    def test_expiration_tag_and_deletion_coordinate(self, mock_config):
+        mock_config.side_effect = lambda key, **kw: ENV_OVERRIDES.get(key, kw.get("default", ""))
+        order = _make_order(status=Order.Status.EXP)
+        order.expires_at = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        tags = {t.to_vec()[0]: t.to_vec() for t in self.nostr.generate_tags(order, "R", "h", "EUR")}
+        import time
+
+        self.assertGreater(int(tags["expiration"][1]), time.time() + 3000)
+        self.assertEqual(tags["s"][1], "expired")
+        dele = [t.to_vec() for t in self.nostr.deletion_tags(order, "ab" * 32)]
+        self.assertEqual(dele[0], ["a", f"38383:{'ab' * 32}:{tags['d'][1]}"])
+        self.assertEqual(dele[1], ["k", "38383"])
 
 
 # ---------------------------------------------------------------------------

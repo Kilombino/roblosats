@@ -376,6 +376,9 @@ def status_text(txid):
 
 
 def _auto_return_txid(bond):
+    sent = (getattr(bond, "auto_return", None) or {}).get("sent")
+    if sent and sent.get("txid"):  # 0.9.11: the rung of the fee ladder that went out
+        return sent["txid"]
     try:
         from api.escrow import bonds as bond_service
 

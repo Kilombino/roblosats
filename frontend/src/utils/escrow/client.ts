@@ -47,6 +47,8 @@ export interface EscrowOrderData {
   bond_auto_return_signed?: boolean;
   bond_auto_return_tx?: string;
   bond_auto_return_coins?: BondCoin[];
+  bond_auto_return_ladder?: string[];
+  bond_auto_return_rates?: number[];
   bond_status_code?: number;
   escrow_role?: 'seller' | 'buyer';
   escrow_coordinator_pubkey?: string;
@@ -355,6 +357,18 @@ export const signBondAutoReturn = (
     paysOnlyUs(myScript, maxFeeSats, 'automatic return'),
   );
 };
+
+/** 0.9.11: the fee ladder of the automatic return (the same return at lower rates, ascending;
+ * the last rung is bond_auto_return_tx). Every rung is checked like the top one. */
+export const signBondAutoReturnLadder = (
+  data: EscrowOrderData,
+  keys: EscrowKeys,
+  myScript: Uint8Array,
+  maxFeeSats: number,
+): string[][] =>
+  (data.bond_auto_return_ladder ?? []).map((tx) =>
+    signBondAutoReturn({ ...data, bond_auto_return_tx: tx }, keys, myScript, maxFeeSats),
+  );
 
 /** rl31-beta18: coins at our bond address that are not the bond, back to our address. */
 export const signBondLeftover = (

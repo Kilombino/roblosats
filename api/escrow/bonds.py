@@ -301,7 +301,15 @@ def submit_penalty_signature(bond, sigs):
 # broadcasts it only from release(), i.e. once the bond can no longer be penalized nor go into a
 # deposit. Anything else (no address, an old app, coins that changed, a node that refuses it)
 # falls back to the manual "Get my bond back".
-AUTO_RETURN_PLAN = 1
+AUTO_RETURN_PLAN = 2
+# 0.9.11 (plan 2): a fee LADDER. Plan 1 signed one return at the penalty's rate (up to 10 sat/vB),
+# so with the mempool at 1 sat/vB a bond paid ten times the fee it needed (a user paid 1,530
+# sats). Plan 2 also pre-signs the same return at lower rates (ESCROW_AUTO_RETURN_RATES, default
+# "1,3", below the penalty's rate); the coordinator broadcasts the cheapest one the node expects
+# to confirm within ESCROW_AUTO_RETURN_TARGET_BLOCKS and, if it is still unconfirmed after
+# ESCROW_AUTO_RETURN_BUMP_SECONDS (or the estimate rose above it), replaces it with the next one
+# (same inputs, RBF). The top rung is plan 1's transaction, so an app that signs only it (older
+# apps) keeps plan 1's behaviour. Bonds signed under plan 1 keep their single return.
 
 
 def set_return_address(bond, payout_spk, address):
@@ -348,9 +356,57 @@ def _build_auto_return(bond):
         except ValueError:
             return bond  # too small to return automatically: manual
     ar.update({"tx": tx.serialize().hex(), "rate": rate, "coins": [list(c) for c in coins]})
+    if int(ar.get("plan") or 1) >= 2:
+        ar["ladder"] = _ladder(coins, spk, rate, tx)
     bond.auto_return = ar
     bond.save(update_fields=["auto_return", "updated_at"])
     return bond
+
+
+def ladder_rates(top):
+    """The lower rungs: ESCROW_AUTO_RETURN_RATES below the top rate, ascending, no repeats."""
+    raw = str(service.config("ESCROW_AUTO_RETURN_RATES", default="1,3"))
+    rates = set()
+    for part in raw.split(","):
+        try:
+            r = round(float(part.strip()), 2)
+        except ValueError:
+            continue
+        if 1.0 <= r < top:
+            rates.add(r)
+    return sorted(rates)
+
+
+def _ladder(coins, spk, top_rate, top_tx):
+    """[{rate, tx}] ascending, the last one the top (plan 1's) transaction."""
+    rungs = []
+    for r in ladder_rates(top_rate):
+        try:
+            rungs.append({"rate": r, "tx": coins_spend_tx(coins, spk, r).serialize().hex()})
+        except ValueError:
+            continue
+    rungs.append({"rate": top_rate, "tx": top_tx.serialize().hex()})
+    return rungs
+
+
+def _rung_message(bond, tx_hex):
+    ar = bond.auto_return or {}
+    tx = Transaction.parse(bytes.fromhex(tx_hex))
+    return tx, _coin_messages(bond, tx, [tuple(c) for c in ar.get("coins") or coins_of(bond)])
+
+
+def signed_rungs(bond):
+    """[(index, rate, tx_hex, sigs)] of the rungs the owner signed, ascending by rate. The top
+    rung (plan 1's transaction) is signed by ar["sigs"]."""
+    ar = bond.auto_return or {}
+    ladder = ar.get("ladder") or [{"rate": ar.get("rate"), "tx": ar.get("tx")}]
+    lsigs = ar.get("ladder_sigs") or []
+    out = []
+    for i, rung in enumerate(ladder):
+        sigs = ar.get("sigs") if rung.get("tx") == ar.get("tx") else (lsigs[i] if i < len(lsigs) else None)
+        if sigs and rung.get("tx"):
+            out.append((i, float(rung.get("rate") or 0), rung["tx"], sigs))
+    return out
 
 
 def auto_return_message(bond):
@@ -359,8 +415,9 @@ def auto_return_message(bond):
     return tx, _coin_messages(bond, tx, [tuple(c) for c in ar.get("coins") or coins_of(bond)])
 
 
-def submit_auto_return_signature(bond, sigs):
-    """The owner's signature(s) of its automatic return (one per coin)."""
+def submit_auto_return_signature(bond, sigs, ladder_sigs=None):
+    """The owner's signature(s) of its automatic return (one per coin); 0.9.11: ladder_sigs, one
+    list per rung of the fee ladder (the top rung is the same transaction as sigs)."""
     from api.models import OnchainBond
 
     sigs = _as_list(sigs)
@@ -377,13 +434,54 @@ def submit_auto_return_signature(bond, sigs):
             raise EscrowError("the automatic return does not pay the return address")
         _check_owner_sigs(bond, msgs, sigs, "automatic return")
         ar["sigs"] = sigs
+        # 0.9.11 (plan 2): the cheaper rungs, each checked like the top one
+        if ladder_sigs and ar.get("ladder"):
+            got = []
+            for i, rung in enumerate(ar["ladder"]):
+                rs = _as_list(ladder_sigs[i]) if i < len(ladder_sigs) and ladder_sigs[i] else None
+                if rung["tx"] == ar["tx"]:
+                    rs = sigs
+                elif rs:
+                    rtx, rmsgs = _rung_message(bond, rung["tx"])
+                    if len(rtx.outputs) != 1 or rtx.outputs[0].script_pubkey.hex() != ar.get("spk"):
+                        raise EscrowError("the automatic return does not pay the return address")
+                    _check_owner_sigs(bond, rmsgs, rs, "automatic return")
+                got.append(rs)
+            ar["ladder_sigs"] = got
         bond.auto_return = ar
         bond.save(update_fields=["auto_return", "updated_at"])
     return bond
 
 
+def target_rate():
+    """The rate the node expects to confirm within ESCROW_AUTO_RETURN_TARGET_BLOCKS."""
+    return service.fee_rate(service.config("ESCROW_AUTO_RETURN_TARGET_BLOCKS", cast=int, default=6))
+
+
+def choose_rung(rungs, rate):
+    """The cheapest signed rung at or above the expected rate, else the most expensive one."""
+    for rung in rungs:
+        if rung[1] + 1e-9 >= rate:
+            return rung
+    return rungs[-1] if rungs else None
+
+
+def _send_rung(bond, rung):
+    i, rate, tx_hex, sigs = rung
+    tx, msgs = _rung_message(bond, tx_hex)
+    ar = bond.auto_return or {}
+    if len(tx.outputs) != 1 or tx.outputs[0].script_pubkey.hex() != ar.get("spk"):
+        raise EscrowError("the signed return does not pay the return address")
+    _cosign(bond, tx, msgs, sigs)
+    service.rpc("sendrawtransaction", [tx.serialize().hex()])
+    return tx
+
+
 def _broadcast_auto_return(bond):
-    """From release() only: the bond is free. True when the signed return went out."""
+    """From release() only: the bond is free. True when the signed return went out. 0.9.11: the
+    cheapest signed rung the mempool needs; if the node refuses it, the next one up."""
+    import time
+
     from api.models import OnchainBond
 
     ar = bond.auto_return or {}
@@ -392,20 +490,83 @@ def _broadcast_auto_return(bond):
     try:
         if [list(c) for c in coins_of(bond)] != [list(c) for c in ar.get("coins") or []]:
             raise EscrowError("the bond's coins changed since the return was signed")
-        tx, msgs = auto_return_message(bond)
-        if len(tx.outputs) != 1 or tx.outputs[0].script_pubkey.hex() != ar.get("spk"):
-            raise EscrowError("the signed return does not pay the return address")
-        _cosign(bond, tx, msgs, ar["sigs"])
-        service.rpc("sendrawtransaction", [tx.serialize().hex()])
+        rungs = signed_rungs(bond)
+        first = choose_rung(rungs, target_rate())
+        tx, sent, error = None, None, None
+        for rung in [r for r in rungs if r[1] >= first[1]]:
+            try:
+                tx = _send_rung(bond, rung)
+                sent = rung
+                break
+            except Exception as e:  # too cheap for the node now: the next rung
+                error = e
+        if tx is None:
+            raise error or EscrowError("no signed return")
     except Exception as e:
         bond.order.log(f"Onchain {bond.role} bond: automatic return not sent ({e}); the owner takes it back by hand", level="WARN")
         _alert_bond_manual(bond, e)
         return False
+    ar = dict(bond.auto_return)
+    ar["sent"] = {"index": sent[0], "rate": sent[1], "txid": tx.txid(), "at": int(time.time())}
+    bond.auto_return = ar
     bond.spend_txid = tx.txid()
     bond.status = OnchainBond.Status.RETURNED
-    bond.save(update_fields=["spend_txid", "status", "updated_at"])
-    bond.order.log(f"Onchain {bond.role} bond **returned automatically** to {ar.get('address')} in {bond.spend_txid}")
+    bond.save(update_fields=["auto_return", "spend_txid", "status", "updated_at"])
+    bond.order.log(f"Onchain {bond.role} bond **returned automatically** to {ar.get('address')} in {bond.spend_txid}"
+                   f" ({sent[1]:g} sat/vB)")
     return True
+
+
+def bump_auto_return(bond, now=None):
+    """0.9.11: an automatic return still unconfirmed after ESCROW_AUTO_RETURN_BUMP_SECONDS, or
+    below what the node now expects, is replaced by the next signed rung (RBF). True if bumped."""
+    import time
+
+    from api.models import OnchainBond
+
+    ar = dict(bond.auto_return or {})
+    sent = ar.get("sent")
+    if bond.status != OnchainBond.Status.RETURNED or not sent or ar.get("confirmed"):
+        return False
+    status = tx_status(sent["txid"])
+    if status == "confirmed":
+        ar["confirmed"] = True
+        bond.auto_return = ar
+        bond.save(update_fields=["auto_return", "updated_at"])
+        return False
+    now = int(now if now is not None else time.time())
+    waited = now - int(sent.get("at") or now)
+    later = [r for r in signed_rungs(bond) if r[1] > float(sent["rate"])]
+    if not later:
+        return False
+    stale = waited >= service.config("ESCROW_AUTO_RETURN_BUMP_SECONDS", cast=int, default=7200)
+    if not stale and target_rate() <= float(sent["rate"]):
+        return False
+    nxt = later[0]
+    try:
+        tx = _send_rung(bond, nxt)
+    except Exception as e:
+        bond.order.log(f"Onchain {bond.role} bond: automatic return not bumped ({e})", level="WARN")
+        return False
+    ar["sent"] = {"index": nxt[0], "rate": nxt[1], "txid": tx.txid(), "at": now, "replaced": sent["txid"]}
+    bond.auto_return = ar
+    bond.spend_txid = tx.txid()
+    bond.save(update_fields=["auto_return", "spend_txid", "updated_at"])
+    bond.order.log(f"Onchain {bond.role} bond: automatic return **bumped** to {nxt[1]:g} sat/vB in {bond.spend_txid}")
+    return True
+
+
+def bump_auto_returns():
+    """From the follow_invoices loop: every automatic return that is still in the mempool."""
+    from api.models import OnchainBond
+
+    n = 0
+    for bond in OnchainBond.objects.filter(status=OnchainBond.Status.RETURNED, auto_return__has_key="sent"):
+        try:
+            n += bool(bump_auto_return(bond))
+        except Exception:
+            continue
+    return n
 
 
 def _alert_bond_manual(bond, error):
@@ -621,6 +782,10 @@ def bond_data(bond):
             data["bond_auto_return_coins"] = [
                 {"txid": c[0], "vout": int(c[1]), "value": int(c[2])} for c in ar.get("coins") or []
             ]
+            # 0.9.11: the fee ladder (ascending rates; the last rung is bond_auto_return_tx)
+            if ar.get("ladder"):
+                data["bond_auto_return_ladder"] = [r["tx"] for r in ar["ladder"]]
+                data["bond_auto_return_rates"] = [r["rate"] for r in ar["ladder"]]
     if bond.return_tx and bond.status == bond.Status.RETURNABLE:
         data["bond_return_tx"] = bond.return_tx
         data["bond_return_coins"] = [{"txid": t, "vout": v, "value": s} for t, v, s in return_coins_of(bond)]

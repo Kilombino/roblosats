@@ -64,6 +64,18 @@ def _onchain_bond(bond):
     if bond.status == S.RETURNED:
         mining = 0
         returned = sats
+        ar = getattr(bond, "auto_return", None) or {}
+        sent = ar.get("sent") or {}
+        if not bond.return_tx and sent and bond.spend_txid == sent.get("txid"):
+            # 0.9.11: an automatic return from the fee ladder: what that rung paid the miners
+            try:
+                ladder = ar.get("ladder") or [{"tx": ar.get("tx")}]
+                tx = Transaction.parse(bytes.fromhex(ladder[int(sent.get("index") or 0)]["tx"]))
+                out = sum(o.value for o in tx.outputs)
+                spent = sum(int(c[2]) for c in ar.get("coins") or [])
+                mining, returned = max(0, spent - out), out
+            except Exception:
+                pass
         if bond.return_tx:
             try:
                 out = sum(o.value for o in Transaction.parse(bytes.fromhex(bond.return_tx)).outputs)

@@ -27,6 +27,7 @@ import {
   releasePartial,
   signCooperativeLeaf,
   signBondAutoReturn,
+  signBondAutoReturnLadder,
   bondCoinsOf,
   signBondPenalties,
   signBondReturns,
@@ -367,13 +368,16 @@ export const OnchainEscrowPrompt = ({
           if (!mine) return;
           try {
             const value = bondCoinsOf(data).reduce((a, u) => a + u.value, 0);
-            const signatures = signBondAutoReturn(
-              data,
-              keys,
-              addressToScript(addr),
-              Math.max(2_000, Math.floor(value * 0.1)),
+            const maxFee = Math.max(2_000, Math.floor(value * 0.1));
+            const signatures = signBondAutoReturn(data, keys, addressToScript(addr), maxFee);
+            // 0.9.11: also the cheaper rungs, so the coordinator sends the one the mempool needs
+            const ladder = data.bond_auto_return_ladder?.length
+              ? signBondAutoReturnLadder(data, keys, addressToScript(addr), maxFee)
+              : undefined;
+            onAction(
+              'bond_auto_return_signature',
+              ladder ? { signatures, ladder } : { signatures },
             );
-            onAction('bond_auto_return_signature', { signatures });
           } catch (e) {
             setError(e instanceof EscrowCheckError ? t(e.message) : String(e));
           }

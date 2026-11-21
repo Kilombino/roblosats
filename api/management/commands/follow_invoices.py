@@ -92,6 +92,12 @@ class Command(BaseCommand):
             bonds.recover_abandoned()
         except Exception as e:
             self.stderr.write(f"late onchain bonds: {e}")
+        try:
+            from api.escrow import bonds
+
+            bonds.bump_auto_returns()  # 0.9.11: the fee ladder of the automatic returns
+        except Exception as e:
+            self.stderr.write(f"automatic bond returns: {e}")
 
     def is_same_status(a: LNPayment.Status, b: LNPayment.Status) -> bool:
         """

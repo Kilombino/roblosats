@@ -9,6 +9,7 @@ import {
   owedInRelease,
   signBondLeftover,
   signBondAutoReturn,
+  signBondAutoReturnLadder,
   signBondPenalties,
   type EscrowOrderData,
 } from '../client';
@@ -417,6 +418,48 @@ describe('bond top-ups and coins at the bond address (rl31-beta18)', () => {
     expect(() => signBondAutoReturn(d, buyer, dest, 100)).toThrow();
     expect(() =>
       signBondAutoReturn({ ...d, bond_auto_return_coins: [coins[0]] }, buyer, dest, 2000),
+    ).toThrow();
+  });
+
+  it('0.9.11: signs every rung of the fee ladder, each checked like the top one', () => {
+    const mk = (v: number): Transaction =>
+      new Transaction(
+        coins.map((c) => ({ txid: c.txid, vout: c.vout, sequence: 0xfffffffd })),
+        [{ value: BigInt(v), script: dest }],
+        2,
+        0,
+      );
+    const ladder = [mk(3550), mk(3500), mk(3400)].map((t) => bytesToHex(t.serialize()));
+    const d = bondData(buyer, {
+      bond_txid: coins[0].txid,
+      bond_vout: 0,
+      bond_value: 3630,
+      bond_coins: coins,
+      bond_status_code: 1,
+      bond_auto_return_tx: ladder[2],
+      bond_auto_return_coins: coins,
+      bond_auto_return_ladder: ladder,
+    });
+    const sigs = signBondAutoReturnLadder(d, buyer, dest, 2000);
+    expect(sigs).toHaveLength(3);
+    sigs.forEach((s) => expect(s).toHaveLength(2));
+    expect(
+      signBondAutoReturnLadder({ ...d, bond_auto_return_ladder: undefined }, buyer, dest, 2000),
+    ).toEqual([]);
+    // a rung paying someone else is refused like the top one
+    const bad = new Transaction(
+      coins.map((c) => ({ txid: c.txid, vout: c.vout, sequence: 0xfffffffd })),
+      [{ value: BigInt(3500), script: hexToBytes('0014' + '44'.repeat(20)) }],
+      2,
+      0,
+    );
+    expect(() =>
+      signBondAutoReturnLadder(
+        { ...d, bond_auto_return_ladder: [bytesToHex(bad.serialize()), ladder[2]] },
+        buyer,
+        dest,
+        2000,
+      ),
     ).toThrow();
   });
 

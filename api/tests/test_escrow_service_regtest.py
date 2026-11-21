@@ -1750,3 +1750,111 @@ class EscrowDisputePageRegtest(EscrowOrderFlowRegtest):
         self.assertEqual(flow.proceeds(order), info["coordinator"])
         s = __import__("api.order_summary", fromlist=["x"]).final_summary(order, seller)
         self.assertEqual(s["bond_state"], "returned")
+
+
+@skipUnless(REGTEST, "needs the regtest lab (ESCROW_REGTEST=1)")
+class EscrowAutoReturnLadderRegtest(EscrowAutoReturnRegtest):
+    """0.9.11 (auto-return plan 2): the app pre-signs the return at several rates; the
+    coordinator sends the cheapest one the mempool needs and, if it gets stuck, replaces it with
+    the next (RBF). Plan 1 paid the penalty's rate (up to 10 sat/vB) whatever the mempool."""
+
+    test_cancelled_public_order_returns_the_bond_by_itself = None
+    test_taker_bond_freed_when_the_maker_cancels = None
+    test_bond_in_a_deposit_is_never_returned_again = None
+
+    def _sign_auto_return(self, order, user, keys):
+        from api.escrow import bonds, flow
+
+        d = flow.order_data(order, user)
+        if not d.get("bond_auto_return_tx"):
+            return
+        self.assertGreaterEqual(len(d["bond_auto_return_ladder"]), 2)
+        self.assertEqual(d["bond_auto_return_ladder"][-1], d["bond_auto_return_tx"])
+        bond = flow.bond_of(order, d["bond_role"], owner=user)
+
+        def sign(tx_hex):
+            _, msgs = bonds._rung_message(bond, tx_hex)
+            return [with_hashtype(schnorr_sign(keys["bond"], m)).hex() for m in msgs]
+
+        payload = {"signatures": sign(d["bond_auto_return_tx"])}
+        if not getattr(self, "_top_only", False):
+            payload["ladder"] = [sign(t) for t in d["bond_auto_return_ladder"]]
+        flow.action(order, user, "bond_auto_return_signature", payload)
+        self.assertTrue(flow.order_data(order, user)["bond_auto_return_signed"])
+
+    def _fee_of(self, txid):
+        info = service.rpc("getmempoolentry", [txid])
+        return info["fees"]["base"] * 1e8 / info["vsize"]
+
+    def test_cheap_rung_at_low_fees_then_bumped(self):
+        from unittest.mock import patch
+
+        from api.escrow import bonds
+        from api.logics import Logics
+        from api.models import OnchainBond
+
+        order, buyer, kb, bond = self._make_public()
+        bond.refresh_from_db()
+        rates = [r["rate"] for r in bond.auto_return["ladder"]]
+        self.assertEqual(rates[:2], [1.0, 3.0])
+        with patch("api.escrow.bonds.target_rate", return_value=1.0):
+            Logics.cancel_order(order, buyer)
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, OnchainBond.Status.RETURNED)
+        self.assertEqual(bond.auto_return["sent"]["rate"], 1.0)
+        first = bond.spend_txid
+        self.assertLess(self._fee_of(first), 1.5)
+        # still unconfirmed long after: the next rung replaces it (same coins, RBF)
+        with patch("api.escrow.bonds.target_rate", return_value=1.0):
+            self.assertFalse(bonds.bump_auto_return(bond))  # not stale yet
+            self.assertTrue(bonds.bump_auto_return(bond, now=bond.auto_return["sent"]["at"] + 7300))
+        bond.refresh_from_db()
+        self.assertNotEqual(bond.spend_txid, first)
+        self.assertEqual(bond.auto_return["sent"]["rate"], 3.0)
+        self.assertEqual(bond.auto_return["sent"]["replaced"], first)
+        mempool = service.rpc("getrawmempool", [])
+        self.assertIn(bond.spend_txid, mempool)
+        self.assertNotIn(first, mempool)
+        self.assertGreater(self._fee_of(bond.spend_txid), 2.5)
+        _mine()
+        conf, paid = _paid_to(bond.spend_txid, self.return_addresses[buyer.id])
+        self.assertGreaterEqual(conf, 1)
+        self.assertFalse(bonds.bump_auto_return(bond))  # confirmed: nothing more
+        bond.refresh_from_db()
+        self.assertTrue(bond.auto_return.get("confirmed"))
+        s = __import__("api.order_summary", fromlist=["x"]).final_summary(order, buyer)
+        self.assertEqual(s["bond_returned_sats"], paid)
+        self.assertEqual(s["mining_fee_sats"], bond.value - paid)
+
+    def test_high_fees_send_the_top_rung(self):
+        from unittest.mock import patch
+
+        from api.logics import Logics
+
+        order, buyer, kb, bond = self._make_public()
+        bond.refresh_from_db()
+        top = bond.auto_return["ladder"][-1]["rate"]
+        with patch("api.escrow.bonds.target_rate", return_value=top + 20):
+            Logics.cancel_order(order, buyer)
+        bond.refresh_from_db()
+        self.assertEqual(bond.auto_return["sent"]["rate"], top)
+        self.assertEqual(bond.spend_txid, bond.auto_return["sent"]["txid"])
+        _mine()
+        conf, _paid = _paid_to(bond.spend_txid, self.return_addresses[buyer.id])
+        self.assertGreaterEqual(conf, 1)
+
+    def test_top_only_signature_keeps_plan_1_behaviour(self):
+        """An app that signs only the top rung (0.9.10 and older) gets plan 1's single return."""
+        from unittest.mock import patch
+
+        from api.escrow import bonds
+        from api.logics import Logics
+
+        self._top_only = True
+        order, buyer, kb, bond = self._make_public()
+        bond.refresh_from_db()
+        self.assertEqual(len(bonds.signed_rungs(bond)), 1)
+        with patch("api.escrow.bonds.target_rate", return_value=1.0):
+            Logics.cancel_order(order, buyer)
+        bond.refresh_from_db()
+        self.assertEqual(bond.auto_return["sent"]["rate"], bond.auto_return["rate"])
