@@ -1247,7 +1247,6 @@
   "the automatic return does not pay our address": "el retorn automàtic no paga a la nostra adreça",
   "the automatic return fee is too high": "la comissió del retorn automàtic és massa alta",
   "When your bond is free, it goes back by itself to {{address}}.": "Quan la teva fiança quedi lliure, torna sola a {{address}}.",
-  "Until your bond has 1 confirmation, another robot can still take this order first (a Lightning bond locks in seconds). If that happens you lose nothing: you get your bond back from this order.": "Fins que la teva fiança tingui 1 confirmació, un altre robot encara pot prendre aquesta ordre abans (una fiança Lightning es bloqueja en segons). Si passa, no perds res: recuperes la teva fiança des d'aquesta ordre.",
   "Your bond went back to you.": "La teva fiança ja t'ha tornat.",
   "Bond return": "Devolució de la fiança",
   "Your bond payment is waiting for 1 confirmation. Then you can get it back here: keep this order open.": "El pagament de la teva fiança espera 1 confirmació. Després la podràs recuperar aquí: deixa aquesta ordre oberta.",
@@ -1282,5 +1281,15 @@
   "Bond returned to": "Fiança retornada a",
   "Tor only": "Només Tor",
   "Clearnet (beta)": "Clearnet (beta)",
-  "Coordinators with a clearnet address are reached directly, faster but without Tor: they see your IP address. The others still go through Tor.": "Els coordinadors amb adreça clearnet s'usen directament, més ràpid però sense Tor: veuen la teva adreça IP. La resta continua anant per Tor."
+  "Coordinators with a clearnet address are reached directly, faster but without Tor: they see your IP address. The others still go through Tor.": "Els coordinadors amb adreça clearnet s'usen directament, més ràpid però sense Tor: veuen la teva adreça IP. La resta continua anant per Tor.",
+  "Pay with BTC (BLAKE2b) only — Spamcoin (SHA-256) sent here is NOT seen by the coordinator": "Paga només amb BTC (BLAKE2b): el coordinador NO veu els Spamcoin (SHA-256) enviats aquí",
+  "Until your bond has 1 confirmation, another robot can still take this order first (a Lightning bond locks in seconds). If that happens you lose nothing: your bond comes back to you (by itself if you gave a return address, otherwise with \"Get my bond back\" on this order) and you are told. If your bond confirms first, the order is yours and you are notified right away.": "Fins que la teva fiança tingui 1 confirmació, un altre robot encara pot prendre aquesta ordre abans (una fiança Lightning es bloqueja en segons). Si passa, no perds res: la teva fiança torna a tu (sola si vas donar una adreça de devolució; si no, amb «Recuperar la meva fiança» en aquesta ordre) i se t'avisa. Si la teva fiança es confirma primer, l'ordre és teva i se t'avisa al moment.",
+  "Chain where the sats are": "Cadena on són els sats",
+  "BTC (BLAKE2b)": "BTC (BLAKE2b)",
+  "Spamchain (SHA-256)": "Spamchain (SHA-256)",
+  "Only if you sent Spamcoin (SHA-256) by mistake to your bond or funding address: the coordinator never saw it. Your funding address can be emptied at any time; your bond address after its timelock, counted from that payment's confirmation on Spamchain. The coordinator does not sign anything.": "Només si vas enviar Spamcoin (SHA-256) per error a la teva adreça de fiança o d'aportació: el coordinador mai no ho va veure. La teva adreça d'aportació es pot buidar quan vulguis; la de la fiança després del seu bloqueig temporal, comptat des de la confirmació d'aquest pagament a Spamchain. El coordinador no signa res.",
+  "Spamchain explorer (Esplora API)": "Explorador de Spamchain (API Esplora)",
+  "Default: {{url}} (or {{alt}}). Any Esplora API of the SHA-256 chain works.": "Per defecte: {{url}} (o {{alt}}). Serveix qualsevol API Esplora de la cadena SHA-256.",
+  "The rescue will send {{amount}} Spamsats (minus the mining fee) on Spamchain (SHA-256) to:": "El rescat enviarà {{amount}} Spamsats (menys la comissió de mineria) a Spamchain (SHA-256) a:",
+  "Only bonds and funding addresses can be recovered on Spamchain": "A Spamchain només es poden recuperar fiances i adreces d'aportació"
 }

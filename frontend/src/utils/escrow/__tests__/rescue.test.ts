@@ -10,6 +10,7 @@ import {
   signBondLeftover,
   signBondAutoReturn,
   signBondAutoReturnLadder,
+  signBondPenaltyLadder,
   signBondPenalties,
   type EscrowOrderData,
 } from '../client';
@@ -30,6 +31,7 @@ import {
   fundingScript,
   p2trAddress,
   pubkey,
+  sighashTaproot,
   xonly,
 } from '../taproot';
 
@@ -463,6 +465,62 @@ describe('bond top-ups and coins at the bond address (rl31-beta18)', () => {
     ).toThrow();
   });
 
+  it('0.9.12: signs the penalty ladder, every rung to the penalty output, ending with the penalty', () => {
+    const b = new BondContract(pubkey(buyer.bond), hexToBytes(coordPk), 540, 'bcrt');
+    const coordOut = hexToBytes('0014' + '77'.repeat(20));
+    const mk = (v: number, script: Uint8Array = coordOut): Transaction =>
+      new Transaction(
+        coins.map((c) => ({ txid: c.txid, vout: c.vout, sequence: 0xfffffffd })),
+        [{ value: BigInt(v), script }],
+        2,
+        0,
+      );
+    const ladder = [mk(3520), mk(3300), mk(2600)].map((t) => bytesToHex(t.serialize()));
+    const d = bondData(buyer, {
+      bond_txid: coins[0].txid,
+      bond_vout: 0,
+      bond_value: 3630,
+      bond_coins: coins,
+      bond_status_code: 1,
+      bond_penalty_tx: ladder[2],
+      bond_penalty_ladder: ladder,
+    });
+    const sigs = signBondPenaltyLadder(d, buyer);
+    expect(sigs).toHaveLength(3);
+    const spent = coins.map((c) => ({ value: BigInt(c.value), script: b.scriptPubkey }));
+    sigs.forEach((rung, r) =>
+      rung.forEach((sg, i) =>
+        expect(
+          schnorr.verify(
+            hexToBytes(sg).slice(0, 64),
+            Transaction.parse(ladder[r]).sighashUnified(
+              i,
+              spent,
+              b.leafHashes[BondContract.COOPERATIVE],
+            ),
+            xonly(pubkey(buyer.bond)),
+          ),
+        ).toBe(true),
+      ),
+    );
+    // the top rung is the penalty itself
+    expect(ladder[2]).toEqual(d.bond_penalty_tx);
+    // no ladder: nothing (an older coordinator)
+    expect(signBondPenaltyLadder({ ...d, bond_penalty_ladder: undefined }, buyer)).toEqual([]);
+    // a rung paying another address, or a ladder that does not end with the penalty: refused
+    const bad = bytesToHex(mk(3520, dest).serialize());
+    expect(() =>
+      signBondPenaltyLadder({ ...d, bond_penalty_ladder: [bad, ladder[2]] }, buyer),
+    ).toThrow();
+    expect(() =>
+      signBondPenaltyLadder({ ...d, bond_penalty_ladder: [ladder[0], ladder[1]] }, buyer),
+    ).toThrow();
+    // a locked bond (no bond_penalty_tx any more) still signs, checked against the last rung
+    expect(
+      signBondPenaltyLadder({ ...d, bond_penalty_tx: undefined, bond_status_code: 2 }, buyer),
+    ).toHaveLength(3);
+  });
+
   it('signs the leftover return only to our address and never with the bond coin', () => {
     const b = new BondContract(pubkey(buyer.bond), hexToBytes(coordPk), 540, 'bcrt');
     const left = { txid: 'b1'.repeat(32), vout: 1, value: 3300 };
@@ -631,3 +689,84 @@ describe('uneconomic leftovers', () => {
     expect(recoveryFee('bond', 2, 2)).toBeGreaterThan(recoveryFee('bond', 1, 2));
   });
 });
+
+// 0.9.12 (#28): Spamcoin sent by mistake to our bond or funding address, taken back on the
+// SHA-256 chain with the plain BIP341 sighash (the unified one is only valid on our chain).
+describe('rescue on Spamchain (SHA-256), 0.9.12', () => {
+  it('signs the bond refund and the funding sweep with the plain BIP341 sighash', () => {
+    const rec = record('buyer');
+    const coin = { txid: 'c2'.repeat(32), vout: 0, value: 30000 };
+    const b = buildBondRefund(rec, buyer, coin, dest, 2, 'sha256');
+    const tx = Transaction.parse(b.hex);
+    expect(tx.inputs[0].sequence).toBe(30);
+    const c = new BondContract(pubkey(buyer.bond), hexToBytes(coordPk), 30, 'bcrt');
+    const spent = [{ value: BigInt(30000), script: c.scriptPubkey }];
+    const sig = hexToBytes(witnesses(b.hex)[0][0]);
+    expect(sig).toHaveLength(64); // SIGHASH_DEFAULT: no hash type byte
+    const leaf = c.leafHashes[BondContract.REFUND];
+    expect(schnorr.verify(sig, sighashTaproot(tx, 0, spent, leaf), xonly(pubkey(buyer.bond)))).toBe(
+      true,
+    );
+    expect(schnorr.verify(sig, tx.sighashUnified(0, spent, leaf), xonly(pubkey(buyer.bond)))).toBe(
+      false,
+    );
+    // the same spend for our own chain keeps the unified signature (65 bytes)
+    const ours = buildBondRefund(rec, buyer, coin, dest, 2);
+    expect(hexToBytes(witnesses(ours.hex)[0][0])).toHaveLength(65);
+    const s = buildFundingSweep(
+      rec,
+      buyer,
+      [{ txid: '01'.repeat(32), vout: 0, value: 10000 }],
+      dest,
+      2,
+      'sha256',
+    );
+    const st = Transaction.parse(s.hex);
+    const fspent = [{ value: BigInt(10000), script: fundingScript(pubkey(buyer.funding)) }];
+    const fsig = hexToBytes(witnesses(s.hex)[0][0]);
+    expect(schnorr.verify(fsig, sighashTaproot(st, 0, fspent), xonly(pubkey(buyer.funding)))).toBe(
+      true,
+    );
+  });
+});
+
+// Real check against a SHA-256 regtest node (the lab's second chain: the same Knots build with
+// BLAKE2b never activated): SPAMCHAIN_REGTEST=1. Its wallet signs the unified way, so the coins
+// come from coinbases mined straight to our addresses and every check is a mined block
+// (generateblock: consensus, not just mempool policy).
+const BCLI_SHA = process.env.SPAMCHAIN_REGTEST ? '/mnt/datos2/roblosats/qa-lab/bcli-sha' : '';
+(BCLI_SHA ? test : test.skip)(
+  'Spamchain: the bond refund and funding sweep are valid on a SHA-256 node; the unified ones are not',
+  () => {
+    const cli = (a: string): string => execSync(`${BCLI_SHA} ${a}`, { encoding: 'utf8' }).trim();
+    const other = 'bcrt1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080';
+    const coinbaseTo = (addr: string): { txid: string; vout: number; value: number } => {
+      const [hash] = JSON.parse(cli(`generatetoaddress 1 ${addr}`));
+      const cb = JSON.parse(cli(`getblock ${hash} 2`)).tx[0];
+      const vout = cb.vout.findIndex(
+        (o: { scriptPubKey: { address?: string } }) => o.scriptPubKey.address === addr,
+      );
+      return { txid: cb.txid, vout, value: Math.round(cb.vout[vout].value * 1e8) };
+    };
+    const mined = (hex: string): boolean => {
+      try {
+        cli(`generateblock ${other} '["${hex}"]'`);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    const destScript = hexToBytes('5120' + '44'.repeat(32));
+    const rec = record('seller');
+    const b = new BondContract(pubkey(seller.bond), hexToBytes(coordPk), 30, 'bcrt');
+    const faddr = p2trAddress(xonly(pubkey(seller.funding)), 'bcrt');
+    const bd = coinbaseTo(b.address);
+    const fd = coinbaseTo(faddr);
+    cli(`generatetoaddress 101 ${other}`); // coinbase maturity (and the bond's 30-block timelock)
+    expect(mined(buildFundingSweep(rec, seller, [fd], destScript, 2).hex)).toBe(false);
+    expect(mined(buildBondRefund(rec, seller, bd, destScript, 2).hex)).toBe(false);
+    expect(mined(buildFundingSweep(rec, seller, [fd], destScript, 2, 'sha256').hex)).toBe(true);
+    expect(mined(buildBondRefund(rec, seller, bd, destScript, 2, 'sha256').hex)).toBe(true);
+  },
+  120000,
+);

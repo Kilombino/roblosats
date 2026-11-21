@@ -15,12 +15,21 @@ import {
   Divider,
   FormControlLabel,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from '@mui/material';
 
 import { systemClient } from '../../services/System';
 import { pn } from '../../utils';
-import { DEFAULT_EXPLORER, EXPLORER_SETTING, Explorer } from '../../utils/escrow/explorer';
+import {
+  ALT_SPAMCHAIN_EXPLORER,
+  DEFAULT_EXPLORER,
+  DEFAULT_SPAMCHAIN_EXPLORER,
+  EXPLORER_SETTING,
+  Explorer,
+  SPAMCHAIN_EXPLORER_SETTING,
+} from '../../utils/escrow/explorer';
 import {
   RescueError,
   blocksLeft,
@@ -35,6 +44,7 @@ import {
   storedFairRescue,
   worthRecovering,
   type BuiltRescue,
+  type RescueChain,
   type RescueRecord,
   type Utxo,
 } from '../../utils/escrow/rescue';
@@ -73,6 +83,9 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
   const { t } = useTranslation();
   const [recs, setRecs] = useState<RescueRecord[]>([]);
   const [explorerUrl, setExplorerUrl] = useState<string>(DEFAULT_EXPLORER);
+  // 0.9.12: coins sent by mistake on the SHA-256 chain (Spamcoin) are recovered there
+  const [chain, setChain] = useState<RescueChain>('blake2b');
+  const [spamUrl, setSpamUrl] = useState<string>(DEFAULT_SPAMCHAIN_EXPLORER);
   const [dest, setDest] = useState<string>('');
   const [items, setItems] = useState<Item[] | null>(null);
   const [notes, setNotes] = useState<string[]>([]);
@@ -94,16 +107,28 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
     void systemClient.getItem(EXPLORER_SETTING).then((v) => {
       if (v) setExplorerUrl(v);
     });
+    void systemClient.getItem(SPAMCHAIN_EXPLORER_SETTING).then((v) => {
+      if (v) setSpamUrl(v);
+    });
   }, [open, token]);
 
-  const explorer = (): Explorer => new Explorer(explorerUrl.trim() || DEFAULT_EXPLORER);
+  const sha = chain === 'sha256';
+  const explorer = (): Explorer =>
+    sha
+      ? new Explorer(spamUrl.trim() || DEFAULT_SPAMCHAIN_EXPLORER)
+      : new Explorer(explorerUrl.trim() || DEFAULT_EXPLORER);
 
   const check = async (): Promise<void> => {
     if (!token) return;
     setBusy(true);
     setError('');
     try {
-      systemClient.setItem(EXPLORER_SETTING, explorerUrl.trim() || DEFAULT_EXPLORER);
+      if (sha)
+        systemClient.setItem(
+          SPAMCHAIN_EXPLORER_SETTING,
+          spamUrl.trim() || DEFAULT_SPAMCHAIN_EXPLORER,
+        );
+      else systemClient.setItem(EXPLORER_SETTING, explorerUrl.trim() || DEFAULT_EXPLORER);
       const ex = explorer();
       const height = await ex.tipHeight();
       setRate(await ex.feeRate());
@@ -163,7 +188,8 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
           }
           // 3) the escrow: plan 2 (rl31-beta16), the rescue both pre-signed gives each one its
           //    own after rescue_csv blocks; plan 1, the seller alone takes it all
-          if (rec.escrow?.depositTxid) {
+          // (the escrow itself is never on the other chain: only the coordinator builds it)
+          if (!sha && rec.escrow?.depositTxid) {
             const spent = await ex.spentBy(rec.escrow.depositTxid, 0);
             if (!spent && (rec.escrow.rescuePlan ?? 1) >= 2) {
               if (rec.escrow.rescueTx) {
@@ -237,9 +263,14 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
     const problem = confirmAddress({
       address: dest,
       hrp: it.rec.hrp,
-      message: t('The rescue will send {{amount}} Sats (minus the mining fee) to:', {
-        amount: pn(it.sats),
-      }),
+      message: sha
+        ? t(
+            'The rescue will send {{amount}} Spamsats (minus the mining fee) on Spamchain (SHA-256) to:',
+            { amount: pn(it.sats) },
+          )
+        : t('The rescue will send {{amount}} Sats (minus the mining fee) to:', {
+            amount: pn(it.sats),
+          }),
       onConfirm: (checked) => {
         void recover(it, checked);
       },
@@ -265,11 +296,13 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
       const script = check.script;
       const rate = await ex.feeRate();
       const keys = keysOf(token, it.rec);
+      if (sha && it.kind !== 'funding' && it.kind !== 'bond')
+        throw new RescueError('Only bonds and funding addresses can be recovered on Spamchain');
       const built =
         it.kind === 'funding'
-          ? buildFundingSweep(it.rec, keys, it.utxos, script, rate)
+          ? buildFundingSweep(it.rec, keys, it.utxos, script, rate, chain)
           : it.kind === 'bond'
-            ? buildBondRefund(it.rec, keys, it.utxos, script, rate)
+            ? buildBondRefund(it.rec, keys, it.utxos, script, rate, chain)
             : buildEscrowRescue(it.rec, keys, it.utxos[0], script, rate);
       await ex.broadcast(built.hex);
       setDone((d) => ({ ...d, [`${it.rec.orderId}-${it.kind}${it.key ?? ''}`]: built }));
@@ -305,7 +338,7 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
         ? t('You can recover it now')
         : t('In {{blocks}} blocks (about {{hours}} h)', {
             blocks: pn(w),
-            hours: Math.ceil((w * MIN_PER_BLOCK) / 60),
+            hours: Math.ceil((w * (sha ? 10 : MIN_PER_BLOCK)) / 60),
           });
 
   return (
@@ -328,17 +361,60 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
             })}
           </Typography>
         )}
-        <TextField
-          fullWidth
+        <Typography variant='caption' component='div' sx={{ mt: 1 }}>
+          {t('Chain where the sats are')}
+        </Typography>
+        <ToggleButtonGroup
+          exclusive
           size='small'
-          margin='dense'
-          label={t('Explorer (Esplora API)')}
-          value={explorerUrl}
-          onChange={(e) => setExplorerUrl(e.target.value)}
-          helperText={t('Default: {{url}}. Any Esplora/mempool API of the BLAKE2b chain works.', {
-            url: DEFAULT_EXPLORER,
-          })}
-        />
+          value={chain}
+          onChange={(_e, v: RescueChain | null) => {
+            if (v) {
+              setChain(v);
+              setItems(null);
+              setDone({});
+            }
+          }}
+        >
+          <ToggleButton value='blake2b'>{t('BTC (BLAKE2b)')}</ToggleButton>
+          <ToggleButton value='sha256'>{t('Spamchain (SHA-256)')}</ToggleButton>
+        </ToggleButtonGroup>
+        {sha ? (
+          <Alert severity='warning' sx={{ mt: 1 }}>
+            {t(
+              "Only if you sent Spamcoin (SHA-256) by mistake to your bond or funding address: the coordinator never saw it. Your funding address can be emptied at any time; your bond address after its timelock, counted from that payment's confirmation on Spamchain. The coordinator does not sign anything.",
+            )}
+          </Alert>
+        ) : null}
+        {sha ? (
+          <TextField
+            fullWidth
+            size='small'
+            margin='dense'
+            label={t('Spamchain explorer (Esplora API)')}
+            value={spamUrl}
+            onChange={(e) => setSpamUrl(e.target.value)}
+            helperText={t(
+              'Default: {{url}} (or {{alt}}). Any Esplora API of the SHA-256 chain works.',
+              {
+                url: DEFAULT_SPAMCHAIN_EXPLORER,
+                alt: ALT_SPAMCHAIN_EXPLORER,
+              },
+            )}
+          />
+        ) : (
+          <TextField
+            fullWidth
+            size='small'
+            margin='dense'
+            label={t('Explorer (Esplora API)')}
+            value={explorerUrl}
+            onChange={(e) => setExplorerUrl(e.target.value)}
+            helperText={t('Default: {{url}}. Any Esplora/mempool API of the BLAKE2b chain works.', {
+              url: DEFAULT_EXPLORER,
+            })}
+          />
+        )}
         <TextField
           fullWidth
           size='small'
@@ -378,7 +454,7 @@ const OnchainRescueDialog = ({ open, onClose, token }: Props): React.JSX.Element
                       {t('Order #{{id}}', { id: it.rec.orderId })} · {label(it.kind)}
                     </b>
                     {': '}
-                    {pn(it.sats)} Sats
+                    {pn(it.sats)} {sha ? 'Spamsats' : 'Sats'}
                   </Typography>
                   <Typography variant='caption'>{waitText(it.wait)}</Typography>
                   {it.note ? (

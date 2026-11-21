@@ -30,6 +30,7 @@ import {
   signBondAutoReturnLadder,
   bondCoinsOf,
   signBondPenalties,
+  signBondPenaltyLadder,
   signBondReturns,
   signDeposit,
   signRescue,
@@ -50,6 +51,7 @@ import { useAddressConfirm } from '../../Dialogs/AddressConfirm';
 export type EscrowAction =
   | 'bond_key'
   | 'bond_penalty_signature'
+  | 'bond_penalty_ladder_signature'
   | 'bond_return'
   | 'bond_return_signature'
   | 'bond_leftover_return'
@@ -181,6 +183,20 @@ export const LowFeeWarning = ({
   );
 };
 
+/** 0.9.12 (#28): both chains use the same addresses; a payment sent from a Spamcoin (SHA-256)
+ * wallet lands on the other chain and the coordinator never sees it. Shown with every QR and
+ * address the robot has to pay to. */
+export const WrongChainWarning = (): React.JSX.Element => {
+  const { t } = useTranslation();
+  return (
+    <Alert severity='warning' data-testid='wrong-chain-warning' sx={{ textAlign: 'left' }}>
+      {t(
+        'Pay with BTC (BLAKE2b) only — Spamcoin (SHA-256) sent here is NOT seen by the coordinator',
+      )}
+    </Alert>
+  );
+};
+
 const PayBox = ({
   address,
   sats,
@@ -203,6 +219,9 @@ const PayBox = ({
         <Typography variant='body2' align='center'>
           {label}
         </Typography>
+      </Grid>
+      <Grid>
+        <WrongChainWarning />
       </Grid>
       <Grid>
         <Box sx={{ background: '#fff', padding: '0.5em', borderRadius: '0.3em' }}>
@@ -387,7 +406,32 @@ export const OnchainEscrowPrompt = ({
       once(`penalty-${data.bond_penalty_tx}`, () => {
         // one signature per coin (a topped-up bond has several, rl31-beta18)
         const signatures = signBondPenalties(data, keys);
-        onAction('bond_penalty_signature', { signature: signatures[0], signatures });
+        // 0.9.12: also the cheaper rungs, so a penalty never pays more mining than it needs
+        let ladder: string[][] | undefined;
+        try {
+          ladder = data.bond_penalty_ladder?.length ? signBondPenaltyLadder(data, keys) : undefined;
+        } catch (e) {
+          ladder = undefined; // a ladder that does not check: the penalty alone, as before
+        }
+        onAction(
+          'bond_penalty_signature',
+          ladder
+            ? { signature: signatures[0], signatures, ladder }
+            : { signature: signatures[0], signatures },
+        );
+      });
+    // 0.9.12: a bond locked before the ladder existed: its cheaper penalties, signed now
+    if (
+      data.bond_status_code === BOND.LOCKED &&
+      data.bond_penalty_ladder?.length &&
+      data.bond_penalty_ladder_signed === false
+    )
+      once(`penalty-ladder-${data.bond_penalty_ladder.join('')}`, () => {
+        try {
+          onAction('bond_penalty_ladder_signature', { ladder: signBondPenaltyLadder(data, keys) });
+        } catch (e) {
+          // nothing to do: the coordinator keeps the penalty signed before
+        }
       });
     if (data.escrow_status_code === ESCROW.KEYS && data.escrow_my_keys_set === false)
       once('escrow_keys', () =>
@@ -539,6 +583,7 @@ export const OnchainEscrowPrompt = ({
     order.status,
     data.bond_status_code,
     data.bond_penalty_tx,
+    data.bond_penalty_ladder_signed,
     data.escrow_status_code,
     data.escrow_deposit_tx,
     data.escrow_rescue_tx,
@@ -696,7 +741,7 @@ export const OnchainEscrowPrompt = ({
     order.status === 3 ? (
       <Alert severity='warning' data-testid='take-race-notice'>
         {t(
-          'Until your bond has 1 confirmation, another robot can still take this order first (a Lightning bond locks in seconds). If that happens you lose nothing: you get your bond back from this order.',
+          'Until your bond has 1 confirmation, another robot can still take this order first (a Lightning bond locks in seconds). If that happens you lose nothing: your bond comes back to you (by itself if you gave a return address, otherwise with "Get my bond back" on this order) and you are told. If your bond confirms first, the order is yours and you are notified right away.',
         )}
       </Alert>
     ) : null;

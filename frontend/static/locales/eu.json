@@ -1124,7 +1124,6 @@
   "the automatic return does not pay our address": "the automatic return does not pay our address",
   "the automatic return fee is too high": "the automatic return fee is too high",
   "When your bond is free, it goes back by itself to {{address}}.": "When your bond is free, it goes back by itself to {{address}}.",
-  "Until your bond has 1 confirmation, another robot can still take this order first (a Lightning bond locks in seconds). If that happens you lose nothing: you get your bond back from this order.": "Until your bond has 1 confirmation, another robot can still take this order first (a Lightning bond locks in seconds). If that happens you lose nothing: you get your bond back from this order.",
   "Your bond went back to you.": "Your bond went back to you.",
   "Bond return": "Bond return",
   "Your bond payment is waiting for 1 confirmation. Then you can get it back here: keep this order open.": "Your bond payment is waiting for 1 confirmation. Then you can get it back here: keep this order open.",
@@ -1159,5 +1158,15 @@
   "Bond returned to": "Bond returned to",
   "Tor only": "Tor only",
   "Clearnet (beta)": "Clearnet (beta)",
-  "Coordinators with a clearnet address are reached directly, faster but without Tor: they see your IP address. The others still go through Tor.": "Coordinators with a clearnet address are reached directly, faster but without Tor: they see your IP address. The others still go through Tor."
+  "Coordinators with a clearnet address are reached directly, faster but without Tor: they see your IP address. The others still go through Tor.": "Coordinators with a clearnet address are reached directly, faster but without Tor: they see your IP address. The others still go through Tor.",
+  "Pay with BTC (BLAKE2b) only — Spamcoin (SHA-256) sent here is NOT seen by the coordinator": "Ordaindu BTC-rekin (BLAKE2b) soilik — hona bidalitako Spamcoin (SHA-256) koordinatzaileak EZ du ikusten",
+  "Until your bond has 1 confirmation, another robot can still take this order first (a Lightning bond locks in seconds). If that happens you lose nothing: your bond comes back to you (by itself if you gave a return address, otherwise with \"Get my bond back\" on this order) and you are told. If your bond confirms first, the order is yours and you are notified right away.": "Until your bond has 1 confirmation, another robot can still take this order first (a Lightning bond locks in seconds). If that happens you lose nothing: your bond comes back to you (by itself if you gave a return address, otherwise with \"Get my bond back\" on this order) and you are told. If your bond confirms first, the order is yours and you are notified right away.",
+  "Chain where the sats are": "Chain where the sats are",
+  "BTC (BLAKE2b)": "BTC (BLAKE2b)",
+  "Spamchain (SHA-256)": "Spamchain (SHA-256)",
+  "Only if you sent Spamcoin (SHA-256) by mistake to your bond or funding address: the coordinator never saw it. Your funding address can be emptied at any time; your bond address after its timelock, counted from that payment's confirmation on Spamchain. The coordinator does not sign anything.": "Only if you sent Spamcoin (SHA-256) by mistake to your bond or funding address: the coordinator never saw it. Your funding address can be emptied at any time; your bond address after its timelock, counted from that payment's confirmation on Spamchain. The coordinator does not sign anything.",
+  "Spamchain explorer (Esplora API)": "Spamchain explorer (Esplora API)",
+  "Default: {{url}} (or {{alt}}). Any Esplora API of the SHA-256 chain works.": "Default: {{url}} (or {{alt}}). Any Esplora API of the SHA-256 chain works.",
+  "The rescue will send {{amount}} Spamsats (minus the mining fee) on Spamchain (SHA-256) to:": "The rescue will send {{amount}} Spamsats (minus the mining fee) on Spamchain (SHA-256) to:",
+  "Only bonds and funding addresses can be recovered on Spamchain": "Only bonds and funding addresses can be recovered on Spamchain"
 }

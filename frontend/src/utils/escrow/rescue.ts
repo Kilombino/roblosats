@@ -26,7 +26,9 @@ import {
   hexToBytes,
   p2trAddress,
   pubkey,
+  sighashTaproot,
   signSchnorr,
+  signSchnorrDefault,
   xonly,
   type TxOut,
 } from './taproot';
@@ -71,6 +73,23 @@ export interface Utxo {
 }
 
 export class RescueError extends Error {}
+
+/** 0.9.12: which chain the coins are on. 'blake2b' (BTC, our chain) signs with the unified
+ * sighash as always; 'sha256' (Spamchain: Spamcoin sent to one of our addresses by mistake, order
+ * #28) signs the same spend with the plain BIP341 sighash, which only that chain needs. */
+export type RescueChain = 'blake2b' | 'sha256';
+
+const sigFor = (
+  chain: RescueChain,
+  sk: Uint8Array,
+  tx: Transaction,
+  index: number,
+  spent: TxOut[],
+  leafHash?: Uint8Array,
+): Uint8Array =>
+  chain === 'sha256'
+    ? signSchnorrDefault(sk, sighashTaproot(tx, index, spent, leafHash))
+    : signSchnorr(sk, tx.sighashUnified(index, spent, leafHash));
 
 const enc = new TextEncoder();
 const storageKey = (token: string): string =>
@@ -309,6 +328,7 @@ export const buildBondRefund = (
   utxos: Utxo | Utxo[],
   dest: Uint8Array,
   feeRate: number,
+  chain: RescueChain = 'blake2b',
 ): BuiltRescue => {
   check(Boolean(rec.bond), 'no bond stored for this order');
   const coins = Array.isArray(utxos) ? utxos : [utxos];
@@ -321,7 +341,7 @@ export const buildBondRefund = (
   const tx = singleOutput(coins, c.refundCsv, dest, value);
   const spent: TxOut[] = coins.map((u) => ({ value: BigInt(u.value), script: c.scriptPubkey }));
   const witnesses = coins.map((_, i) => [
-    signSchnorr(keys.bond, tx.sighashUnified(i, spent, c.leafHashes[BondContract.REFUND])),
+    sigFor(chain, keys.bond, tx, i, spent, c.leafHashes[BondContract.REFUND]),
     c.leaves[BondContract.REFUND],
     c.controlBlock(BondContract.REFUND),
   ]);
@@ -336,6 +356,7 @@ export const buildFundingSweep = (
   utxos: Utxo[],
   dest: Uint8Array,
   feeRate: number,
+  chain: RescueChain = 'blake2b',
 ): BuiltRescue => {
   check(utxos.length > 0, 'nothing on the funding address');
   const script = fundingScript(pubkey(keys.funding));
@@ -345,7 +366,7 @@ export const buildFundingSweep = (
   check(value >= BigInt(dustThreshold(dest)), 'the funding address does not cover the mining fee');
   const tx = singleOutput(utxos, 0xfffffffd, dest, value);
   const spent: TxOut[] = utxos.map((u) => ({ value: BigInt(u.value), script }));
-  const witnesses = utxos.map((_, i) => [signSchnorr(keys.funding, tx.sighashUnified(i, spent))]);
+  const witnesses = utxos.map((_, i) => [sigFor(chain, keys.funding, tx, i, spent)]);
   return {
     hex: bytesToHex(tx.serialize(witnesses)),
     txid: tx.txid(),

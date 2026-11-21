@@ -319,6 +319,37 @@ export class Transaction {
   }
 }
 
+/** 0.9.12: the plain BIP341 signature hash (SIGHASH_DEFAULT), as the SHA-256 chain ("Spamchain")
+ * validates it: used only by the rescue tool to take back coins that were sent to one of our
+ * addresses on that chain by mistake. Same fields as sighashUnified without the unified ones. */
+export const sighashTaproot = (
+  tx: Transaction,
+  index: number,
+  spent: TxOut[],
+  leafHash?: Uint8Array,
+): Uint8Array => {
+  if (spent.length !== tx.inputs.length) throw new Error('one spent output per input');
+  const outpoint = (i: TxIn): Uint8Array => concat(hexToBytes(i.txid).reverse(), le(i.vout, 4));
+  const parts = [
+    Uint8Array.of(0, 0), // epoch 0, SIGHASH_DEFAULT
+    le(tx.version, 4),
+    le(tx.locktime, 4),
+    sha256(concat(...tx.inputs.map(outpoint))),
+    sha256(concat(...spent.map((s) => le(s.value, 8)))),
+    sha256(concat(...spent.map((s) => serBytes(s.script)))),
+    sha256(concat(...tx.inputs.map((i) => le(i.sequence, 4)))),
+    sha256(concat(...tx.outputs.map((o) => concat(le(o.value, 8), serBytes(o.script))))),
+    Uint8Array.of(leafHash ? 2 : 0), // spend_type: ext_flag 1 for a script path, no annex
+    le(index, 4),
+  ];
+  if (leafHash) parts.push(leafHash, Uint8Array.of(0), le(0xffffffff, 4));
+  return taggedHash('TapSighash', concat(...parts));
+};
+
+/** 0.9.12: a 64-byte BIP340 signature (SIGHASH_DEFAULT: no hash type byte), for sighashTaproot. */
+export const signSchnorrDefault = (sk: Uint8Array, msg: Uint8Array): Uint8Array =>
+  schnorr.sign(msg, sk, randomBytes(32));
+
 export const signSchnorr = (sk: Uint8Array, msg: Uint8Array): Uint8Array =>
   concat(schnorr.sign(msg, sk, randomBytes(32)), Uint8Array.of(SIGHASH_ALL_UNIFIED));
 

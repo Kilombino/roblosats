@@ -17,6 +17,7 @@ export interface SubmitActionProps {
     | 'take'
     | 'bond_key'
     | 'bond_penalty_signature'
+    | 'bond_penalty_ladder_signature'
     | 'bond_return'
     | 'bond_return_signature'
     | 'bond_leftover_return'

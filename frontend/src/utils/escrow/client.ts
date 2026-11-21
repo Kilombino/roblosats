@@ -82,6 +82,11 @@ export interface EscrowOrderData {
   bond_vout?: number;
   bond_value?: number;
   bond_penalty_tx?: string;
+  /** 0.9.12: the penalty's fee ladder (the same penalty at lower rates, ascending; the last
+   * rung is the penalty itself) and whether we already signed it. */
+  bond_penalty_ladder?: string[];
+  bond_penalty_rates?: number[];
+  bond_penalty_ladder_signed?: boolean;
   bond_return_tx?: string;
   bond_spend_txid?: string;
   bond_mempool_txid?: string;
@@ -302,6 +307,27 @@ export const signBondPenalties = (data: EscrowOrderData, keys: EscrowKeys): stri
 
 export const signBondPenalty = (data: EscrowOrderData, keys: EscrowKeys): string =>
   signBondPenalties(data, keys)[0];
+
+/** 0.9.12: the penalty's fee ladder: every rung spends exactly our bond's coins to the same
+ * single output as the top rung (the coordinator's, as the penalty itself), so signing the
+ * cheaper ones gives nothing more away; the coordinator broadcasts the one the mempool needs.
+ * When the penalty itself is known (SIGN), the top rung must be it. One list per rung. */
+export const signBondPenaltyLadder = (data: EscrowOrderData, keys: EscrowKeys): string[][] => {
+  const ladder = data.bond_penalty_ladder ?? [];
+  if (ladder.length === 0) return [];
+  const topHex = ladder[ladder.length - 1];
+  if (data.bond_penalty_tx && data.bond_penalty_tx !== topHex)
+    fail('the penalty ladder does not end with the penalty');
+  const top = Transaction.parse(topHex);
+  if (top.outputs.length !== 1) fail('the transaction must have a single output');
+  const topScript = bytesToHex(top.outputs[0].script);
+  return ladder.map((tx) =>
+    signBondCoins(data, keys, tx, bondCoinsOf(data), (t) => {
+      if (bytesToHex(t.outputs[0].script) !== topScript)
+        fail('a penalty rung does not pay the penalty address');
+    }),
+  );
+};
 
 const paysOnlyUs =
   (myScript: Uint8Array, maxFeeSats: number, what: string) =>
