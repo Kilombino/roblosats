@@ -1,3 +1,4 @@
+import { HostAddressButton } from '../HostWallet';
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { pendingReturnKey, rememberMyAddress } from '../../utils/myAddresses';
 import { systemClient } from '../../services/System';
@@ -1941,6 +1942,9 @@ const MakerForm = ({
           }}
           slotProps={{ htmlInput: { 'data-testid': 'bond-return-address' } }}
         />
+      ) : null}
+      {maker.onchainEscrow && onchainAvailable ? (
+        <HostAddressButton purpose='bond_return' orderRef='' onAddress={setBondReturn} />
       ) : null}
 
       <Grid container sx={{ alignItems: 'center', flexDirection: 'column' }}>
