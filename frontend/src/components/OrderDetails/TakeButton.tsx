@@ -1,3 +1,4 @@
+import { HostAddressButton } from '../HostWallet';
 import { systemClient } from '../../services/System';
 import { pendingReturnKey, rememberMyAddress } from '../../utils/myAddresses';
 import { addressErrorText, checkAddress, hrpOfNetwork } from '../../utils/address';
@@ -545,6 +546,11 @@ const TakeButton = ({
             onChange={(e) => {
               setBondReturn(e.target.value.trim());
             }}
+          />
+          <HostAddressButton
+            purpose='bond_return'
+            orderRef={`${String(currentOrder?.shortAlias)}/${String(currentOrder?.id)}`}
+            onAddress={setBondReturn}
           />
         </Box>
       ) : null}
