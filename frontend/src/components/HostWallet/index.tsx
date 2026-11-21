@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, Button, Grid, Typography } from '@mui/material';
 import { AccountBalanceWallet } from '@mui/icons-material';
 import {
-  hostWalletAvailable,
+  hostOffers,
   walletAddress,
   walletInvoice,
   walletPay,
@@ -29,7 +29,7 @@ export const HostPayOnchain = ({
   const [busy, setBusy] = useState(false);
   const [txid, setTxid] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  if (!hostWalletAvailable() || !address || !(sats > 0)) return null;
+  if (!hostOffers('walletPay') || !address || !(sats > 0)) return null;
   return (
     <Grid sx={{ width: '100%', textAlign: 'center' }}>
       {txid ? (
@@ -75,7 +75,7 @@ export const HostPayInvoice = ({
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  if (!hostWalletAvailable() || !invoice) return null;
+  if (!hostOffers('walletPayInvoice') || !invoice) return null;
   return (
     <Grid sx={{ width: '100%', textAlign: 'center' }}>
       {done ? (
@@ -123,7 +123,7 @@ export const HostAddressButton = ({
 }): React.JSX.Element | null => {
   const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
-  if (!hostWalletAvailable()) return null;
+  if (!hostOffers('walletAddress')) return null;
   return (
     <Grid sx={{ width: '100%', textAlign: 'center' }}>
       <Button
@@ -163,7 +163,7 @@ export const HostInvoiceButton = ({
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  if (!hostWalletAvailable() || !(sats > 0)) return null;
+  if (!hostOffers('walletInvoice') || !(sats > 0)) return null;
   return (
     <Grid sx={{ width: '100%', textAlign: 'center', marginTop: 1 }}>
       <Button

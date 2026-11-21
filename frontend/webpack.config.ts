@@ -283,13 +283,32 @@ const configAndroid = (env: any, _argv: { mode: string }): Configuration => {
 
 // Kilowallet's ROBLO tab: the Android client without its native parts. Robot names and avatars
 // come from the WebAssembly build (as on the web), the page is served by Kilowallet from a local
-// https origin (WebViewAssetLoader's appassets.androidplatform.net) and talks to Kilowallet's
-// bridge, which reimplements AndroidAppRobosats on Kilowallet's Tor and storage. Built only with
-// `--env target=kilowallet` (scripts/kilowallet-client.sh); the regular builds are unchanged.
-export const KILOWALLET_BASE = 'https://appassets.androidplatform.net/roblo/';
+// origin and talks to Kilowallet's bridge, which reimplements AndroidAppRobosats on Kilowallet's
+// Tor and storage. Built only with `--env target=kilowallet` (scripts/kilowallet-client.sh); the
+// regular builds are unchanged.
+//
+// kw4: every URL in the bundle is relative to its index.html by default, so one zip serves
+// Kilowallet for Android (WebViewAssetLoader's https://appassets.androidplatform.net/roblo/), for
+// the desktop (JCEF's scheme handler on the same origin) and for the iPhone (WKURLSchemeHandler,
+// kwroblo://roblo/): the client runs on a MemoryRouter, so the page's URL never changes and
+// relative URLs always resolve against the folder of index.html. `--env base=<absolute url
+// ending in />` builds an absolute variant instead (kw3 was base=KILOWALLET_ANDROID_BASE).
+export const KILOWALLET_ANDROID_BASE = 'https://appassets.androidplatform.net/roblo/';
 const KILOWALLET_OUT = path.resolve(__dirname, 'build-kilowallet/roblo');
 
+/** The bundle's base: '' (relative, the default) or an absolute URL ending in '/'. */
+export const kilowalletBase = (env: any): string => {
+  const base = typeof env?.base === 'string' ? env.base : '';
+  if (base !== '' && !/^[a-z][a-z0-9+.-]*:\/\/[^\s'"()]+\/$/i.test(base)) {
+    throw new Error(`--env base must be empty or an absolute URL ending in /, not ${base}`);
+  }
+  return base;
+};
+
 const configKilowallet = (env: any, _argv: { mode: string }): Configuration => {
+  const base = kilowalletBase(env);
+  // fonts.css lives in static/css/: relative to it the fonts are in fonts/
+  const fontsUrl = base === '' ? 'fonts/roboto' : `${base}static/css/fonts/roboto`;
   const replace = (from: string, to: string) => ({
     test: path.resolve(__dirname, from),
     loader: 'file-replace-loader',
@@ -323,7 +342,7 @@ const configKilowallet = (env: any, _argv: { mode: string }): Configuration => {
       publicPath: 'auto',
     },
     plugins: [
-      new DefinePlugin({ __MOBILE_ASSET_BASE__: JSON.stringify(KILOWALLET_BASE) }),
+      new DefinePlugin({ __MOBILE_ASSET_BASE__: JSON.stringify(base) }),
       new HtmlWebpackPlugin({
         publicPath: './static/frontend/',
         template: path.resolve(__dirname, 'templates/frontend/index.ejs'),
@@ -334,7 +353,7 @@ const configKilowallet = (env: any, _argv: { mode: string }): Configuration => {
         filename: path.resolve(KILOWALLET_OUT, 'index.html'),
         inject: 'body',
         robosatsSettings: 'mobile-basic',
-        basePath: KILOWALLET_BASE,
+        basePath: base,
       }),
       new CopyWebpackPlugin({
         patterns: [
@@ -345,10 +364,7 @@ const configKilowallet = (env: any, _argv: { mode: string }): Configuration => {
               if (path.endsWith('.css')) {
                 const cssContent = content
                   .toString()
-                  .replace(
-                    /url\(\/static\/css\/fonts\/roboto/g,
-                    `url(${KILOWALLET_BASE}static/css/fonts/roboto`,
-                  );
+                  .replace(/url\(\/static\/css\/fonts\/roboto/g, `url(${fontsUrl}`);
                 return Buffer.from(cssContent);
               }
               return content;

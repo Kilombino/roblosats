@@ -53,10 +53,11 @@ interface AndroidAppRobosats {
   requestBatteryExemption?: () => void;
   // 0.9.7: the order a tapped notification asked to open ({path, robot} JSON, or "")
   takePendingNavigation?: () => string;
-  // Kilowallet (ROBLO tab): {host, version, clearnet} as JSON, answered at once
+  // Kilowallet (ROBLO tab): {host, version, clearnet, platform?, features?} as JSON, answered at once
   hostInfo?: () => string;
-  // Kilowallet, later phases (not called yet, see utils/host.ts hostWalletEnabled): each one
-  // opens a native sheet in Kilowallet and resolves the uuid with a txid, preimage or address.
+  // Kilowallet's wallet (see utils/host.ts hostCan): each one opens a native sheet in Kilowallet
+  // and resolves the uuid with a txid, a lock, an address or an invoice. kw4: every button checks
+  // its own method (a Kilowallet may have on-chain payments and no Lightning).
   walletPay?: (
     uuid: string,
     address: string,

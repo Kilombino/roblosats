@@ -31,6 +31,18 @@ describe('hostWallet', () => {
     expect(require('./hostWallet').hostWalletAvailable()).toBe(false);
   });
 
+  it('kw4: Lightning only with its own methods, not because walletPay is there', () => {
+    setup('AndroidRobosats Kilowallet/1.0.0 (iOS)', {
+      walletPay: () => {},
+      walletAddress: () => {},
+    });
+    const hw = require('./hostWallet');
+    expect(hw.hostWalletAvailable()).toBe(true);
+    expect(hw.hostOffers('walletPay')).toBe(true);
+    expect(hw.hostOffers('walletPayInvoice')).toBe(false);
+    expect(hw.hostOffers('walletInvoice')).toBe(false);
+  });
+
   it('pays and gets the txid back through the uuid', async () => {
     let args: unknown[] = [];
     const promises = setup('AndroidRobosats Kilowallet/1.6.1-roblo', {
