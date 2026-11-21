@@ -2,6 +2,7 @@ import React, { createContext, useEffect, useState, useContext, type ReactNode }
 import { Event, nip17 } from 'nostr-tools';
 
 import { Federation, Settings } from '../models';
+import { clearnetHosts } from '../utils/clearnetHosts';
 
 import { AppContext, type UseAppStoreType } from './AppContext';
 import { GarageContext, type UseGarageStoreType } from './GarageContext';
@@ -151,6 +152,17 @@ export const FederationContextProvider = ({
       loadNotifications();
     }
   }, [slotUpdatedAt]);
+
+  // 0.9.11: the native side reaches directly only the coordinators' own clearnet hosts (Clearnet
+  // mode); everything else keeps going through Tor. Sent at start and on every change.
+  useEffect(() => {
+    if (client !== 'mobile') return;
+    window.AndroidAppRobosats?.setNetworkMode?.(
+      settings.useProxy,
+      settings.clearnet,
+      clearnetHosts(federation).join(','),
+    );
+  }, [settings.useProxy, settings.clearnet]);
 
   useEffect(() => {
     if (client !== 'mobile' || torStatus === 'ON' || !settings.useProxy || settings.clearnet) {

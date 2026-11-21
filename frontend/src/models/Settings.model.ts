@@ -72,6 +72,8 @@ class BaseSettings {
 
     // 0.9.11: Clearnet mode (beta, mobile): coordinators with a clearnet address are reached
     // directly; every onion-only coordinator keeps going through Tor
+    // read synchronously from the app first: the first connection must already use it
+    this.clearnet = client === 'mobile' && window.AndroidAppRobosats?.isClearnet?.() === true;
     systemClient.getItem('settings_clearnet').then((result) => {
       this.clearnet = client === 'mobile' && result === 'true';
     });

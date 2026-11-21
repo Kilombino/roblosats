@@ -805,16 +805,27 @@ class WebAppInterface(private val context: MainActivity, private val webView: We
     private fun useTorFor(url: String): Boolean {
         if (!context.useProxy) return false
         if (!context.clearnet) return true
-        val host = try { Uri.parse(url).host ?: "" } catch (e: Exception) { "" }
-        return host.endsWith(".onion")
+        val host = try { Uri.parse(url).host?.lowercase() ?: "" } catch (e: Exception) { "" }
+        // only the coordinators' own clearnet hosts go direct; everything else (update check,
+        // explorer, uploads, other sites) keeps going through Tor
+        val tor = host.endsWith(".onion") || host !in context.clearnetHosts
+        Log.d(TAG, "clearnet mode: $host via ${if (tor) "tor" else "direct"}")
+        return tor
     }
+
+    /** 0.9.11: Clearnet mode, read synchronously by the page while it starts (so its first
+     * connection already uses the clearnet addresses instead of the onions). */
+    @JavascriptInterface
+    fun isClearnet(): Boolean = context.clearnet
 
     /** 0.9.11: change Tor (built-in or Orbot) and Clearnet in place, without restarting the app
      * (the restart showed a black screen). Starting the built-in Tor runs in the background. */
     @JavascriptInterface
-    fun setNetworkMode(useProxy: Boolean, clearnet: Boolean) {
+    fun setNetworkMode(useProxy: Boolean, clearnet: Boolean, hosts: String) {
         EncryptedStorage.setEncryptedStorage("settings_use_proxy", useProxy.toString())
         EncryptedStorage.setEncryptedStorage("settings_clearnet", clearnet.toString())
+        EncryptedStorage.setEncryptedStorage("settings_clearnet_hosts", hosts)
+        context.clearnetHosts = MainActivity.parseHosts(hosts)
         context.clearnet = clearnet
         if (useProxy && !context.useProxy) {
             Thread {

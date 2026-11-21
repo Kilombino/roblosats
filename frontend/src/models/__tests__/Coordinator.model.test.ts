@@ -110,3 +110,23 @@ describe('0.9.11: Clearnet mode (beta) in the app', () => {
     );
   });
 });
+
+describe('0.9.11: the clearnet hosts the native side may reach directly', () => {
+  it('only the coordinators clearnet hosts, never an onion', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { clearnetHosts } = require('../../utils/clearnetHosts');
+    const fake = {
+      getCoordinators: () => [
+        {
+          mainnet: { clearnet: 'https://Kilobot.Kilombino.com', onion: 'http://x.onion' },
+          testnet: {},
+        },
+        {
+          mainnet: { clearnet: null, onion: 'http://y.onion' },
+          testnet: { clearnet: 'https://t.example' },
+        },
+      ],
+    };
+    expect(clearnetHosts(fake)).toEqual(['kilobot.kilombino.com', 't.example']);
+  });
+});

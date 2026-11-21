@@ -528,6 +528,14 @@ export class Federation {
       c.limits = {};
     });
     this.roboPool.updateRelays(hostUrl, Object.values(this.coordinators));
+    // 0.9.11: the Android notification service reads these relays: in Clearnet mode a
+    // coordinator's clearnet relay, so nothing goes to its onion (they were set once, at start)
+    if (settings.client === 'mobile') {
+      systemClient.setItem(
+        'federation_relays',
+        JSON.stringify(coordinators.map((c) => c.getRelayUrl()).filter(Boolean)),
+      );
+    }
 
     // Nostr book loading is fully independent — start immediately.
     if (this.connection === 'nostr') {

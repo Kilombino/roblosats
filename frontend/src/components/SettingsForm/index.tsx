@@ -52,7 +52,6 @@ const SettingsForm = ({ dense = false }: SettingsFormProps): React.JSX.Element =
   const setNetworkMode = (useProxy: boolean, clearnet: boolean): void => {
     systemClient.setItem('settings_use_proxy', String(useProxy));
     systemClient.setItem('settings_clearnet', String(clearnet));
-    window.AndroidAppRobosats?.setNetworkMode?.(useProxy, clearnet);
     setSettings({ ...settings, useProxy, clearnet });
   };
   const [checkUpdates, setCheckUpdates] = useState<boolean>(true);

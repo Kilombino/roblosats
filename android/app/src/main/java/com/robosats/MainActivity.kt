@@ -63,10 +63,18 @@ class MainActivity : AppCompatActivity() {
         val robot = intent.getStringExtra("robot")?.takeIf { ROBOT_PATTERN.matcher(it).matches() } ?: ""
         return org.json.JSONObject().put("path", path).put("robot", robot).toString()
     }
+    companion object {
+        /** "a.example,b.example" → lower-case host names (0.9.11, Clearnet mode). */
+        fun parseHosts(csv: String): Set<String> =
+            csv.split(",").map { it.trim().lowercase() }.filter { it.isNotEmpty() && !it.endsWith(".onion") }.toSet()
+    }
+
     private lateinit var useOrbotButton: Button
     var useProxy: Boolean = true
     // 0.9.11: Clearnet mode (beta): coordinators with a clearnet address are reached directly
     @Volatile var clearnet: Boolean = false
+    // the coordinators' clearnet hosts (from federation.json, sent by the page)
+    @Volatile var clearnetHosts: Set<String> = emptySet()
 
     /**
      * Allowlist for the order_id Intent extra.
@@ -175,6 +183,7 @@ class MainActivity : AppCompatActivity() {
 
 
         clearnet = EncryptedStorage.getEncryptedStorage("settings_clearnet") == "true"
+        clearnetHosts = parseHosts(EncryptedStorage.getEncryptedStorage("settings_clearnet_hosts"))
         val settingProxy = EncryptedStorage.getEncryptedStorage("settings_use_proxy")
         if (settingProxy == "false") {
             // Setup WebView to use Orbot if the user previously clicked
