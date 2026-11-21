@@ -1,6 +1,6 @@
 import com.android.build.api.dsl.Packaging
 
-val baseVersionCode = 9012
+val baseVersionCode = 9013
 // 0.9.4: 9004000 + abi (0.9.3 used 9003000, 0.9.2 9002000, 0.9.1 9001000, 0.9.0 9000000 + abi; betas of 0.8.8-rl31 8731000 + 10 * betaBuild + abi)
 val betaBuild = 0
 
@@ -18,7 +18,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = baseVersionCode
-        versionName = "0.9.12"
+        versionName = "0.9.13"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -105,6 +105,8 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
     testImplementation(libs.junit)
+    // 0.9.13: real org.json in JVM unit tests (the Android one is a stub there)
+    testImplementation("org.json:json:20240303")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }
