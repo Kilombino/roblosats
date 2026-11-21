@@ -175,6 +175,9 @@ const EncryptedNostrChat: React.FC<Props> = ({
       .then((data: unknown) => {
         const results = data as ChatApiResponse;
         if (results != null) {
+          // the coordinator answered again: a request that failed earlier (no network for a
+          // while) is no longer the chat's state, don't keep showing its error
+          setError((e) => (/^(Error: )?Request failed/.test(e) ? '' : e));
           if (results.peer_pubkey) {
             setPeerPubKey(results.peer_pubkey.split('\\').join('\n'));
           }
@@ -185,6 +188,8 @@ const EncryptedNostrChat: React.FC<Props> = ({
       })
       .catch((error) => {
         setError(error.toString());
+        // no answer from the coordinator: we can't tell the peer is still there
+        setPeerConnected(false);
       });
   };
 

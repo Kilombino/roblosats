@@ -33,8 +33,8 @@ export const hostInfo = (): HostInfo | null => {
 };
 
 /**
- * Wallet functions Kilowallet will offer in a later phase (pay a bond or a deposit from the hot
- * wallet, use one of its addresses, an invoice from its Lightning node). None is shown yet: the
- * client keeps paying by QR / copy until each one is reviewed.
+ * Kilowallet offers its wallet (pay a bond or a deposit from the hot wallet, use one of its
+ * addresses, an invoice from its Lightning node): see utils/hostWallet.ts.
  */
-export const hostWalletEnabled = (): boolean => false;
+export const hostWalletEnabled = (): boolean =>
+  isKilowallet() && typeof window.AndroidAppRobosats?.walletPay === 'function';

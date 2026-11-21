@@ -1,3 +1,4 @@
+import { HostInvoiceButton } from '../../HostWallet';
 import React, { useContext, useEffect, useState, ClipboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -620,6 +621,15 @@ export const LightningPayoutForm = ({
                 }}
                 onPaste={(e) => handlePasteInvoice(e)}
               />
+              {lightning.useLnproxy ? null : (
+                <HostInvoiceButton
+                  sats={lightning.amount}
+                  memo={`Roblosats ${String(order.shortAlias)} #${order.id}`}
+                  onInvoice={(invoice) => {
+                    setLightning({ ...lightning, invoice });
+                  }}
+                />
+              )}
             </Grid>
 
             <Grid style={{ marginTop: 16 }}>

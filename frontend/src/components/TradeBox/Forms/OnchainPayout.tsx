@@ -1,3 +1,4 @@
+import { HostAddressButton } from '../../HostWallet';
 import React, { useContext, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Grid, Typography, TextField, List, Divider, ListItemText, ListItem } from '@mui/material';
@@ -190,6 +191,13 @@ export const OnchainPayoutForm = ({
               maxRows={1}
               onChange={(e) => {
                 setOnchain({ ...onchain, address: e.target.value.trim(), badAddress: '' });
+              }}
+            />
+            <HostAddressButton
+              purpose='payout'
+              orderRef={`${String(order.shortAlias)}/${order.id}`}
+              onAddress={(address) => {
+                setOnchain({ ...onchain, address, badAddress: '' });
               }}
             />
           </Grid>
