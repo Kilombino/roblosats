@@ -109,9 +109,14 @@ and `api/models/AGENTS.md`'s **Trade economics**).
 - `cancel_order()` / `collaborative_cancel()` — branches per status; post-escrow
   collaborative cancel is **always free** (see Product intent — `oas_schemas.py`'s "future
   cost" text is stale)
-- `open_dispute()` / `dispute_statement()` — dispute flow; every timeout-dispute settles
-  escrow and both bonds to the coordinator immediately (full custody path, no auto-resolution;
-  char limits for statements: see Traps)
+- `open_dispute()` / `dispute_statement()` — dispute flow; every timeout-dispute settles the
+  Lightning escrow and the Lightning bonds to the coordinator immediately (full custody path, no
+  auto-resolution; char limits for statements: see Traps). Roblosats 0.9.12: an on-chain bond
+  is NOT penalized then: pure on-chain bonds are inside the escrow output (the decision's release
+  splits them); a hybrid B maker bond (proxy LNPayment) stays LOCKED until the admin decision
+  (`escrow_flow.dispute_bond_sats`: freed on chain to a winner, not credited; penalized for a
+  loser), or until `bonds.guard_disputed_bonds` penalizes it when fewer than
+  `ESCROW_DISPUTE_BOND_SAFETY_BLOCKS` remain before its refund timelock.
 - `order_expires()` — general timeout handler, branches per status; CHA/FSE timeout
   **auto-opens a dispute** (see Product intent)
 - `calc_sats()` / `satoshis_now()` / `price_and_premium_now()` — fiat↔sats conversion

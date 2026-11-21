@@ -2156,10 +2156,6 @@ msgid "A cooperative release had already been prepared (never broadcast): this d
 msgstr "Es war bereits eine kooperative Freigabe vorbereitet (nie gesendet): Diese Entscheidung ersetzt sie."
 
 msgctxt "roblosats-admin"
-msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). It was penalized on chain when the dispute opened: the coordinator got %(got)s sats from it and the rest went to the miners. What the maker gets back is credited as a Lightning reward."
-msgstr "Die Kaution des Makers liegt on-chain (%(bond)s Sats, hinter einem Lightning-Platzhalter). Sie wurde bei Eröffnung des Streitfalls on-chain bestraft: Der Koordinator erhielt %(got)s Sats davon, der Rest ging an die Miner. Was der Maker zurückbekommt, wird als Lightning-Belohnung gutgeschrieben."
-
-msgctxt "roblosats-admin"
 msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). What the maker gets back is credited as a Lightning reward."
 msgstr "Die Kaution des Makers liegt on-chain (%(bond)s Sats, hinter einem Lightning-Platzhalter). Was der Maker zurückbekommt, wird als Lightning-Belohnung gutgeschrieben."
 
@@ -2274,3 +2270,51 @@ msgstr "%(sats)s für %(total)s %(currency)s"
 msgctxt "roblosats-admin"
 msgid "The node refused the transaction (%(reason)s)."
 msgstr "Der Knoten hat die Transaktion abgelehnt (%(reason)s)."
+
+msgctxt "roblosats-admin"
+msgid "won the dispute: the trade amount (their on-chain bond went back on chain)"
+msgstr "hat den Streit gewonnen: der Handelsbetrag (die On-Chain-Kaution ging on-chain zurück)"
+
+msgctxt "roblosats-admin"
+msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). It was already penalized on chain before the decision: the coordinator got %(got)s sats from it and the rest went to the miners. If the maker keeps their bond, its value is credited as a Lightning reward."
+msgstr "Die Kaution des Erstellers liegt on-chain (%(bond)s Sats, hinter einem Lightning-Platzhalter). Sie wurde schon vor der Entscheidung on-chain einbehalten: der Koordinator erhielt %(got)s Sats daraus, der Rest ging an die Miner. Behält der Ersteller seine Kaution, wird ihr Wert als Lightning-Belohnung gutgeschrieben."
+
+msgctxt "roblosats-admin"
+msgid "The maker's bond is on chain (%(bond)s sats) and still locked: it was not penalized when the dispute opened. If the maker keeps it, it goes straight back to them on chain; if they lose it, it is penalized on chain when you decide. If no decision is made within %(blocks)s blocks, it is penalized anyway before the maker could take it back alone."
+msgstr "Die Kaution des Erstellers liegt on-chain (%(bond)s Sats) und ist noch gesperrt: sie wurde bei der Eröffnung des Streits nicht einbehalten. Behält der Ersteller sie, geht sie direkt on-chain an ihn zurück; verliert er sie, wird sie bei deiner Entscheidung on-chain einbehalten. Fällt binnen %(blocks)s Blöcken keine Entscheidung, wird sie trotzdem einbehalten, bevor der Ersteller sie allein zurückholen könnte."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s is credited %(trade)s sats as a reward (the trade amount). Their on-chain bond (%(buyer_bond)s) is not credited: it goes straight back to them on chain."
+msgstr "Dem Käufer %(buyer)s werden %(trade)s Sats als Belohnung gutgeschrieben (der Handelsbetrag). Seine On-Chain-Kaution (%(buyer_bond)s) wird nicht gutgeschrieben: sie geht direkt on-chain an ihn zurück."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets nothing: their on-chain bond (%(buyer_bond)s) is penalized on chain now."
+msgstr "Der Käufer %(buyer)s erhält nichts: seine On-Chain-Kaution (%(buyer_bond)s) wird jetzt on-chain einbehalten."
+
+msgctxt "roblosats-admin"
+msgid "Each party gets back what they put in: the buyer %(buyer)s their on-chain bond (%(buyer_bond)s), straight back on chain; the seller %(seller)s their bond (%(seller_bond)s) and their escrow (%(escrow)s), credited as a reward to withdraw from the app."
+msgstr "Jede Partei erhält zurück, was sie eingesetzt hat: der Käufer %(buyer)s seine On-Chain-Kaution (%(buyer_bond)s), direkt on-chain; der Verkäufer %(seller)s seine Kaution (%(seller_bond)s) und seine Hinterlegung (%(escrow)s), als Belohnung gutgeschrieben, abzuheben in der App."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets their on-chain bond (%(buyer_bond)s) straight back on chain. They do not receive the trade sats."
+msgstr "Der Käufer %(buyer)s erhält seine On-Chain-Kaution (%(buyer_bond)s) direkt on-chain zurück. Die Sats des Handels erhält er nicht."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s LOSES their on-chain bond (%(buyer_bond)s): it is penalized on chain now and the coordinator keeps it."
+msgstr "Der Käufer %(buyer)s VERLIERT seine On-Chain-Kaution (%(buyer_bond)s): sie wird jetzt on-chain einbehalten und der Koordinator behält sie."
+
+msgctxt "roblosats-admin"
+msgid "Both bonds go back: the buyer's on-chain bond (%(buyer_bond)s) straight back on chain, and %(seller_bond)s credited to the seller %(seller)s as a reward."
+msgstr "Beide Kautionen gehen zurück: die On-Chain-Kaution des Käufers (%(buyer_bond)s) direkt on-chain, und %(seller_bond)s als Belohnung an den Verkäufer %(seller)s."
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's on-chain bond was penalized before the dispute was decided: only %(h)s blocks were left before they could take it back alone"
+msgstr "Auftrag %(id)s: die On-Chain-Kaution des %(role)s wurde vor der Entscheidung des Streits einbehalten: es blieben nur %(h)s Blöcke, bis er sie allein zurückholen konnte"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s took their on-chain bond back alone after its timelock, during the dispute"
+msgstr "Auftrag %(id)s: der %(role)s hat seine On-Chain-Kaution nach Ablauf der Zeitsperre während des Streits allein zurückgeholt"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: %(sats)s sats were sent to the %(role)s's on-chain address on the WRONG chain (Spamcoin, SHA-256); the robot was told how to take them back"
+msgstr "Auftrag %(id)s: %(sats)s Sats wurden auf der FALSCHEN Chain (Spamcoin, SHA-256) an die On-Chain-Adresse des %(role)s gesendet; dem Roboter wurde erklärt, wie er sie zurückholt"

@@ -2156,10 +2156,6 @@ msgid "A cooperative release had already been prepared (never broadcast): this d
 msgstr ""
 
 msgctxt "roblosats-admin"
-msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). It was penalized on chain when the dispute opened: the coordinator got %(got)s sats from it and the rest went to the miners. What the maker gets back is credited as a Lightning reward."
-msgstr ""
-
-msgctxt "roblosats-admin"
 msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). What the maker gets back is credited as a Lightning reward."
 msgstr ""
 
@@ -2274,3 +2270,51 @@ msgstr ""
 msgctxt "roblosats-admin"
 msgid "The node refused the transaction (%(reason)s)."
 msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "won the dispute: the trade amount (their on-chain bond went back on chain)"
+msgstr "won the dispute: the trade amount (their on-chain bond went back on chain)"
+
+msgctxt "roblosats-admin"
+msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). It was already penalized on chain before the decision: the coordinator got %(got)s sats from it and the rest went to the miners. If the maker keeps their bond, its value is credited as a Lightning reward."
+msgstr "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). It was already penalized on chain before the decision: the coordinator got %(got)s sats from it and the rest went to the miners. If the maker keeps their bond, its value is credited as a Lightning reward."
+
+msgctxt "roblosats-admin"
+msgid "The maker's bond is on chain (%(bond)s sats) and still locked: it was not penalized when the dispute opened. If the maker keeps it, it goes straight back to them on chain; if they lose it, it is penalized on chain when you decide. If no decision is made within %(blocks)s blocks, it is penalized anyway before the maker could take it back alone."
+msgstr "The maker's bond is on chain (%(bond)s sats) and still locked: it was not penalized when the dispute opened. If the maker keeps it, it goes straight back to them on chain; if they lose it, it is penalized on chain when you decide. If no decision is made within %(blocks)s blocks, it is penalized anyway before the maker could take it back alone."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s is credited %(trade)s sats as a reward (the trade amount). Their on-chain bond (%(buyer_bond)s) is not credited: it goes straight back to them on chain."
+msgstr "The buyer %(buyer)s is credited %(trade)s sats as a reward (the trade amount). Their on-chain bond (%(buyer_bond)s) is not credited: it goes straight back to them on chain."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets nothing: their on-chain bond (%(buyer_bond)s) is penalized on chain now."
+msgstr "The buyer %(buyer)s gets nothing: their on-chain bond (%(buyer_bond)s) is penalized on chain now."
+
+msgctxt "roblosats-admin"
+msgid "Each party gets back what they put in: the buyer %(buyer)s their on-chain bond (%(buyer_bond)s), straight back on chain; the seller %(seller)s their bond (%(seller_bond)s) and their escrow (%(escrow)s), credited as a reward to withdraw from the app."
+msgstr "Each party gets back what they put in: the buyer %(buyer)s their on-chain bond (%(buyer_bond)s), straight back on chain; the seller %(seller)s their bond (%(seller_bond)s) and their escrow (%(escrow)s), credited as a reward to withdraw from the app."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets their on-chain bond (%(buyer_bond)s) straight back on chain. They do not receive the trade sats."
+msgstr "The buyer %(buyer)s gets their on-chain bond (%(buyer_bond)s) straight back on chain. They do not receive the trade sats."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s LOSES their on-chain bond (%(buyer_bond)s): it is penalized on chain now and the coordinator keeps it."
+msgstr "The buyer %(buyer)s LOSES their on-chain bond (%(buyer_bond)s): it is penalized on chain now and the coordinator keeps it."
+
+msgctxt "roblosats-admin"
+msgid "Both bonds go back: the buyer's on-chain bond (%(buyer_bond)s) straight back on chain, and %(seller_bond)s credited to the seller %(seller)s as a reward."
+msgstr "Both bonds go back: the buyer's on-chain bond (%(buyer_bond)s) straight back on chain, and %(seller_bond)s credited to the seller %(seller)s as a reward."
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's on-chain bond was penalized before the dispute was decided: only %(h)s blocks were left before they could take it back alone"
+msgstr "Order %(id)s: the %(role)s's on-chain bond was penalized before the dispute was decided: only %(h)s blocks were left before they could take it back alone"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s took their on-chain bond back alone after its timelock, during the dispute"
+msgstr "Order %(id)s: the %(role)s took their on-chain bond back alone after its timelock, during the dispute"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: %(sats)s sats were sent to the %(role)s's on-chain address on the WRONG chain (Spamcoin, SHA-256); the robot was told how to take them back"
+msgstr "Order %(id)s: %(sats)s sats were sent to the %(role)s's on-chain address on the WRONG chain (Spamcoin, SHA-256); the robot was told how to take them back"

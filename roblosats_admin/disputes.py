@@ -77,11 +77,28 @@ REWARD_REASONS = {
     "bond_back": _lazy("their bond is returned"),
     "escrow": _lazy("their escrow is returned"),
     "escrow_back": _lazy("their escrow is returned"),
+    # 0.9.12: the winner's on-chain bond (hybrid B) went back on chain, not in the reward
+    "maker_wins_trade": _lazy("won the dispute: the trade amount (their on-chain bond went back on chain)"),
+    "taker_wins_trade": _lazy("won the dispute: the trade amount (their on-chain bond went back on chain)"),
 }
 # Who does not lose their bond: whoever gets it back, or wins (the bond is in the prize).
 # The seller keeps their escrow if it is returned or if they win.
-BOND_KEPT = {"maker_bond", "taker_bond", "bond_back", "maker_wins", "taker_wins"}
-ESCROW_KEPT = {"escrow", "escrow_back", "maker_wins", "taker_wins"}
+BOND_KEPT = {"maker_bond", "taker_bond", "bond_back", "maker_wins", "taker_wins", "maker_wins_trade", "taker_wins_trade"}
+ESCROW_KEPT = {"escrow", "escrow_back", "maker_wins", "taker_wins", "maker_wins_trade", "taker_wins_trade"}
+
+
+def _bond_back_onchain(bond):
+    """0.9.12: a hybrid B on-chain bond that went (or is going) back to its owner on chain."""
+    try:
+        from api.escrow import flow
+        from api.models import OnchainBond
+
+        if not flow.is_bond_proxy(bond):
+            return False
+        b = flow.proxied_bond(bond)
+        return b is not None and b.status in (OnchainBond.Status.RETURNABLE, OnchainBond.Status.RETURNED)
+    except Exception:  # noqa: BLE001
+        return False
 
 RECIPIENTS = ("buyer", "seller", "both")
 
@@ -471,7 +488,7 @@ def outcome(order):
         received = credit["sats"] if credit else 0
         available = credit["available"] if credit else None
         losses = []
-        if bond and not (notes & BOND_KEPT):
+        if bond and not (notes & BOND_KEPT) and not _bond_back_onchain(bond):
             losses.append({"what": _("their bond"), "sats": fmt_sats(bond.num_satoshis)})
         if is_seller and escrow and not (notes & ESCROW_KEPT):
             losses.append(
@@ -518,6 +535,10 @@ def plan(order, decision):
     if dispute_onchain.applies(order):
         return dispute_onchain.plan(order, decision)
     result = _plan_lightning(order, decision)
+    try:  # 0.9.12: the maker's on-chain bond is still locked: back on chain or penalized now
+        dispute_onchain.hybrid_b_lines(order, decision, result["lines"])
+    except Exception:  # noqa: BLE001 (extra information, never break the page)
+        pass
     note = ""
     try:
         note = dispute_onchain.hybrid_b_note(order)

@@ -480,6 +480,7 @@ def hybrid_b_note(order):
     """Hybrid B (the order went on over Lightning): what became of the maker's on-chain bond."""
     from api.escrow import bonds as bond_service
     from api.escrow import flow
+    from api.models import OnchainBond
 
     proxy = order.maker_bond
     if not flow.is_bond_proxy(proxy):
@@ -490,14 +491,81 @@ def hybrid_b_note(order):
     if flow.proxy_is_penalized(proxy):
         return _(
             "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). It was "
-            "penalized on chain when the dispute opened: the coordinator got %(got)s sats from "
-            "it and the rest went to the miners. What the maker gets back is credited as a "
-            "Lightning reward."
+            "already penalized on chain before the decision: the coordinator got %(got)s sats from "
+            "it and the rest went to the miners. If the maker keeps their bond, its value is "
+            "credited as a Lightning reward."
         ) % {"bond": fmt_sats(bond.value), "got": fmt_sats(bond_service.penalty_sats(bond))}
+    if bond.status == OnchainBond.Status.LOCKED:
+        # 0.9.12: not penalized when the dispute opened
+        values = {"bond": fmt_sats(bond.value), "blocks": "?"}
+        try:
+            left = bond_service.blocks_to_refund(bond)
+            values["blocks"] = str(max(0, left - bond_service.safety_blocks(bond))) if left is not None else "0"
+        except Exception:  # noqa: BLE001
+            pass
+        return _(
+            "The maker's bond is on chain (%(bond)s sats) and still locked: it was not penalized "
+            "when the dispute opened. If the maker keeps it, it goes straight back to them on "
+            "chain; if they lose it, it is penalized on chain when you decide. If no decision is "
+            "made within %(blocks)s blocks, it is penalized anyway before the maker could take it "
+            "back alone."
+        ) % values
     return _(
         "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). What the "
         "maker gets back is credited as a Lightning reward."
     ) % {"bond": fmt_sats(bond.value)}
+
+
+def hybrid_b_lines(order, decision, lines):
+    """0.9.12: a hybrid B order whose on-chain maker (buyer) bond is still locked: the lines of
+    the Lightning plan that credit that bond say instead that it goes back on chain, or that it
+    is penalized now. Edits `lines` in place; nothing when the bond is not locked any more."""
+    from api.escrow import flow
+    from roblosats_admin.disputes import fmt_sats, payout_sats, roles
+
+    if not flow.proxy_still_locked(order) or not lines:
+        return
+    r = roles(order)
+    if not r["maker_buys"]:
+        return  # hybrid B: the maker is always the buyer
+    v = {
+        "buyer": r["buyer"].username if r["buyer"] else "?",
+        "seller": r["seller"].username if r["seller"] else "?",
+        "buyer_bond": fmt_sats(order.maker_bond.num_satoshis),
+        "seller_bond": fmt_sats(r["seller_bond"].num_satoshis if r["seller_bond"] else 0),
+        "escrow": fmt_sats(order.trade_escrow.num_satoshis if order.trade_escrow else 0),
+    }
+    payout = payout_sats(order)
+    if decision == "buyer" and payout is not None:
+        v["trade"] = fmt_sats(payout)
+        lines[0] = _(
+            "The buyer %(buyer)s is credited %(trade)s sats as a reward (the trade amount). Their "
+            "on-chain bond (%(buyer_bond)s) is not credited: it goes straight back to them on chain."
+        ) % v
+    elif decision == "seller" and len(lines) > 1:
+        lines[1] = _("The buyer %(buyer)s gets nothing: their on-chain bond (%(buyer_bond)s) is penalized on chain now.") % v
+    elif decision == "return":
+        lines[0] = _(
+            "Each party gets back what they put in: the buyer %(buyer)s their on-chain bond "
+            "(%(buyer_bond)s), straight back on chain; the seller %(seller)s their bond "
+            "(%(seller_bond)s) and their escrow (%(escrow)s), credited as a reward to withdraw "
+            "from the app."
+        ) % v
+    elif decision == "penalize_seller" and len(lines) > 1:
+        lines[1] = _(
+            "The buyer %(buyer)s gets their on-chain bond (%(buyer_bond)s) straight back on chain. "
+            "They do not receive the trade sats."
+        ) % v
+    elif decision == "penalize_buyer":
+        lines[0] = _(
+            "The buyer %(buyer)s LOSES their on-chain bond (%(buyer_bond)s): it is penalized on "
+            "chain now and the coordinator keeps it."
+        ) % v
+    elif decision == "completed" and len(lines) > 1:
+        lines[1] = _(
+            "Both bonds go back: the buyer's on-chain bond (%(buyer_bond)s) straight back on "
+            "chain, and %(seller_bond)s credited to the seller %(seller)s as a reward."
+        ) % v
 
 
 def next_step(order):

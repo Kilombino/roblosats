@@ -301,6 +301,14 @@ def onchain_headline(order, extra):
         "payout_sent": _("Order %(id)s: the buyer's on-chain payout was sent (%(sats)s sats)"),
         "payout_confirmed": _("Order %(id)s: the buyer's on-chain payout is confirmed (%(sats)s sats)"),
         "rescue_sent": _("Order %(id)s: the escrow was rescued without the coordinator"),
+        # 0.9.12: a disputed order's on-chain bond penalized before the decision (timelock close)
+        "bond_safety_penalty": _(
+            "Order %(id)s: the %(role)s's on-chain bond was penalized before the dispute was decided: only %(h)s blocks were left before they could take it back alone"
+        ),
+        "wrong_chain": _(
+            "Order %(id)s: %(sats)s sats were sent to the %(role)s's on-chain address on the WRONG chain (Spamcoin, SHA-256); the robot was told how to take them back"
+        ),
+        "bond_taken_back": _("Order %(id)s: the %(role)s took their on-chain bond back alone after its timelock, during the dispute"),
     }
     text = texts.get(k, _("Order %(id)s: on-chain event")) % v
     if k == "release_sent":

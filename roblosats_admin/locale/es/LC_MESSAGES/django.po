@@ -2156,10 +2156,6 @@ msgid "A cooperative release had already been prepared (never broadcast): this d
 msgstr "Ya se había preparado una liberación cooperativa (nunca emitida): esta decisión la sustituye."
 
 msgctxt "roblosats-admin"
-msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). It was penalized on chain when the dispute opened: the coordinator got %(got)s sats from it and the rest went to the miners. What the maker gets back is credited as a Lightning reward."
-msgstr "La fianza del creador está en cadena (%(bond)s sats, tras un sustituto Lightning). Se penalizó en cadena al abrirse la disputa: el coordinador recibió %(got)s sats de ella y el resto fue a los mineros. Lo que el creador recupere se le abona como recompensa Lightning."
-
-msgctxt "roblosats-admin"
 msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). What the maker gets back is credited as a Lightning reward."
 msgstr "La fianza del creador está en cadena (%(bond)s sats, tras un sustituto Lightning). Lo que el creador recupere se le abona como recompensa Lightning."
 
@@ -2274,3 +2270,51 @@ msgstr "%(sats)s por %(total)s %(currency)s"
 msgctxt "roblosats-admin"
 msgid "The node refused the transaction (%(reason)s)."
 msgstr "El nodo rechazó la transacción (%(reason)s)."
+
+msgctxt "roblosats-admin"
+msgid "won the dispute: the trade amount (their on-chain bond went back on chain)"
+msgstr "ganó la disputa: el importe de la operación (su fianza en cadena volvió en cadena)"
+
+msgctxt "roblosats-admin"
+msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). It was already penalized on chain before the decision: the coordinator got %(got)s sats from it and the rest went to the miners. If the maker keeps their bond, its value is credited as a Lightning reward."
+msgstr "La fianza del creador está en cadena (%(bond)s sats, tras un sustituto Lightning). Ya se penalizó en cadena antes de la decisión: el coordinador recibió %(got)s sats de ella y el resto fue a los mineros. Si el creador conserva su fianza, su valor se le abona como recompensa Lightning."
+
+msgctxt "roblosats-admin"
+msgid "The maker's bond is on chain (%(bond)s sats) and still locked: it was not penalized when the dispute opened. If the maker keeps it, it goes straight back to them on chain; if they lose it, it is penalized on chain when you decide. If no decision is made within %(blocks)s blocks, it is penalized anyway before the maker could take it back alone."
+msgstr "La fianza del creador está en cadena (%(bond)s sats) y sigue bloqueada: no se penalizó al abrirse la disputa. Si el creador la conserva, le vuelve directamente en cadena; si la pierde, se penaliza en cadena cuando decidas. Si no hay decisión en %(blocks)s bloques, se penaliza igualmente antes de que el creador pueda recuperarla por su cuenta."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s is credited %(trade)s sats as a reward (the trade amount). Their on-chain bond (%(buyer_bond)s) is not credited: it goes straight back to them on chain."
+msgstr "Al comprador %(buyer)s se le abonan %(trade)s sats como recompensa (el importe de la operación). Su fianza en cadena (%(buyer_bond)s) no se abona: le vuelve directamente en cadena."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets nothing: their on-chain bond (%(buyer_bond)s) is penalized on chain now."
+msgstr "El comprador %(buyer)s no recibe nada: su fianza en cadena (%(buyer_bond)s) se penaliza en cadena ahora."
+
+msgctxt "roblosats-admin"
+msgid "Each party gets back what they put in: the buyer %(buyer)s their on-chain bond (%(buyer_bond)s), straight back on chain; the seller %(seller)s their bond (%(seller_bond)s) and their escrow (%(escrow)s), credited as a reward to withdraw from the app."
+msgstr "Cada parte recupera lo que puso: el comprador %(buyer)s su fianza en cadena (%(buyer_bond)s), directamente en cadena; el vendedor %(seller)s su fianza (%(seller_bond)s) y su depósito (%(escrow)s), abonados como recompensa para retirar desde la app."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets their on-chain bond (%(buyer_bond)s) straight back on chain. They do not receive the trade sats."
+msgstr "El comprador %(buyer)s recupera su fianza en cadena (%(buyer_bond)s) directamente en cadena. No recibe los sats de la operación."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s LOSES their on-chain bond (%(buyer_bond)s): it is penalized on chain now and the coordinator keeps it."
+msgstr "El comprador %(buyer)s PIERDE su fianza en cadena (%(buyer_bond)s): se penaliza en cadena ahora y se la queda el coordinador."
+
+msgctxt "roblosats-admin"
+msgid "Both bonds go back: the buyer's on-chain bond (%(buyer_bond)s) straight back on chain, and %(seller_bond)s credited to the seller %(seller)s as a reward."
+msgstr "Las dos fianzas vuelven: la fianza en cadena del comprador (%(buyer_bond)s) directamente en cadena, y %(seller_bond)s abonados al vendedor %(seller)s como recompensa."
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's on-chain bond was penalized before the dispute was decided: only %(h)s blocks were left before they could take it back alone"
+msgstr "Orden %(id)s: la fianza en cadena del %(role)s se penalizó antes de decidir la disputa: solo quedaban %(h)s bloques para que pudiera recuperarla por su cuenta"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s took their on-chain bond back alone after its timelock, during the dispute"
+msgstr "Orden %(id)s: el %(role)s recuperó su fianza en cadena por su cuenta tras el bloqueo temporal, durante la disputa"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: %(sats)s sats were sent to the %(role)s's on-chain address on the WRONG chain (Spamcoin, SHA-256); the robot was told how to take them back"
+msgstr "Orden %(id)s: se enviaron %(sats)s sats a la dirección on-chain del %(role)s por la cadena EQUIVOCADA (Spamcoin, SHA-256); se ha explicado al robot cómo recuperarlos"

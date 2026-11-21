@@ -276,7 +276,6 @@ class OrderAdmin(AdminChangeLinksMixin, admin.ModelAdmin):
             locked = _lock_disputed(order)
             if locked is not None:
                 order = locked
-                own_bond_sats = order.maker_bond.num_satoshis
                 if Logics.is_buyer(order, order.maker):
                     if order.is_swap:
                         trade_sats = order.payout_tx.num_satoshis
@@ -288,7 +287,12 @@ class OrderAdmin(AdminChangeLinksMixin, admin.ModelAdmin):
                 else:
                     trade_sats = order.trade_escrow.num_satoshis
 
-                _credit(order.maker.robot, own_bond_sats + trade_sats, order, "maker_wins")
+                # 0.9.12: a hybrid B onchain maker bond still locked goes back on chain (0 here);
+                # after everything that may fail, so no transaction goes out for a refused decision
+                own_bond_sats = escrow_flow.dispute_bond_sats(order, "maker", wins=True)
+                _credit(order.maker.robot, own_bond_sats + trade_sats, order,
+                        "maker_wins" if own_bond_sats else "maker_wins_trade")
+                escrow_flow.dispute_bond_sats(order, "taker", wins=False)  # Lightning: settled already
                 order.update_status(Order.Status.TLD)
 
                 self.message_user(
@@ -329,7 +333,6 @@ class OrderAdmin(AdminChangeLinksMixin, admin.ModelAdmin):
             locked = _lock_disputed(order)
             if locked is not None:
                 order = locked
-                own_bond_sats = order.taker_bond.num_satoshis
                 if Logics.is_buyer(order, order.taker):
                     if order.is_swap:
                         trade_sats = order.payout_tx.num_satoshis
@@ -341,7 +344,13 @@ class OrderAdmin(AdminChangeLinksMixin, admin.ModelAdmin):
                 else:
                     trade_sats = order.trade_escrow.num_satoshis
 
-                _credit(order.taker.robot, own_bond_sats + trade_sats, order, "taker_wins")
+                # 0.9.12: a hybrid B onchain maker bond still locked goes back on chain (0 here);
+                # after everything that may fail, so no transaction goes out for a refused decision
+                own_bond_sats = escrow_flow.dispute_bond_sats(order, "taker", wins=True)
+                _credit(order.taker.robot, own_bond_sats + trade_sats, order,
+                        "taker_wins" if own_bond_sats else "taker_wins_trade")
+                # 0.9.12: the losing maker's onchain bond (hybrid B) is penalized now
+                escrow_flow.dispute_bond_sats(order, "maker", wins=False)
 
                 order.update_status(Order.Status.MLD)
 
@@ -382,7 +391,10 @@ class OrderAdmin(AdminChangeLinksMixin, admin.ModelAdmin):
             locked = _lock_disputed(order)
             if locked is not None:
                 order = locked
-                _credit(order.maker_bond.sender.robot, order.maker_bond.num_satoshis, order, "maker_bond")
+                # 0.9.12: a hybrid B onchain maker bond still locked goes back on chain instead
+                maker_bond_sats = escrow_flow.dispute_bond_sats(order, "maker", wins=True)
+                if maker_bond_sats:
+                    _credit(order.maker_bond.sender.robot, maker_bond_sats, order, "maker_bond")
                 _credit(order.taker_bond.sender.robot, order.taker_bond.num_satoshis, order, "taker_bond")
                 _credit(
                     order.trade_escrow.sender.robot,
@@ -441,8 +453,14 @@ class OrderAdmin(AdminChangeLinksMixin, admin.ModelAdmin):
                 )
                 continue
             order = locked
+            innocent = "taker" if guilty == "maker" else "maker"
             innocent_bond = order.taker_bond if guilty == "maker" else order.maker_bond
-            _credit(innocent_bond.sender.robot, innocent_bond.num_satoshis, order, "bond_back")
+            # 0.9.12: a hybrid B onchain maker bond: freed on chain if innocent (nothing credited),
+            # penalized now if guilty
+            innocent_sats = escrow_flow.dispute_bond_sats(order, innocent, wins=True)
+            if innocent_sats:
+                _credit(innocent_bond.sender.robot, innocent_sats, order, "bond_back")
+            escrow_flow.dispute_bond_sats(order, guilty, wins=False)
             _credit(
                 order.trade_escrow.sender.robot,
                 order.trade_escrow.num_satoshis,
@@ -495,7 +513,10 @@ class OrderAdmin(AdminChangeLinksMixin, admin.ModelAdmin):
             locked = _lock_disputed(order)
             if locked is not None:
                 order = locked
-                _credit(order.maker.robot, order.maker_bond.num_satoshis, order, "maker_bond")
+                # 0.9.12: a hybrid B onchain maker bond still locked goes back on chain instead
+                maker_bond_sats = escrow_flow.dispute_bond_sats(order, "maker", wins=True)
+                if maker_bond_sats:
+                    _credit(order.maker.robot, maker_bond_sats, order, "maker_bond")
                 _credit(order.taker.robot, order.taker_bond.num_satoshis, order, "taker_bond")
 
                 # Dispute timeouts cancel the onchain payout (order_expires ->

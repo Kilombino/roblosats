@@ -1858,3 +1858,292 @@ class EscrowAutoReturnLadderRegtest(EscrowAutoReturnRegtest):
             Logics.cancel_order(order, buyer)
         bond.refresh_from_db()
         self.assertEqual(bond.auto_return["sent"]["rate"], bond.auto_return["rate"])
+
+
+def _sign_penalty_ladder(test, order, user, keys, bond):
+    """0.9.12: the app signs the penalty AND its fee ladder (one list of signatures per rung)."""
+    from api.escrow import bonds, flow
+    from api.escrow.bonds import penalty_message
+
+    d = flow.order_data(order, user)
+    test.assertEqual(d["bond_penalty_ladder"][-1], d["bond_penalty_tx"])
+    test.assertEqual(d["bond_penalty_rates"][:2], [1.0, 3.0])
+    _, msgs = penalty_message(bond)
+    sigs = [with_hashtype(schnorr_sign(keys["bond"], m)).hex() for m in msgs]
+    ladder = []
+    for tx_hex in d["bond_penalty_ladder"]:
+        tx = Transaction.parse(bytes.fromhex(tx_hex))
+        ladder.append([with_hashtype(schnorr_sign(keys["bond"], m)).hex()
+                       for m in bonds._coin_messages(bond, tx, bonds.coins_of(bond))])
+    flow.action(order, user, "bond_penalty_signature", {"signature": sigs[0], "signatures": sigs, "ladder": ladder})
+    flow.advance(order)
+    order.refresh_from_db()
+
+
+@skipUnless(REGTEST, "needs the regtest lab (ESCROW_REGTEST=1)")
+class EscrowDisputeBond0912Regtest(EscrowHybridRegtest):
+    """0.9.12 (Kilombino, TG 14873): an onchain bond is not penalized when a dispute opens.
+    Hybrid B: the maker's onchain bond stays locked until the decision, goes back on chain to a
+    winning maker (its signed return, cheapest rung) and is penalized (cheapest penalty rung)
+    when the maker loses; the timelock safety guard penalizes it before its owner could take it
+    back alone; a decision after the owner took it back penalizes nothing. Pure onchain: the
+    bonds sit in the escrow, nothing is broadcast at the opening (the decision's release splits
+    them, see EscrowDisputePageRegtest)."""
+
+    AUTO_RETURN = True
+    SIGN_AUTO_RETURN = True
+    test_case_a_lightning_buyer_to_successful = None
+    test_case_a_small_order_one_minimum_in_total = None
+    test_case_b_proxy_return_and_penalty_onchain = None
+
+    def _sign_penalty(self, order, user, keys, bond):
+        _sign_penalty_ladder(self, order, user, keys, bond)
+
+    def _sign_auto_return(self, order, user, keys):
+        from api.escrow import bonds, flow
+
+        d = flow.order_data(order, user)
+        if not d.get("bond_auto_return_tx"):
+            return
+        bond = flow.bond_of(order, d["bond_role"], owner=user)
+
+        def sign(tx_hex):
+            _, msgs = bonds._rung_message(bond, tx_hex)
+            return [with_hashtype(schnorr_sign(keys["bond"], m)).hex() for m in msgs]
+
+        flow.action(order, user, "bond_auto_return_signature",
+                    {"signatures": sign(d["bond_auto_return_tx"]), "ladder": [sign(t) for t in d["bond_auto_return_ladder"]]})
+
+    def _disputed_b(self, csv=None):
+        """A hybrid B order (the maker buys onchain, the seller took with Lightning) in the chat,
+        then the chat expires: the dispute opens by itself (#29)."""
+        import os
+        from unittest.mock import patch
+
+        from api.escrow import flow
+        from api.logics import Logics
+
+        env = {"ESCROW_LAB_BOND_CSV": str(csv)} if csv else {}
+        with patch.dict(os.environ, env):
+            order, buyer, seller, kb = self._make(maker_sells=False)
+        order = self._ln_take(order, seller)
+        self.assertTrue(flow.has_proxy(order))
+        now = timezone.now()
+        order.trade_escrow = LNPayment.objects.create(
+            concept=LNPayment.Concepts.TRESCROW, type=LNPayment.Types.HOLD, sender=seller,
+            status=LNPayment.Status.LOCKED, num_satoshis=1_039_106, payment_hash=uuid.uuid4().hex,
+            preimage=uuid.uuid4().hex, invoice=f"lnbcrt{uuid.uuid4().hex}", created_at=now,
+            expires_at=now + timezone.timedelta(hours=3),
+        )
+        from api.models import OnchainPayment
+
+        order.is_swap = True  # the buyer gave an onchain payout address (#29)
+        order.payout_tx = OnchainPayment.objects.create(
+            concept=OnchainPayment.Concepts.PAYBUYER, status=OnchainPayment.Status.VALID, balance=None,
+            address=_faucet("getnewaddress", "", "bech32"), num_satoshis=999_800, sent_satoshis=999_800,
+            receiver=buyer,
+        )
+        order.status = Order.Status.CHA
+        order.expires_at = now - timezone.timedelta(minutes=1)
+        order.save()
+        bond = flow.bond_of(order, "maker")
+        self.assertEqual(len(bond.penalty_ladder.get("sigs") or []), len(bond.penalty_ladder["rungs"]))
+        mempool = set(service.rpc("getrawmempool", []))
+        with patch("api.logics.LNNode") as ln:
+            ln.settle_hold_invoice.return_value = True
+            Logics.order_expires(order)  # CHA timeout -> dispute
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.DIS)
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, bond.Status.LOCKED)  # NOT penalized at the opening
+        self.assertEqual(set(service.rpc("getrawmempool", [])) - mempool, set())  # nothing broadcast
+        order.maker_bond.refresh_from_db()
+        self.assertEqual(order.maker_bond.status, LNPayment.Status.LOCKED)
+        return order, buyer, seller, kb, bond
+
+    def _decide(self, order, decision):
+        from unittest.mock import patch
+
+        from django.contrib import admin as dj_admin
+
+        from roblosats_admin import disputes
+
+        staff = User.objects.create_user(username=f"staff_{uuid.uuid4().hex[:6]}", password="x", is_staff=True)
+        with patch("api.admin.send_notification"), patch("api.logics.Logics.pay_buyer", return_value=True), \
+                patch("api.escrow.bonds.target_rate", return_value=1.0), \
+                patch("api.escrow.bonds.penalty_target_rate", return_value=1.0):
+            ok, msgs = disputes.resolve(dj_admin.site._registry[Order], Order.objects.get(pk=order.pk), decision, staff)
+        self.assertTrue(ok, msgs)
+        order.refresh_from_db()
+
+    def _fee_rate(self, txid):
+        info = service.rpc("getrawtransaction", [txid, True])
+        spent = 0
+        for i in info["vin"]:
+            prev = service.rpc("getrawtransaction", [i["txid"], True])
+            spent += round(prev["vout"][i["vout"]]["value"] * 1e8)
+        return (spent - sum(round(o["value"] * 1e8) for o in info["vout"])) / info["vsize"]
+
+    def test_maker_wins_gets_its_bond_back_on_chain_cheaply(self):
+        order, buyer, seller, kb, bond = self._disputed_b()
+        self._decide(order, "buyer")  # the maker is the buyer
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, bond.Status.RETURNED)
+        self.assertEqual(bond.auto_return["sent"]["rate"], 1.0)
+        _mine()
+        conf, paid = _paid_to(bond.spend_txid, self.return_addresses[buyer.id])
+        self.assertGreaterEqual(conf, 1)
+        self.assertLess(self._fee_rate(bond.spend_txid), 1.5)
+        self.assertGreater(paid, bond.value - 200)  # ~110 sats of mining, not 1,500
+        from api.logics import ensure_ledger
+        from django.db import connection
+
+        ensure_ledger()
+        with connection.cursor() as c:
+            c.execute("SELECT SUM(amount) FROM coord_reward_ledger WHERE order_id = %s AND robot_id = %s",
+                      [order.id, buyer.robot.id])
+            credited = int(c.fetchone()[0] or 0)
+        self.assertEqual(credited, 999_800)  # the trade amount only: the bond went back on chain
+
+    def test_maker_loses_bond_penalized_at_the_decision_cheaply(self):
+        order, buyer, seller, kb, bond = self._disputed_b()
+        self._decide(order, "seller")
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, bond.Status.PENALIZED)
+        self.assertEqual(bond.penalty_ladder["sent"]["rate"], 1.0)
+        order.maker_bond.refresh_from_db()
+        self.assertEqual(order.maker_bond.status, LNPayment.Status.SETLED)
+        _mine()
+        info = service.rpc("getrawtransaction", [bond.spend_txid, True])
+        self.assertGreaterEqual(info["confirmations"], 1)
+        from api.escrow import flow
+
+        self.assertEqual(info["vout"][0]["scriptPubKey"]["hex"], flow.coordinator_fee_spk().hex())
+        self.assertLess(self._fee_rate(bond.spend_txid), 1.5)
+        from api.escrow import bonds
+
+        self.assertGreater(bonds.penalty_sats(bond), bonds.penalty_floor_sats(bond))
+        self.assertEqual(order.status, Order.Status.MLD)
+
+    def test_safety_guard_penalizes_before_the_timelock(self):
+        from unittest.mock import patch
+
+        from api.escrow import bonds
+
+        order, buyer, seller, kb, bond = self._disputed_b(csv=30)
+        self.assertEqual(bond.refund_csv, 30)
+        self.assertEqual(bonds.safety_blocks(bond), 7)
+        with patch("api.escrow.bonds.penalty_target_rate", return_value=1.0):
+            self.assertEqual(bonds.guard_disputed_bonds(force=True), 0)
+            left = bonds.blocks_to_refund(bond)
+            _mine(left - 7)  # 7 blocks left: not yet
+            self.assertEqual(bonds.guard_disputed_bonds(force=True), 0)
+            _mine(1)  # 6 left < 7
+            self.assertEqual(bonds.guard_disputed_bonds(force=True), 1)
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, bond.Status.PENALIZED)
+        _mine()
+        self.assertGreaterEqual(service.rpc("getrawtransaction", [bond.spend_txid, True])["confirmations"], 1)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.DIS)
+        self.assertIn("safety", order.logs)
+        # the coordinator then finds for the maker: its bond's value comes back as rewards
+        from api.escrow import flow
+
+        self.assertEqual(flow.dispute_bond_sats(order, "maker", wins=True), bond.value)
+
+    def test_decided_after_the_owner_took_it_back_alone(self):
+        from unittest.mock import patch
+
+        from api.escrow import bonds
+        from api.escrow.taproot import SIGHASH_ALL_UNIFIED, TxOut, leaf_witness
+        from api.escrow.transactions import coins_spend_tx
+
+        order, buyer, seller, kb, bond = self._disputed_b(csv=12)
+        _mine(12)  # the guard never ran (the coordinator was down): the timelock is over
+        c = bonds.contract_of(bond)
+        back = _faucet("getnewaddress", "", "bech32m")
+        tx = coins_spend_tx(bonds.coins_of(bond), _spk(back), 2.0, refund=True, csv=c.refund_csv)
+        spent = [TxOut(bond.value, c.script_pubkey)]
+        msg = tx.sighash_unified(0, spent, SIGHASH_ALL_UNIFIED, c.leaf_hash(c.REFUND))
+        tx.inputs[0].witness = leaf_witness(c, c.REFUND, [schnorr_sign(kb["bond"], msg)])
+        service.rpc("sendrawtransaction", [tx.serialize().hex()])
+        _mine()
+        with patch("api.escrow.bonds.penalty_target_rate", return_value=1.0):
+            self._decide(order, "seller")  # the maker loses, but its bond is gone
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, bond.Status.RETURNED)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.MLD)
+        self.assertIn("no longer at its address", order.logs)
+
+    def test_decided_after_the_timelock_bond_still_there(self):
+        """The timelock passed but the owner did not move it: the decision still penalizes."""
+        order, buyer, seller, kb, bond = self._disputed_b(csv=12)
+        _mine(15)
+        self._decide(order, "seller")
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, bond.Status.PENALIZED)
+        _mine()
+        self.assertGreaterEqual(service.rpc("getrawtransaction", [bond.spend_txid, True])["confirmations"], 1)
+
+
+@skipUnless(REGTEST, "needs the regtest lab (ESCROW_REGTEST=1)")
+class EscrowDisputeOnchain0912Regtest(EscrowDisputePageRegtest):
+    """0.9.12, pure onchain: both bonds are inside the escrow when a dispute opens; nothing is
+    broadcast then, and the decision's release returns the winner's bond (and its reward share
+    of the loser's) and pays the rest of the loser's bond to the coordinator. The penalty
+    ladder signed by a new app is kept for the bonds before the deposit."""
+
+    test_return_everything_from_the_page = None
+
+    def _sign_penalty(self, order, user, keys, bond):
+        _sign_penalty_ladder(self, order, user, keys, bond)
+
+    def _open(self):
+        from api.escrow import flow
+        from api.logics import Logics
+        from api.models import OnchainBond
+
+        order, buyer, seller, keys = self._to_chat()
+        order.expires_at = timezone.now()
+        order.save()
+        mempool = set(service.rpc("getrawmempool", []))
+        self.assertEqual(Logics.open_dispute(order, seller), (True, None))
+        self.assertEqual(set(service.rpc("getrawmempool", [])) - mempool, set())
+        for role in ("maker", "taker"):
+            self.assertEqual(flow.bond_of(order, role).status, OnchainBond.Status.IN_DEPOSIT)
+        order.refresh_from_db()
+        self.assertIn("inside the onchain escrow", order.logs)
+        return order, buyer, seller, keys
+
+    def _release(self, order, signer, key):
+        from api.escrow import flow
+
+        escrow = flow.escrow_of(order)
+        _, msg = service.release_message(escrow)
+        flow.action(order, signer, "escrow_leaf_signature", {"signature": with_hashtype(schnorr_sign(key, msg)).hex()})
+        return escrow
+
+    def test_maker_wins_bond_back_in_the_release(self):
+        from api.escrow import flow
+
+        order, buyer, seller, keys = self._open()  # the maker is the buyer
+        self._page(order, "buyer")
+        escrow = self._release(order, buyer, keys["buyer"]["escrow"])
+        outs, mining = self._release_outputs(escrow)
+        plan, info = flow.dispute_split(order, escrow, True)
+        self.assertEqual(outs["buyer"], dict(plan)["buyer"] - mining)
+        self.assertEqual(info["bonds"]["buyer"], self.buyer_in)  # its whole bond is in its output
+        self.assertLessEqual(escrow.release_fee_rate, 25)
+
+    def test_maker_loses_bond_to_the_coordinator_in_the_release(self):
+        from api.escrow import flow
+
+        order, buyer, seller, keys = self._open()
+        self._page(order, "seller")
+        escrow = self._release(order, seller, keys["seller"]["escrow"])
+        outs, mining = self._release_outputs(escrow)
+        plan, info = flow.dispute_split(order, escrow, False)
+        self.assertEqual(outs.get("coordinator"), dict(plan)["coordinator"])
+        self.assertNotIn("buyer", outs)  # the losing maker gets nothing back

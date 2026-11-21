@@ -98,6 +98,19 @@ class Command(BaseCommand):
             bonds.bump_auto_returns()  # 0.9.11: the fee ladder of the automatic returns
         except Exception as e:
             self.stderr.write(f"automatic bond returns: {e}")
+        try:
+            from api.escrow import bonds
+
+            bonds.bump_penalties()  # 0.9.12: the fee ladder of the penalties
+        except Exception as e:
+            self.stderr.write(f"bond penalties: {e}")
+        try:
+            from api.escrow import bonds
+
+            # 0.9.12: onchain bonds stay locked during a dispute; penalized before their timelock
+            bonds.guard_disputed_bonds()
+        except Exception as e:
+            self.stderr.write(f"dispute bond guard: {e}")
 
     def is_same_status(a: LNPayment.Status, b: LNPayment.Status) -> bool:
         """

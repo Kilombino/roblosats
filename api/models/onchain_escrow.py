@@ -53,6 +53,10 @@ class OnchainEscrow(models.Model):
     release_nonces = models.JSONField(default=dict, blank=True)
     release_partial_sigs = models.JSONField(default=dict, blank=True)
     release_fee_rate = models.FloatField(null=True, blank=True)
+    # 0.9.12: payments seen at the funding addresses on the SHA-256 chain (api/escrow/spamchain.py)
+    wrong_chain = models.JSONField(
+        default=list, blank=True, db_default=models.Value([], output_field=models.JSONField())
+    )
 
     def __str__(self):
         return f"ESCROW-{self.order_id}: {self.get_status_display()}"
@@ -115,6 +119,19 @@ class OnchainBond(models.Model):
     # it signs the penalty: {"plan": 1, "address", "spk", "tx", "sigs", "rate"}. The coordinator
     # broadcasts it as soon as the bond is free (bonds.release). Empty for older bonds.
     auto_return = models.JSONField(default=dict, blank=True)
+    # 0.9.12: the penalty's fee LADDER, like the automatic return's (0.9.11): the same penalty at
+    # lower rates, signed in advance by the owner, so the coordinator broadcasts the cheapest one
+    # the mempool needs and replaces it (RBF) if it gets stuck: {"plan": 1, "rungs": [{"rate",
+    # "tx"}] ascending (the last one is penalty_tx), "sigs": [[...] per rung], "sent": {...}}.
+    # Empty for older bonds and older apps: their single penalty_tx at the cap, as before.
+    # db_default: an older image (rollback) still inserts bonds without knowing the column.
+    penalty_ladder = models.JSONField(
+        default=dict, blank=True, db_default=models.Value({}, output_field=models.JSONField())
+    )
+    # 0.9.12: payments seen at this bond's address on the SHA-256 chain (api/escrow/spamchain.py)
+    wrong_chain = models.JSONField(
+        default=list, blank=True, db_default=models.Value([], output_field=models.JSONField())
+    )
 
     def __str__(self):
         return f"BOND-{self.order_id}-{self.role}: {self.get_status_display()}"

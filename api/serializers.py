@@ -713,13 +713,14 @@ class UpdateOrderSerializer(serializers.Serializer):
             "bond_leftover_signatures",
             "bond_return_address",
             "bond_auto_return_signature",
+            "bond_penalty_ladder_signature",
         ),
         allow_null=False,
     )
     escrow = serializers.JSONField(
         required=False,
         default=None,
-        help_text="Onchain escrow action data: escrow_keys {escrow_pubkey, funding_pubkey}, escrow_funding_signatures {signatures}, escrow_rescue_signature {signature}, escrow_nonce {nonce}, escrow_partial {partial}, escrow_leaf_signature {signature}, escrow_release_leaf {signature} (0.9.5: the seller alone finishes a cooperative release through its leaf with the coordinator); escrow_keys also takes leaf_release (true: the app signs that way); bond_key {bond_pubkey}, bond_penalty_signature {signature}, bond_return {address}, bond_return_signature {signature} or {signatures} (one per coin), bond_leftover_return {address}, bond_leftover_signatures {signatures}; bond_penalty_signature also takes {signatures} for a bond of several coins. escrow_address uses `address` (PGP signed).",
+        help_text="Onchain escrow action data: escrow_keys {escrow_pubkey, funding_pubkey}, escrow_funding_signatures {signatures}, escrow_rescue_signature {signature}, escrow_nonce {nonce}, escrow_partial {partial}, escrow_leaf_signature {signature}, escrow_release_leaf {signature} (0.9.5: the seller alone finishes a cooperative release through its leaf with the coordinator); escrow_keys also takes leaf_release (true: the app signs that way); bond_key {bond_pubkey}, bond_penalty_signature {signature}, bond_return {address}, bond_return_signature {signature} or {signatures} (one per coin), bond_leftover_return {address}, bond_leftover_signatures {signatures}; bond_penalty_signature also takes {signatures} for a bond of several coins and (0.9.12) {ladder}: one list of signatures per rung of bond_penalty_ladder; bond_penalty_ladder_signature {ladder} signs that ladder for a bond already locked. escrow_address uses `address` (PGP signed).",
     )
     rating = serializers.ChoiceField(
         choices=("1", "2", "3", "4", "5"),

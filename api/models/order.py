@@ -396,8 +396,16 @@ class Order(models.Model):
         if config("DISABLE_ORDER_LOGS", cast=bool, default=True):
             return
         try:
+            # 0.9.12: from the database, not from this instance: another instance of the same
+            # order (bond.order, escrow.order) may have logged in between, and writing this
+            # instance's stale copy back erased it (#29 lost its "bond penalized" line)
+            current = self.logs
+            if self.pk:
+                fresh = type(self).objects.filter(pk=self.pk).values_list("logs", flat=True).first()
+                if fresh is not None:
+                    current = fresh
             try:
-                entries = json.loads(self.logs)
+                entries = json.loads(current)
             except (json.JSONDecodeError, TypeError):
                 entries = []
             entries.append(

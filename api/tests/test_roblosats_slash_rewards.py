@@ -40,7 +40,7 @@ def _penalty_hex(value, rate=10.0):
     return coins_spend_tx([("ab" * 32, 0, value)], COORD_SPK, rate).serialize().hex()
 
 
-def _fake_penalize(bond):
+def _fake_penalize(bond, reason=""):
     """bonds.penalize without a node: the bond is PENALIZED, its penalty_tx stays as signed."""
     if bond is None or bond.status != OnchainBond.Status.LOCKED:
         return False

@@ -620,4 +620,18 @@ def send_notification(order_id=None, chat_message_id=None, message=None):
         low = (float(parts[5]), float(parts[6])) if len(parts) > 6 else None
         notifications.onchain_seen_mempool(order, int(user_id), what, int(sats), short, low)
 
+    elif message and message.startswith("wrong_chain:"):
+        # 0.9.12: wrong_chain:<user id>:<bond|funding>:<sats>:<bond refund_csv or 0>
+        parts = message.split(":") + ["0"]
+        _, user_id, what, sats, csv = parts[:5]
+        notifications.wrong_chain(order, int(user_id), what, int(sats), int(csv or 0))
+
     return
+
+
+@shared_task(name="spamchain_watch", ignore_result=True, time_limit=600)
+def spamchain_watch():
+    """0.9.12: on-chain bond and escrow funding addresses paid on the SHA-256 chain by mistake."""
+    from api.escrow import spamchain
+
+    return spamchain.check_all()

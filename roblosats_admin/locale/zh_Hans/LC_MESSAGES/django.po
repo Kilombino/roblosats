@@ -2156,10 +2156,6 @@ msgid "A cooperative release had already been prepared (never broadcast): this d
 msgstr "之前已准备好一笔协作释放交易（从未广播）：本裁决将替换它。"
 
 msgctxt "roblosats-admin"
-msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). It was penalized on chain when the dispute opened: the coordinator got %(got)s sats from it and the rest went to the miners. What the maker gets back is credited as a Lightning reward."
-msgstr "挂单方的保证金在链上（%(bond)s 聪，由闪电替身代表）。争议开启时它已在链上被处罚：协调者从中获得 %(got)s 聪，其余归矿工。挂单方能取回的部分将作为闪电奖励记入。"
-
-msgctxt "roblosats-admin"
 msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). What the maker gets back is credited as a Lightning reward."
 msgstr "挂单方的保证金在链上（%(bond)s 聪，由闪电替身代表）。挂单方能取回的部分将作为闪电奖励记入。"
 
@@ -2274,3 +2270,51 @@ msgstr "%(sats)s 换 %(total)s %(currency)s"
 msgctxt "roblosats-admin"
 msgid "The node refused the transaction (%(reason)s)."
 msgstr "节点拒绝了该交易（%(reason)s）。"
+
+msgctxt "roblosats-admin"
+msgid "won the dispute: the trade amount (their on-chain bond went back on chain)"
+msgstr "赢得争议：交易金额（其链上保证金已在链上退回）"
+
+msgctxt "roblosats-admin"
+msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). It was already penalized on chain before the decision: the coordinator got %(got)s sats from it and the rest went to the miners. If the maker keeps their bond, its value is credited as a Lightning reward."
+msgstr "挂单者的保证金在链上（%(bond)s 聪，由一个闪电替身代表）。它在裁决前已在链上被罚没：协调者从中得到 %(got)s 聪，其余给了矿工。如果挂单者保住保证金，其价值将作为闪电奖励记入。"
+
+msgctxt "roblosats-admin"
+msgid "The maker's bond is on chain (%(bond)s sats) and still locked: it was not penalized when the dispute opened. If the maker keeps it, it goes straight back to them on chain; if they lose it, it is penalized on chain when you decide. If no decision is made within %(blocks)s blocks, it is penalized anyway before the maker could take it back alone."
+msgstr "挂单者的保证金在链上（%(bond)s 聪），仍处于锁定状态：争议开启时没有被罚没。如果挂单者保住它，它会直接在链上退回；如果输掉，它会在你裁决时在链上被罚没。如果 %(blocks)s 个区块内没有裁决，它会在挂单者能够自行取回之前被罚没。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s is credited %(trade)s sats as a reward (the trade amount). Their on-chain bond (%(buyer_bond)s) is not credited: it goes straight back to them on chain."
+msgstr "买家 %(buyer)s 获得 %(trade)s 聪奖励（交易金额）。其链上保证金（%(buyer_bond)s）不记入奖励：它会直接在链上退回。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets nothing: their on-chain bond (%(buyer_bond)s) is penalized on chain now."
+msgstr "买家 %(buyer)s 什么也得不到：其链上保证金（%(buyer_bond)s）现在在链上被罚没。"
+
+msgctxt "roblosats-admin"
+msgid "Each party gets back what they put in: the buyer %(buyer)s their on-chain bond (%(buyer_bond)s), straight back on chain; the seller %(seller)s their bond (%(seller_bond)s) and their escrow (%(escrow)s), credited as a reward to withdraw from the app."
+msgstr "各方取回自己投入的部分：买家 %(buyer)s 的链上保证金（%(buyer_bond)s）直接在链上退回；卖家 %(seller)s 的保证金（%(seller_bond)s）和托管（%(escrow)s）作为奖励记入，可在应用中提取。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets their on-chain bond (%(buyer_bond)s) straight back on chain. They do not receive the trade sats."
+msgstr "买家 %(buyer)s 的链上保证金（%(buyer_bond)s）直接在链上退回。买家不会收到交易的聪。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s LOSES their on-chain bond (%(buyer_bond)s): it is penalized on chain now and the coordinator keeps it."
+msgstr "买家 %(buyer)s 失去其链上保证金（%(buyer_bond)s）：它现在在链上被罚没，由协调者保留。"
+
+msgctxt "roblosats-admin"
+msgid "Both bonds go back: the buyer's on-chain bond (%(buyer_bond)s) straight back on chain, and %(seller_bond)s credited to the seller %(seller)s as a reward."
+msgstr "两份保证金都退回：买家的链上保证金（%(buyer_bond)s）直接在链上退回，%(seller_bond)s 作为奖励记给卖家 %(seller)s。"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's on-chain bond was penalized before the dispute was decided: only %(h)s blocks were left before they could take it back alone"
+msgstr "订单 %(id)s：%(role)s 的链上保证金在争议裁决前被罚没：距离其能够自行取回只剩 %(h)s 个区块"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s took their on-chain bond back alone after its timelock, during the dispute"
+msgstr "订单 %(id)s：争议期间，%(role)s 在时间锁到期后自行取回了其链上保证金"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: %(sats)s sats were sent to the %(role)s's on-chain address on the WRONG chain (Spamcoin, SHA-256); the robot was told how to take them back"
+msgstr "订单 %(id)s：有 %(sats)s 聪通过错误的链（Spamcoin，SHA-256）发送到了 %(role)s 的链上地址；已告知机器人如何取回"

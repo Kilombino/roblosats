@@ -153,7 +153,29 @@ def penalty_fee_rate(value, n_coins, payout_spk):
 
 
 def penalty_sats(bond):
-    """What the bond's penalty pays the coordinator (its only output), 0 without a penalty."""
+    """What the bond's penalty pays the coordinator (its only output), 0 without a penalty.
+    0.9.12: the rung that was broadcast (the latest one after a bump), else the top penalty."""
+    if bond is None or not bond.penalty_tx:
+        return 0
+    tx_hex = bond.penalty_tx
+    lad = getattr(bond, "penalty_ladder", None) or {}
+    sent = lad.get("sent") or {}
+    try:
+        if sent and sent.get("txid") == bond.spend_txid:
+            tx_hex = lad["rungs"][int(sent["index"])]["tx"]
+    except (KeyError, IndexError, ValueError, TypeError):
+        tx_hex = bond.penalty_tx
+    try:
+        tx = Transaction.parse(bytes.fromhex(tx_hex))
+    except Exception:
+        return 0
+    return int(sum(o.value for o in tx.outputs))
+
+
+def penalty_floor_sats(bond):
+    """0.9.12: what the coordinator gets from the bond's penalty AT LEAST: the top penalty's
+    output (a cheaper rung may still be replaced by it). Rewards and proceeds are counted on it,
+    as in 0.9.11, so a bump never leaves a reward larger than what the coordinator got."""
     if bond is None or not bond.penalty_tx:
         return 0
     try:
@@ -183,6 +205,11 @@ def open_bond(order, user, role, owner_pubkey_hex, take_order=None):
         return existing
     ckey = coordinator_bond_key(order.id, role, owner_pk.hex())
     csv = max(144, Logics.compute_cltv_expiry_blocks(order, f"{role}_bond"))
+    # 0.9.12: a regtest lab may shorten the timelock to test what happens near it (never on a
+    # real network: the owner could then take its bond back before the trade ends)
+    lab_csv = service.config("ESCROW_LAB_BOND_CSV", cast=int, default=0)
+    if lab_csv > 0 and service.config("NETWORK", default="mainnet") == "regtest":
+        csv = lab_csv
     c = BondContract(owner_pk, pubkey(ckey), min(csv, 0xFFFE), hrp=service.network_hrp())
     bond = OnchainBond.objects.create(
         order=order,
@@ -229,7 +256,9 @@ def refresh(bond, min_conf=1):
         tx = coins_spend_tx(coins, coordinator_fee_spk(), max(1.0, (bond.value - DUST_P2TR) // vb))
     bond.penalty_tx = tx.serialize().hex()
     bond.status = OnchainBond.Status.SIGN
+    bond.penalty_ladder = {}
     bond.save()
+    _build_penalty_ladder(bond)  # 0.9.12: the cheaper penalties, signed with the top one
     _build_auto_return(bond)  # 0.9.7: signed together with the penalty
     return bond
 
@@ -277,8 +306,10 @@ def penalty_message(bond):
     return tx, msgs
 
 
-def submit_penalty_signature(bond, sigs):
-    """The owner's signature(s) of the penalty, given in advance: the bond is then LOCKED."""
+def submit_penalty_signature(bond, sigs, ladder_sigs=None):
+    """The owner's signature(s) of the penalty, given in advance: the bond is then LOCKED.
+    0.9.12: ladder_sigs, one list per rung of the penalty's fee ladder (optional: an app that
+    signs only the top penalty keeps the 0.9.11 behaviour)."""
     from api.models import OnchainBond
 
     sigs = _as_list(sigs)
@@ -290,9 +321,160 @@ def submit_penalty_signature(bond, sigs):
         _check_owner_sigs(bond, msgs, sigs, "penalty")
         bond.penalty_owner_sig = sigs[0]
         bond.penalty_owner_sigs = sigs
+        if ladder_sigs:
+            _check_penalty_ladder(bond, sigs, ladder_sigs)
         bond.status = OnchainBond.Status.LOCKED
         bond.save()
     return bond
+
+
+# 0.9.12: the penalty's fee LADDER (PENALTY_LADDER_PLAN 1). Until 0.9.11 the owner signed one
+# penalty at ESCROW_PENALTY_FEE_RATE (a ceiling, 10 sat/vB, held to 10 % of the bond): 1,500 of a
+# 30,000-sat bond went to the miners (#29) while the mempool took 1 sat/vB. Now the owner also
+# signs the same penalty at lower rates (ESCROW_PENALTY_RATES, default "1,3", below the top
+# rate); the coordinator broadcasts the cheapest one the node expects to confirm within
+# ESCROW_PENALTY_TARGET_BLOCKS and, if it is still unconfirmed after ESCROW_PENALTY_BUMP_SECONDS
+# (or the estimate rose above it), replaces it with the next one (same inputs, RBF). The top rung
+# is penalty_tx, so an app that signs only it (older apps) keeps the old behaviour. The rungs pay
+# the coordinator's output only (as the penalty does), so the owner gives nothing more.
+PENALTY_LADDER_PLAN = 1
+
+
+def penalty_rates(top):
+    """The lower rungs of the penalty: ESCROW_PENALTY_RATES below the top rate, ascending."""
+    raw = str(service.config("ESCROW_PENALTY_RATES", default="1,3"))
+    rates = set()
+    for part in raw.split(","):
+        try:
+            r = round(float(part.strip()), 2)
+        except ValueError:
+            continue
+        if 1.0 <= r < top - 1e-9:
+            rates.add(r)
+    return sorted(rates)
+
+
+def _tx_rate(tx, coins):
+    """Fee rate (sat/vB, 2 decimals) of a transaction spending these bond coins to one output."""
+    from api.escrow.transactions import coins_spend_vbytes
+
+    fee = sum(c[2] for c in coins) - sum(o.value for o in tx.outputs)
+    return round(fee / coins_spend_vbytes(len(coins), tx.outputs[0].script_pubkey), 2)
+
+
+def _build_penalty_ladder(bond):
+    """The cheaper penalties to sign, once the penalty is fixed (SIGN, or LOCKED for a bond
+    locked by an older coordinator or app: a new app may still sign them)."""
+    from api.models import OnchainBond
+
+    if bond.status not in (OnchainBond.Status.SIGN, OnchainBond.Status.LOCKED) or not bond.penalty_tx:
+        return bond
+    if (bond.penalty_ladder or {}).get("rungs"):
+        return bond
+    coins = coins_of(bond)
+    if not coins:
+        return bond
+    top = Transaction.parse(bytes.fromhex(bond.penalty_tx))
+    if len(top.outputs) != 1:
+        return bond
+    spk = top.outputs[0].script_pubkey  # the penalty's own output: the same coordinator address
+    top_rate = _tx_rate(top, coins)
+    rungs = []
+    for r in penalty_rates(top_rate):
+        try:
+            rungs.append({"rate": r, "tx": coins_spend_tx(coins, spk, r).serialize().hex()})
+        except ValueError:
+            continue
+    if not rungs:
+        return bond
+    rungs.append({"rate": top_rate, "tx": bond.penalty_tx})
+    bond.penalty_ladder = {"plan": PENALTY_LADDER_PLAN, "rungs": rungs}
+    bond.save(update_fields=["penalty_ladder", "updated_at"])
+    return bond
+
+
+def _check_penalty_ladder(bond, sigs, ladder_sigs):
+    """Checks and stores the owner's signatures of the penalty's rungs (bond already locked
+    for update by the caller). Each rung spends exactly the penalty's coins to the penalty's
+    only output; the top rung is penalty_tx, signed by sigs."""
+    lad = dict(bond.penalty_ladder or {})
+    rungs = lad.get("rungs") or []
+    if not rungs:
+        raise EscrowError("this bond has no penalty ladder to sign")
+    top = Transaction.parse(bytes.fromhex(bond.penalty_tx))
+    got = []
+    for i, rung in enumerate(rungs):
+        rs = _as_list(ladder_sigs[i]) if i < len(ladder_sigs) and ladder_sigs[i] else None
+        if rung["tx"] == bond.penalty_tx:
+            rs = sigs
+        elif rs:
+            tx = Transaction.parse(bytes.fromhex(rung["tx"]))
+            if len(tx.outputs) != 1 or tx.outputs[0].script_pubkey != top.outputs[0].script_pubkey:
+                raise EscrowError("a penalty rung does not pay the penalty's address")
+            _check_owner_sigs(bond, _coin_messages(bond, tx, coins_of(bond)), rs, "penalty")
+        got.append(rs)
+    lad["sigs"] = got
+    bond.penalty_ladder = lad
+
+
+def submit_penalty_ladder_signatures(bond, ladder_sigs):
+    """0.9.12: a bond locked before its app signed the ladder (an older coordinator or app):
+    the rungs can be signed later, while the bond is still locked."""
+    from api.models import OnchainBond
+
+    with transaction.atomic():
+        bond = OnchainBond.objects.select_for_update().get(pk=bond.pk)
+        if bond.status != OnchainBond.Status.LOCKED:
+            raise EscrowError("the bond is not locked")
+        if (bond.penalty_ladder or {}).get("sigs"):
+            return bond
+        _build_penalty_ladder(bond)
+        _check_penalty_ladder(bond, bond.penalty_owner_sigs or [bond.penalty_owner_sig], ladder_sigs)
+        bond.save(update_fields=["penalty_ladder", "updated_at"])
+    return bond
+
+
+def signed_penalty_rungs(bond):
+    """[(index, rate, tx_hex, sigs)] of the penalties the owner signed, ascending by rate. The
+    top one (penalty_tx) is always there, signed by penalty_owner_sigs."""
+    lad = bond.penalty_ladder or {}
+    top_sigs = bond.penalty_owner_sigs or ([bond.penalty_owner_sig] if bond.penalty_owner_sig else [])
+    rungs = lad.get("rungs") or []
+    lsigs = lad.get("sigs") or []
+    out = []
+    for i, rung in enumerate(rungs):
+        if rung.get("tx") == bond.penalty_tx:
+            continue
+        sigs = lsigs[i] if i < len(lsigs) else None
+        if sigs:
+            out.append((i, float(rung.get("rate") or 0), rung["tx"], sigs))
+    top_rate = next((float(r.get("rate") or 0) for r in rungs if r.get("tx") == bond.penalty_tx), None)
+    if top_rate is None:
+        try:
+            top_rate = _tx_rate(Transaction.parse(bytes.fromhex(bond.penalty_tx)), coins_of(bond))
+        except Exception:
+            top_rate = 0.0
+    top_index = next((i for i, r in enumerate(rungs) if r.get("tx") == bond.penalty_tx), len(rungs))
+    if top_sigs:
+        out.append((top_index, top_rate, bond.penalty_tx, top_sigs))
+    return out
+
+
+def penalty_target_rate():
+    """The rate the node expects to confirm within ESCROW_PENALTY_TARGET_BLOCKS."""
+    try:
+        return service.fee_rate(service.config("ESCROW_PENALTY_TARGET_BLOCKS", cast=int, default=6))
+    except Exception:
+        return service.config("ESCROW_FALLBACK_FEE_RATE", cast=float, default=5.0)
+
+
+def _send_penalty_rung(bond, rung):
+    i, rate, tx_hex, sigs = rung
+    tx = Transaction.parse(bytes.fromhex(tx_hex))
+    msgs = _coin_messages(bond, tx, coins_of(bond))
+    _cosign(bond, tx, msgs, sigs)
+    service.rpc("sendrawtransaction", [tx.serialize().hex()])
+    return tx
 
 
 # 0.9.7: automatic return of a free bond (AUTO_RETURN_PLAN 1). The owner gives a return address
@@ -543,7 +725,7 @@ def bump_auto_return(bond, now=None):
     if not later:
         return False
     stale = waited >= service.config("ESCROW_AUTO_RETURN_BUMP_SECONDS", cast=int, default=7200)
-    if not stale and target_rate() <= float(sent["rate"]):
+    if not stale and target_rate() <= float(sent["rate"]) + 1e-6:  # float noise of the estimate
         return False
     nxt = later[0]
     try:
@@ -592,20 +774,236 @@ def _coordinator_key_of(bond):
     return key
 
 
-def penalize(bond):
-    """Broadcast the penalty the owner signed in advance, with the coordinator's signature."""
+def penalize(bond, reason=""):
+    """Broadcast the penalty the owner signed in advance, with the coordinator's signature.
+    0.9.12: the cheapest signed rung the mempool needs; if the node refuses it, the next one up
+    (the top one is the penalty of 0.9.11). Raises EscrowError when none goes out."""
+    import time
+
     from api.models import OnchainBond
 
     if bond is None or bond.status != OnchainBond.Status.LOCKED:
         return False
-    tx, msgs = penalty_message(bond)
-    _cosign(bond, tx, msgs, bond.penalty_owner_sigs or [bond.penalty_owner_sig])
-    service.rpc("sendrawtransaction", [tx.serialize().hex()])
+    rungs = signed_penalty_rungs(bond)
+    if not rungs:
+        raise EscrowError("the bond's penalty is not signed")
+    first = choose_rung(rungs, penalty_target_rate()) if len(rungs) > 1 else rungs[0]
+    tx, sent, error = None, None, None
+    for rung in [r for r in rungs if r[1] >= first[1]]:
+        try:
+            tx = _send_penalty_rung(bond, rung)
+            sent = rung
+            break
+        except Exception as e:  # too cheap for the node now: the next rung
+            error = e
+    if tx is None:
+        raise error if isinstance(error, EscrowError) else EscrowError(str(error or "no signed penalty"))
+    lad = dict(bond.penalty_ladder or {})
+    lad["sent"] = {"index": sent[0], "rate": sent[1], "txid": tx.txid(), "at": int(time.time())}
+    bond.penalty_ladder = lad
     bond.spend_txid = tx.txid()
     bond.status = OnchainBond.Status.PENALIZED
-    bond.save(update_fields=["spend_txid", "status", "updated_at"])
-    bond.order.log(f"Onchain {bond.role} bond **penalized** in {bond.spend_txid}")
+    bond.save(update_fields=["penalty_ladder", "spend_txid", "status", "updated_at"])
+    bond.order.log(f"Onchain {bond.role} bond **penalized** in {bond.spend_txid} ({sent[1]:g} sat/vB)"
+                   + (f": {reason}" if reason else ""))
     return True
+
+
+def bump_penalty(bond, now=None):
+    """0.9.12: a penalty still unconfirmed after ESCROW_PENALTY_BUMP_SECONDS, or below what the
+    node now expects, is replaced by the next signed rung (RBF). True if bumped."""
+    import time
+
+    from api.models import OnchainBond
+
+    lad = dict(bond.penalty_ladder or {})
+    sent = lad.get("sent")
+    if bond.status != OnchainBond.Status.PENALIZED or not sent or lad.get("confirmed"):
+        return False
+    if tx_status(sent["txid"]) == "confirmed":
+        lad["confirmed"] = True
+        bond.penalty_ladder = lad
+        bond.save(update_fields=["penalty_ladder", "updated_at"])
+        return False
+    now = int(now if now is not None else time.time())
+    waited = now - int(sent.get("at") or now)
+    later = [r for r in signed_penalty_rungs(bond) if r[1] > float(sent["rate"])]
+    if not later:
+        return False
+    stale = waited >= service.config("ESCROW_PENALTY_BUMP_SECONDS", cast=int, default=7200)
+    if not stale and penalty_target_rate() <= float(sent["rate"]) + 1e-6:
+        return False
+    nxt = later[0]
+    try:
+        tx = _send_penalty_rung(bond, nxt)
+    except Exception as e:
+        bond.order.log(f"Onchain {bond.role} bond: penalty not bumped ({e})", level="WARN")
+        return False
+    lad["sent"] = {"index": nxt[0], "rate": nxt[1], "txid": tx.txid(), "at": now, "replaced": sent["txid"]}
+    bond.penalty_ladder = lad
+    bond.spend_txid = tx.txid()
+    bond.save(update_fields=["penalty_ladder", "spend_txid", "updated_at"])
+    bond.order.log(f"Onchain {bond.role} bond: penalty **bumped** to {nxt[1]:g} sat/vB in {bond.spend_txid}")
+    return True
+
+
+def bump_penalties():
+    """From the follow_invoices loop: every penalty of the ladder that is still in the mempool."""
+    from api.models import OnchainBond
+
+    n = 0
+    for bond in OnchainBond.objects.filter(status=OnchainBond.Status.PENALIZED, penalty_ladder__has_key="sent"):
+        try:
+            n += bool(bump_penalty(bond))
+        except Exception:
+            continue
+    return n
+
+
+# 0.9.12: an onchain bond is no longer penalized when a dispute opens (a Lightning hold invoice
+# must be settled then, or its HTLC may force-close the channel; a bond on chain can wait). It
+# stays locked until the dispute is decided: penalized if its owner loses, freed (and returned by
+# the signed return) if it wins. Its owner can take it back alone once the bond's timelock
+# (refund_csv, counted from the bond's confirmation) is over, so a dispute that runs that long
+# would let a loser walk away with it: ESCROW_DISPUTE_BOND_SAFETY_BLOCKS (144) before that, the
+# coordinator penalizes it anyway; a winner then gets its value back as a reward.
+def bond_coins_state(bond):
+    """(unspent, confirmations): whether every coin of the bond is still unspent (also in the
+    mempool) and the confirmations of its OLDEST coin (the first one its owner could take back
+    alone). (False, None) once any coin is spent; (True, 0) while unconfirmed."""
+    oldest = 0
+    for txid, vout, _sats in coins_of(bond):
+        out = service.rpc("gettxout", [txid, int(vout), True])
+        if not out:
+            return False, None
+        oldest = max(oldest, int(out.get("confirmations") or 0))
+    return True, oldest
+
+
+def blocks_to_refund(bond):
+    """Blocks left before the owner can take the bond back alone (0 = it can now), or None when
+    the bond is no longer where it was."""
+    unspent, conf = bond_coins_state(bond)
+    if not unspent:
+        return None
+    return max(0, int(bond.refund_csv) - int(conf))
+
+
+def safety_blocks(bond=None):
+    """Blocks before the timelock at which a disputed bond is penalized anyway: the setting, but
+    never more than a quarter of the bond's own timelock (a short one would otherwise be
+    penalized the moment its dispute opens), and at least 6."""
+    blocks = service.config("ESCROW_DISPUTE_BOND_SAFETY_BLOCKS", cast=int, default=144)
+    if bond is not None and bond.refund_csv:
+        blocks = min(blocks, max(6, int(bond.refund_csv) // 4))
+    return blocks
+
+
+def taken_back(bond, why):
+    """The bond's coins were spent by somebody else (its owner, alone, after the timelock):
+    nothing is left to penalize or to return."""
+    from api.models import OnchainBond
+
+    bond.status = OnchainBond.Status.RETURNED
+    bond.save(update_fields=["status", "updated_at"])
+    bond.order.log(f"Onchain {bond.role} bond is **no longer at its address** ({why}): its owner took it "
+                   "back alone after the timelock; nothing to penalize or return", level="WARN")
+    _alert_safety(bond, "taken_back")
+    return bond
+
+
+def _alert_safety(bond, what, left=None):
+    try:
+        from django.apps import apps
+
+        if apps.is_installed("roblosats_admin"):
+            from roblosats_admin import alerts
+
+            alerts.queue("onchain", bond.order_id, {
+                "kind": f"bond_{what}", "role": bond.role, "sats": int(bond.value or 0),
+                "height": "" if left is None else int(left), "txid": bond.spend_txid or "",
+            })
+    except Exception:  # noqa: BLE001 (an alert never stops the guard)
+        pass
+
+
+_guard = {"at": 0.0}
+
+
+def guard_disputed_bonds(force=False):
+    """From the follow_invoices loop (at most once a minute): every onchain bond still locked in
+    a disputed order whose timelock is close is penalized now (see above); one already spent by
+    its owner is marked as taken back. Returns the number of bonds acted on."""
+    import time
+
+    from api.logics import order_lock
+    from api.models import OnchainBond, Order
+
+    now = time.monotonic()
+    if not force and now - _guard["at"] < 60:
+        return 0
+    _guard["at"] = now
+    n = 0
+    ids = list(OnchainBond.objects.filter(
+        status=OnchainBond.Status.LOCKED, order__is_disputed=True,
+        order__status__in=[Order.Status.DIS, Order.Status.WFR],
+    ).values_list("pk", "order_id"))
+    for pk, order_id in ids:
+        try:
+            with order_lock(order_id):
+                bond = OnchainBond.objects.select_related("order").get(pk=pk)
+                if bond.status != OnchainBond.Status.LOCKED or bond.order.status not in (
+                    Order.Status.DIS, Order.Status.WFR
+                ):
+                    continue
+                n += bool(guard_bond(bond))
+        except Exception as e:  # the node down: next pass
+            import logging
+
+            logging.getLogger(__name__).warning(f"dispute bond guard, bond {pk}: {e}")
+    return n
+
+
+def guard_bond(bond):
+    """One locked bond of an open dispute: penalized when fewer than safety_blocks() remain."""
+    left = blocks_to_refund(bond)
+    if left is None:
+        taken_back(bond, "spent while the dispute was open")
+        return True
+    if left >= safety_blocks(bond):
+        return False
+    reason = (f"the dispute is still open and only {left} blocks remain before its owner can take it "
+              "back alone (safety)")
+    penalize_now(bond, reason)
+    _alert_safety(bond, "safety_penalty", left)
+    return True
+
+
+def penalize_now(bond, reason=""):
+    """Penalizes a locked bond through the order's own path (the hybrid proxy, so its LNPayment
+    is settled too). If the penalty cannot go out because the coins are gone, the bond is marked
+    as taken back. True when the penalty went out."""
+    from api.escrow import flow
+
+    order = bond.order
+    proxy = order.maker_bond if bond.role == "maker" and flow.is_bond_proxy(order.maker_bond) else None
+    try:
+        if proxy is not None and flow.proxied_bond(proxy) and flow.proxied_bond(proxy).pk == bond.pk:
+            ok = flow.proxy_settle(proxy, reason=reason, raise_errors=True)
+        else:
+            ok = penalize(bond, reason)
+        return bool(ok)
+    except EscrowError as e:
+        bond.refresh_from_db()
+        try:
+            unspent, _ = bond_coins_state(bond)
+        except Exception:
+            unspent = True
+        if not unspent:
+            taken_back(bond, f"the penalty was refused: {e}")
+        else:
+            order.log(f"Onchain {bond.role} bond penalty could not be broadcast: {e}", level="ERROR")
+        return False
 
 
 def release(bond):
@@ -775,6 +1173,21 @@ def bond_data(bond):
         data["bond_coins"] = [{"txid": t, "vout": v, "value": s} for t, v, s in coins]
     if bond.status == bond.Status.SIGN:
         data["bond_penalty_tx"] = bond.penalty_tx
+    # 0.9.12: the penalty's fee ladder (ascending rates; the last rung is the penalty itself), to
+    # sign with the penalty (SIGN) or later while the bond is locked
+    if bond.status in (bond.Status.SIGN, bond.Status.LOCKED) and bond.penalty_tx:
+        lad = getattr(bond, "penalty_ladder", None) or {}
+        if bond.status == bond.Status.LOCKED and not lad.get("rungs"):
+            try:
+                _build_penalty_ladder(bond)
+                lad = bond.penalty_ladder or {}
+            except Exception:
+                lad = {}
+        if lad.get("rungs"):
+            data["bond_penalty_ladder_signed"] = bool(lad.get("sigs"))
+            if not lad.get("sigs"):
+                data["bond_penalty_ladder"] = [r["tx"] for r in lad["rungs"]]
+                data["bond_penalty_rates"] = [r["rate"] for r in lad["rungs"]]
     # 0.9.7: the automatic return (address, the transaction to sign, whether it is signed)
     ar = getattr(bond, "auto_return", None) or {}
     if ar.get("plan"):

@@ -877,7 +877,10 @@ def bond_action(order, user, name, data):
     if bond is None:
         raise EscrowError("send your bond key first")
     if name == "bond_penalty_signature":
-        bonds.submit_penalty_signature(bond, data.get("signatures") or data["signature"])
+        bonds.submit_penalty_signature(bond, data.get("signatures") or data["signature"], data.get("ladder"))
+    elif name == "bond_penalty_ladder_signature":
+        # 0.9.12: the penalty's fee ladder of a bond that is already locked
+        bonds.submit_penalty_ladder_signatures(bond, data["ladder"])
     elif name == "bond_return":
         bonds.return_tx(bond, _spk_for_address(data["address"]))
     elif name == "bond_return_signature":
@@ -1868,7 +1871,7 @@ def has_proxy(order):
     return is_bond_proxy(order.maker_bond)
 
 
-def proxy_settle(proxy):
+def proxy_settle(proxy, reason="", raise_errors=False):
     """Settling the proxy = penalizing the onchain bond. True only the first time."""
     from api.escrow import bonds
     from api.models import LNPayment
@@ -1878,14 +1881,74 @@ def proxy_settle(proxy):
         return False
     bond = proxied_bond(proxy)
     try:
-        bonds.penalize(bond)
+        bonds.penalize(bond, reason)
     except EscrowError as e:
+        if raise_errors:
+            raise
         if bond is not None:
             bond.order.log(f"Onchain maker bond penalty could not be broadcast: {e}", level="ERROR")
         return False
     proxy.status = LNPayment.Status.SETLED
     proxy.save(update_fields=["status"])
     return True
+
+
+# --- 0.9.12: the onchain maker bond of a hybrid B order in a dispute -----------------------
+#
+# Kilombino, 21 nov 2026 (TG 14873): an onchain bond is no longer penalized when the dispute
+# opens (order #29: the maker's 30,000-sat bond was penalized at 10 sat/vB the moment the chat
+# expired). It stays locked behind its proxy until the dispute is decided: the winner gets it
+# back on chain (the return it signed in advance, from the fee ladder) and is NOT credited its
+# value; the loser's bond is penalized then. A bond penalized earlier (opened under 0.9.11, or by
+# the timelock safety guard) is credited back to a winning maker as rewards, as before.
+
+def dispute_bond_sats(order, side, wins):
+    """The sats a dispute decision credits for the bond of 'maker'/'taker', and the onchain
+    side effect for a hybrid B maker bond: freed (wins) or penalized (loses) on chain. A
+    Lightning bond (settled when the dispute opened) is credited whole when its owner wins."""
+    from api.escrow import bonds
+    from api.models import LNPayment, OnchainBond
+
+    ln = order.maker_bond if side == "maker" else order.taker_bond
+    if ln is None:
+        return 0
+    if not is_bond_proxy(ln):
+        return ln.num_satoshis if wins else 0
+    bond = proxied_bond(ln)
+    if bond is None:
+        return ln.num_satoshis if wins else 0
+    S = OnchainBond.Status
+    if bond.status == S.LOCKED:
+        if wins:
+            # still at stake on chain: it goes straight back to its owner (signed return, cheapest
+            # rung the mempool needs; else the owner's "Get my bond back")
+            proxy_return(ln, LNPayment.Status.RETNED)
+            order.log(f"Dispute: the {side}'s onchain bond is **freed** and goes back to its owner on chain "
+                      "(not credited as rewards)")
+            return 0
+        bonds.penalize_now(bond, "the dispute was lost")
+        return 0
+    if bond.status == S.PENALIZED:
+        if wins:
+            order.log(f"Dispute: the {side}'s onchain bond had been penalized before the decision: its value "
+                      f"({ln.num_satoshis} Sats) is credited back as rewards", level="WARN")
+            return ln.num_satoshis
+        return 0
+    # RETURNABLE / RETURNED: it is (or went) back with its owner already
+    if not wins and bond.status == S.RETURNED:
+        order.log(f"Dispute lost by the {side}, but its onchain bond had already gone back to it on chain: "
+                  "nothing to penalize", level="WARN")
+    return 0
+
+
+def proxy_still_locked(order):
+    """Hybrid B: the maker's onchain bond is still at stake (not penalized when the dispute opened)."""
+    from api.models import OnchainBond
+
+    if not has_proxy(order):
+        return False
+    bond = proxied_bond(order.maker_bond)
+    return bond is not None and bond.status == OnchainBond.Status.LOCKED
 
 
 def proxy_return(proxy, status):
@@ -1911,7 +1974,7 @@ def proxy_penalty_sats(proxy):
 
     if not proxy_is_penalized(proxy):
         return 0
-    return bonds.penalty_sats(proxied_bond(proxy))
+    return bonds.penalty_floor_sats(proxied_bond(proxy))  # 0.9.12: what it pays at least
 
 
 def to_lightning(order):
@@ -2013,7 +2076,8 @@ def _slash_side(order, side):
     b = bond_of(order, side)
     if b is None:
         return None
-    got = bonds.penalty_sats(b) if b.status == OnchainBond.Status.PENALIZED else 0
+    # 0.9.12: what the penalty pays AT LEAST (a cheaper rung of its ladder may still be bumped)
+    got = bonds.penalty_floor_sats(b) if b.status == OnchainBond.Status.PENALIZED else 0
     # same key as the hybrid B proxy, so one onchain bond is never rewarded twice
     return {"user": b.owner, "staked": b.value, "received": got, "key": f"{PROXY_PREFIX}{b.pk}"}
 

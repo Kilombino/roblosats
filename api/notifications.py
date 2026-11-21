@@ -331,16 +331,55 @@ class Notifications:
         lang = lang_of(user.robot)
         if lang == "es":
             title = (f"⚡ Otro robot tomó la orden {order.id} antes que tú: su fianza se bloqueó primero. "
-                     "Tu fianza on-chain no está en juego y no pierdes nada. Si aún no la enviaste, no la envíes. "
-                     "Si ya la enviaste, abre la orden para recuperarla (cuando tenga 1 confirmación).")
+                     "No pierdes nada: tu fianza on-chain vuelve a ti, sola si diste una dirección de devolución; "
+                     "si no, abre la orden y pulsa «Recuperar mi fianza» (cuando tenga 1 confirmación). "
+                     "Si aún no la enviaste, no la envíes.")
         elif lang == "ca":
             title = (f"⚡ Un altre robot ha pres l'ordre {order.id} abans que tu: la seva fiança s'ha bloquejat primer. "
-                     "La teva fiança on-chain no està en joc i no perds res. Si encara no l'has enviada, no l'enviïs. "
-                     "Si ja l'has enviada, obre l'ordre per recuperar-la (quan tingui 1 confirmació).")
+                     "No perds res: la teva fiança on-chain torna a tu, sola si vas donar una adreça de devolució; "
+                     "si no, obre l'ordre i prem «Recuperar la meva fiança» (quan tingui 1 confirmació). "
+                     "Si encara no l'has enviada, no l'enviïs.")
         else:
             title = (f"⚡ Another robot took order {order.id} before you: its bond locked first. "
-                     "Your onchain bond is not at stake and you lose nothing. If you have not sent it yet, don't. "
-                     "If you already sent it, open the order to get it back (once it has 1 confirmation).")
+                     "You lose nothing: your onchain bond comes back to you, by itself if you gave a return address; "
+                     "otherwise open the order and tap \"Get my bond back\" (once it has 1 confirmation). "
+                     "If you have not sent it yet, don't.")
+        self.send_message(order, user.robot, title, self.order_url(order), action=True)
+
+    def wrong_chain(self, order, user_id, what, sats, csv=0):
+        """0.9.12: this robot paid its on-chain bond or escrow funding with Spamcoin (SHA-256)."""
+        from django.contrib.auth.models import User
+
+        from api.step_alerts import lang_of
+
+        user = User.objects.filter(id=user_id).first()
+        if user is None:
+            return
+        lang = lang_of(user.robot)
+        if lang == "es":
+            where = "tu fianza" if what == "bond" else "tu dirección de aportación del depósito"
+            when = (f"cuando pasen {csv} bloques desde su confirmación en esa cadena" if what == "bond" and csv
+                    else "cuando quieras")
+            title = (f"⚠️ Orden {order.id}: llegaron {sats} sats a {where} por la cadena EQUIVOCADA "
+                     "(Spamcoin, SHA-256). El coordinador solo ve BTC (BLAKE2b): ese pago no cuenta. "
+                     f"No se pierde: recupéralo tú en «Recuperar sin el coordinador», eligiendo Spamchain, {when}. "
+                     "Para esta orden paga con BTC (BLAKE2b).")
+        elif lang == "ca":
+            where = "la teva fiança" if what == "bond" else "la teva adreça d'aportació del dipòsit"
+            when = (f"quan passin {csv} blocs des de la seva confirmació en aquella cadena" if what == "bond" and csv
+                    else "quan vulguis")
+            title = (f"⚠️ Ordre {order.id}: han arribat {sats} sats a {where} per la cadena EQUIVOCADA "
+                     "(Spamcoin, SHA-256). El coordinador només veu BTC (BLAKE2b): aquest pagament no compta. "
+                     f"No es perd: recupera'l tu a «Recuperar sense el coordinador», triant Spamchain, {when}. "
+                     "Per a aquesta ordre paga amb BTC (BLAKE2b).")
+        else:
+            where = "your bond address" if what == "bond" else "your escrow funding address"
+            when = (f"once {csv} blocks have passed since its confirmation on that chain" if what == "bond" and csv
+                    else "at any time")
+            title = (f"⚠️ Order {order.id}: {sats} sats arrived at {where} on the WRONG chain "
+                     "(Spamcoin, SHA-256). The coordinator only sees BTC (BLAKE2b): that payment does not count. "
+                     f"It is not lost: take it back yourself with \"Recover without the coordinator\", choosing "
+                     f"Spamchain, {when}. For this order, pay with BTC (BLAKE2b).")
         self.send_message(order, user.robot, title, self.order_url(order), action=True)
 
     def order_taken_confirmed(self, order):

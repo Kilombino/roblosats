@@ -2156,10 +2156,6 @@ msgid "A cooperative release had already been prepared (never broadcast): this d
 msgstr "協調リリースがすでに準備されていました（未ブロードキャスト）：この判断で置き換えられます。"
 
 msgctxt "roblosats-admin"
-msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). It was penalized on chain when the dispute opened: the coordinator got %(got)s sats from it and the rest went to the miners. What the maker gets back is credited as a Lightning reward."
-msgstr "メイカーの保証金はオンチェーンにあります（%(bond)s sats、Lightningの代替の裏側）。紛争開始時にオンチェーンでペナルティが科されました：コーディネーターがそこから %(got)s sats を受け取り、残りはマイナーに渡りました。メイカーが取り戻す分はLightning報酬として付与されます。"
-
-msgctxt "roblosats-admin"
 msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). What the maker gets back is credited as a Lightning reward."
 msgstr "メイカーの保証金はオンチェーンにあります（%(bond)s sats、Lightningの代替の裏側）。メイカーが取り戻す分はLightning報酬として付与されます。"
 
@@ -2274,3 +2270,51 @@ msgstr "%(sats)s で %(total)s %(currency)s"
 msgctxt "roblosats-admin"
 msgid "The node refused the transaction (%(reason)s)."
 msgstr "ノードがトランザクションを拒否しました（%(reason)s）。"
+
+msgctxt "roblosats-admin"
+msgid "won the dispute: the trade amount (their on-chain bond went back on chain)"
+msgstr "紛争に勝利：取引額（オンチェーンの保証金はオンチェーンで返却済み）"
+
+msgctxt "roblosats-admin"
+msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). It was already penalized on chain before the decision: the coordinator got %(got)s sats from it and the rest went to the miners. If the maker keeps their bond, its value is credited as a Lightning reward."
+msgstr "メイカーの保証金はオンチェーンにあります（%(bond)s sats、Lightningの代替で保持）。判断の前にすでにオンチェーンで没収されました：コーディネーターは %(got)s sats を受け取り、残りはマイナーへ。メイカーが保証金を保持する場合、その額がLightning報酬として付与されます。"
+
+msgctxt "roblosats-admin"
+msgid "The maker's bond is on chain (%(bond)s sats) and still locked: it was not penalized when the dispute opened. If the maker keeps it, it goes straight back to them on chain; if they lose it, it is penalized on chain when you decide. If no decision is made within %(blocks)s blocks, it is penalized anyway before the maker could take it back alone."
+msgstr "メイカーの保証金はオンチェーンにあり（%(bond)s sats）、まだロックされています：紛争開始時には没収されていません。メイカーが保持すればオンチェーンで直接返却され、失えばあなたの判断時にオンチェーンで没収されます。%(blocks)s ブロック以内に判断がなければ、メイカーが単独で取り戻せるようになる前に没収されます。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s is credited %(trade)s sats as a reward (the trade amount). Their on-chain bond (%(buyer_bond)s) is not credited: it goes straight back to them on chain."
+msgstr "買い手 %(buyer)s に報酬として %(trade)s sats が付与されます（取引額）。オンチェーンの保証金（%(buyer_bond)s）は付与されず、オンチェーンで直接返却されます。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets nothing: their on-chain bond (%(buyer_bond)s) is penalized on chain now."
+msgstr "買い手 %(buyer)s は何も受け取りません：オンチェーンの保証金（%(buyer_bond)s）は今オンチェーンで没収されます。"
+
+msgctxt "roblosats-admin"
+msgid "Each party gets back what they put in: the buyer %(buyer)s their on-chain bond (%(buyer_bond)s), straight back on chain; the seller %(seller)s their bond (%(seller_bond)s) and their escrow (%(escrow)s), credited as a reward to withdraw from the app."
+msgstr "各当事者は出したものを取り戻します：買い手 %(buyer)s はオンチェーンの保証金（%(buyer_bond)s）をオンチェーンで直接、売り手 %(seller)s は保証金（%(seller_bond)s）とエスクロー（%(escrow)s）を報酬として受け取り、アプリから引き出します。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets their on-chain bond (%(buyer_bond)s) straight back on chain. They do not receive the trade sats."
+msgstr "買い手 %(buyer)s はオンチェーンの保証金（%(buyer_bond)s）をオンチェーンで直接取り戻します。取引の sats は受け取りません。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s LOSES their on-chain bond (%(buyer_bond)s): it is penalized on chain now and the coordinator keeps it."
+msgstr "買い手 %(buyer)s はオンチェーンの保証金（%(buyer_bond)s）を失います：今オンチェーンで没収され、コーディネーターが保持します。"
+
+msgctxt "roblosats-admin"
+msgid "Both bonds go back: the buyer's on-chain bond (%(buyer_bond)s) straight back on chain, and %(seller_bond)s credited to the seller %(seller)s as a reward."
+msgstr "両方の保証金が戻ります：買い手のオンチェーン保証金（%(buyer_bond)s）はオンチェーンで直接、%(seller_bond)s は売り手 %(seller)s に報酬として付与されます。"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's on-chain bond was penalized before the dispute was decided: only %(h)s blocks were left before they could take it back alone"
+msgstr "注文 %(id)s：紛争の判断前に %(role)s のオンチェーン保証金が没収されました：単独で取り戻せるまで残り %(h)s ブロックでした"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s took their on-chain bond back alone after its timelock, during the dispute"
+msgstr "注文 %(id)s：紛争中、%(role)s はタイムロック後にオンチェーン保証金を単独で取り戻しました"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: %(sats)s sats were sent to the %(role)s's on-chain address on the WRONG chain (Spamcoin, SHA-256); the robot was told how to take them back"
+msgstr "注文 %(id)s：%(sats)s sats が誤ったチェーン（Spamcoin、SHA-256）で %(role)s のオンチェーンアドレスに送られました。ロボットには取り戻し方を伝えました"

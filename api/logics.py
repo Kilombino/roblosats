@@ -919,13 +919,24 @@ class Logics:
         if order.status != Order.Status.PAY and order.expires_at and timezone.now() < order.expires_at - timedelta(hours=18):
             return False, new_error(1054)
 
+        # 0.9.12 (Kilombino, TG 14873): only Lightning hold invoices are settled now (their HTLCs
+        # can force-close channels if held for long). An onchain bond is not: in an onchain order
+        # both bonds are already inside the escrow output, and the decision's release splits
+        # them; the onchain maker bond of a hybrid B order (behind a proxy) stays locked until
+        # the decision (penalized if its owner loses, returned on chain if it wins, penalized
+        # earlier only if its timelock gets close: bonds.guard_disputed_bonds).
+        def settle_ln_bond(bond):
+            if bond is None or escrow_flow.is_bond_proxy(bond):
+                return False
+            return cls.settle_bond(bond)
+
         if onchain:
-            cls.settle_bond(order.maker_bond)
-            cls.settle_bond(order.taker_bond)
+            settle_ln_bond(order.maker_bond)
+            settle_ln_bond(order.taker_bond)  # hybrid A: the Lightning taker bond
         elif not order.trade_escrow.status == LNPayment.Status.SETLED:
             cls.settle_escrow(order)
-            cls.settle_bond(order.maker_bond)
-            cls.settle_bond(order.taker_bond)
+            settle_ln_bond(order.maker_bond)
+            settle_ln_bond(order.taker_bond)
 
         order.is_disputed = True
         order.update_status(Order.Status.DIS)
@@ -950,8 +961,14 @@ class Logics:
         order.log(
             f"Dispute was opened {f'by Robot({user.robot.id},{user.username})' if user else ''}"
         )
-        order.log("Maker bond was **settled**")
-        order.log("Taker bond was **settled**")
+        for side, bond in (("Maker", order.maker_bond), ("Taker", order.taker_bond)):
+            if bond is None:
+                if onchain:
+                    order.log(f"{side} bond stays **inside the onchain escrow** until the decision")
+            elif escrow_flow.is_bond_proxy(bond):
+                order.log(f"{side} bond (onchain) stays **locked** until the decision: penalized only if its owner loses")
+            else:
+                order.log(f"{side} bond was **settled**")
 
         return True, None
 

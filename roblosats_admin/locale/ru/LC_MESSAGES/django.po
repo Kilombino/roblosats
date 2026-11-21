@@ -2156,10 +2156,6 @@ msgid "A cooperative release had already been prepared (never broadcast): this d
 msgstr "Совместный выпуск уже был подготовлен (но не отправлен в сеть): это решение его заменяет."
 
 msgctxt "roblosats-admin"
-msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). It was penalized on chain when the dispute opened: the coordinator got %(got)s sats from it and the rest went to the miners. What the maker gets back is credited as a Lightning reward."
-msgstr "Залог мейкера находится ончейн (%(bond)s сат, за Lightning-заменителем). При открытии спора он был оштрафован ончейн: координатор получил из него %(got)s сат, а остальное ушло майнерам. То, что мейкер получает обратно, начисляется как Lightning-вознаграждение."
-
-msgctxt "roblosats-admin"
 msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). What the maker gets back is credited as a Lightning reward."
 msgstr "Залог мейкера находится ончейн (%(bond)s сат, за Lightning-заменителем). То, что мейкер получает обратно, начисляется как Lightning-вознаграждение."
 
@@ -2274,3 +2270,51 @@ msgstr "%(sats)s за %(total)s %(currency)s"
 msgctxt "roblosats-admin"
 msgid "The node refused the transaction (%(reason)s)."
 msgstr "Узел отклонил транзакцию (%(reason)s)."
+
+msgctxt "roblosats-admin"
+msgid "won the dispute: the trade amount (their on-chain bond went back on chain)"
+msgstr "выиграл спор: сумма сделки (его ончейн-залог вернулся ончейн)"
+
+msgctxt "roblosats-admin"
+msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). It was already penalized on chain before the decision: the coordinator got %(got)s sats from it and the rest went to the miners. If the maker keeps their bond, its value is credited as a Lightning reward."
+msgstr "Залог создателя находится ончейн (%(bond)s сат, за Lightning-заменителем). Он уже был оштрафован ончейн до решения: координатор получил из него %(got)s сат, остальное ушло майнерам. Если создатель сохраняет залог, его стоимость зачисляется как вознаграждение Lightning."
+
+msgctxt "roblosats-admin"
+msgid "The maker's bond is on chain (%(bond)s sats) and still locked: it was not penalized when the dispute opened. If the maker keeps it, it goes straight back to them on chain; if they lose it, it is penalized on chain when you decide. If no decision is made within %(blocks)s blocks, it is penalized anyway before the maker could take it back alone."
+msgstr "Залог создателя находится ончейн (%(bond)s сат) и всё ещё заблокирован: он не был оштрафован при открытии спора. Если создатель его сохраняет, он сразу возвращается ему ончейн; если проигрывает, залог штрафуется ончейн, когда вы решите. Если решения не будет в течение %(blocks)s блоков, он всё равно штрафуется до того, как создатель сможет забрать его сам."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s is credited %(trade)s sats as a reward (the trade amount). Their on-chain bond (%(buyer_bond)s) is not credited: it goes straight back to them on chain."
+msgstr "Покупателю %(buyer)s зачисляется %(trade)s сат как вознаграждение (сумма сделки). Его ончейн-залог (%(buyer_bond)s) не зачисляется: он сразу возвращается ему ончейн."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets nothing: their on-chain bond (%(buyer_bond)s) is penalized on chain now."
+msgstr "Покупатель %(buyer)s ничего не получает: его ончейн-залог (%(buyer_bond)s) штрафуется ончейн сейчас."
+
+msgctxt "roblosats-admin"
+msgid "Each party gets back what they put in: the buyer %(buyer)s their on-chain bond (%(buyer_bond)s), straight back on chain; the seller %(seller)s their bond (%(seller_bond)s) and their escrow (%(escrow)s), credited as a reward to withdraw from the app."
+msgstr "Каждая сторона получает обратно то, что внесла: покупатель %(buyer)s свой ончейн-залог (%(buyer_bond)s), сразу ончейн; продавец %(seller)s свой залог (%(seller_bond)s) и депозит (%(escrow)s), зачисленные как вознаграждение для вывода в приложении."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets their on-chain bond (%(buyer_bond)s) straight back on chain. They do not receive the trade sats."
+msgstr "Покупатель %(buyer)s получает свой ончейн-залог (%(buyer_bond)s) сразу обратно ончейн. Саты сделки он не получает."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s LOSES their on-chain bond (%(buyer_bond)s): it is penalized on chain now and the coordinator keeps it."
+msgstr "Покупатель %(buyer)s ТЕРЯЕТ свой ончейн-залог (%(buyer_bond)s): он штрафуется ончейн сейчас, и его оставляет координатор."
+
+msgctxt "roblosats-admin"
+msgid "Both bonds go back: the buyer's on-chain bond (%(buyer_bond)s) straight back on chain, and %(seller_bond)s credited to the seller %(seller)s as a reward."
+msgstr "Оба залога возвращаются: ончейн-залог покупателя (%(buyer_bond)s) сразу ончейн, а %(seller_bond)s зачисляются продавцу %(seller)s как вознаграждение."
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s's on-chain bond was penalized before the dispute was decided: only %(h)s blocks were left before they could take it back alone"
+msgstr "Ордер %(id)s: ончейн-залог стороны %(role)s оштрафован до решения спора: оставалось всего %(h)s блоков, после чего она могла бы забрать его сама"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(role)s took their on-chain bond back alone after its timelock, during the dispute"
+msgstr "Ордер %(id)s: сторона %(role)s сама забрала свой ончейн-залог после истечения таймлока, во время спора"
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: %(sats)s sats were sent to the %(role)s's on-chain address on the WRONG chain (Spamcoin, SHA-256); the robot was told how to take them back"
+msgstr "Ордер %(id)s: %(sats)s сат отправлены на ончейн-адрес стороны %(role)s в НЕПРАВИЛЬНОЙ цепи (Spamcoin, SHA-256); роботу объяснили, как их вернуть"

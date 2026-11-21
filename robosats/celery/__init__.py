@@ -40,6 +40,10 @@ app.conf.beat_schedule = {
         "task": "roblosats_admin_watch",
         "schedule": timedelta(seconds=60),
     },
+    "spamchain-watch": {  # 0.9.12: on-chain addresses paid on the SHA-256 chain by mistake
+        "task": "spamchain_watch",
+        "schedule": timedelta(seconds=config("SPAMCHAIN_WATCH_SECONDS", cast=int, default=600)),
+    },
     "users-cleansing": {  # Cleans abandoned users at midnight
         "task": "users_cleansing",
         "schedule": crontab(hour=0, minute=0),

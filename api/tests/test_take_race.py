@@ -175,7 +175,7 @@ class TakeLostNotice(RaceBase):
         robot, title = send.call_args.args[1], send.call_args.args[2]
         self.assertEqual(robot, self.loser.robot)
         self.assertIn(f"orden {self.order.id}", title)
-        self.assertIn("no pierdes nada", title)
+        self.assertIn("No pierdes nada", title)
         self.assertTrue(send.call_args.kwargs["action"])
 
     def test_not_to_the_trader_of_the_order(self):

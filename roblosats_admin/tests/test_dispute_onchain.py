@@ -252,7 +252,7 @@ class OnchainPlanTest(TestCase):
         with patch("api.escrow.bonds.penalty_sats", return_value=2_500):
             p = disputes.plan(order, "buyer")
         self.assertTrue(p["possible"])
-        self.assertIn("penalized on chain when the dispute opened", p["lines"][-1])
+        self.assertIn("already penalized on chain before the decision", p["lines"][-1])
         self.assertIn(disputes.fmt_sats(2_500), p["lines"][-1])
         self.assertTrue(disputes.plan(order, "penalize_buyer")["possible"])
 
