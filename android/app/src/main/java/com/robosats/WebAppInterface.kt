@@ -11,6 +11,7 @@ import android.widget.Toast
 import com.robosats.models.EncryptedStorage
 import com.robosats.models.NostrClient
 import com.robosats.services.NotificationsService
+import com.robosats.tor.TorGate
 import com.robosats.tor.TorKmpManager.getTorKmpObject
 import okhttp3.Call
 import okhttp3.Callback
@@ -177,7 +178,7 @@ class WebAppInterface(private val context: MainActivity, private val webView: We
                 .pingInterval(30, TimeUnit.SECONDS)
 
             if (useTorFor(path)) {
-                builder = builder.proxy(getTorKmpObject().proxy)
+                builder = builder.proxySelector(TorGate.selector)
             }
 
             val client = builder.build()
@@ -296,7 +297,7 @@ class WebAppInterface(private val context: MainActivity, private val webView: We
                 .readTimeout(120, TimeUnit.SECONDS) // Set read timeout
 
             if (useTorFor(url)) {
-                builder = builder.proxy(getTorKmpObject().proxy)
+                builder = builder.proxySelector(TorGate.selector)
             }
 
             val client = builder.build()
@@ -376,7 +377,7 @@ class WebAppInterface(private val context: MainActivity, private val webView: We
                 .connectTimeout(60, TimeUnit.SECONDS)
                 .readTimeout(120, TimeUnit.SECONDS)
             if (useTorFor(url)) {
-                builder = builder.proxy(getTorKmpObject().proxy)
+                builder = builder.proxySelector(TorGate.selector)
             }
             val client = builder.build()
             val requestBuilder = RequestBuilder().url(url)
@@ -425,7 +426,7 @@ class WebAppInterface(private val context: MainActivity, private val webView: We
                 .readTimeout(120, TimeUnit.SECONDS) // Set read timeout
 
             if (useTorFor(url)) {
-                builder = builder.proxy(getTorKmpObject().proxy)
+                builder = builder.proxySelector(TorGate.selector)
             }
 
             val client = builder.build()
@@ -482,7 +483,7 @@ class WebAppInterface(private val context: MainActivity, private val webView: We
                 .readTimeout(120, TimeUnit.SECONDS) // Set read timeout
 
             if (useTorFor(url)) {
-                builder = builder.proxy(getTorKmpObject().proxy)
+                builder = builder.proxySelector(TorGate.selector)
             }
 
             val client = builder.build()
@@ -724,7 +725,8 @@ class WebAppInterface(private val context: MainActivity, private val webView: We
     // 0.9.6: in-app update (as in Kilowallet). The check goes to GitHub through Tor when the
     // app uses its own Tor; nothing is installed unless the APK's SHA-256 matches the release
     // notes and it carries this app's signing certificate.
-    private fun updateProxy(): java.net.Proxy? = if (context.useProxy) getTorKmpObject().proxy else null
+    // 0.9.13: waits for Tor (callers run in their own Thread), never "no proxy" while it starts
+    private fun updateProxy(): java.net.Proxy? = if (context.useProxy) TorGate.awaitProxy() else null
 
     @JavascriptInterface
     fun checkUpdate(uuid: String) {
@@ -837,6 +839,12 @@ class WebAppInterface(private val context: MainActivity, private val webView: We
             }.start()
         }
         context.useProxy = useProxy
+        // 0.9.13: notification relays follow (Orbot: no proxy; built-in: Tor's, or none until ready)
+        if (useProxy) {
+            TorGate.onTorProxyChanged(TorGate.readyProxy())
+        } else {
+            com.vitorpamplona.ammolite.service.HttpClientManager.setDefaultProxy(null)
+        }
     }
 
     private fun onWsMessage(path: String?, message: String?) {

@@ -110,7 +110,14 @@ class Garage {
     saveAsJson(`garage_slots_${new Date().toISOString()}.json`, keys, client);
   };
 
+  // 0.9.13: true while loadSlots rebuilds the garage. Each new Slot triggers a hook that used to
+  // save the garage: storage briefly held "{}" and then 1, 2… robots. On Android the
+  // notification service read that partial garage (the empty key crashed the app in 0.9.12) and
+  // resubscribed on every write; and an app killed in that moment kept a partial garage.
+  private loadingSlots: boolean = false;
+
   save = (): void => {
+    if (this.loadingSlots) return;
     systemClient.setItem('garage_slots', JSON.stringify(this.slots));
     if (this.currentSlot) systemClient.setItem('garage_current_slot', this.currentSlot);
   };
@@ -125,11 +132,30 @@ class Garage {
   };
 
   loadSlots = async (): Promise<void> => {
-    this.slots = {};
-    const slotsDump: string = (await systemClient.getItem('garage_slots')) ?? '';
+    this.loadingSlots = true;
+    let loaded = false;
+    try {
+      this.slots = {};
+      const slotsDump: string = (await systemClient.getItem('garage_slots')) ?? '';
 
-    if (slotsDump !== '') {
-      const rawSlots = JSON.parse(slotsDump) as Record<string, StoredSlot>;
+      if (slotsDump !== '') {
+        const rawSlots = JSON.parse(slotsDump) as Record<string, StoredSlot>;
+        this.restoreSlots(rawSlots);
+        this.currentSlot =
+          (await systemClient.getItem('garage_current_slot')) ?? Object.keys(rawSlots)[0];
+        loaded = true;
+      }
+    } finally {
+      this.loadingSlots = false;
+    }
+    if (loaded) {
+      console.log('Robot Garage was loaded from local storage');
+      this.triggerHook('onSlotUpdate');
+    }
+  };
+
+  private restoreSlots = (rawSlots: Record<string, StoredSlot>): void => {
+    {
       Object.values(rawSlots).forEach((rawSlot) => {
         if (rawSlot?.token) {
           const robotAliases = Object.keys(rawSlot.robots ?? {});
@@ -161,11 +187,6 @@ class Garage {
           }
         }
       });
-
-      this.currentSlot =
-        (await systemClient.getItem('garage_current_slot')) ?? Object.keys(rawSlots)[0];
-      console.log('Robot Garage was loaded from local storage');
-      this.triggerHook('onSlotUpdate');
     }
   };
 

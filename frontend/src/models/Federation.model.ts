@@ -513,6 +513,12 @@ export class Federation {
     coordinator: string,
   ): void => {
     this.connectionGeneration += 1;
+    // 0.9.13: a batch still in flight belongs to the previous connection: reusing it meant the
+    // new connection sent no new requests, while the info that batch had already received was
+    // cleared below, so the federation vote ran with 0 voters ("no majority" at every start in
+    // Clearnet mode, where the app connects once before Tor is ready and again after).
+    this._loadInfoPromise = undefined;
+    this._loadBookPromise = undefined;
     this.connection = settings.connection;
     this.loading = true;
     this.federationListLoaded = false;
@@ -735,7 +741,8 @@ export class Federation {
     this.exchange.loadingCoordinators = Object.keys(this.coordinators).length;
     this.updateEnabledCoordinators();
 
-    this._loadInfoPromise = Promise.allSettled(
+    const generation = this.connectionGeneration;
+    const batch: Promise<void> = Promise.allSettled(
       Object.values(this.coordinators).map((coor) =>
         withTimeout(
           coor.loadInfo(() => {
@@ -745,6 +752,8 @@ export class Federation {
         ),
       ),
     ).then(() => {
+      // 0.9.13: a batch of an older connection must not drain the current one's counter
+      if (this.connectionGeneration !== generation || this._loadInfoPromise !== batch) return;
       // Force-drain the counter so the loading spinner always clears even when
       // some coordinators timed out without firing their onDataLoad callback.
       this.exchange.loadingCoordinators = 0;
@@ -752,6 +761,7 @@ export class Federation {
       this.updateExchange();
       this._loadInfoPromise = undefined;
     });
+    this._loadInfoPromise = batch;
 
     return this._loadInfoPromise;
   };
@@ -768,7 +778,8 @@ export class Federation {
     this.exchange.loadingCoordinators = Object.keys(this.coordinators).length;
     this.triggerHook('onFederationUpdate');
 
-    this._loadBookPromise = Promise.allSettled(
+    const generation = this.connectionGeneration;
+    const batch: Promise<void> = Promise.allSettled(
       Object.values(this.coordinators).map((coor) =>
         withTimeout(
           coor.loadBook(() => {
@@ -778,6 +789,7 @@ export class Federation {
         ),
       ),
     ).then(() => {
+      if (this.connectionGeneration !== generation || this._loadBookPromise !== batch) return;
       // Force-drain the counter so the loading spinner always clears even when
       // some coordinators timed out without firing their onDataLoad callback.
       this.exchange.loadingCoordinators = 0;
@@ -785,6 +797,7 @@ export class Federation {
       this.updateExchange();
       this._loadBookPromise = undefined;
     });
+    this._loadBookPromise = batch;
 
     return this._loadBookPromise;
   };
@@ -818,6 +831,14 @@ export class Federation {
   loadCoordinatorData = async (): Promise<void> => {
     const generation = this.connectionGeneration;
 
+    // 0.9.13: the loads start first: they set loadingCoordinators. The signal below used to be
+    // created before, while the counter still held 0 from the previous connection, so it resolved
+    // at once and the federation vote ran before any coordinator answered (0 voters).
+    // Start all loading in parallel; then wait for the "all responded" signal.
+    this.loadInfo();
+    this.loadLimits();
+    if (this.connection === 'api') this.loadBook();
+
     // Resolve as soon as every coordinator that is going to respond has done so
     // (loadingCoordinators == 0), rather than waiting for the 15 s withTimeout
     // wall. The full batch still runs in the background.
@@ -839,10 +860,6 @@ export class Federation {
       this.hooks.onFederationUpdate.push(check);
     });
 
-    // Start all loading in parallel; await the "all responded" signal.
-    this.loadInfo();
-    this.loadLimits();
-    if (this.connection === 'api') this.loadBook();
     await allRespondedOrTimedOut;
 
     // If the connection changed while we were loading, discard this stale completion.
@@ -850,6 +867,50 @@ export class Federation {
 
     await this.loadDevFund();
     await this.refreshFederationList();
+    await this.revoteWhenLateInfoArrives(generation);
+  };
+
+  /** 0.9.13: how long a "no majority" vote waits for coordinators that had not answered yet. */
+  static LATE_INFO_WAIT_MS = 90_000;
+
+  /**
+   * 0.9.13: the vote runs once the reachable coordinators answered or after 15 s; an onion
+   * coordinator reached through a Tor that has just started can take longer. When the vote found
+   * no majority and some coordinators had not answered, wait for them (up to LATE_INFO_WAIT_MS)
+   * and vote once more, so the start-up "no majority (0 voters)" recovers by itself.
+   */
+  private revoteWhenLateInfoArrives = async (generation: number): Promise<void> => {
+    if (this.majorityFederationHash !== null) return;
+    const missing = Object.values(this.coordinators).filter(
+      (c) => c.enabled && c.info === undefined,
+    );
+    if (missing.length === 0) return;
+    const deadline = Date.now() + Federation.LATE_INFO_WAIT_MS;
+    // one vote at a time, each time a late coordinator answers, until there is a majority
+    let chain: Promise<void> = Promise.resolve();
+    const revote = (coordinator: Coordinator): Promise<void> => {
+      chain = chain.then(async () => {
+        if (
+          this.connectionGeneration !== generation ||
+          this.majorityFederationHash !== null ||
+          coordinator.info === undefined ||
+          Date.now() > deadline
+        ) {
+          return;
+        }
+        console.log('[FederationDiscovery] late coordinator info arrived — voting again');
+        await this.refreshFederationList();
+      });
+      return chain;
+    };
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
+      Promise.allSettled(missing.map(async (c) => await c.loadInfo().then(() => revote(c)))),
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, Federation.LATE_INFO_WAIT_MS);
+      }),
+    ]);
+    if (timer) clearTimeout(timer);
   };
 
   updateExchange = (): void => {

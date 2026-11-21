@@ -220,6 +220,8 @@ class TorKmp(private val application : Application) {
                 Proxy(Proxy.Type.SOCKS, InetSocketAddress(socks.address.value, socks.port.value))
             }
             Log.i(TAG, "Tor SOCKS proxy: ${socks ?: "none"}")
+            // 0.9.13: the relays' shared client never falls back to "no proxy"
+            TorGate.onTorProxyChanged(proxy)
             addLine(listeners.toString())
         }
     }

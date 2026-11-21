@@ -37,6 +37,7 @@ import com.robosats.tor.TorKmp
 import com.robosats.tor.TorKmpManager
 import com.robosats.tor.TorKmpManager.getTorKmpObject
 import com.vitorpamplona.ammolite.service.HttpClientManager
+import com.robosats.tor.TorGate
 import java.util.regex.Pattern
 
 class MainActivity : AppCompatActivity() {
@@ -185,6 +186,9 @@ class MainActivity : AppCompatActivity() {
         clearnet = EncryptedStorage.getEncryptedStorage("settings_clearnet") == "true"
         clearnetHosts = parseHosts(EncryptedStorage.getEncryptedStorage("settings_clearnet_hosts"))
         val settingProxy = EncryptedStorage.getEncryptedStorage("settings_use_proxy")
+        // 0.9.13: until Tor is ready, the notification relays' shared client points at a closed
+        // SOCKS port instead of having no proxy (no direct connection, no system DNS for a .onion)
+        if (settingProxy != "false") HttpClientManager.setDefaultProxy(TorGate.readyProxy() ?: TorGate.UNREACHABLE)
         if (settingProxy == "false") {
             // Setup WebView to use Orbot if the user previously clicked
             onUseOrbotButtonClicked()

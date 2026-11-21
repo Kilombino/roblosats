@@ -370,3 +370,43 @@ describe('finished onchain order with a pending onchain step', () => {
     expect(slot.activeOrder).toBe(fresh);
   });
 });
+
+// 0.9.13: loading the garage at start-up must never write a partial garage ("{}" then one robot
+// at a time): the Android notification service read it in between and crashed on an empty key.
+it('never saves a partial garage while it loads the stored robots', async () => {
+  const tokens = [
+    'robotTokenA0123456789abcdefghijklmn',
+    'robotTokenB0123456789abcdefghijklmn',
+    'robotTokenC0123456789abcdefghijklmn',
+  ];
+  const stored: Record<string, unknown> = {};
+  tokens.forEach((t) => {
+    stored[t] = { token: t, robots: { test: { pubKey: 'pub', encPrivKey: 'enc' } } };
+  });
+  jest.mocked(systemClient.getItem).mockImplementation(async (k: string) => {
+    if (k === 'garage_slots') return JSON.stringify(stored);
+    if (k === 'garage_current_slot') return tokens[1];
+    return undefined;
+  });
+  const garage = new Garage();
+  await garage.waitForSlotsLoaded();
+  const writes = jest
+    .mocked(systemClient.setItem)
+    .mock.calls.filter(([k]) => k === 'garage_slots')
+    .map(([, v]) => Object.keys(JSON.parse(v) as object).length);
+  expect(Object.keys(garage.slots)).toHaveLength(3);
+  expect(garage.currentSlot).toBe(tokens[1]);
+  expect(writes.length).toBeGreaterThan(0);
+  writes.forEach((n) => expect(n).toBe(3));
+  // each stored slot keeps a 32-byte nostr key
+  const last = JSON.parse(
+    jest
+      .mocked(systemClient.setItem)
+      .mock.calls.filter(([k]) => k === 'garage_slots')
+      .pop()![1],
+  ) as Record<string, { nostrSecKey: Record<string, number>; nostrPubKey: string }>;
+  Object.values(last).forEach((s) => {
+    expect(Object.keys(s.nostrSecKey)).toHaveLength(32);
+    expect(s.nostrPubKey).toMatch(/^[0-9a-f]{64}$/);
+  });
+});

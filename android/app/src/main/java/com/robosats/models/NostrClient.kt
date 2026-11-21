@@ -6,11 +6,11 @@ import com.vitorpamplona.ammolite.relays.Client
 import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.RelayPool
 import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.ammolite.relays.filters.FilterSerializer
+import com.vitorpamplona.ammolite.relays.filters.IPerRelayFilter
 import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.encoders.Hex
+import com.vitorpamplona.quartz.events.Event
 import org.json.JSONArray
-import org.json.JSONObject
 
 object NostrClient {
     private var subscriptionNotificationId = "robosatsNotificationId"
@@ -40,8 +40,21 @@ object NostrClient {
 
     fun refresh() {
         val pubKeys = garagePubKeys()
-        if (authors.toSet() != pubKeys.toSet()) {
+        // 0.9.13: only a garage that gained robots resubscribes. The page rewrites the garage
+        // robot by robot while it loads (for a moment "{}", then 1, 2… robots): each of those
+        // writes used to send a new REQ and the relay sent the whole history again.
+        if (pubKeys.isNotEmpty() && !authors.toSet().containsAll(pubKeys)) {
             subscribeToInbox()
+        } else if (pubKeys.isNotEmpty() && pubKeys.toSet() != authors.toSet()) {
+            // robots removed: the next subscription (restart, network change) drops them
+            Log.d("RobosatsNostrClient", "Garage has fewer robots (${pubKeys.size}/${authors.size}); subscription kept")
+        }
+    }
+
+    /** 0.9.13: while a relay is connected, remember that the service was listening (see InboxWindow). */
+    fun markActive(nowSeconds: Long = System.currentTimeMillis() / 1000) {
+        if (RelayPool.getAll().any { it.isConnected() }) {
+            EncryptedStorage.setEncryptedStorage(InboxWindow.KEY_LAST_ACTIVE, nowSeconds.toString())
         }
     }
 
@@ -61,55 +74,39 @@ object NostrClient {
         }
     }
 
-    fun garagePubKeys(): List<String> {
-        val garageString = EncryptedStorage.getEncryptedStorage("garage_slots")
-        var pubKeys = emptyList<String>()
+    fun garagePubKeys(): List<String> =
+        RobotKeys.pubKeys(EncryptedStorage.getEncryptedStorage("garage_slots"))
 
-        if (garageString.isNotEmpty()) {
-            val garage = JSONObject(garageString)
-
-            val keys = garage.keys()
-            while (keys.hasNext()) {
-                val key = keys.next()
-                val slot = garage.getJSONObject(key) // Get the value associated with the key
-                val hexPubKey = slot.getString("nostrPubKey")
-                if (hexPubKey.isNotEmpty()) {
-                    pubKeys = pubKeys.plus(hexPubKey)
-                }
-            }
+    /**
+     * 0.9.13: the key pair of the robot [hexPubKey], or null (logged) when it is not in the
+     * garage or its stored key is not a valid 32-byte secret for that pubkey. Never throws: up to
+     * 0.9.12 an empty or partial garage (the page rewrites it robot by robot while it loads)
+     * reached secp256k1 as an empty key and the exception killed the app.
+     *
+     * [garageString] lets the caller use the same snapshot it took the robot list from.
+     */
+    fun getRobotKeyPair(
+        hexPubKey: String,
+        garageString: String = EncryptedStorage.getEncryptedStorage("garage_slots"),
+    ): KeyPair? {
+        val secret = RobotKeys.secretFor(garageString, hexPubKey)
+        if (secret == null) {
+            Log.w("RobosatsNostrClient", "No valid nostr key in the garage for robot ${hexPubKey.take(8)}…; skipped")
+            return null
         }
-
-        return pubKeys
-    }
-
-    fun getRobotKeyPair(hexPubKey: String): KeyPair {
-        val garageString = EncryptedStorage.getEncryptedStorage("garage_slots")
-        var privKey = ""
-        var pubKey = ""
-
-        if (garageString.isNotEmpty()) {
-            val garage = JSONObject(garageString)
-
-            val keys = garage.keys()
-            while (keys.hasNext() && privKey == "") {
-                val key = keys.next()
-                val slot = garage.getJSONObject(key)
-                val slotPubKey = slot.getString("nostrPubKey")
-                if (slotPubKey == hexPubKey) {
-                    pubKey = slotPubKey
-                    val nostrSecKeyJson = slot.getJSONObject("nostrSecKey")
-                    val byteArray = ByteArray(nostrSecKeyJson.length()) { index ->
-                        nostrSecKeyJson.getInt(index.toString()).toByte()
-                    }
-                    privKey = byteArray.joinToString("") { byte -> "%02x".format(byte) }
-                }
+        return try {
+            val pair = KeyPair(secret)
+            val derived = pair.pubKey.let { RobotKeys.toHex(it) }
+            if (derived != hexPubKey.lowercase()) {
+                Log.w("RobosatsNostrClient", "Stored nostr key of robot ${hexPubKey.take(8)}… does not match its pubkey; skipped")
+                null
+            } else {
+                pair
             }
+        } catch (e: Throwable) {
+            Log.w("RobosatsNostrClient", "Invalid nostr key for robot ${hexPubKey.take(8)}…: ${e.message}; skipped")
+            null
         }
-
-        return KeyPair(
-            Hex.decode(privKey),
-            Hex.decode(pubKey),
-        )
     }
 
     private fun connectRelays() {
@@ -140,29 +137,48 @@ object NostrClient {
     }
 
     private fun subscribeToInbox() {
-        val garageString = EncryptedStorage.getEncryptedStorage("garage_slots")
+        val pubKeys = garagePubKeys()
+        if (pubKeys.isEmpty()) return
+        authors = pubKeys
 
-        if (garageString.isNotEmpty()) {
-            authors = garagePubKeys()
-
-            if (authors.isNotEmpty()) {
-                Log.d(
-                    "RobosatsNostrClient",
-                    "Relay subscription authors: ${authors.size}",
-                )
-                Client.sendFilter(
-                    subscriptionNotificationId,
-                    listOf(
-                        TypedFilter(
-                            types = COMMON_FEED_TYPES,
-                            filter = SincePerRelayFilter(
-                                kinds = listOf(1059),
-                                tags = mapOf("p" to authors),
-                            ),
-                        ),
-                    ),
-                )
-            }
-        }
+        val now = System.currentTimeMillis() / 1000
+        val lastActive = InboxWindow.parseLastActive(EncryptedStorage.getEncryptedStorage(InboxWindow.KEY_LAST_ACTIVE))
+        val since = InboxWindow.since(now, lastActive)
+        Log.d(
+            "RobosatsNostrClient",
+            "Relay subscription authors: ${authors.size} since=$since limit=${InboxWindow.LIMIT}",
+        )
+        Client.sendFilter(
+            subscriptionNotificationId,
+            listOf(
+                TypedFilter(
+                    types = COMMON_FEED_TYPES,
+                    filter = InboxFilter(authors, since, InboxWindow.LIMIT),
+                ),
+            ),
+        )
     }
+}
+
+/**
+ * 0.9.13: kind 1059 to the robots' pubkeys (`#p`) with a fixed `since` and a `limit`. The
+ * library's SincePerRelayFilter takes its since per relay URL from an EOSE map we do not keep,
+ * so it always went out without one.
+ */
+class InboxFilter(
+    private val pubKeys: List<String>,
+    private val since: Long,
+    private val limit: Int,
+) : IPerRelayFilter {
+    private val pubKeySet = pubKeys.toHashSet()
+
+    override fun toJson(forRelay: String): String =
+        FilterSerializer.toJson(null, null, listOf(1059), mapOf("p" to pubKeys), since, null, limit, null)
+
+    override fun match(event: Event, forRelay: String): Boolean =
+        event.kind == 1059 && event.tags.any { it.size > 1 && it[0] == "p" && it[1] in pubKeySet }
+
+    override fun toDebugJson(): String = toJson("")
+
+    override fun isValidFor(forRelay: String): Boolean = true
 }

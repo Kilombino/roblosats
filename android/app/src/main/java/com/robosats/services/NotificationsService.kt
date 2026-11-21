@@ -30,9 +30,11 @@ import com.robosats.R
 import com.robosats.RoboIdentities
 import com.robosats.models.EncryptedStorage
 import com.robosats.models.NostrClient
-import com.robosats.models.NostrClient.garagePubKeys
 import com.robosats.models.NostrClient.getRobotKeyPair
 import com.robosats.models.NotificationDedup
+import com.robosats.models.RobotKeys
+import com.robosats.models.SeenWraps
+import com.robosats.tor.TorGate
 import com.vitorpamplona.ammolite.relays.Client
 import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.quartz.events.ChatMessageEvent
@@ -72,6 +74,9 @@ class NotificationsService : Service() {
         const val ACTION_STOP_SERVICE = "com.robosats.services.STOP_SERVICE"
     }
 
+    // 0.9.13: gift wraps already opened, kept on the device (flushed once a minute)
+    private val seenWraps by lazy { SeenWraps(EncryptedStorage.getEncryptedStorage(SeenWraps.KEY)) }
+
     private val clientNotificationListener =
         object : Client.Listener {
             override fun onEvent(
@@ -80,35 +85,65 @@ class NotificationsService : Service() {
                 relay: Relay,
                 afterEOSE: Boolean,
             ) {
-                if (event is GiftWrapEvent && processedEvents.putIfAbsent(event.id, true) == null) {
-                    Log.d("RobosatsNotifications", "Relay Event: ${relay.url} - $subscriptionId - ${event.toJson()}")
-                    val firstTaggedUser = event.firstTaggedUser()
-                    val authors = garagePubKeys()
-
-                    if (firstTaggedUser?.isNotEmpty() == true && authors.contains(firstTaggedUser)) {
-                        Log.d("RobosatsNotifications", "Relay Event: ${relay.url} - $subscriptionId")
-
-                        var nostrSigner = NostrSignerInternal(getRobotKeyPair(firstTaggedUser))
-                        event.unwrap(nostrSigner) { gift ->
-                            if (gift is SealedGossipEvent) {
-                                gift.unseal(nostrSigner) { rumor ->
-                                    if (rumor is ChatMessageEvent) {
-                                        val federationPubKeys = EncryptedStorage.getEncryptedStorage("federation_pubkeys")
-                                        // 0.9.6: each notice once, ever (rumor ids kept on the device): a relay that
-                                        // sends the same gift wrap again after a restart no longer repeats it
-                                        if (federationPubKeys.contains(rumor.pubKey) &&
-                                            NotificationDedup.shouldNotify(dedupStore, rumor.id, rumor.createdAt)
-                                        ) {
-                                            displayOrderNotification(rumor, firstTaggedUser)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                // 0.9.13: this runs in a library coroutine without an exception handler: anything
+                // thrown here (a bad robot key, a malformed event, storage) killed the app. One bad
+                // event or robot is now logged and skipped.
+                try {
+                    handleEvent(event, subscriptionId, relay)
+                } catch (t: Throwable) {
+                    Log.e("RobosatsNotifications", "Event ${event.id.take(8)}… from ${relay.url} skipped: ${t.message}", t)
                 }
             }
         }
+
+    private fun handleEvent(event: Event, subscriptionId: String, relay: Relay) {
+        if (event !is GiftWrapEvent || processedEvents.containsKey(event.id)) return
+        val firstTaggedUser = event.firstTaggedUser()?.lowercase() ?: return
+        // one snapshot of the garage for the robot list and the key (the page may rewrite it
+        // in between, robot by robot, while it loads)
+        val garageString = EncryptedStorage.getEncryptedStorage("garage_slots")
+        if (firstTaggedUser !in RobotKeys.pubKeys(garageString)) return
+        val keyPair = getRobotKeyPair(firstTaggedUser, garageString) ?: return
+        // seen only once it could really be opened: a robot whose key was not readable yet gets
+        // its gift wraps again on the next subscription
+        processedEvents[event.id] = true
+        if (!seenWraps.firstTime(event.id, event.createdAt)) return
+        Log.d("RobosatsNotifications", "Relay Event: ${relay.url} - $subscriptionId - ${event.id}")
+
+        val nostrSigner = NostrSignerInternal(keyPair)
+        event.unwrap(nostrSigner) { gift ->
+            try {
+                if (gift is SealedGossipEvent) {
+                    gift.unseal(nostrSigner) { rumor ->
+                        try {
+                            if (rumor is ChatMessageEvent) {
+                                val federationPubKeys = EncryptedStorage.getEncryptedStorage("federation_pubkeys")
+                                // 0.9.6: each notice once, ever (rumor ids kept on the device): a relay that
+                                // sends the same gift wrap again after a restart no longer repeats it
+                                if (federationPubKeys.contains(rumor.pubKey) &&
+                                    NotificationDedup.shouldNotify(dedupStore, rumor.id, rumor.createdAt)
+                                ) {
+                                    displayOrderNotification(rumor, firstTaggedUser)
+                                }
+                            }
+                        } catch (t: Throwable) {
+                            Log.e("RobosatsNotifications", "Notice of ${event.id.take(8)}… skipped: ${t.message}", t)
+                        }
+                    }
+                }
+            } catch (t: Throwable) {
+                Log.e("RobosatsNotifications", "Seal of ${event.id.take(8)}… skipped: ${t.message}", t)
+            }
+        }
+    }
+
+    private fun flushSeenWraps() {
+        try {
+            if (seenWraps.dirty) EncryptedStorage.setEncryptedStorage(SeenWraps.KEY, seenWraps.serialize())
+        } catch (t: Throwable) {
+            Log.w("RobosatsNotifications", "Could not save seen gift wraps: ${t.message}")
+        }
+    }
 
     private val networkCallback =
         object : ConnectivityManager.NetworkCallback() {
@@ -196,6 +231,7 @@ class NotificationsService : Service() {
 
     override fun onDestroy() {
         timer.cancel()
+        flushSeenWraps()
         stopSubscription()
 
         try {
@@ -234,15 +270,35 @@ class NotificationsService : Service() {
         }
     }
 
+    // 0.9.13: a subscription waiting for Tor must not start after the service was stopped
+    @Volatile
+    private var subscribed = false
+
     private fun startSubscription() {
+        subscribed = true
         if (!Client.isSubscribed(clientNotificationListener)) Client.subscribe(clientNotificationListener)
 
         CoroutineScope(Dispatchers.IO).launch {
-            NostrClient.start()
+            try {
+                // 0.9.13: relays are never dialled without Tor's SOCKS proxy in Tor/Clearnet mode
+                // (no direct connection, no system DNS for a .onion); if the app is not open, the
+                // service starts the built-in Tor itself
+                val readyNow = TorGate.prepareRelays(application) {
+                    // fresh relays (a failed one waits 180 s before retrying)
+                    if (subscribed) {
+                        NostrClient.stop()
+                        NostrClient.start()
+                    }
+                }
+                if (readyNow) NostrClient.start()
+            } catch (t: Throwable) {
+                Log.e("RobosatsNotifications", "startSubscription: ${t.message}", t)
+            }
         }
     }
 
     private fun stopSubscription() {
+        subscribed = false
         Client.unsubscribe(clientNotificationListener)
         NostrClient.stop()
     }
@@ -251,7 +307,15 @@ class NotificationsService : Service() {
         timer.schedule(
             object : TimerTask() {
                 override fun run() {
-                    NostrClient.checkRelaysHealth()
+                    // 0.9.13: a TimerTask that throws cancels the Timer for good
+                    try {
+                        // 0.9.13: no relay is dialled before Tor is ready (see TorGate)
+                        if (TorGate.relaysCanConnect()) NostrClient.checkRelaysHealth()
+                        NostrClient.markActive()
+                        flushSeenWraps()
+                    } catch (t: Throwable) {
+                        Log.e("RobosatsNotifications", "keepAlive: ${t.message}", t)
+                    }
                 }
             },
             5000,
