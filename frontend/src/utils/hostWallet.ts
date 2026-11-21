@@ -1,7 +1,7 @@
 // Kilowallet's wallet functions for the client inside its ROBLO tab. Each one opens a native
 // sheet in Kilowallet (amount and address fixed, fingerprint) and resolves with a txid, a payment
 // hash, an address or an invoice; the client never sees keys, balances or coins.
-import { isKilowallet } from './host';
+import { hostCan, hostWalletEnabled, type HostMethod } from './host';
 
 const newUuid = (): string =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -12,8 +12,10 @@ const newUuid = (): string =>
       });
 
 /** Kilowallet offers its wallet here (an older Kilowallet, or the Roblosats app, does not). */
-export const hostWalletAvailable = (): boolean =>
-  isKilowallet() && typeof window.AndroidAppRobosats?.walletPay === 'function';
+export const hostWalletAvailable = (): boolean => hostWalletEnabled();
+
+/** Kilowallet offers this one function (see utils/host.ts hostCan). */
+export const hostOffers = (method: HostMethod): boolean => hostCan(method);
 
 const ask = async (call: (uuid: string) => void): Promise<string> =>
   await new Promise<string>((resolve, reject) => {

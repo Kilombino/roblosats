@@ -3,7 +3,7 @@
 // (Tor by default, clearnet only when chosen there).
 type Win = {
   navigator: { userAgent: string };
-  AndroidAppRobosats?: { hostInfo?: () => string };
+  AndroidAppRobosats?: Record<string, unknown>;
   RobosatsSettings?: string;
 };
 const g = global as unknown as { window?: Win };
@@ -45,9 +45,81 @@ describe('host (Kilowallet)', () => {
     expect(mobileAssetBase).toBe('file:///android_asset/');
   });
 
-  it('wallet functions stay hidden in this phase', () => {
-    const { hostWalletEnabled } = require('./host');
+  it('no wallet function without its bridge method', () => {
+    const { hostWalletEnabled, hostCan } = require('./host');
     setWindow('AndroidRobosats Kilowallet/1.6.1');
     expect(hostWalletEnabled()).toBe(false);
+    expect(hostCan('walletPay')).toBe(false);
+  });
+
+  it('kw4: hostInfo carries the platform and the features', () => {
+    const { hostInfo } = require('./host');
+    setWindow('AndroidRobosats Kilowallet/0.1.0-beta24 (desktop)', () =>
+      JSON.stringify({
+        host: 'kilowallet',
+        version: '0.1.0-beta24',
+        clearnet: false,
+        platform: 'desktop',
+        features: ['walletPay', 'walletAddress'],
+      }),
+    );
+    expect(hostInfo()).toMatchObject({
+      platform: 'desktop',
+      features: ['walletPay', 'walletAddress'],
+    });
+  });
+
+  const withMethods = (info?: object): void => {
+    const noop = (): void => {};
+    g.window = {
+      navigator: { userAgent: 'AndroidRobosats Kilowallet/1.0.0 (iOS)' },
+      AndroidAppRobosats: {
+        walletPay: noop,
+        walletAddress: noop,
+        walletPayInvoice: noop,
+        walletInvoice: noop,
+        ...(info ? { hostInfo: () => JSON.stringify(info) } : {}),
+      },
+      RobosatsSettings: 'mobile-basic',
+    };
+  };
+
+  it('kw4: each wallet function by its own method and feature (no Lightning on this host)', () => {
+    const { hostCan, hostWalletEnabled } = require('./host');
+    withMethods({
+      host: 'kilowallet',
+      version: '1.0.0',
+      clearnet: false,
+      platform: 'ios',
+      features: ['walletPay', 'walletAddress'],
+    });
+    expect(hostCan('walletPay')).toBe(true);
+    expect(hostCan('walletAddress')).toBe(true);
+    expect(hostCan('walletPayInvoice')).toBe(false);
+    expect(hostCan('walletInvoice')).toBe(false);
+    expect(hostWalletEnabled()).toBe(true);
+  });
+
+  it('kw3 Android beta (no features list): every method it has is offered', () => {
+    const { hostCan } = require('./host');
+    withMethods({ host: 'kilowallet', version: '1.6.1', clearnet: false });
+    expect(hostCan('walletPayInvoice')).toBe(true);
+    expect(hostCan('walletInvoice')).toBe(true);
+  });
+
+  it('a Lightning method missing from the bridge hides only its own button', () => {
+    const { hostCan } = require('./host');
+    setWindow('AndroidRobosats Kilowallet/1.0.0 (iOS)');
+    (g.window as Win).AndroidAppRobosats = { walletPay: () => {}, walletAddress: () => {} };
+    expect(hostCan('walletPay')).toBe(true);
+    expect(hostCan('walletPayInvoice')).toBe(false);
+    expect(hostCan('walletInvoice')).toBe(false);
+  });
+
+  it('outside Kilowallet nothing is offered, even with the methods', () => {
+    const { hostCan } = require('./host');
+    withMethods();
+    (g.window as Win).navigator.userAgent = 'AndroidRobosats';
+    expect(hostCan('walletPay')).toBe(false);
   });
 });

@@ -4,6 +4,10 @@
 #
 #   scripts/kilowallet-client.sh <tag> [outdir]
 #
+# kw4: the bundle's URLs are relative (one zip for Kilowallet on Android, desktop and iPhone).
+# ROBLO_BASE=<absolute url ending in /> builds an absolute variant instead; its zip is named
+# roblo-client-<tag>-<scheme>.zip and SOURCE says which base it has.
+#
 # Reproducible: same commit + same frontend/package-lock.json => same zip, byte for byte. The
 # webpack output is deterministic (content hashes), and the zip is written with its entries
 # sorted, a fixed date and fixed permissions, so neither file order nor mtimes leak in.
@@ -27,13 +31,17 @@ rm -rf "$BUILDROOT"; mkdir -p "$BUILDROOT"
 git archive "$COMMIT" frontend LICENSE | tar -x -C "$BUILDROOT"
 ln -s "$(readlink -f "$NM")" "$BUILDROOT/frontend/node_modules"
 cd "$BUILDROOT/frontend"
-NODE_ENV=production npx webpack --config webpack.config.ts --mode production --env target=kilowallet >"$BUILDROOT/webpack.log" 2>&1 \
+BASE=${ROBLO_BASE:-}
+BASEARG=()
+[ -n "$BASE" ] && BASEARG=(--env "base=$BASE")
+NODE_ENV=production npx webpack --config webpack.config.ts --mode production --env target=kilowallet "${BASEARG[@]}" >"$BUILDROOT/webpack.log" 2>&1 \
   || { tail -30 "$BUILDROOT/webpack.log" >&2; exit 1; }
 DIR=build-kilowallet/roblo
 cp ../LICENSE "$DIR/LICENSE"
-printf 'repo=https://github.com/Kilombino/roblosats\ntag=%s\ncommit=%s\nbuild=scripts/kilowallet-client.sh %s\n' \
-  "$TAG" "$COMMIT" "$TAG" > "$DIR/SOURCE"
-ZIP="$OUT/roblo-client-$TAG.zip"
+printf 'repo=https://github.com/Kilombino/roblosats\ntag=%s\ncommit=%s\nbase=%s\nbuild=%sscripts/kilowallet-client.sh %s\n' \
+  "$TAG" "$COMMIT" "${BASE:-relative}" "${BASE:+ROBLO_BASE=$BASE }" "$TAG" > "$DIR/SOURCE"
+NAME="roblo-client-$TAG${BASE:+-${BASE%%:*}}"
+ZIP="$OUT/$NAME.zip"
 python3 -I - "$DIR" "$ZIP" <<'PY'
 import os, sys, zipfile
 src, dst = sys.argv[1], sys.argv[2]
@@ -55,4 +63,4 @@ os.replace(dst + '.tmp', dst)
 PY
 cd "$OUT"
 rm -rf "$BUILDROOT"
-sha256sum "roblo-client-$TAG.zip" | tee "roblo-client-$TAG.zip.sha256"
+sha256sum "$NAME.zip" | tee "$NAME.zip.sha256"
