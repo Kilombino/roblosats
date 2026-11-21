@@ -126,6 +126,8 @@ const EncryptedApiChat: React.FC<Props> = ({
       .then((raw) => {
         const results = raw as ChatApiResponse | undefined;
         if (results != null) {
+          // the coordinator answered again: drop the error of a request that failed while offline
+          setError((e) => (/^(Error: )?Request failed/.test(e) ? '' : e));
           setPeerConnected(results.peer_connected ?? false);
           setPeerPubKey((results.peer_pubkey ?? '').split('\\').join('\n'));
           setServerMessages(results.messages ?? []);
@@ -133,6 +135,8 @@ const EncryptedApiChat: React.FC<Props> = ({
       })
       .catch((error) => {
         setError(error.toString());
+        // no answer from the coordinator: we can't tell the peer is still there
+        setPeerConnected(false);
       });
   };
 

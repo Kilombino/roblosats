@@ -2,6 +2,7 @@ import React, { useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Box, Grid, Typography, Tooltip, useTheme } from '@mui/material';
 import { ContentCopy } from '@mui/icons-material';
+import { HostPayInvoice } from '../../HostWallet';
 import QRCode from 'react-qr-code';
 import { type Order } from '../../../models';
 import { systemClient } from '../../../services/System';
@@ -80,9 +81,7 @@ export const LockInvoicePrompt = ({
         <Typography color='secondary' variant='h6' align='center'>
           <b>
             {/* Roblosats: currency 1000 is Spamcoin, not a swap */}
-            {order.is_buyer
-                ? t('You are BUYING BTC')
-                : t('You are SELLING BTC')}
+            {order.is_buyer ? t('You are BUYING BTC') : t('You are SELLING BTC')}
           </b>
         </Typography>
       ) : (
@@ -129,6 +128,13 @@ export const LockInvoicePrompt = ({
         </Tooltip>
       </Grid>
 
+      {/* Kilowallet's ROBLO tab: lock it with its Lightning node */}
+      <Grid size={12} sx={{ display: 'flex', justifyContent: 'center' }}>
+        <HostPayInvoice
+          invoice={invoice ?? ''}
+          orderRef={`${String(order.shortAlias)}/${order.id}`}
+        />
+      </Grid>
       <Grid size={12} sx={{ display: 'flex', justifyContent: 'center' }}>
         <Typography variant='caption' align='center'>
           {helperText}
@@ -139,7 +145,7 @@ export const LockInvoicePrompt = ({
         <Grid size={12} sx={{ display: 'flex', justifyContent: 'center' }}>
           <Typography variant='body2' align='center' color='warning.main'>
             {t(
-              'Includes {{sats}} Sats for the buyer\'s swap to onchain (you took this onchain order with Lightning). What the swap does not use comes back to you as rewards.',
+              "Includes {{sats}} Sats for the buyer's swap to onchain (you took this onchain order with Lightning). What the swap does not use comes back to you as rewards.",
               { sats: pn(swapSurcharge) },
             )}
           </Typography>

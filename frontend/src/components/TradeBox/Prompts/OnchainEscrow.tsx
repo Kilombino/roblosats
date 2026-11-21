@@ -46,6 +46,7 @@ import { isMyAddress, pendingReturnKey, rememberMyAddress } from '../../../utils
 import { type FeeHint, formatRate, lowFeeNeeded, validHint } from '../../../utils/escrow/fees';
 import { Transaction, addressToScript, bytesToHex } from '../../../utils/escrow/taproot';
 import { DEFAULT_HRP } from '../../../utils/address';
+import { HostAddressButton, HostPayOnchain } from '../../HostWallet';
 import { useAddressConfirm } from '../../Dialogs/AddressConfirm';
 
 export type EscrowAction =
@@ -203,12 +204,14 @@ const PayBox = ({
   label,
   note,
   hint,
+  orderRef,
 }: {
   address: string;
   sats: number;
   label: string;
   note?: string;
   hint?: FeeHint | null;
+  orderRef?: string;
 }): React.JSX.Element => {
   const { t } = useTranslation();
   const btc = (sats / 1e8).toFixed(8);
@@ -267,6 +270,13 @@ const PayBox = ({
           </Button>
         </Tooltip>
       </Grid>
+      {/* Kilowallet's ROBLO tab: pay it from the hot wallet (native sheet, fingerprint) */}
+      <HostPayOnchain
+        address={address}
+        sats={sats}
+        orderRef={orderRef ?? ''}
+        feeHint={validHint(hint) ? hint?.next_block : undefined}
+      />
       {validHint(hint) ? (
         <Grid>
           <FeeHintNote hint={hint} />
@@ -824,6 +834,7 @@ export const OnchainEscrowPrompt = ({
               </Alert>
             ) : null}
             <PayBox
+              orderRef={`${String(order.shortAlias)}/${order.id}`}
               hint={data.onchain_fee_hint}
               address={data.bond_address}
               sats={bondTopUps && bondConfirmed > 0 ? Math.max(bondMissing, 330) : bondRequired}
@@ -923,6 +934,11 @@ export const OnchainEscrowPrompt = ({
             helperText={t('Accepted: 1…, 3…, bc1q… or bc1p…')}
           />
         </Grid>
+        <HostAddressButton
+          purpose={isBuyer ? 'payout' : 'refund'}
+          orderRef={`${String(order.shortAlias)}/${order.id}`}
+          onAddress={setAddress}
+        />
         <Grid>
           <Button
             variant='contained'
@@ -987,6 +1003,7 @@ export const OnchainEscrowPrompt = ({
         <Grid container spacing={1} sx={{ flexDirection: 'column', alignItems: 'center' }}>
           <Grid>
             <PayBox
+              orderRef={`${String(order.shortAlias)}/${order.id}`}
               hint={data.onchain_fee_hint}
               address={data.escrow_funding_address}
               sats={data.escrow_funding_recommended ?? 0}
