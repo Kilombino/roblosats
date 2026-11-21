@@ -28,21 +28,29 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 DEFAULT_ESPLORA = "https://mempool.space/api"
+# mempool.space refuses most Tor exits (Kilobot, 21 nov 2026: every request timed out); its onion
+# answers in ~2 s. The default through Tor is the onion.
+DEFAULT_ESPLORA_TOR = "http://mempoolhqx4isw62xs7abwphsq7ldayuidyx2v2oethdhhj6mlo2r6ad.onion/api"
 
 
 def enabled():
     return config("SPAMCHAIN_WATCH", cast=bool, default=True)
 
 
+def _use_tor():
+    return config("SPAMCHAIN_USE_TOR", cast=bool, default=config("USE_TOR", cast=bool, default=True))
+
+
 def esplora_base():
-    return (config("SPAMCHAIN_ESPLORA_URL", default=DEFAULT_ESPLORA) or DEFAULT_ESPLORA).rstrip("/")
+    default = DEFAULT_ESPLORA_TOR if _use_tor() else DEFAULT_ESPLORA
+    return (config("SPAMCHAIN_ESPLORA_URL", default="") or default).rstrip("/")
 
 
 def _session():
     import requests
 
     s = requests.Session()
-    use_tor = config("SPAMCHAIN_USE_TOR", cast=bool, default=config("USE_TOR", cast=bool, default=True))
+    use_tor = _use_tor()
     if use_tor:
         proxy = "socks5h://" + config("TOR_PROXY", default="127.0.0.1:9050")
         s.proxies = {"http": proxy, "https": proxy}

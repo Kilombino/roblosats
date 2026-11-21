@@ -8,8 +8,9 @@ export const DEFAULT_EXPLORER = 'https://mempool.kilombino.com/api';
 export const EXPLORER_SETTING = 'onchain_rescue_explorer';
 // 0.9.12: an Esplora API of the SHA-256 chain ("Spamchain"), for Spamcoin sent by mistake to one
 // of our on-chain addresses. In the Android app it goes through Tor when Tor is on, like the rest.
-export const DEFAULT_SPAMCHAIN_EXPLORER = 'https://mempool.space/api';
-export const ALT_SPAMCHAIN_EXPLORER = 'https://blockstream.info/api';
+// blockstream.info answers through Tor exits; mempool.space refuses most of them (21 nov 2026).
+export const DEFAULT_SPAMCHAIN_EXPLORER = 'https://blockstream.info/api';
+export const ALT_SPAMCHAIN_EXPLORER = 'https://mempool.space/api';
 export const SPAMCHAIN_EXPLORER_SETTING = 'onchain_rescue_explorer_sha256';
 
 export class ExplorerError extends Error {}
