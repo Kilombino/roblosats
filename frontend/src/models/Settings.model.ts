@@ -69,6 +69,12 @@ class BaseSettings {
     systemClient.getItem('settings_use_proxy').then((result) => {
       this.useProxy = client === 'mobile' && result !== 'false';
     });
+
+    // 0.9.11: Clearnet mode (beta, mobile): coordinators with a clearnet address are reached
+    // directly; every onion-only coordinator keeps going through Tor
+    systemClient.getItem('settings_clearnet').then((result) => {
+      this.clearnet = client === 'mobile' && result === 'true';
+    });
   }
 
   // Roblosats: dark unless the user chose light in Settings.
@@ -90,6 +96,7 @@ class BaseSettings {
   public unsafeClient: boolean = false;
   public selfhostedClient: boolean = false;
   public useProxy: boolean = false;
+  public clearnet: boolean = false;
   public androidNotifications: boolean = false;
   public actionAlerts: boolean = true;
 }

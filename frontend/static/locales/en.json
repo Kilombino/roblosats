@@ -1265,5 +1265,8 @@
   "The rescue will send {{amount}} Sats (minus the mining fee) to:": "The rescue will send {{amount}} Sats (minus the mining fee) to:",
   "Your payout of {{amount}} Sats will go to:": "Your payout of {{amount}} Sats will go to:",
   "Min {{min}}, max {{max}} sat/vB": "Min {{min}}, max {{max}} sat/vB",
-  "Bond returned to": "Bond returned to"
+  "Bond returned to": "Bond returned to",
+  "Tor only": "Tor only",
+  "Clearnet (beta)": "Clearnet (beta)",
+  "Coordinators with a clearnet address are reached directly, faster but without Tor: they see your IP address. The others still go through Tor.": "Coordinators with a clearnet address are reached directly, faster but without Tor: they see your IP address. The others still go through Tor."
 }

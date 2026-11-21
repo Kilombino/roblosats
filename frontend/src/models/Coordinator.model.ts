@@ -209,7 +209,11 @@ export class Coordinator {
       this.url = `${hostUrl}/${settings.network}/${this.shortAlias}`;
     } else {
       const network = settings.network ?? 'mainnet';
-      const own = this[network]?.[origin];
+      // 0.9.11: Clearnet mode (beta) in the app: a coordinator that publishes a clearnet
+      // address is reached there; the others keep their onion (through Tor)
+      const clearnet =
+        settings.clearnet && settings.client === 'mobile' ? this[network]?.clearnet : undefined;
+      const own = clearnet ?? this[network]?.[origin];
       // Roblosats: on the clearnet web, a coordinator with only an onion is reached through
       // the web server's bridge to it (roblosats.kilombino.com/<network>/<alias>, over Tor).
       if (!own && origin === 'clearnet' && window.location.host === 'roblosats.kilombino.com') {

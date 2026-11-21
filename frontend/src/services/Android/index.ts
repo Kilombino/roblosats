@@ -35,6 +35,8 @@ interface AndroidAppRobosats {
   // rl31-beta12: plain-text request (rescue explorer); resolves {status, body (base64)}
   sendText?: (uuid: string, method: string, url: string, contentType: string, body: string) => void;
   restart: () => void;
+  // 0.9.11: Tor (built-in / Orbot) and Clearnet mode, changed in place
+  setNetworkMode?: (useProxy: boolean, clearnet: boolean) => void;
   // 0.9.6: in-app update (resolves {status, version, current, url, notes, canInstall})
   checkUpdate?: (uuid: string) => void;
   startUpdate?: () => void;

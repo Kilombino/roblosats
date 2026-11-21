@@ -113,7 +113,7 @@ export const GarageContextProvider = ({
     } else if (token) {
       void garage.fetchRobot(federation, token);
     }
-  }, [settings.network, settings.useProxy, torStatus, page]);
+  }, [settings.network, settings.useProxy, torStatus, page, settings.clearnet]);
 
   const fetchSlotActiveOrder: () => void = () => {
     const slot = garage?.getSlot();

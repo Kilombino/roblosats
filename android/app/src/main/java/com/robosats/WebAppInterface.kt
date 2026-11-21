@@ -3,6 +3,7 @@ package com.robosats
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
@@ -175,7 +176,7 @@ class WebAppInterface(private val context: MainActivity, private val webView: We
                 .readTimeout(0, TimeUnit.SECONDS)
                 .pingInterval(30, TimeUnit.SECONDS)
 
-            if (context.useProxy) {
+            if (useTorFor(path)) {
                 builder = builder.proxy(getTorKmpObject().proxy)
             }
 
@@ -294,7 +295,7 @@ class WebAppInterface(private val context: MainActivity, private val webView: We
                 .connectTimeout(60, TimeUnit.SECONDS) // Set connection timeout
                 .readTimeout(120, TimeUnit.SECONDS) // Set read timeout
 
-            if (context.useProxy) {
+            if (useTorFor(url)) {
                 builder = builder.proxy(getTorKmpObject().proxy)
             }
 
@@ -374,7 +375,7 @@ class WebAppInterface(private val context: MainActivity, private val webView: We
             var builder = Builder()
                 .connectTimeout(60, TimeUnit.SECONDS)
                 .readTimeout(120, TimeUnit.SECONDS)
-            if (context.useProxy) {
+            if (useTorFor(url)) {
                 builder = builder.proxy(getTorKmpObject().proxy)
             }
             val client = builder.build()
@@ -423,7 +424,7 @@ class WebAppInterface(private val context: MainActivity, private val webView: We
                 .connectTimeout(60, TimeUnit.SECONDS) // Set connection timeout
                 .readTimeout(120, TimeUnit.SECONDS) // Set read timeout
 
-            if (context.useProxy) {
+            if (useTorFor(url)) {
                 builder = builder.proxy(getTorKmpObject().proxy)
             }
 
@@ -480,7 +481,7 @@ class WebAppInterface(private val context: MainActivity, private val webView: We
                 .connectTimeout(60, TimeUnit.SECONDS) // Set connection timeout
                 .readTimeout(120, TimeUnit.SECONDS) // Set read timeout
 
-            if (context.useProxy) {
+            if (useTorFor(url)) {
                 builder = builder.proxy(getTorKmpObject().proxy)
             }
 
@@ -794,6 +795,37 @@ class WebAppInterface(private val context: MainActivity, private val webView: We
             Log.e(TAG, "Error restarting app", e)
             Toast.makeText(context, "Failed to restart app", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    /**
+     * 0.9.11: Clearnet mode (beta). Built-in Tor (or Orbot) stays the default; with Clearnet on,
+     * a coordinator that publishes a clearnet address is reached directly and every .onion keeps
+     * going through Tor. Read per request, so a switch applies at once.
+     */
+    private fun useTorFor(url: String): Boolean {
+        if (!context.useProxy) return false
+        if (!context.clearnet) return true
+        val host = try { Uri.parse(url).host ?: "" } catch (e: Exception) { "" }
+        return host.endsWith(".onion")
+    }
+
+    /** 0.9.11: change Tor (built-in or Orbot) and Clearnet in place, without restarting the app
+     * (the restart showed a black screen). Starting the built-in Tor runs in the background. */
+    @JavascriptInterface
+    fun setNetworkMode(useProxy: Boolean, clearnet: Boolean) {
+        EncryptedStorage.setEncryptedStorage("settings_use_proxy", useProxy.toString())
+        EncryptedStorage.setEncryptedStorage("settings_clearnet", clearnet.toString())
+        context.clearnet = clearnet
+        if (useProxy && !context.useProxy) {
+            Thread {
+                try {
+                    context.startBuiltInTor()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Could not start the built-in Tor: ${e.message}")
+                }
+            }.start()
+        }
+        context.useProxy = useProxy
     }
 
     private fun onWsMessage(path: String?, message: String?) {

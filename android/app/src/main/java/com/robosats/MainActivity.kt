@@ -65,6 +65,8 @@ class MainActivity : AppCompatActivity() {
     }
     private lateinit var useOrbotButton: Button
     var useProxy: Boolean = true
+    // 0.9.11: Clearnet mode (beta): coordinators with a clearnet address are reached directly
+    @Volatile var clearnet: Boolean = false
 
     /**
      * Allowlist for the order_id Intent extra.
@@ -172,10 +174,16 @@ class MainActivity : AppCompatActivity() {
         pendingNavigation = navigationFrom(intent)
 
 
+        clearnet = EncryptedStorage.getEncryptedStorage("settings_clearnet") == "true"
         val settingProxy = EncryptedStorage.getEncryptedStorage("settings_use_proxy")
         if (settingProxy == "false") {
             // Setup WebView to use Orbot if the user previously clicked
             onUseOrbotButtonClicked()
+        } else if (clearnet) {
+            // 0.9.11: Clearnet mode: the app opens at once (clearnet coordinators need no Tor);
+            // the built-in Tor starts in the background for the onion-only ones
+            Thread { startBuiltInTor() }.start()
+            setupWebView()
         } else {
             // Initialize Tor and setup WebView only after Tor is properly connected
             initializeTor()
@@ -257,6 +265,26 @@ class MainActivity : AppCompatActivity() {
                 NotificationsService::class.java,
             ),
         )
+    }
+
+    /**
+     * 0.9.11: start the built-in Tor from Settings (Orbot → built-in) without restarting the
+     * app; blocks its (background) caller until Tor is connected or 2 minutes pass.
+     */
+    fun startBuiltInTor() {
+        try {
+            torKmp = getTorKmpObject()
+        } catch (e: UninitializedPropertyAccessException) {
+            torKmp = TorKmp(application as Application)
+            TorKmpManager.updateTorKmpObject(torKmp)
+        }
+        var tries = 0
+        while (!torKmp.isConnected() && tries < 120) {
+            if (!torKmp.isStarting()) torKmp.startQuietly()
+            Thread.sleep(1000)
+            tries += 1
+        }
+        if (torKmp.isConnected()) HttpClientManager.setDefaultProxy(getTorKmpObject().proxy)
     }
 
     /**
@@ -355,8 +383,9 @@ class MainActivity : AppCompatActivity() {
      * Configures initial WebView settings with external blocked
      */
     private fun setupWebView() {
-        // Double-check Tor is connected before proceeding
-        if (useProxy && !torKmp.isConnected()) {
+        // Double-check Tor is connected before proceeding (not needed in Clearnet mode: every
+        // request goes through WebAppInterface, which sends .onion ones through Tor only)
+        if (useProxy && !clearnet && !torKmp.isConnected()) {
             Log.e("SecurityError", "Attempted to set up WebView without Tor connection")
             return
         }
@@ -392,7 +421,7 @@ class MainActivity : AppCompatActivity() {
         Thread {
             try {
                 // First verify Tor is still connected
-                if (useProxy && !torKmp.isConnected()) {
+                if (useProxy && !clearnet && !torKmp.isConnected()) {
                     throw SecurityException("Tor disconnected during proxy setup")
                 }
 

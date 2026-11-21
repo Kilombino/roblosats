@@ -79,3 +79,34 @@ describe('Coordinator.updateUrl / getRelayUrl', () => {
     expect(coordinator.loadingBook).toBe(false);
   });
 });
+
+describe('0.9.11: Clearnet mode (beta) in the app', () => {
+  it('a coordinator with a clearnet address is reached there, over https and wss', () => {
+    const c = makeCoordinator('onion', makeSettings({ client: 'mobile', clearnet: true }));
+    expect(c.url).toBe('https://test.example.com');
+    expect(c.getRelayUrl()).toBe('wss://test.example.com/relay/');
+  });
+
+  it('an onion-only coordinator keeps its onion (Tor)', () => {
+    const cfg = {
+      ...baseConfig,
+      mainnet: { clearnet: null, onion: 'http://onlyonion.onion', i2p: undefined },
+    };
+    const c = new Coordinator(
+      cfg as unknown as CoordinatorConfig,
+      'onion',
+      makeSettings({ client: 'mobile', clearnet: true }),
+      'https://host.example',
+    );
+    expect(c.url).toBe('http://onlyonion.onion');
+  });
+
+  it('off by default, and never on the web client', () => {
+    expect(makeCoordinator('onion', makeSettings({ client: 'mobile' })).url).toBe(
+      'http://testexampleonion1234.onion',
+    );
+    expect(makeCoordinator('onion', makeSettings({ client: 'web', clearnet: true })).url).toBe(
+      'http://testexampleonion1234.onion',
+    );
+  });
+});

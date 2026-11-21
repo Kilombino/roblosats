@@ -135,7 +135,7 @@ export const FederationContextProvider = ({
     // federation discovery. The settings-change effect below handles subsequent
     // changes but does NOT fire on the very first mount if all values are already
     // at their defaults (network/connection/torStatus don't change).
-    if (client !== 'mobile' || torStatus === 'ON' || !settings.useProxy) {
+    if (client !== 'mobile' || torStatus === 'ON' || !settings.useProxy || settings.clearnet) {
       updateConnection(settings);
     }
   }, []);
@@ -147,19 +147,19 @@ export const FederationContextProvider = ({
   }, []);
 
   useEffect(() => {
-    if (client !== 'mobile' || torStatus === 'ON' || !settings.useProxy) {
+    if (client !== 'mobile' || torStatus === 'ON' || !settings.useProxy || settings.clearnet) {
       loadNotifications();
     }
   }, [slotUpdatedAt]);
 
   useEffect(() => {
-    if (client !== 'mobile' || torStatus === 'ON' || !settings.useProxy) {
+    if (client !== 'mobile' || torStatus === 'ON' || !settings.useProxy || settings.clearnet) {
       federation.roboPool.clearNotificationSubscriptions();
       setSubscribedNotificationPubkeys([]);
       updateConnection(settings);
       loadNotifications(true);
     }
-  }, [settings.network, settings.useProxy, torStatus, settings.connection]);
+  }, [settings.network, settings.useProxy, torStatus, settings.connection, settings.clearnet]);
 
   useEffect(() => {
     if (page === 'offers') void federation.loadBook();

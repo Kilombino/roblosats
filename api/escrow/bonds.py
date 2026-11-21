@@ -455,7 +455,10 @@ def submit_auto_return_signature(bond, sigs, ladder_sigs=None):
 
 def target_rate():
     """The rate the node expects to confirm within ESCROW_AUTO_RETURN_TARGET_BLOCKS."""
-    return service.fee_rate(service.config("ESCROW_AUTO_RETURN_TARGET_BLOCKS", cast=int, default=6))
+    try:
+        return service.fee_rate(service.config("ESCROW_AUTO_RETURN_TARGET_BLOCKS", cast=int, default=6))
+    except Exception:  # a node that does not answer: the fallback, as fee_rate does
+        return service.config("ESCROW_FALLBACK_FEE_RATE", cast=float, default=5.0)
 
 
 def choose_rung(rungs, rate):
@@ -491,7 +494,7 @@ def _broadcast_auto_return(bond):
         if [list(c) for c in coins_of(bond)] != [list(c) for c in ar.get("coins") or []]:
             raise EscrowError("the bond's coins changed since the return was signed")
         rungs = signed_rungs(bond)
-        first = choose_rung(rungs, target_rate())
+        first = choose_rung(rungs, target_rate()) if len(rungs) > 1 else rungs[0]
         tx, sent, error = None, None, None
         for rung in [r for r in rungs if r[1] >= first[1]]:
             try:

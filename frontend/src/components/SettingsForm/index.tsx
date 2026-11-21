@@ -30,6 +30,7 @@ import {
   SystemUpdate,
   BugReport,
   BatteryChargingFull,
+  Public,
 } from '@mui/icons-material';
 import { CHECK_UPDATE_EVENT, BACKGROUND_EVENT, RecentLogsDialog } from '../Dialogs';
 import { systemClient } from '../../services/System';
@@ -46,6 +47,14 @@ const SettingsForm = ({ dense = false }: SettingsFormProps): React.JSX.Element =
   const theme = useTheme();
   const { t } = useTranslation();
   const [openLogs, setOpenLogs] = useState<boolean>(false);
+  // 0.9.11: Tor (built-in / Orbot) and Clearnet change in place: the app used to restart (a
+  // black screen). The federation reconnects through the settings effect.
+  const setNetworkMode = (useProxy: boolean, clearnet: boolean): void => {
+    systemClient.setItem('settings_use_proxy', String(useProxy));
+    systemClient.setItem('settings_clearnet', String(clearnet));
+    window.AndroidAppRobosats?.setNetworkMode?.(useProxy, clearnet);
+    setSettings({ ...settings, useProxy, clearnet });
+  };
   const [checkUpdates, setCheckUpdates] = useState<boolean>(true);
   React.useEffect(() => {
     void systemClient.getItem('settings_check_updates').then((v) => {
@@ -305,10 +314,9 @@ const SettingsForm = ({ dense = false }: SettingsFormProps): React.JSX.Element =
             exclusive={true}
             sx={{ width: '100%' }}
             value={settings.useProxy}
-            onChange={(_e, useProxy) => {
-              setSettings({ ...settings, useProxy });
-              systemClient.setItem('settings_use_proxy', String(useProxy));
-              systemClient.restart();
+            onChange={(_e, useProxy: boolean | null) => {
+              if (useProxy === null) return;
+              setNetworkMode(useProxy, settings.clearnet);
             }}
           >
             <ToggleButton value={false} color='primary' sx={{ flexGrow: 1 }}>
@@ -318,6 +326,42 @@ const SettingsForm = ({ dense = false }: SettingsFormProps): React.JSX.Element =
               {t('Build-in')}
             </ToggleButton>
           </ToggleButtonGroup>
+        </ListItem>
+      )}
+      {client == 'mobile' && (
+        <ListItem>
+          <ListItemIcon sx={{ minWidth: 56 }}>
+            <Public />
+          </ListItemIcon>
+          <div style={{ width: '100%' }}>
+            <ToggleButtonGroup
+              exclusive={true}
+              sx={{ width: '100%' }}
+              value={settings.clearnet}
+              onChange={(_e, clearnet: boolean | null) => {
+                if (clearnet === null) return;
+                setNetworkMode(settings.useProxy, clearnet);
+              }}
+            >
+              <ToggleButton value={false} color='primary' sx={{ flexGrow: 1 }}>
+                {t('Tor only')}
+              </ToggleButton>
+              <ToggleButton value={true} color='secondary' sx={{ flexGrow: 1 }}>
+                {t('Clearnet (beta)')}
+              </ToggleButton>
+            </ToggleButtonGroup>
+            {settings.clearnet ? (
+              <Typography
+                variant='caption'
+                color='text.secondary'
+                sx={{ display: 'block', mt: 0.5 }}
+              >
+                {t(
+                  'Coordinators with a clearnet address are reached directly, faster but without Tor: they see your IP address. The others still go through Tor.',
+                )}
+              </Typography>
+            ) : null}
+          </div>
         </ListItem>
       )}
       {/* 0.9.6: update notice, recent logs, background reliability */}
