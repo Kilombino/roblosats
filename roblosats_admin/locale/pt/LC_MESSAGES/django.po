@@ -2474,3 +2474,119 @@ msgstr "O comprador %(nick)s recebe %(sats)s sats on-chain em %(address)s (%(par
 msgctxt "roblosats-admin"
 msgid "The coordinator receives %(sats)s sats on chain at its fee address: the trade fees."
 msgstr "O coordenador recebe %(sats)s sats on-chain no seu endereço de taxas: as taxas da troca."
+
+msgctxt "roblosats-admin"
+msgid "%(sats)s sats from the %(loser)s's lost bond (the winner's share), credited as a Lightning reward"
+msgstr "%(sats)s sats da caução perdida do %(loser)s (a parte do vencedor), creditados como recompensa Lightning"
+
+msgctxt "roblosats-admin"
+msgid "(%(sats)s sats of that bond go to the %(winner)s as the winner's share)"
+msgstr "(%(sats)s sats dessa caução vão para o %(winner)s como parte do vencedor)"
+
+msgctxt "roblosats-admin"
+msgid "on chain"
+msgstr "on-chain"
+
+msgctxt "roblosats-admin"
+msgid "missing"
+msgstr "em falta"
+
+msgctxt "roblosats-admin"
+msgid "held by the coordinator (settled)"
+msgstr "com o coordenador (cobrada)"
+
+msgctxt "roblosats-admin"
+msgid "locked (hold invoice)"
+msgstr "bloqueada (hold invoice)"
+
+msgctxt "roblosats-admin"
+msgid "returned to its owner"
+msgstr "devolvida ao dono"
+
+msgctxt "roblosats-admin"
+msgid "not paid yet"
+msgstr "ainda não paga"
+
+msgctxt "roblosats-admin"
+msgid "confirmed, waiting for its owner's signature"
+msgstr "confirmada, à espera da assinatura do dono"
+
+msgctxt "roblosats-admin"
+msgid "locked on chain"
+msgstr "bloqueada on-chain"
+
+msgctxt "roblosats-admin"
+msgid "inside the on-chain escrow"
+msgstr "dentro do depósito on-chain"
+
+msgctxt "roblosats-admin"
+msgid "penalized on chain"
+msgstr "penalizada on-chain"
+
+msgctxt "roblosats-admin"
+msgid "free, back to its owner"
+msgstr "livre, volta para o dono"
+
+msgctxt "roblosats-admin"
+msgid "back with its owner"
+msgstr "de volta com o dono"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's statement"
+msgstr "Declaração do comprador"
+
+msgctxt "roblosats-admin"
+msgid "Seller's statement"
+msgstr "Declaração do vendedor"
+
+msgctxt "roblosats-admin"
+msgid "Fiat marked as sent"
+msgstr "Fiat marcado como enviado"
+
+msgctxt "roblosats-admin"
+msgid "This dispute is already decided."
+msgstr "Esta disputa já está decidida."
+
+msgctxt "roblosats-admin"
+msgid "Both statements are in: read them and decide below."
+msgstr "As duas declarações já chegaram: leia-as e decida abaixo."
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the %(role)s's statement; you can already write to both."
+msgstr "Falta a declaração do %(role)s; já pode escrever aos dois."
+
+msgctxt "roblosats-admin"
+msgid "Waiting for both statements; you can already write to both."
+msgstr "Faltam as duas declarações; já pode escrever aos dois."
+
+msgctxt "roblosats-admin"
+msgid "At a glance"
+msgstr "Num relance"
+
+msgctxt "roblosats-admin"
+msgid "At stake"
+msgstr "Em jogo"
+
+msgctxt "roblosats-admin"
+msgid "Layer"
+msgstr "Camada"
+
+msgctxt "roblosats-admin"
+msgid "Where it is now"
+msgstr "Onde está agora"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s): %(share)s go to the %(winner)s as the winner's share and %(rest)s to the coordinator"
+msgstr "a sua caução Lightning (%(sats)s): %(share)s vão para o %(winner)s como parte do vencedor e %(rest)s para o coordenador"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), penalized on chain: %(share)s go to the %(winner)s as the winner's share and the rest of what the penalty pays to the coordinator"
+msgstr "a sua caução on-chain (%(sats)s), penalizada on-chain: %(share)s vão para o %(winner)s como parte do vencedor e o resto do que a penalização paga para o coordenador"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s; %(share)s go to the %(winner)s as the winner's share and %(rest)s to the coordinator)"
+msgstr "a sua caução Lightning (%(sats)s; %(share)s vão para o %(winner)s como parte do vencedor e %(rest)s para o coordenador)"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s, penalized on chain; %(share)s go to the %(winner)s as the winner's share and the rest of what the penalty pays to the coordinator)"
+msgstr "a sua caução on-chain (%(sats)s, penalizada on-chain; %(share)s vão para o %(winner)s como parte do vencedor e o resto do que a penalização paga para o coordenador)"

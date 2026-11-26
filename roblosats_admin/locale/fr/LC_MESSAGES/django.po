@@ -2373,7 +2373,7 @@ msgstr "sa caution on-chain (%(sats)s), déjà revenue on-chain : rien à pénal
 
 msgctxt "roblosats-admin"
 msgid "The %(role)s %(nick)s gets: %(parts)s."
-msgstr "Le %(role)s %(nick)s reçoit : %(parts)s."
+msgstr "%(nick)s (%(role)s) reçoit : %(parts)s."
 
 msgctxt "roblosats-admin"
 msgid "In total %(total)s sats credited as a Lightning reward, withdrawn from the app."
@@ -2429,11 +2429,11 @@ msgstr "récompense de l'autre caution on-chain"
 
 msgctxt "roblosats-admin"
 msgid "The %(role)s %(nick)s receives %(sats)s sats on chain at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
-msgstr "Le %(role)s %(nick)s reçoit %(sats)s sats on-chain à %(address)s (%(parts)s), moins les frais de minage de la libération, pris sur cette sortie."
+msgstr "%(nick)s (%(role)s) reçoit %(sats)s sats on-chain à %(address)s (%(parts)s), moins les frais de minage de la libération, pris sur cette sortie."
 
 msgctxt "roblosats-admin"
 msgid "The %(role)s %(nick)s only gets back the leftover of their deposit, %(sats)s sats on chain at %(address)s."
-msgstr "Le %(role)s %(nick)s ne récupère que le reste de son dépôt, %(sats)s sats on-chain à %(address)s."
+msgstr "%(nick)s (%(role)s) ne récupère que le reste de son dépôt, %(sats)s sats on-chain à %(address)s."
 
 msgctxt "roblosats-admin"
 msgid "The coordinator receives %(sats)s sats on chain at its fee address: %(penalty)s kept from the loser's bond + %(fees)s of trade fees."
@@ -2441,11 +2441,11 @@ msgstr "Le coordinateur reçoit %(sats)s sats on-chain à son adresse de frais :
 
 msgctxt "roblosats-admin"
 msgid "The %(role)s's bond is a Lightning bond (%(sats)s sats), settled when the dispute opened: the coordinator keeps it and credits %(reward)s sats of it to the %(winner)s as a Lightning reward, withdrawn from the app."
-msgstr "La caution du %(role)s est une caution Lightning (%(sats)s sats), encaissée à l'ouverture du litige : le coordinateur la garde et en crédite %(reward)s sats au %(winner)s en récompense Lightning, à retirer depuis l'app."
+msgstr "La caution (%(role)s) est une caution Lightning (%(sats)s sats), encaissée à l'ouverture du litige : le coordinateur la garde et en crédite %(reward)s sats au gagnant (%(winner)s) en récompense Lightning, à retirer depuis l'app."
 
 msgctxt "roblosats-admin"
 msgid "The %(role)s's Lightning bond (%(sats)s sats), settled when the dispute opened, is credited back to them as a Lightning reward, withdrawn from the app."
-msgstr "La caution Lightning du %(role)s (%(sats)s sats), encaissée à l'ouverture du litige, lui est recréditée en récompense Lightning, à retirer depuis l'app."
+msgstr "La caution Lightning (%(role)s, %(sats)s sats), encaissée à l'ouverture du litige, est recréditée à son propriétaire en récompense Lightning, à retirer depuis l'app."
 
 msgctxt "roblosats-admin"
 msgid "The seller %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s), minus the mining fee of the return, which comes out of this output."
@@ -2457,7 +2457,7 @@ msgstr "L'acheteur %(nick)s récupère %(sats)s sats on-chain à %(address)s (%(
 
 msgctxt "roblosats-admin"
 msgid "The %(side)s's Lightning bond (%(sats)s sats) goes back to them: credited as a Lightning reward if it was already settled when the dispute opened, unlocked otherwise."
-msgstr "La caution Lightning du %(side)s (%(sats)s sats) lui revient : créditée en récompense Lightning si elle avait déjà été encaissée à l'ouverture du litige, débloquée sinon."
+msgstr "La caution Lightning (%(side)s, %(sats)s sats) revient à son propriétaire : créditée en récompense Lightning si elle avait déjà été encaissée à l'ouverture du litige, débloquée sinon."
 
 msgctxt "roblosats-admin"
 msgid "The seller %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s)."
@@ -2474,3 +2474,119 @@ msgstr "L'acheteur %(nick)s reçoit %(sats)s sats on-chain à %(address)s (%(par
 msgctxt "roblosats-admin"
 msgid "The coordinator receives %(sats)s sats on chain at its fee address: the trade fees."
 msgstr "Le coordinateur reçoit %(sats)s sats on-chain à son adresse de frais : les frais d'échange."
+
+msgctxt "roblosats-admin"
+msgid "%(sats)s sats from the %(loser)s's lost bond (the winner's share), credited as a Lightning reward"
+msgstr "%(sats)s sats de la caution perdue (%(loser)s), la part du gagnant, crédités en récompense Lightning"
+
+msgctxt "roblosats-admin"
+msgid "(%(sats)s sats of that bond go to the %(winner)s as the winner's share)"
+msgstr "(%(sats)s sats de cette caution vont au gagnant, %(winner)s, comme sa part)"
+
+msgctxt "roblosats-admin"
+msgid "on chain"
+msgstr "on-chain"
+
+msgctxt "roblosats-admin"
+msgid "missing"
+msgstr "manquante"
+
+msgctxt "roblosats-admin"
+msgid "held by the coordinator (settled)"
+msgstr "détenue par le coordinateur (encaissée)"
+
+msgctxt "roblosats-admin"
+msgid "locked (hold invoice)"
+msgstr "bloquée (facture hold)"
+
+msgctxt "roblosats-admin"
+msgid "returned to its owner"
+msgstr "rendue à son propriétaire"
+
+msgctxt "roblosats-admin"
+msgid "not paid yet"
+msgstr "pas encore payée"
+
+msgctxt "roblosats-admin"
+msgid "confirmed, waiting for its owner's signature"
+msgstr "confirmée, en attente de la signature de son propriétaire"
+
+msgctxt "roblosats-admin"
+msgid "locked on chain"
+msgstr "bloquée on-chain"
+
+msgctxt "roblosats-admin"
+msgid "inside the on-chain escrow"
+msgstr "dans le séquestre on-chain"
+
+msgctxt "roblosats-admin"
+msgid "penalized on chain"
+msgstr "pénalisée on-chain"
+
+msgctxt "roblosats-admin"
+msgid "free, back to its owner"
+msgstr "libre, revient à son propriétaire"
+
+msgctxt "roblosats-admin"
+msgid "back with its owner"
+msgstr "revenue à son propriétaire"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's statement"
+msgstr "Déclaration de l'acheteur"
+
+msgctxt "roblosats-admin"
+msgid "Seller's statement"
+msgstr "Déclaration du vendeur"
+
+msgctxt "roblosats-admin"
+msgid "Fiat marked as sent"
+msgstr "Fiat marqué comme envoyé"
+
+msgctxt "roblosats-admin"
+msgid "This dispute is already decided."
+msgstr "Ce litige est déjà tranché."
+
+msgctxt "roblosats-admin"
+msgid "Both statements are in: read them and decide below."
+msgstr "Les deux déclarations sont là : lisez-les et décidez plus bas."
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the %(role)s's statement; you can already write to both."
+msgstr "Il manque la déclaration (%(role)s) ; vous pouvez déjà écrire aux deux."
+
+msgctxt "roblosats-admin"
+msgid "Waiting for both statements; you can already write to both."
+msgstr "Les deux déclarations manquent ; vous pouvez déjà écrire aux deux."
+
+msgctxt "roblosats-admin"
+msgid "At a glance"
+msgstr "En un coup d'œil"
+
+msgctxt "roblosats-admin"
+msgid "At stake"
+msgstr "En jeu"
+
+msgctxt "roblosats-admin"
+msgid "Layer"
+msgstr "Couche"
+
+msgctxt "roblosats-admin"
+msgid "Where it is now"
+msgstr "Où il est maintenant"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s): %(share)s go to the %(winner)s as the winner's share and %(rest)s to the coordinator"
+msgstr "sa caution Lightning (%(sats)s) : %(share)s vont au gagnant (%(winner)s) comme sa part et %(rest)s au coordinateur"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), penalized on chain: %(share)s go to the %(winner)s as the winner's share and the rest of what the penalty pays to the coordinator"
+msgstr "sa caution on-chain (%(sats)s), pénalisée on-chain : %(share)s vont au gagnant (%(winner)s) comme sa part et le reste de ce que paie la pénalité au coordinateur"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s; %(share)s go to the %(winner)s as the winner's share and %(rest)s to the coordinator)"
+msgstr "sa caution Lightning (%(sats)s ; %(share)s vont au gagnant (%(winner)s) comme sa part et %(rest)s au coordinateur)"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s, penalized on chain; %(share)s go to the %(winner)s as the winner's share and the rest of what the penalty pays to the coordinator)"
+msgstr "sa caution on-chain (%(sats)s, pénalisée on-chain ; %(share)s vont au gagnant (%(winner)s) comme sa part et le reste de ce que paie la pénalité au coordinateur)"

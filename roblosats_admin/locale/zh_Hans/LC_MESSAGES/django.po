@@ -2401,7 +2401,7 @@ msgstr "卖方 %(seller)s 获得 %(escrow_text)s，但失去 %(bond)s。"
 
 msgctxt "roblosats-admin"
 msgid "They do not receive the trade sats."
-msgstr "其不获得交易的聪。"
+msgstr "其不会获得交易的聪。"
 
 msgctxt "roblosats-admin"
 msgid "The buyer %(buyer)s LOSES %(bond)s."
@@ -2474,3 +2474,119 @@ msgstr "买方 %(nick)s 在链上于 %(address)s 收到 %(sats)s 聪（%(parts)s
 msgctxt "roblosats-admin"
 msgid "The coordinator receives %(sats)s sats on chain at its fee address: the trade fees."
 msgstr "协调者在链上于其手续费地址收到 %(sats)s 聪：交易手续费。"
+
+msgctxt "roblosats-admin"
+msgid "%(sats)s sats from the %(loser)s's lost bond (the winner's share), credited as a Lightning reward"
+msgstr "来自 %(loser)s 失去的保证金的 %(sats)s 聪（胜方份额），作为 Lightning 奖励记入"
+
+msgctxt "roblosats-admin"
+msgid "(%(sats)s sats of that bond go to the %(winner)s as the winner's share)"
+msgstr "（该保证金中的 %(sats)s 聪作为胜方份额归 %(winner)s）"
+
+msgctxt "roblosats-admin"
+msgid "on chain"
+msgstr "链上"
+
+msgctxt "roblosats-admin"
+msgid "missing"
+msgstr "缺失"
+
+msgctxt "roblosats-admin"
+msgid "held by the coordinator (settled)"
+msgstr "由协调者持有（已结算）"
+
+msgctxt "roblosats-admin"
+msgid "locked (hold invoice)"
+msgstr "已锁定（hold 发票）"
+
+msgctxt "roblosats-admin"
+msgid "returned to its owner"
+msgstr "已退还给所有者"
+
+msgctxt "roblosats-admin"
+msgid "not paid yet"
+msgstr "尚未支付"
+
+msgctxt "roblosats-admin"
+msgid "confirmed, waiting for its owner's signature"
+msgstr "已确认，等待所有者签名"
+
+msgctxt "roblosats-admin"
+msgid "locked on chain"
+msgstr "已在链上锁定"
+
+msgctxt "roblosats-admin"
+msgid "inside the on-chain escrow"
+msgstr "在链上托管中"
+
+msgctxt "roblosats-admin"
+msgid "penalized on chain"
+msgstr "已在链上罚没"
+
+msgctxt "roblosats-admin"
+msgid "free, back to its owner"
+msgstr "已释放，退还给所有者"
+
+msgctxt "roblosats-admin"
+msgid "back with its owner"
+msgstr "已回到所有者手中"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's statement"
+msgstr "买方陈述"
+
+msgctxt "roblosats-admin"
+msgid "Seller's statement"
+msgstr "卖方陈述"
+
+msgctxt "roblosats-admin"
+msgid "Fiat marked as sent"
+msgstr "法币已标记为已发送"
+
+msgctxt "roblosats-admin"
+msgid "This dispute is already decided."
+msgstr "该争议已裁决。"
+
+msgctxt "roblosats-admin"
+msgid "Both statements are in: read them and decide below."
+msgstr "双方陈述均已提交：阅读后在下方裁决。"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the %(role)s's statement; you can already write to both."
+msgstr "还缺 %(role)s 的陈述；你已可以给双方写信。"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for both statements; you can already write to both."
+msgstr "双方陈述都还没有；你已可以给双方写信。"
+
+msgctxt "roblosats-admin"
+msgid "At a glance"
+msgstr "一览"
+
+msgctxt "roblosats-admin"
+msgid "At stake"
+msgstr "涉及资金"
+
+msgctxt "roblosats-admin"
+msgid "Layer"
+msgstr "层"
+
+msgctxt "roblosats-admin"
+msgid "Where it is now"
+msgstr "当前位置"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s): %(share)s go to the %(winner)s as the winner's share and %(rest)s to the coordinator"
+msgstr "其 Lightning 保证金（%(sats)s）：%(share)s 作为胜方份额归 %(winner)s，%(rest)s 归协调者"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), penalized on chain: %(share)s go to the %(winner)s as the winner's share and the rest of what the penalty pays to the coordinator"
+msgstr "其链上保证金（%(sats)s），已在链上罚没：%(share)s 作为胜方份额归 %(winner)s，罚没所得的其余部分归协调者"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s; %(share)s go to the %(winner)s as the winner's share and %(rest)s to the coordinator)"
+msgstr "其 Lightning 保证金（%(sats)s；%(share)s 作为胜方份额归 %(winner)s，%(rest)s 归协调者）"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s, penalized on chain; %(share)s go to the %(winner)s as the winner's share and the rest of what the penalty pays to the coordinator)"
+msgstr "其链上保证金（%(sats)s，已在链上罚没；%(share)s 作为胜方份额归 %(winner)s，罚没所得的其余部分归协调者）"

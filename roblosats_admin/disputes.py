@@ -615,9 +615,21 @@ def bond_kept_text(info):
     return _("their on-chain bond (%(sats)s), already back with them on chain") % v
 
 
-def bond_lost_text(info):
-    """The bond of a party that loses it."""
+def bond_lost_text(info, share=0, winner=None):
+    """The bond of a party that loses it. 0.9.16: with the winner's share of it (share sats to
+    the 'winner' role), the line says how the bond is split instead of "kept by the coordinator"."""
     v = {"sats": fmt_sats(info["sats"])}
+    if share and winner and info["kind"] == "lightning":
+        return _(
+            "their Lightning bond (%(sats)s; %(share)s go to the %(winner)s as the winner's share and "
+            "%(rest)s to the coordinator)"
+        ) % {**v, "share": fmt_sats(share), "winner": role_name(winner),
+             "rest": fmt_sats(max(0, info["sats"] - share))}
+    if share and winner and info["state"] in ("locked", "penalized"):
+        return _(
+            "their on-chain bond (%(sats)s, penalized on chain; %(share)s go to the %(winner)s as the "
+            "winner's share and the rest of what the penalty pays to the coordinator)"
+        ) % {**v, "share": fmt_sats(share), "winner": role_name(winner)}
     if info["kind"] == "lightning":
         return _("their Lightning bond (%(sats)s), kept by the coordinator") % v
     if info["state"] == "locked":
@@ -651,11 +663,34 @@ def _plan_lightning(order, decision):
 
     values = {"buyer": buyer_nick, "seller": seller_nick, "escrow": fmt_sats(escrow_sats)}
 
-    def credited(role, base_sats, base_text, info):
-        """'The <role> <nick> is credited N sats as a Lightning reward (parts)' + the bond's fate."""
-        total = base_sats + bond_credit(info)
+    def side_of(role):
+        return r[f"{role}_side"]
+
+    def share_of(loser_role):
+        """0.9.16: what the other trader gets of the loser's bond (SLASHED_BOND_REWARD_SPLIT)."""
+        from api.escrow import flow as escrow_flow
+
+        try:
+            return escrow_flow.dispute_reward_preview(order, side_of(loser_role))
+        except Exception:
+            return 0
+
+    def lost(info, loser_role, winner_role):
+        """0.9.16: the lost bond, with how it is split when the winner gets a share of it."""
+        return bond_lost_text(info, share_of(loser_role), winner_role)
+
+    def credited(role, base_sats, base_text, info, reward_from=None):
+        """'The <role> <nick> is credited N sats as a Lightning reward (parts)' + the bond's fate,
+        plus (0.9.16) its share of the loser's bond when reward_from names the loser."""
+        reward = share_of(reward_from) if reward_from else 0
+        total = base_sats + bond_credit(info) + reward
         parts = [base_text] if base_text else []
         parts.append(bond_kept_text(info))
+        if reward:
+            parts.append(
+                _("%(sats)s sats from the %(loser)s's lost bond (the winner's share), credited as a Lightning reward")
+                % {"sats": fmt_sats(reward), "loser": role_name(reward_from)}
+            )
         nick = buyer_nick if role == "buyer" else seller_nick
         line = _("The %(role)s %(nick)s gets: %(parts)s.") % {
             "role": role_name(role), "nick": nick, "parts": "; ".join(parts)}
@@ -671,15 +706,15 @@ def _plan_lightning(order, decision):
         else:
             trade = _("the trade amount %(trade)s from the Lightning escrow, credited as a Lightning reward") % {
                 "trade": fmt_sats(payout)}
-            lines.append(credited("buyer", payout, trade, bb))
+            lines.append(credited("buyer", payout, trade, bb, reward_from="seller"))
             lines.append(
                 _("The seller %(seller)s gets nothing back: they lose %(bond)s and their Lightning escrow (%(escrow)s).")
-                % {**values, "bond": bond_lost_text(sb)}
+                % {**values, "bond": lost(sb, "seller", "buyer")}
             )
     elif decision == "seller":
         esc = _("their Lightning escrow back (%(escrow)s), credited as a Lightning reward") % values
-        lines.append(credited("seller", escrow_sats, esc, sb))
-        lines.append(_("The buyer %(buyer)s gets nothing: they lose %(bond)s.") % {**values, "bond": bond_lost_text(bb)})
+        lines.append(credited("seller", escrow_sats, esc, sb, reward_from="buyer"))
+        lines.append(_("The buyer %(buyer)s gets nothing: they lose %(bond)s.") % {**values, "bond": lost(bb, "buyer", "seller")})
     elif decision == "return":
         lines.append(credited("buyer", 0, "", bb))
         esc = _("their Lightning escrow back (%(escrow)s), credited as a Lightning reward") % values
@@ -690,13 +725,13 @@ def _plan_lightning(order, decision):
             esc = _("their Lightning escrow back (%(escrow)s), credited as a Lightning reward") % values
             lines.append(
                 _("The seller %(seller)s gets %(escrow_text)s, but LOSES %(bond)s.")
-                % {**values, "escrow_text": esc, "bond": bond_lost_text(sb)}
+                % {**values, "escrow_text": esc, "bond": lost(sb, "seller", "buyer")}
             )
-            lines.append(credited("buyer", 0, "", bb) + " " + _("They do not receive the trade sats."))
+            lines.append(credited("buyer", 0, "", bb, reward_from="seller") + " " + _("They do not receive the trade sats."))
         else:
-            lines.append(_("The buyer %(buyer)s LOSES %(bond)s.") % {**values, "bond": bond_lost_text(bb)})
+            lines.append(_("The buyer %(buyer)s LOSES %(bond)s.") % {**values, "bond": lost(bb, "buyer", "seller")})
             esc = _("their Lightning escrow back (%(escrow)s), credited as a Lightning reward") % values
-            lines.append(credited("seller", escrow_sats, esc, sb))
+            lines.append(credited("seller", escrow_sats, esc, sb, reward_from="buyer"))
         lines.append(_("There is no trade: nobody takes what they did not pay for. Rewards are withdrawn from the app."))
     elif decision == "completed":
         if payout is None:
@@ -969,7 +1004,100 @@ def _context(order_admin, request, order, confirm=None):
         "fiat_sent": order.is_fiat_sent,
         "can_change": order_admin.has_change_permission(request, order),
         "languages": _languages(request),
+        "glance": glance(order, p_buyer, p_seller),
     }
+
+
+def glance(order, p_buyer, p_seller):
+    """0.9.16 (Kilombino TG 15674): what a coordinator needs first on a dispute page: the kind of
+    order, every amount at stake with its layer and where it is now, who has spoken, and the
+    next step. Never breaks the page (falls back to an empty panel)."""
+    from api.escrow import flow
+    from api.models import LNPayment, OnchainBond
+    from roblosats_admin import onchain as oc
+
+    try:
+        k = oc.kind(order)
+        kind = f"{oc.KIND_ICON[k]} {oc.KIND_LABEL[k]}"
+    except Exception:  # noqa: BLE001
+        kind = ""
+    r = roles(order)
+    rows = []
+    ln_word, oc_word = _("Lightning"), _("on chain")
+
+    def ln_state(pay):
+        if pay is None:
+            return _("missing")
+        return {
+            LNPayment.Status.SETLED: _("held by the coordinator (settled)"),
+            LNPayment.Status.LOCKED: _("locked (hold invoice)"),
+            LNPayment.Status.RETNED: _("returned to its owner"),
+            LNPayment.Status.CANCEL: _("cancelled"),
+        }.get(pay.status, LNPayment.Status(pay.status).label)
+
+    def oc_state(b):
+        S = OnchainBond.Status
+        return {
+            S.FUNDING: _("not paid yet"),
+            S.SIGN: _("confirmed, waiting for its owner's signature"),
+            S.LOCKED: _("locked on chain"),
+            S.IN_DEPOSIT: _("inside the on-chain escrow"),
+            S.PENALIZED: _("penalized on chain"),
+            S.RETURNABLE: _("free, back to its owner"),
+            S.RETURNED: _("back with its owner"),
+        }.get(b.status, b.get_status_display())
+
+    try:
+        onchain_escrow = flow.is_onchain(order)
+        if onchain_escrow:
+            esc = flow.escrow_of(order)
+            rows.append({"what": _("Seller's escrow"), "layer": oc_word,
+                         "sats": fmt_sats(getattr(esc, "escrow_sats", 0) or order.last_satoshis or 0),
+                         "state": esc.get_status_display() if esc is not None else _("missing")})
+        else:
+            e = order.trade_escrow
+            rows.append({"what": _("Seller's escrow"), "layer": ln_word,
+                         "sats": fmt_sats(e.num_satoshis if e else 0), "state": ln_state(e)})
+        for role in ("buyer", "seller"):
+            label = _("Buyer's bond") if role == "buyer" else _("Seller's bond")
+            side = r[f"{role}_side"]
+            pay = r[f"{role}_bond"]
+            if pay is not None and flow.is_bond_proxy(pay):
+                b = flow.proxied_bond(pay)
+                rows.append({"what": label, "layer": oc_word, "sats": fmt_sats(pay.num_satoshis),
+                             "state": oc_state(b) if b is not None else _("missing")})
+            elif pay is not None:
+                rows.append({"what": label, "layer": ln_word, "sats": fmt_sats(pay.num_satoshis),
+                             "state": ln_state(pay)})
+            else:
+                b = flow.bond_of(order, side)
+                if b is not None:
+                    rows.append({"what": label, "layer": oc_word, "sats": fmt_sats(b.value or b.required_sats),
+                                 "state": oc_state(b)})
+                else:
+                    rows.append({"what": label, "layer": "—", "sats": "—", "state": _("missing")})
+    except Exception:  # noqa: BLE001 (never break the dispute page)
+        pass
+
+    def spoke(p):
+        return bool(p.get("statement"))
+
+    checks = [
+        {"ok": spoke(p_buyer), "text": _("Buyer's statement")},
+        {"ok": spoke(p_seller), "text": _("Seller's statement")},
+        {"ok": bool(p_buyer.get("attached_chat") or p_seller.get("attached_chat")), "text": _("Chat attached")},
+        {"ok": bool(order.is_fiat_sent), "text": _("Fiat marked as sent")},
+    ]
+    if not is_open_dispute(order):
+        step = _("This dispute is already decided.")
+    elif spoke(p_buyer) and spoke(p_seller):
+        step = _("Both statements are in: read them and decide below.")
+    elif spoke(p_buyer) or spoke(p_seller):
+        step = _("Waiting for the %(role)s's statement; you can already write to both.") % {
+            "role": role_name("seller" if spoke(p_buyer) else "buyer")}
+    else:
+        step = _("Waiting for both statements; you can already write to both.")
+    return {"kind": kind, "rows": rows, "checks": checks, "step": step}
 
 
 def _require_staff(request):

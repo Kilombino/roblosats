@@ -309,6 +309,8 @@ class OrderAdmin(AdminChangeLinksMixin, admin.ModelAdmin):
                 _credit(order.maker.robot, own_bond_sats + trade_sats, order,
                         "maker_wins" if own_bond_sats else "maker_wins_trade")
                 escrow_flow.dispute_bond_sats(order, "taker", wins=False)  # Lightning: settled already
+                # 0.9.16: the winner also gets a share of the loser's bond
+                escrow_flow.dispute_loser_reward(order, "taker")
                 order.update_status(Order.Status.TLD)
 
                 self.message_user(
@@ -368,6 +370,8 @@ class OrderAdmin(AdminChangeLinksMixin, admin.ModelAdmin):
                         "taker_wins" if own_bond_sats else "taker_wins_trade")
                 # 0.9.12: the losing maker's onchain bond (hybrid B) is penalized now
                 escrow_flow.dispute_bond_sats(order, "maker", wins=False)
+                # 0.9.16: the winner also gets a share of the loser's bond
+                escrow_flow.dispute_loser_reward(order, "maker")
 
                 order.update_status(Order.Status.MLD)
 
@@ -481,6 +485,8 @@ class OrderAdmin(AdminChangeLinksMixin, admin.ModelAdmin):
             if innocent_sats:
                 _credit(innocent_bond.sender.robot, innocent_sats, order, "bond_back")
             escrow_flow.dispute_bond_sats(order, guilty, wins=False)
+            # 0.9.16: the innocent side also gets a share of the guilty bond
+            escrow_flow.dispute_loser_reward(order, guilty)
             _credit(
                 order.trade_escrow.sender.robot,
                 order.trade_escrow.num_satoshis,

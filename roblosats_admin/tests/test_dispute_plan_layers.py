@@ -66,8 +66,8 @@ class PlanLayers(TestCase):
         t = self._text("buyer")
         self.assertIn("the trade amount 998 000 from the Lightning escrow, credited as a Lightning reward", t)
         self.assertIn("their Lightning bond (30 000), credited as a Lightning reward", t)
-        self.assertIn("In total 1 028 000 sats credited as a Lightning reward", t)
-        self.assertIn("they lose their Lightning bond (30 000), kept by the coordinator and their Lightning escrow", t)
+        self.assertIn("In total 1 043 000 sats credited as a Lightning reward", t)
+        self.assertIn("they lose their Lightning bond (30 000; 15 000 go to the buyer as the winner's share and 15 000 to the coordinator) and their Lightning escrow", t)
         t = self._text("seller")
         self.assertIn("their Lightning escrow back (1 000 000), credited as a Lightning reward", t)
         t = self._text("completed")
@@ -77,7 +77,7 @@ class PlanLayers(TestCase):
         self._onchain_taker_bond(OnchainBond.Status.LOCKED)
         t = self._text("buyer")
         self.assertIn("their on-chain bond (30 000), straight back to them on chain (not credited)", t)
-        self.assertIn("In total 998 000 sats credited as a Lightning reward", t)
+        self.assertIn("In total 1 013 000 sats credited as a Lightning reward", t)
         t = self._text("seller")
         self.assertIn("they lose their on-chain bond (30 000), penalized on chain now", t)
         t = self._text("return")
@@ -87,7 +87,7 @@ class PlanLayers(TestCase):
         self._onchain_taker_bond(OnchainBond.Status.PENALIZED)
         t = self._text("buyer")
         self.assertIn("the value of their on-chain bond (30 000), penalized on chain earlier, credited as a Lightning reward", t)
-        self.assertIn("In total 1 028 000 sats", t)
+        self.assertIn("In total 1 043 000 sats", t)  # 0.9.16: + 15,000 of the seller's bond
 
     def test_spanish(self):
         with translation.override("es"):

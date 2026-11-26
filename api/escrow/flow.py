@@ -2353,6 +2353,81 @@ def _slash_side(order, side):
     return {"user": b.owner, "staked": b.value, "received": got, "key": f"{PROXY_PREFIX}{b.pk}"}
 
 
+def _ln_order_bond(order, side):
+    """0.9.16: the bond of 'maker'/'taker' in a Lightning-escrow order (pure Lightning, hybrid B,
+    mixta C) as {user, staked, received, key}: a Lightning hold invoice (received whole once
+    settled) or an onchain bond behind a proxy (received = what its penalty pays at least)."""
+    from api.escrow import bonds
+    from api.models import LNPayment, OnchainBond
+
+    ln = order.maker_bond if side == "maker" else order.taker_bond
+    if ln is None:
+        return None
+    if is_bond_proxy(ln):
+        b = proxied_bond(ln)
+        if b is None:
+            return None
+        got = bonds.penalty_floor_sats(b) if b.status == OnchainBond.Status.PENALIZED else 0
+        return {"user": b.owner, "staked": b.value, "received": got, "key": f"{PROXY_PREFIX}{b.pk}"}
+    ln.refresh_from_db(fields=["status"])
+    got = ln.num_satoshis if ln.status == LNPayment.Status.SETLED else 0
+    return {"user": ln.sender, "staked": ln.num_satoshis, "received": got, "key": ln.payment_hash}
+
+
+def dispute_reward_preview(order, loser):
+    """0.9.16: the share of the losing trader's bond a dispute winner gets in a Lightning-escrow
+    order (SLASHED_BOND_REWARD_SPLIT of what the coordinator gets from it, at most of the
+    winner's own bond, as for cancellations). For the dispute page, before the decision: a
+    Lightning bond settled at the opening counts whole, an onchain bond still locked by what its
+    penalty will pay at least."""
+    from api.escrow import bonds
+    from api.models import OnchainBond
+
+    winner = "taker" if loser == "maker" else "maker"
+    lose, win = _ln_order_bond(order, loser), _ln_order_bond(order, winner)
+    if lose is None or win is None:
+        return 0
+    received = lose["received"]
+    ln = order.maker_bond if loser == "maker" else order.taker_bond
+    if not received and is_bond_proxy(ln):
+        b = proxied_bond(ln)
+        if b is not None and b.status == OnchainBond.Status.LOCKED:
+            received = bonds.penalty_floor_sats(b)
+    split = config("SLASHED_BOND_REWARD_SPLIT", cast=float, default=0.5)
+    return int(min(received, win["staked"]) * split)
+
+
+def dispute_loser_reward(order, loser):
+    """0.9.16 (Kilombino TG 15674): in a Lightning-escrow order decided against 'maker'/'taker'
+    (the winner gets the trade, or the loser is penalized with no trade), the other trader also
+    gets SLASHED_BOND_REWARD_SPLIT of what the coordinator got from the loser's bond, at most of
+    its own bond, as for cancellations and timeouts. Call it after the loser's bond was settled
+    or penalized (dispute_bond_sats(..., wins=False)). Once per bond (same ledger key as a
+    cancellation's reward). Returns the sats credited."""
+    from api.logics import ledger_credit
+
+    winner = "taker" if loser == "maker" else "maker"
+    lose, win = _ln_order_bond(order, loser), _ln_order_bond(order, winner)
+    if lose is None or lose["received"] <= 0:
+        order.log(f"Dispute: no reward from the {loser}'s bond (the coordinator got nothing from it)", level="WARN")
+        return 0
+    if win is None or win["user"] is None or win["user"].pk == lose["user"].pk:
+        return 0
+    split = config("SLASHED_BOND_REWARD_SPLIT", cast=float, default=0.5)
+    reward = int(min(lose["received"], win["staked"]) * split)
+    if reward <= 0:
+        return 0
+    robot = win["user"].robot
+    if not ledger_credit(robot, reward, "slash_reward", f"slash_reward:{order.id}:{lose['key']}", order_id=order.id):
+        order.log(f"Dispute: the {loser}'s bond was already rewarded: DUPLICATE CREDIT REFUSED", level="WARN")
+        return 0
+    order.log(
+        f"Dispute: Robot({robot.id},{win['user'].username}) is rewarded {reward} Sats of the {loser}'s bond "
+        f"(the coordinator got {lose['received']} Sats from it)"
+    )
+    return reward
+
+
 def credit_penalty(order, at_fault):
     """rl31-beta22: an onchain (or hybrid A) order ended by a fault before the escrow: the
     trader at fault ('maker'/'taker') lost its bond. Until beta21 nobody was rewarded and the
