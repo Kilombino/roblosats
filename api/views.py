@@ -879,6 +879,15 @@ class OrderView(viewsets.ViewSet):
                             {"bad_request": "Taking Lightning orders with an onchain bond is off on this coordinator"},
                             status.HTTP_400_BAD_REQUEST,
                         )
+                    # mixta D: a seller's onchain take of a Lightning BUY needs time left on the
+                    # maker's Lightning bond for the onchain flow (TG 15602)
+                    if take_onchain and order.type == Order.Types.BUY:
+                        ok, _left, _needed = escrow_flow.mixta_d_window(order)
+                        if not ok:
+                            return Response(
+                                {"bad_request": "This order cannot be taken with an onchain bond any more (the maker's Lightning bond would expire before the onchain trade ends): take it with Lightning"},
+                                status.HTTP_400_BAD_REQUEST,
+                            )
                     if order.has_range:
                         valid, context = Logics.take(order, request.user, amount, lightning=take_lightning, onchain=take_onchain)
                     else:

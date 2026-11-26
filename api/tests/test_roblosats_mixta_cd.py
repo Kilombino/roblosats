@@ -429,3 +429,31 @@ class TakeOnchainView(MixtaBase):
         self.assertEqual(r.data["bond_role"], "taker")
         self.assertEqual(r.data["bond_status_code"], OnchainBond.Status.LOCKED)
         self.assertTrue(r.data["taker_locked"])
+
+
+class MixtaDWindow(MixtaBase):
+    """TG 15602: the maker's Lightning bond outlives the onchain flow of a mixta D order."""
+
+    def _with_cltv(self, order, blocks, age_h):
+        b = order.maker_bond
+        b.cltv_expiry = blocks
+        b.created_at = timezone.now() - timezone.timedelta(hours=age_h)
+        b.save()
+        return order
+
+    def test_a_fresh_maker_bond_has_room(self):
+        from api.logics import Logics as L
+
+        order = self._order(maker_sells=False)
+        blocks = L.compute_cltv_expiry_blocks(order, "maker_bond")
+        ok, left, needed = flow.mixta_d_window(self._with_cltv(order, blocks, 0))
+        self.assertTrue(ok, (left, needed))
+        # and still with the whole public time used up and a whole onchain take window on top
+        aged = (order.t_to_expire(Order.Status.PUB) + config("ESCROW_BOND_SECONDS", cast=int, default=3 * 3600)) / 3600
+        ok, left, needed = flow.mixta_d_window(self._with_cltv(order, blocks, aged))
+        self.assertTrue(ok, (left, needed))
+
+    def test_an_old_maker_bond_refuses_the_onchain_seller(self):
+        order = self._with_cltv(self._order(maker_sells=False), 100, 24)
+        ok, left, needed = flow.mixta_d_window(order)
+        self.assertFalse(ok)

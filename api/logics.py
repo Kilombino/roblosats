@@ -1903,6 +1903,13 @@ class Logics:
         if invoice_concept == "maker_bond":
             cltv_expiry_secs += order.t_to_expire(Order.Status.PUB)
             cltv_expiry_secs += order.t_to_expire(Order.Status.TAK)
+            # Mixta D (26 nov 2026, TG 15602): a Lightning BUY may be taken by a seller with an
+            # onchain bond; then this bond backs an onchain flow: room for the onchain take,
+            # the onchain funding and the release (escrow_flow.mixta_d_window checks it)
+            if order.type == Order.Types.BUY and not escrow_flow.is_onchain(order) and escrow_flow.onchain_take_enabled():
+                cltv_expiry_secs += config("ESCROW_BOND_SECONDS", cast=int, default=3 * 3600)
+                cltv_expiry_secs += config("ESCROW_FUNDING_SECONDS", cast=int, default=3 * 3600)
+                cltv_expiry_secs += config("ESCROW_D_RELEASE_MARGIN", cast=int, default=6 * 3600)
 
         # Add a safety marging by multiplying by the maxium expected mining network speed up
         safe_cltv_expiry_secs = cltv_expiry_secs * MAX_MINING_NETWORK_SPEEDUP_EXPECTED

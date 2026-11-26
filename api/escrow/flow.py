@@ -2147,6 +2147,28 @@ def onchain_take_enabled():
     return service.enabled() and config("ESCROW_ONCHAIN_TAKER", cast=bool, default=True)
 
 
+def mixta_d_window(order):
+    """Mixta D (Kilombino TG 15602): the maker's Lightning hold-invoice bond must outlive the
+    onchain flow it ends up backing. (ok, seconds left, seconds needed). Left: its CLTV at the
+    fastest block rate expected, minus its age; needed: keys/addresses (WF2) + the onchain
+    funding window + the fiat exchange + ESCROW_D_RELEASE_MARGIN (6 h) for the release."""
+    from api.logics import BLOCK_TIME, MAX_MINING_NETWORK_SPEEDUP_EXPECTED
+    from api.models import Order
+
+    bond = order.maker_bond
+    if bond is None or not bond.cltv_expiry or is_bond_proxy(bond):
+        return True, None, None
+    left = bond.cltv_expiry * BLOCK_TIME * 60 / max(1.0, MAX_MINING_NETWORK_SPEEDUP_EXPECTED)
+    left -= (timezone.now() - bond.created_at).total_seconds()
+    needed = (
+        order.t_to_expire(Order.Status.WF2)
+        + config("ESCROW_FUNDING_SECONDS", cast=int, default=3 * 3600)
+        + order.t_to_expire(Order.Status.CHA)
+        + config("ESCROW_D_RELEASE_MARGIN", cast=int, default=6 * 3600)
+    )
+    return left >= needed, int(left), int(needed)
+
+
 def onchain_take_contract(order, take_order):
     """finalize_contract of a Lightning order taken with an onchain bond (now LOCKED).
     Mixta C (the taker is the buyer): the order stays a Lightning order; the taker's onchain
