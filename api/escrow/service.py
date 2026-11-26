@@ -190,11 +190,11 @@ HYBRID_PLAN = 1
 
 
 def _buyer_has_ln_bond(order):
-    from api.logics import Logics
+    """Hybrid A (the buyer took with Lightning) or mixta D (the maker, a buyer, kept its
+    Lightning bond): the buyer has nothing in the escrow."""
+    from api.escrow import flow
 
-    if not order.taker_lightning or order.taker_id is None:
-        return False
-    return not Logics.is_seller(order, order.taker)
+    return flow.role_is_ln(order, "buyer")
 
 
 def create_escrow(order):

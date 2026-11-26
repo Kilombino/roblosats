@@ -25,6 +25,8 @@ class TakeOrder(models.Model):
     expires_at = models.DateTimeField()
     # Roblosats hybrid: taking an onchain order with Lightning (see Order.taker_lightning).
     lightning = models.BooleanField(default=False, db_default=False, null=False)
+    # Roblosats mixta C/D (26 nov 2026): taking a Lightning order with an onchain bond.
+    onchain = models.BooleanField(default=False, db_default=False, null=False)
     taker_bond = models.OneToOneField(
         "api.LNPayment",
         related_name="take_order",

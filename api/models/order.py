@@ -80,6 +80,10 @@ class Order(models.Model):
     # Lightning order with the maker's onchain bond behind a proxy LNPayment).
     # db_default keeps a rollback to an older image working (it inserts without the column)
     taker_lightning = models.BooleanField(default=False, db_default=False, null=False)
+    # Roblosats mixta D (26 nov 2026): a Lightning order (the maker, a buyer, kept its Lightning
+    # hold-invoice bond) taken by a seller who locks onchain: the order runs as an onchain-escrow
+    # order with the maker's bond still a Lightning hold invoice (order.maker_bond).
+    maker_lightning = models.BooleanField(default=False, db_default=False, null=False)
     created_at = models.DateTimeField(default=timezone.now)
     expires_at = models.DateTimeField()
     expiry_reason = models.PositiveSmallIntegerField(

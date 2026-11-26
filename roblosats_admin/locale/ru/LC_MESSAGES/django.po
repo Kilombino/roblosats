@@ -2318,3 +2318,9 @@ msgstr "Ордер %(id)s: сторона %(role)s сама забрала св�
 msgctxt "roblosats-admin"
 msgid "Order %(id)s: %(sats)s sats were sent to the %(role)s's on-chain address on the WRONG chain (Spamcoin, SHA-256); the robot was told how to take them back"
 msgstr "Ордер %(id)s: %(sats)s сат отправлены на ончейн-адрес стороны %(role)s в НЕПРАВИЛЬНОЙ цепи (Spamcoin, SHA-256); роботу объяснили, как их вернуть"
+
+msgid "Hybrid C (on-chain buyer bond)"
+msgstr ""
+
+msgid "Hybrid D (on-chain seller)"
+msgstr ""

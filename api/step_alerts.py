@@ -1055,7 +1055,12 @@ def on_status_changed(sender, order, old_status, new_status, **kwargs):
     from api.models import Order
 
     ended = (Order.Status.UCA, Order.Status.EXP, Order.Status.CCA, Order.Status.SUC, Order.Status.MLD, Order.Status.TLD)
-    if new_status in ended and (_is_onchain(order) or getattr(order, "taker_lightning", False)):
+    if new_status in ended and (
+        _is_onchain(order)
+        or getattr(order, "taker_lightning", False)
+        or getattr(order, "maker_lightning", False)
+        or str(getattr(order.taker_bond, "payment_hash", "") or "").startswith("onchain-bond-")  # mixta C
+    ):
         transaction.on_commit(
             lambda: send_notification.apply_async(kwargs=dict(order_id=order.id, message="onchain_end"), countdown=120)
         )

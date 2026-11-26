@@ -231,8 +231,9 @@ class Slot {
     order: Order,
     takeAmount: string,
     lightning = false,
+    onchain = false,
   ): Promise<Order> => {
-    await order.take(federation, this, takeAmount, lightning);
+    await order.take(federation, this, takeAmount, lightning, onchain);
     this.updateSlotFromOrder(order);
     return order;
   };

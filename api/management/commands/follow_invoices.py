@@ -86,6 +86,21 @@ class Command(BaseCommand):
                     flow.advance(order)
             except Exception as e:
                 self.stderr.write(f"onchain escrow of order {order.id}: {e}")
+        # Mixta C/D (26 nov 2026): public Lightning orders taken with an onchain bond
+        ln_takes = Order.objects.filter(
+            escrow_type=Order.EscrowTypes.LIGHTNING,
+            status=Order.Status.PUB,
+            order__onchain=True,
+            order__expires_at__gt=timezone.now(),
+        ).distinct()
+        for order in ln_takes:
+            try:
+                with order_lock(order.pk):
+                    order.refresh_from_db()
+                    if order.status == Order.Status.PUB and not flow.is_onchain(order):
+                        flow.advance_onchain_takes(order)
+            except Exception as e:
+                self.stderr.write(f"onchain take of order {order.id}: {e}")
         try:
             from api.escrow import bonds
 

@@ -1292,5 +1292,9 @@
   "Default: {{url}} (or {{alt}}). Any Esplora API of the SHA-256 chain works.": "Per defecte: {{url}} (o {{alt}}). Serveix qualsevol API Esplora de la cadena SHA-256.",
   "The rescue will send {{amount}} Spamsats (minus the mining fee) on Spamchain (SHA-256) to:": "El rescat enviarà {{amount}} Spamsats (menys la comissió de mineria) a Spamchain (SHA-256) a:",
   "Only bonds and funding addresses can be recovered on Spamchain": "A Spamchain només es poden recuperar fiances i adreces d'aportació",
-  "Bond (maker and taker each lock it)": "Fiança (la bloquegen el venedor i el comprador)"
+  "Bond (maker and taker each lock it)": "Fiança (la bloquegen el venedor i el comprador)",
+  "Lock your bond with": "Bloqueja la teva fiança amb",
+  "With onchain you lock your bond and the trade escrow onchain: the order becomes an onchain escrow order. The buyer keeps its Lightning bond.": "Amb on-chain bloqueges la teva fiança i l'escrow de l'operació on-chain: l'ordre passa a ser d'escrow on-chain. El comprador manté la seva fiança Lightning.",
+  "With onchain your bond is an onchain deposit and you need no Lightning to take: the seller locks the sats over Lightning and you can be paid onchain.": "Amb on-chain la teva fiança és un dipòsit on-chain i no necessites Lightning per prendre-la: el venedor bloqueja els sats per Lightning i pots cobrar on-chain.",
+  "Your bond needs 1 confirmation (up to 3 hours from when it is seen in the mempool). Meanwhile someone may take the order with Lightning, or with an onchain bond that confirms first: then your bond comes back to you, without any penalty.": "La teva fiança necessita 1 confirmació (fins a 3 hores des que es veu a la mempool). Mentrestant algú pot prendre l'ordre amb Lightning, o amb una fiança on-chain que confirmi abans: aleshores la teva fiança torna a tu, sense cap penalització."
 }

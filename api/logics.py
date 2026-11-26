@@ -464,7 +464,7 @@ class Logics:
             return "Inactive"
 
     @classmethod
-    def take(cls, order, user, amount=None, lightning=False):
+    def take(cls, order, user, amount=None, lightning=False, onchain=False):
         is_penalized, time_out = cls.is_penalized(user)
         take_order = TakeOrder.objects.filter(
             taker=user, order=order, expires_at__gt=timezone.now()
@@ -477,12 +477,20 @@ class Logics:
             )
             return True, None
         else:
+            # Mixta C/D (26 nov 2026): a Lightning order taken with an onchain bond gets the
+            # onchain window for its bond (pushed to 3 h after it is seen in the mempool).
+            onchain_take = bool(onchain) and not escrow_flow.is_onchain(order)
+            take_secs = (
+                config("ESCROW_BOND_SECONDS", cast=int, default=3 * 3600)
+                if onchain_take
+                else order.t_to_expire(Order.Status.TAK)
+            )
             take_order = TakeOrder.objects.create(
                 taker=user,
                 order=order,
                 lightning=bool(lightning) and escrow_flow.is_onchain(order),
-                expires_at=timezone.now()
-                + timedelta(seconds=order.t_to_expire(Order.Status.TAK)),
+                onchain=onchain_take,
+                expires_at=timezone.now() + timedelta(seconds=take_secs),
             )
 
             if order.has_range:
@@ -1120,9 +1128,9 @@ class Logics:
 
         # context necessary for the user to submit an onchain address
         MIN_SWAP_AMOUNT = config("MIN_SWAP_AMOUNT", cast=int, default=20_000)
-        if escrow_flow.has_proxy(order):
-            # Hybrid B: the buyer made an onchain order; the swap is how it still gets it onchain,
-            # down to the onchain escrow minimum.
+        if escrow_flow.has_any_proxy(order):
+            # Hybrid B: the buyer made an onchain order; mixta C: the buyer took with an onchain
+            # bond. The swap is how it still gets it onchain, down to the onchain escrow minimum.
             MIN_SWAP_AMOUNT = min(
                 MIN_SWAP_AMOUNT,
                 config("ESCROW_MIN_SATS", cast=int, default=config("MIN_ORDER_SIZE", cast=int, default=20000)),
@@ -1310,8 +1318,8 @@ class Logics:
         )
         cls.move_state_updated_payout_method(order)
 
-        # 0.9.7, hybrid B: the buyer's onchain bond goes back automatically to this address too
-        if escrow_flow.has_proxy(order):
+        # 0.9.7, hybrid B / mixta C: the buyer's onchain bond goes back automatically here too
+        if escrow_flow.has_any_proxy(order):
             try:
                 escrow_flow.default_bond_return(order, user, escrow_flow._spk_for_address(address), address)
             except Exception as e:
@@ -1919,6 +1927,9 @@ class Logics:
                 escrow_flow.to_lightning(order)  # case B: Lightning order from now on
             else:
                 order.log("Taken with Lightning by the buyer: Lightning taker bond, onchain escrow (case A)")
+        elif not escrow_flow.is_onchain(order) and getattr(take_order, "onchain", False):
+            # Mixta C/D (26 nov 2026): the Lightning order was taken with an onchain bond
+            escrow_flow.onchain_take_contract(order, take_order)
 
         if order.has_range:
             order.amount = take_order.amount
@@ -1947,6 +1958,7 @@ class Logics:
                 "spamcoin_sats",
                 "expires_at",
                 "taker_lightning",
+                "maker_lightning",
                 "escrow_type",
                 "maker_bond",
             ]

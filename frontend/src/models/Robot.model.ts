@@ -25,6 +25,7 @@ interface RobotApiResponse {
     max_sats: number;
     min_bond_sats?: number;
     min_fee_sats?: number;
+    take_ln_orders?: boolean;
   };
 }
 
@@ -77,6 +78,8 @@ class Robot {
     maxSats: number;
     minBondSats?: number;
     minFeeSats?: number;
+    // 26 nov 2026 (mixta C/D): Lightning orders may be taken with an onchain bond
+    takeLnOrders?: boolean;
   } | null = null;
   // Roblosats: the coordinator did not answer the last /api/robot/ (offline, gone).
   public unreachable: boolean = false;
@@ -172,6 +175,7 @@ class Robot {
                 maxSats: data.onchain_escrow.max_sats,
                 minBondSats: data.onchain_escrow.min_bond_sats,
                 minFeeSats: data.onchain_escrow.min_fee_sats,
+                takeLnOrders: data.onchain_escrow.take_ln_orders,
               }
             : null,
         });

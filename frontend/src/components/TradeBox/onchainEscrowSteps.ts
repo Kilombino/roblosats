@@ -41,14 +41,19 @@ export const onchainEscrowTitle = (order: Order): string => {
   return 'Get your bond back';
 };
 
-/** Hybrid (a Lightning seller took an onchain order): the order runs over Lightning but the
- * maker's bond is onchain; when it is free the maker takes it back with the onchain prompt. */
+/** Hybrid B (a Lightning seller took an onchain order) / mixta C (a buyer took a Lightning
+ * order with an onchain bond): the order runs over Lightning but one bond is onchain; when it is
+ * free its owner takes it back with the onchain prompt. */
 export const hybridBondStep = (order: Order): boolean => {
-  const o = order as unknown as O;
-  return (
-    Boolean(o.hybrid_onchain_maker_bond) &&
-    o.is_maker &&
-    [4, 5, 12, 14, 17, 18].includes(o.status) &&
-    o.bond_status_code === 5
-  );
+  const o = order as unknown as O & { hybrid_onchain_taker_bond?: boolean };
+  const mine =
+    (Boolean(o.hybrid_onchain_maker_bond) && o.is_maker) ||
+    (Boolean(o.hybrid_onchain_taker_bond) && !o.is_maker);
+  return mine && [4, 5, 12, 14, 17, 18].includes(o.status) && o.bond_status_code === 5;
+};
+
+/** Mixta C/D (26 nov 2026): this robot is taking a Lightning order with an onchain bond. */
+export const lnOnchainTakeStep = (order: Order): boolean => {
+  const o = order as unknown as O & { take_onchain?: boolean };
+  return o.status === 3 && !o.is_maker && Boolean(o.take_onchain);
 };

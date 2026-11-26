@@ -2318,3 +2318,9 @@ msgstr "订单 %(id)s：争议期间，%(role)s 在时间锁到期后自行取�
 msgctxt "roblosats-admin"
 msgid "Order %(id)s: %(sats)s sats were sent to the %(role)s's on-chain address on the WRONG chain (Spamcoin, SHA-256); the robot was told how to take them back"
 msgstr "订单 %(id)s：有 %(sats)s 聪通过错误的链（Spamcoin，SHA-256）发送到了 %(role)s 的链上地址；已告知机器人如何取回"
+
+msgid "Hybrid C (on-chain buyer bond)"
+msgstr ""
+
+msgid "Hybrid D (on-chain seller)"
+msgstr ""

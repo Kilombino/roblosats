@@ -80,6 +80,15 @@ const TakeButton = ({
     (currentOrder as unknown as { escrow_type?: number | string })?.escrow_type === 1 ||
     (currentOrder as unknown as { escrow_type?: number | string })?.escrow_type === 'onchain';
   const [takeWith, setTakeWith] = useState<'onchain' | 'lightning'>('onchain');
+  // Mixta C/D (26 nov 2026): a Lightning order may be taken with an onchain bond
+  const [lnBondWith, setLnBondWith] = useState<'onchain' | 'lightning'>('lightning');
+  const onchainTakeOfLn =
+    !isOnchainOrder &&
+    Boolean(
+      info?.onchain_take ??
+        garage.getSlot()?.getRobot(currentOrder?.shortAlias ?? '')?.onchainEscrow?.takeLnOrders,
+    );
+  const onchainLnTake = onchainTakeOfLn && lnBondWith === 'onchain';
   // The maker's order type: 0 = the maker buys (the taker sells), 1 = the maker sells.
   const takerSells = currentOrder?.type === 0;
   // rl31-beta19: a "丰 sat" order is taken in sats
@@ -185,6 +194,41 @@ const TakeButton = ({
               : t(
                   'With Lightning your bond is a Lightning hold invoice and you do not need to send anything onchain. The seller still locks the sats onchain and you receive them onchain; your coordinator fee comes out of what you receive.',
                 )}
+          </Alert>
+        ) : null}
+      </Box>
+    );
+  };
+
+  const lnBondChoice = (): React.JSX.Element | null => {
+    if (!onchainTakeOfLn) return null;
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, mb: 1 }}>
+        <Typography variant='body2'>{t('Lock your bond with')}</Typography>
+        <ToggleButtonGroup
+          size='small'
+          exclusive
+          value={lnBondWith}
+          onChange={(_e, v: 'onchain' | 'lightning' | null) => {
+            if (v) setLnBondWith(v);
+          }}
+        >
+          <ToggleButton value='lightning'>{t('⚡ Lightning')}</ToggleButton>
+          <ToggleButton value='onchain'>{t('⛓️ Onchain')}</ToggleButton>
+        </ToggleButtonGroup>
+        {lnBondWith === 'onchain' ? (
+          <Alert severity='warning' sx={{ maxWidth: '30em' }}>
+            {(takerSells
+              ? t(
+                  'With onchain you lock your bond and the trade escrow onchain: the order becomes an onchain escrow order. The buyer keeps its Lightning bond.',
+                )
+              : t(
+                  'With onchain your bond is an onchain deposit and you need no Lightning to take: the seller locks the sats over Lightning and you can be paid onchain.',
+                )) +
+              ' ' +
+              t(
+                'Your bond needs 1 confirmation (up to 3 hours from when it is seen in the mempool). Meanwhile someone may take the order with Lightning, or with an onchain bond that confirms first: then your bond comes back to you, without any penalty.',
+              )}
           </Alert>
         ) : null}
       </Box>
@@ -469,7 +513,8 @@ const TakeButton = ({
     ?.bond_hrp;
   const bondReturnHrp = orderHrp ?? hrpOfNetwork(federation.network);
   const bondReturnCheck = bondReturn ? checkAddress(bondReturn, bondReturnHrp) : null;
-  const bondReturnUsed = isOnchainOrder && takeWith !== 'lightning' && bondReturnCheck !== null;
+  const bondReturnUsed =
+    ((isOnchainOrder && takeWith !== 'lightning') || onchainLnTake) && bondReturnCheck !== null;
   const confirmedBondReturn = useRef<string>('');
   const { confirmAddress, addressDialog } = useAddressConfirm();
 
@@ -502,7 +547,13 @@ const TakeButton = ({
     setLoadingTake(true);
 
     slot
-      .takeOrder(federation, currentOrder, takeAmount, isOnchainOrder && takeWith === 'lightning')
+      .takeOrder(
+        federation,
+        currentOrder,
+        takeAmount,
+        isOnchainOrder && takeWith === 'lightning',
+        onchainLnTake,
+      )
       .then((order) => {
         if (order?.bad_request !== undefined) {
           setBadRequest(order.bad_request);
@@ -526,8 +577,9 @@ const TakeButton = ({
   return (
     <Box>
       {takeWithChoice()}
+      {lnBondChoice()}
       {/* 0.9.7: where the onchain bond goes back by itself once it is free (optional) */}
-      {isOnchainOrder && takeWith !== 'lightning' ? (
+      {(isOnchainOrder && takeWith !== 'lightning') || onchainLnTake ? (
         <Box sx={{ px: 1, pb: 1 }}>
           <TextField
             fullWidth

@@ -319,11 +319,49 @@ def _advance_bonds(order):
             bond = OnchainBond.objects.filter(order=order, role="taker", take_order=take_order).order_by("-created_at").first()
             if not bond:
                 continue
+            extend_take_from_mempool(take_order, bond)
             bond = bonds.refresh(bond)
             if bond.status == OnchainBond.Status.LOCKED:
                 order.log("Onchain taker bond **locked**")
                 Logics.finalize_contract(take_order)
                 break
+
+
+def extend_take_from_mempool(take_order, bond):
+    """26 nov 2026 (Kilombino, TG 15573): an onchain take has ESCROW_BOND_SECONDS (3 h) from the
+    moment its bond is seen in the mempool to confirm it. The first time the payment shows up,
+    the take's deadline is pushed to that moment + 3 h (never brought forward)."""
+    from django.core.cache import cache
+
+    from api.models import OnchainBond
+
+    if bond.status != OnchainBond.Status.FUNDING:
+        return False
+    try:
+        pending = _unconfirmed(bond.address)
+    except Exception:
+        return False
+    if not pending or not cache.add(f"onchain-take-mempool:{take_order.pk}", 1, timeout=2 * 24 * 3600):
+        return False
+    until = timezone.now() + timedelta(seconds=config("ESCROW_BOND_SECONDS", cast=int, default=3 * 3600))
+    if until > take_order.expires_at:
+        take_order.expires_at = until
+        take_order.save(update_fields=["expires_at"])
+        bond.order.log(
+            f"Onchain take of Robot({take_order.taker.robot.id},{take_order.taker}): its bond is in the mempool, "
+            f"the take now waits for its confirmation until {until:%Y-%m-%d %H:%M} UTC"
+        )
+    return True
+
+
+def advance_onchain_takes(order):
+    """Mixta C/D (26 nov 2026): a public Lightning order with takes paying an onchain bond:
+    their deadlines, mempool notices, and the contract once one of those bonds is locked."""
+    _advance_bonds(order)
+    try:
+        notify_mempool(order, None)
+    except Exception as e:
+        logger.warning(f"Order {order.id}: onchain take mempool check failed: {e}")
 
 
 def advance(order):
@@ -367,8 +405,9 @@ def advance(order):
         from api.models import LNPayment
 
         def bond_ready(role):
-            if role_is_ln(order, role):  # hybrid: the taker's bond is a Lightning hold invoice
-                return order.taker_bond is not None and order.taker_bond.status == LNPayment.Status.LOCKED
+            if role_is_ln(order, role):  # hybrid A/D: this side's bond is a Lightning hold invoice
+                lb = ln_bond(order)
+                return lb is not None and lb.status == LNPayment.Status.LOCKED
             b = tb.get(role)
             return b is not None and b.status == OnchainBond.Status.LOCKED
 
@@ -553,11 +592,11 @@ def collaborative_cancel(order):
     if to_buyer:
         payouts.append(TxOut(to_buyer, _spk(escrow, "buyer")))
     service.start_release(escrow, payouts, OnchainEscrow.ReleaseKind.COOPERATIVE, 0, seller_leaf(escrow))
-    if order.taker_lightning:
+    if ln_bond(order) is not None:
         from api.logics import Logics
 
-        Logics.return_bond(order.taker_bond)
-        order.log("Lightning taker bond **unlocked** (collaborative cancellation)")
+        Logics.return_bond(ln_bond(order))
+        order.log(f"Lightning {ln_side(order)} bond **unlocked** (collaborative cancellation)")
     _record_release(escrow, cancel=True, release_coordinator_sats=0, release_fee_sats=0, release_dev_sats=0)
     order.log("Collaborative cancellation: **onchain return to the seller** started"
               + (" (coordinator fees refunded)" if fee_plan(escrow) >= 2 else ""))
@@ -599,27 +638,28 @@ def return_everything(order):
     payouts = [TxOut(sats, _spk(escrow, who)) for who, sats in return_split(escrow)]
     service.start_release(escrow, payouts, OnchainEscrow.ReleaseKind.SELLER_WINS, 0)
     _record_release(escrow, cancel=True, release_coordinator_sats=0, release_fee_sats=0, release_dev_sats=0)
-    if order.taker_lightning and order.taker_bond is not None:
+    if ln_bond(order) is not None:
         ln_bond_return_everything(order)
     order.log("Dispute solved with **everything returned**: waiting for the seller's signature on the return")
 
 
 def ln_bond_return_everything(order):
-    """Hybrid A, "return everything": the Lightning taker bond goes back to the taker."""
+    """Hybrid A/D, "return everything": the Lightning bond goes back to its owner."""
     from api.logics import Logics, ledger_credit
     from api.models import LNPayment
 
-    bond = order.taker_bond
+    side = ln_side(order)
+    bond = ln_bond(order)
     bond.refresh_from_db(fields=["status"])
     if bond.status != LNPayment.Status.SETLED:
         Logics.return_bond(bond)
         bond.refresh_from_db(fields=["status"])
         if bond.status != LNPayment.Status.SETLED:
-            order.log("Lightning taker bond **unlocked** (dispute: everything returned)")
+            order.log(f"Lightning {side} bond **unlocked** (dispute: everything returned)")
             return
-    ledger_credit(order.taker.robot, bond.num_satoshis, "dispute_bond_back",
+    ledger_credit(side_user(order, side).robot, bond.num_satoshis, "dispute_bond_back",
                   f"dispute_bond_back:{order.id}:{bond.payment_hash}", order_id=order.id)
-    order.log(f"Dispute solved with everything returned: the Lightning taker bond of {bond.num_satoshis} Sats "
+    order.log(f"Dispute solved with everything returned: the Lightning {side} bond of {bond.num_satoshis} Sats "
               "is credited back as rewards")
 
 
@@ -810,7 +850,7 @@ def complete_dispute(order):
     if fee_plan(escrow) >= 2:
         values.update(release_fee_sats=_paid_to_coordinator(tx), release_dev_sats=info["dev"])
     _record_release(escrow, **values)
-    if order.taker_lightning and order.taker_bond is not None:  # hybrid A: both bonds back
+    if ln_bond(order) is not None:  # hybrid A/D: both bonds back
         ln_bond_return_everything(order)
     order.update_status(Order.Status.PAY)
     order.contract_finalization_time = timezone.now()
@@ -863,6 +903,12 @@ def bond_action(order, user, name, data):
         if role == "taker" and take_order is not None and take_order.lightning and order.taker != user \
                 and take_order.expires_at > timezone.now():
             raise EscrowError("this take pays its bond with Lightning")
+        # Lightning order: only a take made with an onchain bond (mixta C/D) gets one; the maker
+        # of a Lightning order has its hold invoice.
+        if not is_onchain(order):
+            if role == "maker" or take_order is None or not getattr(take_order, "onchain", False) \
+                    or order.taker == user:
+                raise EscrowError("this order pays its bonds with Lightning")
         # 0.9.8: no new bond for a take that is over (another taker locked first, or it expired)
         if role == "taker" and order.taker != user and (
             take_order is None or take_order.expires_at <= timezone.now()
@@ -1445,11 +1491,11 @@ def trade_summary(order, user):
 
     bond_ids = plan.get("bond_ids", {})
     bond_sats = OnchainBond.objects.get(pk=bond_ids[role]).value if role in bond_ids else 0
-    ln_bond = role_is_ln(order, role)
-    if ln_bond and order.taker_bond is not None:
-        bond_sats = order.taker_bond.num_satoshis
+    is_ln = role_is_ln(order, role)
+    if is_ln and ln_bond(order) is not None:
+        bond_sats = ln_bond(order).num_satoshis
     return {
-        "lightning_bond": ln_bond,
+        "lightning_bond": is_ln,
         "fee_at_release": role == "buyer" and bool(escrow.funding_signatures.get("release_coordinator_sats")),
         "fee_refunded_sats": fees_held(escrow)[role] if escrow.funding_signatures.get("cancel") else 0,
         "role": role,
@@ -1457,7 +1503,7 @@ def trade_summary(order, user):
         "trade_sats": trade,
         "received_sats": received,
         "bond_sats": bond_sats,
-        "bond_back_sats": bond_sats if ln_bond else bonds.get(role, 0),
+        "bond_back_sats": bond_sats if is_ln else bonds.get(role, 0),
         # rl31-beta20: a funding excess that rode in the escrow, back with the bond (in received)
         "extra_back_sats": _extras(escrow)[role],
         "coordinator_fee_sats": charged_fees(escrow, order)[role],
@@ -1740,13 +1786,16 @@ def bonds_locked(order):
     from api.models import LNPayment
 
     held = (OnchainBond.Status.LOCKED, OnchainBond.Status.IN_DEPOSIT)
-    maker = bond_of(order, "maker")
-    taker = bond_of(order, "taker")
-    if order.taker_lightning:
-        return bool(maker and maker.status in held), bool(
-            order.taker_bond and order.taker_bond.status == LNPayment.Status.LOCKED
-        )
-    return bool(maker and maker.status in held), bool(taker and taker.status in held)
+    side = ln_side(order)
+
+    def locked(s):
+        if s == side:
+            b = order.maker_bond if s == "maker" else order.taker_bond
+            return bool(b and b.status == LNPayment.Status.LOCKED)
+        b = bond_of(order, s)
+        return bool(b and b.status in held)
+
+    return locked("maker"), locked("taker")
 
 
 def allowed_list():
@@ -1844,9 +1893,43 @@ def taker_role(order):
     return "buyer" if Logics.is_seller(order, order.maker) else "seller"
 
 
+def ln_side(order):
+    """'maker'/'taker': the trader of this onchain order whose bond is a Lightning hold invoice
+    (hybrid A: the taker; mixta D, 26 nov 2026: the maker of a Lightning order taken by an
+    onchain seller), or None."""
+    if order.taker_lightning and order.taker_id is not None:
+        return "taker"
+    if getattr(order, "maker_lightning", False):
+        return "maker"
+    return None
+
+
+def ln_bond(order):
+    """The Lightning hold-invoice bond of ln_side(order), or None."""
+    side = ln_side(order)
+    if side == "taker":
+        return order.taker_bond
+    if side == "maker":
+        return order.maker_bond
+    return None
+
+
+def side_user(order, side):
+    return order.taker if side == "taker" else order.maker
+
+
+def side_role(order, side):
+    """'seller'/'buyer' of the maker or the taker."""
+    t = taker_role(order)
+    if side == "taker":
+        return t
+    return "seller" if t == "buyer" else "buyer"
+
+
 def role_is_ln(order, role):
     """True when the trader 'role' (seller/buyer) of this onchain order has a Lightning bond."""
-    return bool(order.taker_lightning) and order.taker_id is not None and taker_role(order) == role
+    side = ln_side(order)
+    return side is not None and side_role(order, side) == role
 
 
 def buyer_fee_at_release(order):
@@ -1868,7 +1951,52 @@ def proxied_bond(proxy):
 
 
 def has_proxy(order):
+    """Hybrid B: the maker's onchain bond behind a proxy (a Lightning order since the take)."""
     return is_bond_proxy(order.maker_bond)
+
+
+def has_taker_proxy(order):
+    """Mixta C: the buyer took a Lightning order with an onchain bond, behind a proxy."""
+    return is_bond_proxy(order.taker_bond)
+
+
+def has_any_proxy(order):
+    return has_proxy(order) or has_taker_proxy(order)
+
+
+def user_proxy(order, user):
+    """The proxy of this robot's onchain bond in this Lightning order, or None."""
+    if user is None:
+        return None
+    if order.maker_id == user.id and has_proxy(order):
+        return order.maker_bond
+    if order.taker_id == user.id and has_taker_proxy(order):
+        return order.taker_bond
+    return None
+
+
+def make_proxy(order, side, bond):
+    """A proxy LNPayment for the locked onchain bond of 'maker'/'taker' so the Lightning
+    machinery runs unchanged on it (settle = penalty, return/cancel = free)."""
+    from django.contrib.auth.models import User
+
+    from api.models import LNPayment
+
+    proxy, _ = LNPayment.objects.update_or_create(
+        payment_hash=f"{PROXY_PREFIX}{bond.pk}",
+        defaults=dict(
+            concept=LNPayment.Concepts.MAKEBOND if side == "maker" else LNPayment.Concepts.TAKEBOND,
+            type=LNPayment.Types.HOLD,
+            status=LNPayment.Status.LOCKED,
+            sender=bond.owner,
+            receiver=User.objects.filter(username=config("ESCROW_USERNAME", default="admin")).first(),
+            num_satoshis=bond.value,
+            description=f"Onchain {side} bond of order {order.id} (proxy)",
+            created_at=timezone.now(),
+            expires_at=timezone.now() + timedelta(days=30),
+        ),
+    )
+    return proxy
 
 
 def proxy_settle(proxy, reason="", raise_errors=False):
@@ -1886,7 +2014,7 @@ def proxy_settle(proxy, reason="", raise_errors=False):
         if raise_errors:
             raise
         if bond is not None:
-            bond.order.log(f"Onchain maker bond penalty could not be broadcast: {e}", level="ERROR")
+            bond.order.log(f"Onchain {bond.role} bond penalty could not be broadcast: {e}", level="ERROR")
         return False
     proxy.status = LNPayment.Status.SETLED
     proxy.save(update_fields=["status"])
@@ -1980,27 +2108,12 @@ def proxy_penalty_sats(proxy):
 def to_lightning(order):
     """Case B: the seller took with Lightning. The order goes on as a Lightning order; the
     maker's onchain bond is represented by a proxy LNPayment in order.maker_bond."""
-    from django.contrib.auth.models import User
-
-    from api.models import LNPayment, OnchainBond, Order
+    from api.models import OnchainBond, Order
 
     bond = bond_of(order, "maker")
     if bond is None or bond.status != OnchainBond.Status.LOCKED:
         raise EscrowError("the maker's onchain bond is not locked")
-    proxy, _ = LNPayment.objects.update_or_create(
-        payment_hash=f"{PROXY_PREFIX}{bond.pk}",
-        defaults=dict(
-            concept=LNPayment.Concepts.MAKEBOND,
-            type=LNPayment.Types.HOLD,
-            status=LNPayment.Status.LOCKED,
-            sender=order.maker,
-            receiver=User.objects.filter(username=config("ESCROW_USERNAME", default="admin")).first(),
-            num_satoshis=bond.value,
-            description=f"Onchain maker bond of order {order.id} (proxy)",
-            created_at=timezone.now(),
-            expires_at=timezone.now() + timedelta(days=30),
-        ),
-    )
+    proxy = make_proxy(order, "maker", bond)
     order.maker_bond = proxy
     order.escrow_type = Order.EscrowTypes.LIGHTNING
     order.log(
@@ -2010,14 +2123,69 @@ def to_lightning(order):
 
 
 def to_onchain(order):
-    """Case B order back in the book (the Lightning seller failed): onchain again."""
-    from api.models import Order
+    """Back in the book (publish_order). Case B (the Lightning seller failed): onchain again.
+    Mixta D (the onchain seller failed): a Lightning order again, the maker's Lightning bond
+    still backs it. Mixta C needs nothing: publish_order drops the taker's proxy bond."""
+    from api.models import OnchainEscrow, Order
 
     if has_proxy(order):
         order.escrow_type = Order.EscrowTypes.ONCHAIN
         order.maker_bond = None
         order.log("Back in the book as an **onchain** order (the maker's onchain bond still backs it)")
+    if getattr(order, "maker_lightning", False):
+        OnchainEscrow.objects.filter(
+            order=order, status__in=[OnchainEscrow.Status.KEYS, OnchainEscrow.Status.FUNDING, OnchainEscrow.Status.ABANDONED]
+        ).delete()
+        order.escrow_type = Order.EscrowTypes.LIGHTNING
+        order.maker_lightning = False
+        order.log("Back in the book as a **Lightning** order (the maker's Lightning bond still backs it)")
     order.taker_lightning = False
+
+
+def onchain_take_enabled():
+    """Mixta C/D (26 nov 2026): a Lightning order may be taken with an onchain bond."""
+    return service.enabled() and config("ESCROW_ONCHAIN_TAKER", cast=bool, default=True)
+
+
+def onchain_take_contract(order, take_order):
+    """finalize_contract of a Lightning order taken with an onchain bond (now LOCKED).
+    Mixta C (the taker is the buyer): the order stays a Lightning order; the taker's onchain
+    bond is held through a proxy LNPayment in order.taker_bond. Mixta D (the taker is the
+    seller): the order becomes an onchain-escrow order (the seller funds the escrow onchain)
+    while the maker keeps its Lightning hold-invoice bond (order.maker_lightning)."""
+    from api.logics import Logics
+    from api.models import OnchainBond, Order
+
+    bond = OnchainBond.objects.filter(order=order, role="taker", take_order=take_order).order_by("-created_at").first()
+    if bond is None or bond.status != OnchainBond.Status.LOCKED:
+        raise EscrowError("the taker's onchain bond is not locked")
+    if Logics.is_seller(order, take_order.taker):
+        order.taker_bond = None
+        order.escrow_type = Order.EscrowTypes.ONCHAIN
+        order.maker_lightning = True
+        order.log(
+            f"Taken with an onchain bond by the seller (**mixta D**): the order goes on as an **onchain-escrow** "
+            f"order; the maker keeps its Lightning bond ({order.maker_bond.num_satoshis if order.maker_bond else 0} Sats)"
+        )
+    else:
+        order.taker_bond = make_proxy(order, "taker", bond)
+        order.log(
+            f"Taken with an onchain bond by the buyer (**mixta C**): the order goes on as a Lightning order; the "
+            f"taker's onchain bond ({bond.value} Sats) is held through proxy LNPayment({order.taker_bond.payment_hash})"
+        )
+
+
+def hybrid_kind(order):
+    """'A', 'B', 'C', 'D' or '' (pure Lightning or pure onchain)."""
+    if getattr(order, "maker_lightning", False):
+        return "D"
+    if is_onchain(order) and order.taker_lightning and order.taker_id is not None:
+        return "A"
+    if has_proxy(order):
+        return "B"
+    if has_taker_proxy(order):
+        return "C"
+    return ""
 
 
 def penalize_side(order, side):
@@ -2025,8 +2193,8 @@ def penalize_side(order, side):
     from api.escrow import bonds
     from api.logics import Logics
 
-    if side == "taker" and order.taker_lightning:
-        return Logics.settle_bond(order.taker_bond)
+    if side == ln_side(order):
+        return Logics.settle_bond(order.taker_bond if side == "taker" else order.maker_bond)
     return bonds.penalize(bond_of(order, side))
 
 
@@ -2034,29 +2202,32 @@ def free_side(order, side):
     from api.escrow import bonds
     from api.logics import Logics
 
-    if side == "taker" and order.taker_lightning:
-        return Logics.return_bond(order.taker_bond)
+    if side == ln_side(order):
+        return Logics.return_bond(order.taker_bond if side == "taker" else order.maker_bond)
     return bonds.release(bond_of(order, side))
 
 
 def ln_bond_dispute_credit(order, buyer_wins):
-    """Case A dispute: the Lightning taker bond was settled when the dispute opened. Winner
-    taker: its bond back as rewards. Loser taker: the winner gets the usual reward share."""
+    """Case A/D dispute: the Lightning bond was settled when the dispute opened. Its owner wins:
+    its bond back as rewards. Its owner loses: the winner gets the usual reward share."""
     from api.logics import ledger_credit
 
-    if not order.taker_lightning or order.taker_bond is None:
+    side = ln_side(order)
+    bond = ln_bond(order)
+    if bond is None:
         return
-    taker_wins = (taker_role(order) == "buyer") == buyer_wins
-    sats = order.taker_bond.num_satoshis
-    if taker_wins:
-        ledger_credit(order.taker.robot, sats, "dispute_bond_back",
-                      f"dispute_bond_back:{order.id}:{order.taker_bond.payment_hash}", order_id=order.id)
-        order.log(f"Dispute won by the Lightning taker: its bond of {sats} Sats is credited back as rewards")
+    other = "maker" if side == "taker" else "taker"
+    owner_wins = (side_role(order, side) == "buyer") == buyer_wins
+    sats = bond.num_satoshis
+    if owner_wins:
+        ledger_credit(side_user(order, side).robot, sats, "dispute_bond_back",
+                      f"dispute_bond_back:{order.id}:{bond.payment_hash}", order_id=order.id)
+        order.log(f"Dispute won by the Lightning {side}: its bond of {sats} Sats is credited back as rewards")
     else:
         reward = int(sats * config("SLASHED_BOND_REWARD_SPLIT", cast=float, default=0.5))
-        ledger_credit(order.maker.robot, reward, "slash_reward",
-                      f"slash_reward:{order.id}:{order.taker_bond.payment_hash}", order_id=order.id)
-        order.log(f"Dispute lost by the Lightning taker: the maker is rewarded {reward} Sats of its bond")
+        ledger_credit(side_user(order, other).robot, reward, "slash_reward",
+                      f"slash_reward:{order.id}:{bond.payment_hash}", order_id=order.id)
+        order.log(f"Dispute lost by the Lightning {side}: the {other} is rewarded {reward} Sats of its bond")
 
 
 def _slash_side(order, side):
@@ -2066,8 +2237,8 @@ def _slash_side(order, side):
     from api.escrow import bonds
     from api.models import LNPayment, OnchainBond
 
-    if side == "taker" and order.taker_lightning:
-        b = order.taker_bond
+    if side == ln_side(order):
+        b = order.taker_bond if side == "taker" else order.maker_bond
         if b is None:
             return None
         b.refresh_from_db(fields=["status"])

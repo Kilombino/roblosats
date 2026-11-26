@@ -986,7 +986,8 @@ def penalize_now(bond, reason=""):
     from api.escrow import flow
 
     order = bond.order
-    proxy = order.maker_bond if bond.role == "maker" and flow.is_bond_proxy(order.maker_bond) else None
+    ln = order.maker_bond if bond.role == "maker" else order.taker_bond  # mixta C: the taker's proxy
+    proxy = ln if flow.is_bond_proxy(ln) else None
     try:
         if proxy is not None and flow.proxied_bond(proxy) and flow.proxied_bond(proxy).pk == bond.pk:
             ok = flow.proxy_settle(proxy, reason=reason, raise_errors=True)

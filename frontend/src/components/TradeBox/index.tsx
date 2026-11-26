@@ -48,6 +48,7 @@ import BondLeftoverBox, { hasBondLeftover } from './Prompts/BondLeftover';
 import {
   hybridBondStep,
   isOnchainEscrow,
+  lnOnchainTakeStep,
   onchainEscrowStep,
   onchainEscrowTitle,
 } from './onchainEscrowSteps';
@@ -434,7 +435,11 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
       return baseContract;
     }
 
-    if ((isOnchainEscrow(order) && onchainEscrowStep(order)) || hybridBondStep(order)) {
+    if (
+      (isOnchainEscrow(order) && onchainEscrowStep(order)) ||
+      hybridBondStep(order) ||
+      lnOnchainTakeStep(order)
+    ) {
       baseContract.title = onchainEscrowTitle(order);
       baseContract.titleColor = 'warning';
       baseContract.bondStatus = 'hide';

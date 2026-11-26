@@ -18,7 +18,12 @@ export const isHybridLightningTake = (order: Order): boolean => {
   return Boolean(o.hybrid_onchain_maker_bond || o.taker_lightning);
 };
 
+/** Mixta C (26 nov 2026): the buyer took this Lightning order with an onchain bond. */
+export const isOnchainBondTake = (order: Order): boolean =>
+  Boolean((order as unknown as { hybrid_onchain_taker_bond?: boolean }).hybrid_onchain_taker_bond);
+
 export const defaultPayoutTab = (order: Order): 'lightning' | 'onchain' =>
-  onchainPayoutAllowed(order) && isHybridLightningTake(order) && order.is_maker
+  onchainPayoutAllowed(order) &&
+  ((isHybridLightningTake(order) && order.is_maker) || (isOnchainBondTake(order) && !order.is_maker))
     ? 'onchain'
     : 'lightning';

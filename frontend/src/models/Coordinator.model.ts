@@ -54,6 +54,8 @@ export interface Info {
   swap_enabled: boolean;
   onchain_escrow?: boolean;
   onchain_min_fee_sats?: number;
+  // 26 nov 2026 (mixta C/D): Lightning orders may be taken with an onchain bond
+  onchain_take?: boolean;
   max_swap: number;
   current_swap_fee_rate: number;
   blossom_enabled: boolean;

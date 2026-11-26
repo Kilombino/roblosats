@@ -420,6 +420,14 @@ def build_text(cfg, event, order, extra):
             )
         if order.payment_method:
             detail += f" · {order.payment_method}"
+        try:  # 26 nov 2026: which escrow it runs on (hybrid A/B/C/D included)
+            from roblosats_admin.onchain import KIND_ICON, KIND_LABEL, LIGHTNING, kind as escrow_kind
+
+            k = escrow_kind(order)
+            if k != LIGHTNING:
+                detail += f" · {KIND_ICON[k]} {KIND_LABEL[k]}"
+        except Exception:
+            pass
         lines.append(detail)
         if event == "coordinator_message" and extra.get("text"):
             lines.append(f"«{extra['text']}»")

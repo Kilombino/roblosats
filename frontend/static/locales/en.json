@@ -1278,5 +1278,9 @@
   "Default: {{url}} (or {{alt}}). Any Esplora API of the SHA-256 chain works.": "Default: {{url}} (or {{alt}}). Any Esplora API of the SHA-256 chain works.",
   "The rescue will send {{amount}} Spamsats (minus the mining fee) on Spamchain (SHA-256) to:": "The rescue will send {{amount}} Spamsats (minus the mining fee) on Spamchain (SHA-256) to:",
   "Only bonds and funding addresses can be recovered on Spamchain": "Only bonds and funding addresses can be recovered on Spamchain",
-  "Bond (maker and taker each lock it)": "Bond (maker and taker each lock it)"
+  "Bond (maker and taker each lock it)": "Bond (maker and taker each lock it)",
+  "Lock your bond with": "Lock your bond with",
+  "With onchain you lock your bond and the trade escrow onchain: the order becomes an onchain escrow order. The buyer keeps its Lightning bond.": "With onchain you lock your bond and the trade escrow onchain: the order becomes an onchain escrow order. The buyer keeps its Lightning bond.",
+  "With onchain your bond is an onchain deposit and you need no Lightning to take: the seller locks the sats over Lightning and you can be paid onchain.": "With onchain your bond is an onchain deposit and you need no Lightning to take: the seller locks the sats over Lightning and you can be paid onchain.",
+  "Your bond needs 1 confirmation (up to 3 hours from when it is seen in the mempool). Meanwhile someone may take the order with Lightning, or with an onchain bond that confirms first: then your bond comes back to you, without any penalty.": "Your bond needs 1 confirmation (up to 3 hours from when it is seen in the mempool). Meanwhile someone may take the order with Lightning, or with an onchain bond that confirms first: then your bond comes back to you, without any penalty."
 }

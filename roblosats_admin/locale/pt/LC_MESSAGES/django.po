@@ -2318,3 +2318,9 @@ msgstr "Ordem %(id)s: o %(role)s recuperou sozinho a sua caução on-chain após
 msgctxt "roblosats-admin"
 msgid "Order %(id)s: %(sats)s sats were sent to the %(role)s's on-chain address on the WRONG chain (Spamcoin, SHA-256); the robot was told how to take them back"
 msgstr "Ordem %(id)s: %(sats)s sats foram enviados para o endereço on-chain do %(role)s na cadeia ERRADA (Spamcoin, SHA-256); o robô foi informado de como os recuperar"
+
+msgid "Hybrid C (on-chain buyer bond)"
+msgstr ""
+
+msgid "Hybrid D (on-chain seller)"
+msgstr ""

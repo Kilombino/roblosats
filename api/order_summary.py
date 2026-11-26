@@ -164,7 +164,7 @@ def _base(order, user, role, former_taker):
     )
     from api.escrow import flow
 
-    hybrid = bool(order.taker_lightning) or flow.has_proxy(order)
+    hybrid = bool(order.taker_lightning) or flow.has_any_proxy(order) or bool(getattr(order, "maker_lightning", False))
     return {
         "order_id": order.id,
         "status": order.status,
@@ -247,6 +247,8 @@ def _apply_bond(s, order, user, role, ln_bond):
         bonds = list(OnchainBond.objects.filter(order=order, owner=user).order_by("created_at"))
         if role == "taker" and order.taker_lightning and order.taker == user:
             bonds = []
+        if role == "maker" and getattr(order, "maker_lightning", False) and order.maker == user:
+            bonds = []  # mixta D: the maker's bond is its Lightning hold invoice
     if bonds:
         s["bond_kind"] = "onchain"
         states = []

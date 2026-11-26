@@ -29,13 +29,16 @@ TRADING = {6, 7, 8, 9, 10, 11, 13, 15, 16}
 HELD = (2, 3, 4)  # OnchainEscrow MEMPOOL, LOCKED, RELEASING: the escrow output is unspent
 
 LIGHTNING, ONCHAIN, HYBRID_A, HYBRID_B = "ln", "onchain", "hybrid_a", "hybrid_b"
+HYBRID_C, HYBRID_D = "hybrid_c", "hybrid_d"  # 26 nov 2026: Lightning orders taken with an onchain bond
 KIND_LABEL = {
     LIGHTNING: _lazy("Lightning"),
     ONCHAIN: _lazy("On-chain"),
     HYBRID_A: _lazy("Hybrid A (Lightning buyer)"),
     HYBRID_B: _lazy("Hybrid B (Lightning seller)"),
+    HYBRID_C: _lazy("Hybrid C (on-chain buyer bond)"),
+    HYBRID_D: _lazy("Hybrid D (on-chain seller)"),
 }
-KIND_ICON = {LIGHTNING: "⚡", ONCHAIN: "⛓️", HYBRID_A: "⛓️⚡", HYBRID_B: "⚡⛓️"}
+KIND_ICON = {LIGHTNING: "⚡", ONCHAIN: "⛓️", HYBRID_A: "⛓️⚡", HYBRID_B: "⚡⛓️", HYBRID_C: "⚡🔗", HYBRID_D: "🔗⛓️"}
 
 
 # ---------------------------------------------------------------- basics
@@ -187,7 +190,11 @@ def kind(order):
     from api.models import Order
 
     if order.escrow_type == Order.EscrowTypes.ONCHAIN:
+        if getattr(order, "maker_lightning", False):
+            return HYBRID_D
         return HYBRID_A if order.taker_lightning and order.taker_id else ONCHAIN
+    if str(getattr(order.taker_bond, "payment_hash", "") or "").startswith("onchain-bond-"):
+        return HYBRID_C
     if _has_bonds(order) or _escrow(order) is not None:
         return HYBRID_B
     return LIGHTNING
@@ -539,7 +546,7 @@ class EscrowKindFilter(admin.SimpleListFilter):
     parameter_name = "escrow_kind"
 
     def lookups(self, request, model_admin):
-        return [(k, KIND_LABEL[k]) for k in (LIGHTNING, ONCHAIN, HYBRID_A, HYBRID_B)]
+        return [(k, KIND_LABEL[k]) for k in (LIGHTNING, ONCHAIN, HYBRID_A, HYBRID_B, HYBRID_C, HYBRID_D)]
 
     def queryset(self, request, queryset):
         from api.models import OnchainBond, Order
@@ -549,7 +556,7 @@ class EscrowKindFilter(admin.SimpleListFilter):
         if value == LIGHTNING:
             return queryset.filter(escrow_type=Order.EscrowTypes.LIGHTNING).exclude(bonds)
         if value == ONCHAIN:
-            return queryset.filter(escrow_type=Order.EscrowTypes.ONCHAIN).filter(
+            return queryset.filter(escrow_type=Order.EscrowTypes.ONCHAIN, maker_lightning=False).filter(
                 Q(taker_lightning=False) | Q(taker__isnull=True)
             )
         if value == HYBRID_A:
@@ -557,7 +564,15 @@ class EscrowKindFilter(admin.SimpleListFilter):
                 escrow_type=Order.EscrowTypes.ONCHAIN, taker_lightning=True, taker__isnull=False
             )
         if value == HYBRID_B:
-            return queryset.filter(escrow_type=Order.EscrowTypes.LIGHTNING).filter(bonds)
+            return queryset.filter(escrow_type=Order.EscrowTypes.LIGHTNING).filter(bonds).exclude(
+                taker_bond__payment_hash__startswith="onchain-bond-"
+            )
+        if value == HYBRID_C:
+            return queryset.filter(
+                escrow_type=Order.EscrowTypes.LIGHTNING, taker_bond__payment_hash__startswith="onchain-bond-"
+            )
+        if value == HYBRID_D:
+            return queryset.filter(escrow_type=Order.EscrowTypes.ONCHAIN, maker_lightning=True)
         return queryset
 
 

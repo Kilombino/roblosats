@@ -49,11 +49,11 @@ def _address(escrow, role):
 
 
 def _ln_bond(order, role):
-    """The Lightning bond of 'buyer'/'seller' in a hybrid A order, or None."""
+    """The Lightning bond of 'buyer'/'seller' in a hybrid A/D order, or None."""
     from api.escrow import flow
 
     if flow.role_is_ln(order, role):
-        return order.taker_bond
+        return flow.ln_bond(order)
     return None
 
 

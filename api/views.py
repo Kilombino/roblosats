@@ -396,7 +396,7 @@ class OrderView(viewsets.ViewSet):
         # on chain: its traders keep seeing it. 16 nov 2026 QA: a maker could not get its
         # bond back from a cancelled public order.)
         if (order.status == Order.Status.UCA or order.status == Order.Status.CCA) and not (
-            escrow_flow.is_onchain(order) and data["is_participant"]
+            (escrow_flow.is_onchain(order) or escrow_flow.has_any_proxy(order)) and data["is_participant"]
         ):
             return Response(new_error(1043), status.HTTP_400_BAD_REQUEST)
 
@@ -547,6 +547,9 @@ class OrderView(viewsets.ViewSet):
                 # Said out loud (0.9.3): apps that kept take_lightning from an earlier Lightning
                 # take of this order showed an empty hold invoice instead of the onchain bond.
                 valid, context = True, {"take_lightning": False}
+            elif not escrow_flow.is_onchain(order) and take_order.first().onchain:
+                # Mixta C/D (26 nov 2026): a Lightning order taken with an onchain bond
+                valid, context = True, {"take_lightning": False, "take_onchain": True}
             else:
                 valid, context = Logics.gen_taker_hold_invoice(order, request.user)
                 if escrow_flow.is_onchain(order):
@@ -728,7 +731,25 @@ class OrderView(viewsets.ViewSet):
 
                 data.update(onchain_bonds.bond_data(escrow_flow.proxied_bond(order.maker_bond)))
                 data["bond_role"] = "maker"
+        elif escrow_flow.has_taker_proxy(order):
+            # Mixta C: a Lightning order whose buyer (the taker) put an onchain bond
+            data["bad_request"] = ""
+            data["hybrid_onchain_taker_bond"] = True
+            if order.taker == request.user:
+                from api.escrow import bonds as onchain_bonds
+
+                data.update(onchain_bonds.bond_data(escrow_flow.proxied_bond(order.taker_bond)))
+                data["bond_role"] = "taker"
+        elif take_order.exists() and take_order.first().onchain:
+            # Mixta C/D: the onchain bond of a pending take of a Lightning order
+            data["bad_request"] = ""
+            try:
+                data.update(escrow_flow.order_data(order, request.user))
+            except escrow_flow.EscrowError as e:
+                data["escrow_error"] = str(e)
         data["taker_lightning"] = bool(order.taker_lightning)
+        data["maker_lightning"] = bool(getattr(order, "maker_lightning", False))
+        data["hybrid_kind"] = escrow_flow.hybrid_kind(order)
 
         # rl31-beta21, hybrid B: a seller taking an onchain BUY order with Lightning pays the
         # buyer's swap to onchain. The take screen shows the estimate; the traders the amount.
@@ -844,10 +865,19 @@ class OrderView(viewsets.ViewSet):
                             {"bad_request": "Taking onchain orders with Lightning is off on this coordinator"},
                             status.HTTP_400_BAD_REQUEST,
                         )
+                    # Mixta C/D (26 nov 2026): a Lightning order taken with an onchain bond
+                    take_onchain = bool(serializer.data.get("take_onchain")) and not escrow_flow.is_onchain(order)
+                    if take_onchain and not (
+                        escrow_flow.onchain_take_enabled() and escrow_flow.robot_allowed(request.user)
+                    ):
+                        return Response(
+                            {"bad_request": "Taking Lightning orders with an onchain bond is off on this coordinator"},
+                            status.HTTP_400_BAD_REQUEST,
+                        )
                     if order.has_range:
-                        valid, context = Logics.take(order, request.user, amount, lightning=take_lightning)
+                        valid, context = Logics.take(order, request.user, amount, lightning=take_lightning, onchain=take_onchain)
                     else:
-                        valid, context = Logics.take(order, request.user, lightning=take_lightning)
+                        valid, context = Logics.take(order, request.user, lightning=take_lightning, onchain=take_onchain)
                     if not valid:
                         return Response(context, status=status.HTTP_403_FORBIDDEN)
 
@@ -929,7 +959,13 @@ class OrderView(viewsets.ViewSet):
         # 5.c) Onchain escrow actions (Roblosats)
         elif action.startswith("escrow_") or action.startswith("bond_"):
             if not escrow_flow.is_onchain(order) and not (
-                action.startswith("bond_") and escrow_flow.has_proxy(order)
+                action.startswith("bond_")
+                and (
+                    escrow_flow.has_any_proxy(order)
+                    # mixta C/D: the onchain bond of a pending (or lost) take of a Lightning order
+                    or TakeOrder.objects.filter(taker=request.user, order=order, onchain=True).exists()
+                    or escrow_flow.lost_take_bond(order, request.user) is not None
+                )
             ):
                 return Response({"bad_request": "This order has no onchain escrow"}, status.HTTP_400_BAD_REQUEST)
             escrow_data = dict(serializer.data.get("escrow") or {})
@@ -1049,6 +1085,7 @@ class RobotView(APIView):
                 "max_sats": config("ESCROW_MAX_SATS", cast=int, default=0) or config("MAX_ORDER_SIZE", cast=int, default=250000),
                 "min_bond_sats": escrow_flow.min_bond_sats(),
                 "min_fee_sats": escrow_flow.min_coordinator_fee(),
+                "take_ln_orders": escrow_flow.onchain_take_enabled(),  # mixta C/D (26 nov 2026)
             }
 
         # Adds/generate telegram token and whether it is enabled
@@ -1442,6 +1479,8 @@ class InfoView(viewsets.ViewSet):
         if context["onchain_escrow"]:
             # rl31-beta13: the onchain coordinator fee is at least this many sats (one output)
             context["onchain_min_fee_sats"] = escrow_flow.min_coordinator_fee()
+            # 26 nov 2026, mixta C/D: Lightning orders can be taken with an onchain bond
+            context["onchain_take"] = escrow_flow.onchain_take_enabled()
 
         # federation_hash lets clients vote on the federation list using the hash
         # from each coordinator's /api/info/ response — no separate /api/federation/
