@@ -2147,3 +2147,416 @@ class EscrowDisputeOnchain0912Regtest(EscrowDisputePageRegtest):
         plan, info = flow.dispute_split(order, escrow, False)
         self.assertEqual(outs.get("coordinator"), dict(plan)["coordinator"])
         self.assertNotIn("buyer", outs)  # the losing maker gets nothing back
+
+
+@skipUnless(REGTEST, "needs the regtest lab (ESCROW_REGTEST=1)")
+class EscrowMixtaCDRegtest(EscrowHybridRegtest):
+    """26 nov 2026: a Lightning order taken with an onchain bond (the maker's Lightning side
+    mocked, the onchain side against the node). C: the buyer takes a Lightning SELL with an
+    onchain bond, the order stays Lightning with the taker's bond behind a proxy. D: the seller
+    takes a Lightning BUY with an onchain bond, the order becomes an onchain-escrow order and
+    the maker keeps its Lightning bond."""
+
+    test_case_a_lightning_buyer_to_successful = None
+    test_case_a_small_order_one_minimum_in_total = None
+    test_case_b_proxy_return_and_penalty_onchain = None
+
+    def setUp(self):
+        from unittest.mock import patch
+
+        super().setUp()
+        self.patches += [patch("api.tasks.send_notification"),
+                         patch("api.escrow.flow.onchain_take_enabled", return_value=True)]
+        for p in self.patches[-2:]:
+            p.start()
+
+    def _ln_order(self, maker_sells, sats=1_000_000):
+        """A public Lightning order whose maker bond (a hold invoice, mocked) is locked."""
+        import uuid as _uuid
+
+        from api.models import Currency
+
+        maker = _user()
+        User.objects.get_or_create(username="admin")
+        now = timezone.now()
+        currency, _ = Currency.objects.get_or_create(currency=2, defaults={"exchange_rate": 100_000})
+        order = Order.objects.create(
+            currency=currency, type=Order.Types.SELL if maker_sells else Order.Types.BUY, status=Order.Status.PUB,
+            escrow_type=Order.EscrowTypes.LIGHTNING, created_at=now, expires_at=now + timezone.timedelta(hours=24),
+            has_range=False, amount=100, satoshis=sats, t0_satoshis=sats, last_satoshis=sats,
+            maker=maker, bond_size=3, is_explicit=True,
+        )
+        order.maker_bond = LNPayment.objects.create(
+            concept=LNPayment.Concepts.MAKEBOND, type=LNPayment.Types.HOLD, sender=maker,
+            status=LNPayment.Status.LOCKED, num_satoshis=sats * 3 // 100, payment_hash=_uuid.uuid4().hex,
+            preimage=_uuid.uuid4().hex, invoice=f"lnbcrt{_uuid.uuid4().hex}", created_at=now,
+            expires_at=now + timezone.timedelta(hours=30),
+        )
+        order.save(update_fields=["maker_bond"])
+        return order, maker
+
+    def _onchain_take(self, order, taker=None, pay=True, confirm=True):
+        """A taker with an onchain bond: key, payment (mined unless confirm=False), penalty
+        signature; the contract once advance_onchain_takes sees it locked."""
+        from api.escrow import flow
+        from api.escrow.bonds import penalty_message
+        from api.logics import Logics
+
+        taker = taker or _user()
+        Logics.take(order, taker, onchain=True)
+        keys = self._keys(order, f"taker-{taker.id}")
+        flow.action(order, taker, "bond_key", {"bond_pubkey": pubkey(keys["bond"]).hex()})
+        bond = flow.bond_of(order, "taker", owner=taker)
+        if pay:
+            _faucet("sendtoaddress", bond.address, bond.required_sats / 1e8)
+            if confirm:
+                _mine()
+            flow.advance_onchain_takes(order)
+            bond.refresh_from_db()
+            if confirm:
+                self.assertEqual(bond.status, bond.Status.SIGN)
+                _, msgs = penalty_message(bond)
+                sigs = [with_hashtype(schnorr_sign(keys["bond"], m)).hex() for m in msgs]
+                flow.action(order, taker, "bond_penalty_signature", {"signature": sigs[0], "signatures": sigs})
+                flow.advance_onchain_takes(order)
+                bond.refresh_from_db()
+        order.refresh_from_db()
+        return taker, keys, bond
+
+    def _return_bond_onchain(self, order, owner, keys, bond):
+        from api.escrow import bonds
+        from api.escrow.flow import action
+
+        back = _faucet("getnewaddress", "", "bech32m")
+        action(order, owner, "bond_return", {"address": back})
+        bond.refresh_from_db()
+        tx = Transaction.parse(bytes.fromhex(bond.return_tx))
+        msgs = bonds._coin_messages(bond, tx, bonds.return_coins_of(bond))
+        sigs = [with_hashtype(schnorr_sign(keys["bond"], m)).hex() for m in msgs]
+        action(order, owner, "bond_return_signature", {"signatures": sigs})
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, bond.Status.RETURNED)
+        _mine()
+        conf, paid = _paid_to(bond.spend_txid, back)
+        self.assertGreaterEqual(conf, 1)
+        self.assertGreater(paid, bond.required_sats * 0.8)
+
+    def _penalty_mined(self, bond):
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, bond.Status.PENALIZED)
+        _mine()
+        self.assertGreaterEqual(service.rpc("getrawtransaction", [bond.spend_txid, True])["confirmations"], 1)
+
+    # ----------------------------------------------------------------------------- mixta C
+    def _c_contract(self):
+        from api.escrow import flow
+
+        order, seller = self._ln_order(maker_sells=True)
+        buyer, keys, bond = self._onchain_take(order)
+        self.assertEqual(order.status, Order.Status.WF2)
+        self.assertEqual(order.taker, buyer)
+        self.assertEqual(order.escrow_type, Order.EscrowTypes.LIGHTNING)
+        self.assertTrue(flow.has_taker_proxy(order))
+        self.assertEqual(bond.status, bond.Status.LOCKED)
+        self.assertIsNone(flow.escrow_of(order))
+        return order, seller, buyer, keys, bond
+
+    def test_c_success_returns_the_onchain_bond(self):
+        from unittest.mock import patch
+
+        from api.logics import Logics
+
+        order, seller, buyer, keys, bond = self._c_contract()
+        with patch("api.logics.LNNode") as ln:  # the trade ends well: bonds returned
+            Logics.return_bond(order.taker_bond)
+            Logics.return_bond(order.maker_bond)
+            ln.cancel_return_hold_invoice.assert_called_once_with(order.maker_bond.payment_hash)
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, bond.Status.RETURNABLE)
+        self._return_bond_onchain(order, buyer, keys, bond)
+
+    def test_c_taker_cancel_penalizes_onchain_and_republishes(self):
+        from unittest.mock import patch
+
+        from api.logics import Logics
+
+        order, seller, buyer, keys, bond = self._c_contract()
+        with patch("api.logics.LNNode"):
+            ok, err = Logics.cancel_order(order, buyer)
+        self.assertTrue(ok, err)
+        self._penalty_mined(bond)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.PUB)
+        self.assertIsNone(order.taker_bond)
+        self.assertEqual(order.maker_bond.status, LNPayment.Status.LOCKED)
+
+    def test_c_timeout_penalizes_the_onchain_bond(self):
+        from unittest.mock import patch
+
+        from api.logics import Logics
+
+        order, seller, buyer, keys, bond = self._c_contract()
+        order.expires_at = timezone.now()
+        order.save()
+        with patch("api.logics.LNNode"):
+            Logics.order_expires(order)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.EXP)
+        self._penalty_mined(bond)
+
+    def test_c_dispute_won_by_the_onchain_buyer_returns_its_bond(self):
+        from api.escrow import flow
+
+        order, seller, buyer, keys, bond = self._c_contract()
+        Order.objects.filter(pk=order.pk).update(status=Order.Status.DIS, is_disputed=True)
+        order.refresh_from_db()
+        self.assertEqual(flow.dispute_bond_sats(order, "taker", wins=True), 0)
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, bond.Status.RETURNABLE)
+        self._return_bond_onchain(order, buyer, keys, bond)
+
+    def test_c_dispute_lost_by_the_onchain_buyer_penalizes_its_bond(self):
+        from api.escrow import flow
+
+        order, seller, buyer, keys, bond = self._c_contract()
+        Order.objects.filter(pk=order.pk).update(status=Order.Status.DIS, is_disputed=True)
+        order.refresh_from_db()
+        self.assertEqual(flow.dispute_bond_sats(order, "taker", wins=False), 0)
+        self._penalty_mined(bond)
+
+    def test_c_lightning_take_wins_the_race_onchain_bond_freed(self):
+        self._lightning_wins_race(maker_sells=True)
+
+    def test_d_lightning_take_wins_the_race_onchain_bond_freed(self):
+        self._lightning_wins_race(maker_sells=False)
+
+    def _lightning_wins_race(self, maker_sells):
+        import uuid as _uuid
+
+        from api.escrow import bonds
+        from api.logics import Logics
+        from api.models import TakeOrder
+
+        order, maker = self._ln_order(maker_sells=maker_sells)
+        loser, keys, bond = self._onchain_take(order, confirm=False)
+        self.assertEqual(bond.status, bond.Status.FUNDING)
+        ln_taker = _user()
+        Logics.take(order, ln_taker)
+        take = TakeOrder.objects.get(order=order, taker=ln_taker)
+        now = timezone.now()
+        take.taker_bond = LNPayment.objects.create(
+            concept=LNPayment.Concepts.TAKEBOND, type=LNPayment.Types.HOLD, sender=ln_taker,
+            status=LNPayment.Status.LOCKED, num_satoshis=30_000, payment_hash=_uuid.uuid4().hex,
+            preimage=_uuid.uuid4().hex, invoice=f"lnbcrt{_uuid.uuid4().hex}", created_at=now,
+            expires_at=now + timezone.timedelta(hours=3),
+        )
+        take.save(update_fields=["taker_bond"])
+        Logics.finalize_contract(take)
+        order.refresh_from_db()
+        self.assertEqual(order.taker, ln_taker)
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, bond.Status.ABANDONED)
+        _mine()
+        bonds.recover_abandoned()
+        bond.refresh_from_db()
+        self.assertEqual(bond.status, bond.Status.RETURNABLE)
+        self._return_bond_onchain(order, loser, keys, bond)
+
+    def test_c_first_confirmed_onchain_take_wins(self):
+        self._first_confirmed_wins(maker_sells=True)
+
+    def test_d_first_confirmed_onchain_take_wins(self):
+        self._first_confirmed_wins(maker_sells=False)
+
+    def _first_confirmed_wins(self, maker_sells):
+        from api.escrow import flow
+
+        order, maker = self._ln_order(maker_sells=maker_sells)
+        slow, kslow, bslow = self._onchain_take(order, pay=False)  # took first, pays later
+        fast, kfast, bfast = self._onchain_take(order)
+        self.assertEqual(order.taker, fast)
+        if maker_sells:
+            self.assertEqual(flow.proxied_bond(order.taker_bond), bfast)
+        else:
+            self.assertTrue(order.maker_lightning)
+            self.assertEqual(flow.bond_of(order, "taker"), bfast)
+        _faucet("sendtoaddress", bslow.address, bslow.required_sats / 1e8)
+        _mine()
+        from api.escrow import bonds
+
+        bonds.recover_abandoned()
+        bslow.refresh_from_db()
+        self.assertIn(bslow.status, (bslow.Status.RETURNABLE, bslow.Status.ABANDONED))
+        if bslow.status == bslow.Status.RETURNABLE:
+            self._return_bond_onchain(order, slow, kslow, bslow)
+
+    # ----------------------------------------------------------------------------- mixta D
+    def _d_contract(self):
+        from api.escrow import flow
+
+        order, buyer = self._ln_order(maker_sells=False)
+        seller, ks, bond = self._onchain_take(order)
+        self.assertEqual(order.status, Order.Status.WF2)
+        self.assertEqual(order.escrow_type, Order.EscrowTypes.ONCHAIN)
+        self.assertTrue(order.maker_lightning)
+        self.assertTrue(flow.role_is_ln(order, "buyer"))
+        self.assertIsNotNone(flow.escrow_of(order))
+        keys = {"seller": ks, "buyer": self._keys(order, "buyer")}
+        return order, buyer, seller, keys, bond
+
+    def _d_to_chat(self):
+        from api.escrow import flow
+        from api.escrow.bonds import contract_of
+        from api.escrow.taproot import TxOut
+
+        order, buyer, seller, keys, bond = self._d_contract()
+        users = {"seller": seller, "buyer": buyer}
+        for r, u in users.items():
+            flow.action(order, u, "escrow_keys", self._keys_payload(keys, r))
+            flow.action(order, u, "escrow_address", {"address": _faucet("getnewaddress", "", "bech32m")})
+        flow.advance(order)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.WFE)
+        self.assertTrue(flow.order_data(order, buyer)["escrow_fee_at_release"])
+        ds = flow.order_data(order, seller)
+        _faucet("sendtoaddress", ds["escrow_funding_address"], ds["escrow_funding_recommended"] / 1e8)
+        _mine()
+        flow.advance(order)
+        escrow = flow.escrow_of(order)
+        self.assertEqual(escrow.status, OnchainEscrow.Status.FUNDING)
+        self.assertEqual(list(escrow.funding_signatures["plan"]["bond_ids"]), ["seller"])
+        self.assertEqual(escrow.funding_signatures.get("hybrid_plan"), 1)
+        self._sign_rescue(order, users, keys)
+        d = flow.order_data(order, seller)
+        tx = Transaction.parse(bytes.fromhex(d["escrow_deposit_tx"]))
+        spent = [TxOut(v, bytes.fromhex(sp)) for v, sp in d["escrow_deposit_spent"]]
+        sigs = [with_hashtype(schnorr_sign(keys["seller"]["funding"], tx.sighash_unified(i, spent))).hex() for i in d["escrow_deposit_my_inputs"]]
+        bc = contract_of(bond)
+        bsig = with_hashtype(schnorr_sign(keys["seller"]["bond"], tx.sighash_unified(d["escrow_deposit_my_bond_input"], spent, 0x21, bc.leaf_hash(bc.COOPERATIVE)))).hex()
+        flow.action(order, seller, "escrow_funding_signatures", {"signatures": sigs, "bond_signature": bsig})
+        _mine()
+        flow.advance(order)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.CHA)
+        return order, buyer, seller, keys, bond
+
+    def test_d_success_onchain_release_and_lightning_bond_back(self):
+        from unittest.mock import patch
+
+        from api.escrow import flow
+        from api.logics import Logics
+
+        order, buyer, seller, keys, bond = self._d_to_chat()
+        seller_fee, buyer_fee = flow.fees(order)
+        self.assertEqual(flow.escrow_of(order).escrow_sats, 1_000_000 + 30_000 + seller_fee)
+        self.assertEqual(Logics.confirm_fiat(order, buyer), (True, None))
+        order.refresh_from_db()
+        with patch("api.logics.LNNode") as ln:
+            self.assertEqual(Logics.confirm_fiat(order, seller), (True, None))
+            ln.cancel_return_hold_invoice.assert_called_once_with(order.maker_bond.payment_hash)
+        order.refresh_from_db()
+        self.assertEqual(order.maker_bond.status, LNPayment.Status.RETNED)
+        escrow = self._release(order, {"seller": seller, "buyer": buyer}, keys)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.SUC)
+        _mine()
+        info = service.rpc("getrawtransaction", [escrow.release_txid, True])
+        mining = math.ceil(math.ceil(info["vsize"]) * escrow.release_fee_rate)
+        values = sorted(round(o["value"] * 1e8) for o in info["vout"])
+        self.assertEqual(values, sorted([seller_fee + buyer_fee, 30_000, 1_000_000 - buyer_fee - mining]))
+        self.assertEqual(order.proceeds, seller_fee + buyer_fee)
+        summary = flow.trade_summary(order, buyer)
+        self.assertTrue(summary["lightning_bond"])
+
+    def test_d_seller_cancel_penalizes_onchain_and_back_to_lightning(self):
+        from unittest.mock import patch
+
+        from api.logics import Logics
+
+        order, buyer, seller, keys, bond = self._d_contract()
+        with patch("api.logics.LNNode"):
+            ok, err = Logics.cancel_order(order, seller)
+        self.assertTrue(ok, err)
+        self._penalty_mined(bond)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.PUB)
+        self.assertEqual(order.escrow_type, Order.EscrowTypes.LIGHTNING)
+        self.assertFalse(order.maker_lightning)
+        self.assertEqual(order.maker_bond.status, LNPayment.Status.LOCKED)
+
+    def test_d_seller_never_funds_penalized_buyer_bond_returned(self):
+        from unittest.mock import patch
+
+        from api.escrow import flow
+        from api.logics import Logics
+
+        order, buyer, seller, keys, bond = self._d_contract()
+        for r, u in (("seller", seller), ("buyer", buyer)):
+            flow.action(order, u, "escrow_keys", self._keys_payload(keys, r))
+            flow.action(order, u, "escrow_address", {"address": _faucet("getnewaddress", "", "bech32m")})
+        flow.advance(order)
+        order.refresh_from_db()
+        order.expires_at = timezone.now()
+        order.save()
+        with patch("api.logics.LNNode") as ln:
+            Logics.order_expires(order)
+            ln.cancel_return_hold_invoice.assert_called_once_with(order.maker_bond.payment_hash)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.EXP)
+        self._penalty_mined(bond)
+
+    def _d_dispute(self):
+        from unittest.mock import MagicMock, patch
+
+        from django.contrib.admin.sites import AdminSite
+
+        from api.admin import OrderAdmin
+        from api.logics import Logics
+
+        order, buyer, seller, keys, bond = self._d_to_chat()
+        order.expires_at = timezone.now()
+        order.save()
+        with patch("api.logics.LNNode") as ln:
+            ln.settle_hold_invoice.return_value = True
+            self.assertEqual(Logics.open_dispute(order, buyer), (True, None))
+        order.refresh_from_db()
+        self.assertEqual(order.maker_bond.status, LNPayment.Status.SETLED)
+        admin = OrderAdmin(Order, AdminSite())
+        admin.message_user = MagicMock()
+        return order, buyer, seller, keys, admin
+
+    def test_d_dispute_won_by_the_lightning_buyer(self):
+        from unittest.mock import MagicMock, patch
+
+        from api.escrow import flow
+
+        order, buyer, seller, keys, admin = self._d_dispute()
+        with patch("api.admin.send_notification"), patch("api.logics.ledger_credit", return_value=True) as credit:
+            admin.maker_wins(MagicMock(), Order.objects.filter(pk=order.pk))
+        kinds = [c.args[2] for c in credit.call_args_list]
+        self.assertIn("dispute_bond_back", kinds)  # its Lightning bond back as rewards
+        escrow = flow.escrow_of(order)
+        self.assertEqual(escrow.status, OnchainEscrow.Status.RELEASING)
+        _, msg = service.release_message(escrow)
+        flow.action(order, buyer, "escrow_leaf_signature",
+                    {"signature": with_hashtype(schnorr_sign(keys["buyer"]["escrow"], msg)).hex()})
+        outs, mining = self._release_outputs(escrow)
+        self.assertGreater(outs["buyer"], 1_000_000 - 5_000)
+
+    def test_d_dispute_won_by_the_onchain_seller(self):
+        from unittest.mock import MagicMock, patch
+
+        from api.escrow import flow
+
+        order, buyer, seller, keys, admin = self._d_dispute()
+        with patch("api.admin.send_notification"), patch("api.logics.ledger_credit", return_value=True) as credit:
+            admin.taker_wins(MagicMock(), Order.objects.filter(pk=order.pk))
+        kinds = [c.args[2] for c in credit.call_args_list]
+        self.assertIn("slash_reward", kinds)  # the seller gets its share of the buyer's Lightning bond
+        escrow = flow.escrow_of(order)
+        self.assertEqual(escrow.status, OnchainEscrow.Status.RELEASING)
+        _, msg = service.release_message(escrow)
+        flow.action(order, seller, "escrow_leaf_signature",
+                    {"signature": with_hashtype(schnorr_sign(keys["seller"]["escrow"], msg)).hex()})
+        outs, mining = self._release_outputs(escrow)
+        self.assertGreater(outs["seller"], 1_000_000)
