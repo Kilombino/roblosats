@@ -8,6 +8,20 @@
   {% include "roblosats_admin/_langs.html" %}
 </div>
 
+{% if glance %}
+<section class="rsd-sec rsd-glance" id="glance">
+  <h2>{% translate "At a glance" context "roblosats-admin" %}{% if glance.kind %} <span class="rsd-pill">{{ glance.kind }}</span>{% endif %}</h2>
+  <p class="rsd-glance-step"><b>{{ glance.step }}</b></p>
+  {% if glance.rows %}
+  <table class="rsd-table">
+    <thead><tr><th>{% translate "At stake" context "roblosats-admin" %}</th><th>{% translate "Layer" context "roblosats-admin" %}</th><th style="text-align:right">{% translate "Sats" context "roblosats-admin" %}</th><th>{% translate "Where it is now" context "roblosats-admin" %}</th></tr></thead>
+    <tbody>{% for row in glance.rows %}<tr><td>{{ row.what }}</td><td>{{ row.layer }}</td><td style="text-align:right;white-space:nowrap">{{ row.sats }}</td><td>{{ row.state }}</td></tr>{% endfor %}</tbody>
+  </table>
+  {% endif %}
+  <p class="rsd-glance-checks">{% for c in glance.checks %}<span class="rsd-check {% if c.ok %}ok{% else %}no{% endif %}">{% if c.ok %}✓{% else %}✗{% endif %} {{ c.text }}</span>{% endfor %}</p>
+</section>
+{% endif %}
+
 <section class="rsd-sec" id="summary">
   <div class="rsd-head">
     <span class="rsd-num">{% translate "Order" context "roblosats-admin" %} {{ order.pk }}</span>

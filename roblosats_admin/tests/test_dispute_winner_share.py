@@ -84,3 +84,32 @@ class WinnerShare(TestCase):
         order = make_disputed_order(Order.Types.SELL, self.maker, self.taker)  # bonds still LOCKED
         resolve(self.client, order, "seller")
         self.assertEqual(self._rewards(), (100_000 + 3_000, 0))
+
+
+class AtAGlance(TestCase):
+    """0.9.16: the dispute page opens with what is at stake, where each amount is, who has
+    spoken and the next step."""
+
+    def setUp(self):
+        self.maker, self.taker = make_user("MakerRobot"), make_user("TakerRobot")
+        admin = User.objects.create_superuser("panel-admin", "a@example.org", "pw")
+        self.client = Client()
+        self.client.force_login(admin)
+
+    def test_panel_lists_amounts_layers_and_next_step(self):
+        order = make_disputed_order(Order.Types.SELL, self.maker, self.taker)
+        LNPayment.objects.filter(pk=order.maker_bond.pk).update(status=LNPayment.Status.SETLED)
+        body = self.client.get(reverse("admin:api_order_dispute", args=[order.pk]),
+                               HTTP_ACCEPT_LANGUAGE="en").content.decode()
+        self.assertIn("At a glance", body)
+        self.assertIn("held by the coordinator (settled)", body)  # the seller's settled bond
+        self.assertIn("locked (hold invoice)", body)  # the buyer's bond
+        self.assertIn(S(100_000), body)
+        self.assertIn("Fiat marked as sent", body)
+        self.assertRegex(body, r"Waiting for|Both statements are in")
+
+    def test_panel_is_translated(self):
+        order = make_disputed_order(Order.Types.SELL, self.maker, self.taker)
+        body = self.client.get(reverse("admin:api_order_dispute", args=[order.pk]) + "?lang=es", follow=True,
+                               HTTP_ACCEPT_LANGUAGE="es").content.decode()
+        self.assertIn("De un vistazo", body)

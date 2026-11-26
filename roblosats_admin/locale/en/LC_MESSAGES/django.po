@@ -2474,3 +2474,103 @@ msgstr "The buyer %(nick)s receives %(sats)s sats on chain at %(address)s (%(par
 msgctxt "roblosats-admin"
 msgid "The coordinator receives %(sats)s sats on chain at its fee address: the trade fees."
 msgstr "The coordinator receives %(sats)s sats on chain at its fee address: the trade fees."
+
+msgctxt "roblosats-admin"
+msgid "%(sats)s sats from the %(loser)s's lost bond (the winner's share), credited as a Lightning reward"
+msgstr "%(sats)s sats from the %(loser)s's lost bond (the winner's share), credited as a Lightning reward"
+
+msgctxt "roblosats-admin"
+msgid "(%(sats)s sats of that bond go to the %(winner)s as the winner's share)"
+msgstr "(%(sats)s sats of that bond go to the %(winner)s as the winner's share)"
+
+msgctxt "roblosats-admin"
+msgid "on chain"
+msgstr "on chain"
+
+msgctxt "roblosats-admin"
+msgid "missing"
+msgstr "missing"
+
+msgctxt "roblosats-admin"
+msgid "held by the coordinator (settled)"
+msgstr "held by the coordinator (settled)"
+
+msgctxt "roblosats-admin"
+msgid "locked (hold invoice)"
+msgstr "locked (hold invoice)"
+
+msgctxt "roblosats-admin"
+msgid "returned to its owner"
+msgstr "returned to its owner"
+
+msgctxt "roblosats-admin"
+msgid "not paid yet"
+msgstr "not paid yet"
+
+msgctxt "roblosats-admin"
+msgid "confirmed, waiting for its owner's signature"
+msgstr "confirmed, waiting for its owner's signature"
+
+msgctxt "roblosats-admin"
+msgid "locked on chain"
+msgstr "locked on chain"
+
+msgctxt "roblosats-admin"
+msgid "inside the on-chain escrow"
+msgstr "inside the on-chain escrow"
+
+msgctxt "roblosats-admin"
+msgid "penalized on chain"
+msgstr "penalized on chain"
+
+msgctxt "roblosats-admin"
+msgid "free, back to its owner"
+msgstr "free, back to its owner"
+
+msgctxt "roblosats-admin"
+msgid "back with its owner"
+msgstr "back with its owner"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's statement"
+msgstr "Buyer's statement"
+
+msgctxt "roblosats-admin"
+msgid "Seller's statement"
+msgstr "Seller's statement"
+
+msgctxt "roblosats-admin"
+msgid "Fiat marked as sent"
+msgstr "Fiat marked as sent"
+
+msgctxt "roblosats-admin"
+msgid "This dispute is already decided."
+msgstr "This dispute is already decided."
+
+msgctxt "roblosats-admin"
+msgid "Both statements are in: read them and decide below."
+msgstr "Both statements are in: read them and decide below."
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the %(role)s's statement; you can already write to both."
+msgstr "Waiting for the %(role)s's statement; you can already write to both."
+
+msgctxt "roblosats-admin"
+msgid "Waiting for both statements; you can already write to both."
+msgstr "Waiting for both statements; you can already write to both."
+
+msgctxt "roblosats-admin"
+msgid "At a glance"
+msgstr "At a glance"
+
+msgctxt "roblosats-admin"
+msgid "At stake"
+msgstr "At stake"
+
+msgctxt "roblosats-admin"
+msgid "Layer"
+msgstr "Layer"
+
+msgctxt "roblosats-admin"
+msgid "Where it is now"
+msgstr "Where it is now"

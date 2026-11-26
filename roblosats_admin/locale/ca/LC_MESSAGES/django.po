@@ -2474,3 +2474,103 @@ msgstr "El comprador %(nick)s rep %(sats)s sats on-chain a %(address)s (%(parts)
 msgctxt "roblosats-admin"
 msgid "The coordinator receives %(sats)s sats on chain at its fee address: the trade fees."
 msgstr "El coordinador rep %(sats)s sats on-chain a la seva adreça de comissions: les comissions de l'operació."
+
+msgctxt "roblosats-admin"
+msgid "%(sats)s sats from the %(loser)s's lost bond (the winner's share), credited as a Lightning reward"
+msgstr "%(sats)s sats de la fiança perduda del %(loser)s (la part del guanyador), abonats com a recompensa Lightning"
+
+msgctxt "roblosats-admin"
+msgid "(%(sats)s sats of that bond go to the %(winner)s as the winner's share)"
+msgstr "(%(sats)s sats d'aquesta fiança van al %(winner)s com a part del guanyador)"
+
+msgctxt "roblosats-admin"
+msgid "on chain"
+msgstr "on-chain"
+
+msgctxt "roblosats-admin"
+msgid "missing"
+msgstr "falta"
+
+msgctxt "roblosats-admin"
+msgid "held by the coordinator (settled)"
+msgstr "en mans del coordinador (liquidada)"
+
+msgctxt "roblosats-admin"
+msgid "locked (hold invoice)"
+msgstr "bloquejada (factura retinguda)"
+
+msgctxt "roblosats-admin"
+msgid "returned to its owner"
+msgstr "retornada al seu propietari"
+
+msgctxt "roblosats-admin"
+msgid "not paid yet"
+msgstr "encara sense pagar"
+
+msgctxt "roblosats-admin"
+msgid "confirmed, waiting for its owner's signature"
+msgstr "confirmada, esperant la signatura del seu propietari"
+
+msgctxt "roblosats-admin"
+msgid "locked on chain"
+msgstr "bloquejada on-chain"
+
+msgctxt "roblosats-admin"
+msgid "inside the on-chain escrow"
+msgstr "dins del dipòsit on-chain"
+
+msgctxt "roblosats-admin"
+msgid "penalized on chain"
+msgstr "penalitzada on-chain"
+
+msgctxt "roblosats-admin"
+msgid "free, back to its owner"
+msgstr "lliure, torna al seu propietari"
+
+msgctxt "roblosats-admin"
+msgid "back with its owner"
+msgstr "de tornada amb el seu propietari"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's statement"
+msgstr "Declaració del comprador"
+
+msgctxt "roblosats-admin"
+msgid "Seller's statement"
+msgstr "Declaració del venedor"
+
+msgctxt "roblosats-admin"
+msgid "Fiat marked as sent"
+msgstr "Fiat marcat com a enviat"
+
+msgctxt "roblosats-admin"
+msgid "This dispute is already decided."
+msgstr "Aquesta disputa ja està decidida."
+
+msgctxt "roblosats-admin"
+msgid "Both statements are in: read them and decide below."
+msgstr "Ja hi són les dues declaracions: llegeix-les i decideix a sota."
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the %(role)s's statement; you can already write to both."
+msgstr "Falta la declaració del %(role)s; ja pots escriure a tots dos."
+
+msgctxt "roblosats-admin"
+msgid "Waiting for both statements; you can already write to both."
+msgstr "Falten les dues declaracions; ja pots escriure a tots dos."
+
+msgctxt "roblosats-admin"
+msgid "At a glance"
+msgstr "D'un cop d'ull"
+
+msgctxt "roblosats-admin"
+msgid "At stake"
+msgstr "En joc"
+
+msgctxt "roblosats-admin"
+msgid "Layer"
+msgstr "Capa"
+
+msgctxt "roblosats-admin"
+msgid "Where it is now"
+msgstr "On és ara"

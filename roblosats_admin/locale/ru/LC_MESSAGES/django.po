@@ -2373,7 +2373,7 @@ msgstr "его ончейн-залог (%(sats)s), уже вернувшийся
 
 msgctxt "roblosats-admin"
 msgid "The %(role)s %(nick)s gets: %(parts)s."
-msgstr "%(role)s %(nick)s получает: %(parts)s."
+msgstr "%(nick)s (%(role)s) получает: %(parts)s."
 
 msgctxt "roblosats-admin"
 msgid "In total %(total)s sats credited as a Lightning reward, withdrawn from the app."
@@ -2429,11 +2429,11 @@ msgstr "вознаграждение из другого ончейн-залог
 
 msgctxt "roblosats-admin"
 msgid "The %(role)s %(nick)s receives %(sats)s sats on chain at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
-msgstr "%(role)s %(nick)s получает %(sats)s сат ончейн на %(address)s (%(parts)s) за вычетом комиссии майнинга освобождения, которая берётся из этого выхода."
+msgstr "%(nick)s (%(role)s) получает %(sats)s сат ончейн на %(address)s (%(parts)s) за вычетом комиссии майнинга освобождения, которая берётся из этого выхода."
 
 msgctxt "roblosats-admin"
 msgid "The %(role)s %(nick)s only gets back the leftover of their deposit, %(sats)s sats on chain at %(address)s."
-msgstr "%(role)s %(nick)s получает обратно только остаток своего взноса, %(sats)s сат ончейн на %(address)s."
+msgstr "%(nick)s (%(role)s) получает обратно только остаток своего взноса, %(sats)s сат ончейн на %(address)s."
 
 msgctxt "roblosats-admin"
 msgid "The coordinator receives %(sats)s sats on chain at its fee address: %(penalty)s kept from the loser's bond + %(fees)s of trade fees."
@@ -2441,11 +2441,11 @@ msgstr "Координатор получает %(sats)s сат ончейн н�
 
 msgctxt "roblosats-admin"
 msgid "The %(role)s's bond is a Lightning bond (%(sats)s sats), settled when the dispute opened: the coordinator keeps it and credits %(reward)s sats of it to the %(winner)s as a Lightning reward, withdrawn from the app."
-msgstr "Залог %(role)s — Lightning-залог (%(sats)s сат), списанный при открытии спора: координатор оставляет его и зачисляет %(reward)s сат из него %(winner)s как Lightning-вознаграждение, вывод из приложения."
+msgstr "Залог (%(role)s) — Lightning-залог (%(sats)s сат), списанный при открытии спора: координатор оставляет его и зачисляет %(reward)s сат из него победителю (%(winner)s) как Lightning-вознаграждение, вывод из приложения."
 
 msgctxt "roblosats-admin"
 msgid "The %(role)s's Lightning bond (%(sats)s sats), settled when the dispute opened, is credited back to them as a Lightning reward, withdrawn from the app."
-msgstr "Lightning-залог %(role)s (%(sats)s сат), списанный при открытии спора, зачисляется ему обратно как Lightning-вознаграждение, вывод из приложения."
+msgstr "Lightning-залог (%(role)s, %(sats)s сат), списанный при открытии спора, зачисляется владельцу обратно как Lightning-вознаграждение, вывод из приложения."
 
 msgctxt "roblosats-admin"
 msgid "The seller %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s), minus the mining fee of the return, which comes out of this output."
@@ -2457,7 +2457,7 @@ msgstr "Покупатель %(nick)s получает обратно %(sats)s �
 
 msgctxt "roblosats-admin"
 msgid "The %(side)s's Lightning bond (%(sats)s sats) goes back to them: credited as a Lightning reward if it was already settled when the dispute opened, unlocked otherwise."
-msgstr "Lightning-залог %(side)s (%(sats)s сат) возвращается ему: зачисляется как Lightning-вознаграждение, если был списан при открытии спора, иначе разблокируется."
+msgstr "Lightning-залог (%(side)s, %(sats)s сат) возвращается владельцу: зачисляется как Lightning-вознаграждение, если был списан при открытии спора, иначе разблокируется."
 
 msgctxt "roblosats-admin"
 msgid "The seller %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s)."
@@ -2474,3 +2474,103 @@ msgstr "Покупатель %(nick)s получает %(sats)s сат онче�
 msgctxt "roblosats-admin"
 msgid "The coordinator receives %(sats)s sats on chain at its fee address: the trade fees."
 msgstr "Координатор получает %(sats)s сат ончейн на свой адрес комиссий: комиссии сделки."
+
+msgctxt "roblosats-admin"
+msgid "%(sats)s sats from the %(loser)s's lost bond (the winner's share), credited as a Lightning reward"
+msgstr "%(sats)s сат из потерянного залога (%(loser)s), доля победителя, зачисленные как Lightning-вознаграждение"
+
+msgctxt "roblosats-admin"
+msgid "(%(sats)s sats of that bond go to the %(winner)s as the winner's share)"
+msgstr "(%(sats)s сат из этого залога уходят победителю (%(winner)s) как его доля)"
+
+msgctxt "roblosats-admin"
+msgid "on chain"
+msgstr "ончейн"
+
+msgctxt "roblosats-admin"
+msgid "missing"
+msgstr "отсутствует"
+
+msgctxt "roblosats-admin"
+msgid "held by the coordinator (settled)"
+msgstr "у координатора (списан)"
+
+msgctxt "roblosats-admin"
+msgid "locked (hold invoice)"
+msgstr "заблокирован (hold-инвойс)"
+
+msgctxt "roblosats-admin"
+msgid "returned to its owner"
+msgstr "возвращён владельцу"
+
+msgctxt "roblosats-admin"
+msgid "not paid yet"
+msgstr "ещё не оплачен"
+
+msgctxt "roblosats-admin"
+msgid "confirmed, waiting for its owner's signature"
+msgstr "подтверждён, ждёт подписи владельца"
+
+msgctxt "roblosats-admin"
+msgid "locked on chain"
+msgstr "заблокирован ончейн"
+
+msgctxt "roblosats-admin"
+msgid "inside the on-chain escrow"
+msgstr "внутри ончейн-эскроу"
+
+msgctxt "roblosats-admin"
+msgid "penalized on chain"
+msgstr "оштрафован ончейн"
+
+msgctxt "roblosats-admin"
+msgid "free, back to its owner"
+msgstr "свободен, возвращается владельцу"
+
+msgctxt "roblosats-admin"
+msgid "back with its owner"
+msgstr "вернулся к владельцу"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's statement"
+msgstr "Заявление покупателя"
+
+msgctxt "roblosats-admin"
+msgid "Seller's statement"
+msgstr "Заявление продавца"
+
+msgctxt "roblosats-admin"
+msgid "Fiat marked as sent"
+msgstr "Фиат отмечен как отправленный"
+
+msgctxt "roblosats-admin"
+msgid "This dispute is already decided."
+msgstr "Этот спор уже решён."
+
+msgctxt "roblosats-admin"
+msgid "Both statements are in: read them and decide below."
+msgstr "Оба заявления получены: прочитайте их и решите ниже."
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the %(role)s's statement; you can already write to both."
+msgstr "Нет заявления (%(role)s); вы уже можете написать обоим."
+
+msgctxt "roblosats-admin"
+msgid "Waiting for both statements; you can already write to both."
+msgstr "Оба заявления ещё не получены; вы уже можете написать обоим."
+
+msgctxt "roblosats-admin"
+msgid "At a glance"
+msgstr "Коротко"
+
+msgctxt "roblosats-admin"
+msgid "At stake"
+msgstr "На кону"
+
+msgctxt "roblosats-admin"
+msgid "Layer"
+msgstr "Уровень"
+
+msgctxt "roblosats-admin"
+msgid "Where it is now"
+msgstr "Где сейчас"

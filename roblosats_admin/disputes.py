@@ -998,7 +998,100 @@ def _context(order_admin, request, order, confirm=None):
         "fiat_sent": order.is_fiat_sent,
         "can_change": order_admin.has_change_permission(request, order),
         "languages": _languages(request),
+        "glance": glance(order, p_buyer, p_seller),
     }
+
+
+def glance(order, p_buyer, p_seller):
+    """0.9.16 (Kilombino TG 15674): what a coordinator needs first on a dispute page: the kind of
+    order, every amount at stake with its layer and where it is now, who has spoken, and the
+    next step. Never breaks the page (falls back to an empty panel)."""
+    from api.escrow import flow
+    from api.models import LNPayment, OnchainBond
+    from roblosats_admin import onchain as oc
+
+    try:
+        k = oc.kind(order)
+        kind = f"{oc.KIND_ICON[k]} {oc.KIND_LABEL[k]}"
+    except Exception:  # noqa: BLE001
+        kind = ""
+    r = roles(order)
+    rows = []
+    ln_word, oc_word = _("Lightning"), _("on chain")
+
+    def ln_state(pay):
+        if pay is None:
+            return _("missing")
+        return {
+            LNPayment.Status.SETLED: _("held by the coordinator (settled)"),
+            LNPayment.Status.LOCKED: _("locked (hold invoice)"),
+            LNPayment.Status.RETNED: _("returned to its owner"),
+            LNPayment.Status.CANCEL: _("cancelled"),
+        }.get(pay.status, LNPayment.Status(pay.status).label)
+
+    def oc_state(b):
+        S = OnchainBond.Status
+        return {
+            S.FUNDING: _("not paid yet"),
+            S.SIGN: _("confirmed, waiting for its owner's signature"),
+            S.LOCKED: _("locked on chain"),
+            S.IN_DEPOSIT: _("inside the on-chain escrow"),
+            S.PENALIZED: _("penalized on chain"),
+            S.RETURNABLE: _("free, back to its owner"),
+            S.RETURNED: _("back with its owner"),
+        }.get(b.status, b.get_status_display())
+
+    try:
+        onchain_escrow = flow.is_onchain(order)
+        if onchain_escrow:
+            esc = flow.escrow_of(order)
+            rows.append({"what": _("Seller's escrow"), "layer": oc_word,
+                         "sats": fmt_sats(getattr(esc, "escrow_sats", 0) or order.last_satoshis or 0),
+                         "state": esc.get_status_display() if esc is not None else _("missing")})
+        else:
+            e = order.trade_escrow
+            rows.append({"what": _("Seller's escrow"), "layer": ln_word,
+                         "sats": fmt_sats(e.num_satoshis if e else 0), "state": ln_state(e)})
+        for role in ("buyer", "seller"):
+            label = _("Buyer's bond") if role == "buyer" else _("Seller's bond")
+            side = r[f"{role}_side"]
+            pay = r[f"{role}_bond"]
+            if pay is not None and flow.is_bond_proxy(pay):
+                b = flow.proxied_bond(pay)
+                rows.append({"what": label, "layer": oc_word, "sats": fmt_sats(pay.num_satoshis),
+                             "state": oc_state(b) if b is not None else _("missing")})
+            elif pay is not None:
+                rows.append({"what": label, "layer": ln_word, "sats": fmt_sats(pay.num_satoshis),
+                             "state": ln_state(pay)})
+            else:
+                b = flow.bond_of(order, side)
+                if b is not None:
+                    rows.append({"what": label, "layer": oc_word, "sats": fmt_sats(b.value or b.required_sats),
+                                 "state": oc_state(b)})
+                else:
+                    rows.append({"what": label, "layer": "—", "sats": "—", "state": _("missing")})
+    except Exception:  # noqa: BLE001 (never break the dispute page)
+        pass
+
+    def spoke(p):
+        return bool(p.get("statement"))
+
+    checks = [
+        {"ok": spoke(p_buyer), "text": _("Buyer's statement")},
+        {"ok": spoke(p_seller), "text": _("Seller's statement")},
+        {"ok": bool(p_buyer.get("attached_chat") or p_seller.get("attached_chat")), "text": _("Chat attached")},
+        {"ok": bool(order.is_fiat_sent), "text": _("Fiat marked as sent")},
+    ]
+    if not is_open_dispute(order):
+        step = _("This dispute is already decided.")
+    elif spoke(p_buyer) and spoke(p_seller):
+        step = _("Both statements are in: read them and decide below.")
+    elif spoke(p_buyer) or spoke(p_seller):
+        step = _("Waiting for the %(role)s's statement; you can already write to both.") % {
+            "role": role_name("seller" if spoke(p_buyer) else "buyer")}
+    else:
+        step = _("Waiting for both statements; you can already write to both.")
+    return {"kind": kind, "rows": rows, "checks": checks, "step": step}
 
 
 def _require_staff(request):

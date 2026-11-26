@@ -2474,3 +2474,103 @@ msgstr "El comprador %(nick)s recibe %(sats)s sats on-chain en %(address)s (%(pa
 msgctxt "roblosats-admin"
 msgid "The coordinator receives %(sats)s sats on chain at its fee address: the trade fees."
 msgstr "El coordinador recibe %(sats)s sats on-chain en su dirección de comisiones: las comisiones de la operación."
+
+msgctxt "roblosats-admin"
+msgid "%(sats)s sats from the %(loser)s's lost bond (the winner's share), credited as a Lightning reward"
+msgstr "%(sats)s sats de la fianza perdida del %(loser)s (la parte del ganador), abonados como recompensa Lightning"
+
+msgctxt "roblosats-admin"
+msgid "(%(sats)s sats of that bond go to the %(winner)s as the winner's share)"
+msgstr "(%(sats)s sats de esa fianza van al %(winner)s como parte del ganador)"
+
+msgctxt "roblosats-admin"
+msgid "on chain"
+msgstr "on-chain"
+
+msgctxt "roblosats-admin"
+msgid "missing"
+msgstr "falta"
+
+msgctxt "roblosats-admin"
+msgid "held by the coordinator (settled)"
+msgstr "en poder del coordinador (liquidada)"
+
+msgctxt "roblosats-admin"
+msgid "locked (hold invoice)"
+msgstr "bloqueada (factura retenida)"
+
+msgctxt "roblosats-admin"
+msgid "returned to its owner"
+msgstr "devuelta a su dueño"
+
+msgctxt "roblosats-admin"
+msgid "not paid yet"
+msgstr "aún sin pagar"
+
+msgctxt "roblosats-admin"
+msgid "confirmed, waiting for its owner's signature"
+msgstr "confirmada, esperando la firma de su dueño"
+
+msgctxt "roblosats-admin"
+msgid "locked on chain"
+msgstr "bloqueada on-chain"
+
+msgctxt "roblosats-admin"
+msgid "inside the on-chain escrow"
+msgstr "dentro del depósito on-chain"
+
+msgctxt "roblosats-admin"
+msgid "penalized on chain"
+msgstr "penalizada on-chain"
+
+msgctxt "roblosats-admin"
+msgid "free, back to its owner"
+msgstr "libre, vuelve a su dueño"
+
+msgctxt "roblosats-admin"
+msgid "back with its owner"
+msgstr "de vuelta con su dueño"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's statement"
+msgstr "Declaración del comprador"
+
+msgctxt "roblosats-admin"
+msgid "Seller's statement"
+msgstr "Declaración del vendedor"
+
+msgctxt "roblosats-admin"
+msgid "Fiat marked as sent"
+msgstr "Fiat marcado como enviado"
+
+msgctxt "roblosats-admin"
+msgid "This dispute is already decided."
+msgstr "Esta disputa ya está decidida."
+
+msgctxt "roblosats-admin"
+msgid "Both statements are in: read them and decide below."
+msgstr "Ya están las dos declaraciones: léelas y decide abajo."
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the %(role)s's statement; you can already write to both."
+msgstr "Falta la declaración del %(role)s; ya puedes escribir a los dos."
+
+msgctxt "roblosats-admin"
+msgid "Waiting for both statements; you can already write to both."
+msgstr "Faltan las dos declaraciones; ya puedes escribir a los dos."
+
+msgctxt "roblosats-admin"
+msgid "At a glance"
+msgstr "De un vistazo"
+
+msgctxt "roblosats-admin"
+msgid "At stake"
+msgstr "En juego"
+
+msgctxt "roblosats-admin"
+msgid "Layer"
+msgstr "Capa"
+
+msgctxt "roblosats-admin"
+msgid "Where it is now"
+msgstr "Dónde está ahora"

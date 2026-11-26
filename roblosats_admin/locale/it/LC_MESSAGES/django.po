@@ -2373,7 +2373,7 @@ msgstr "la sua cauzione on-chain (%(sats)s), già tornata on-chain: niente da pe
 
 msgctxt "roblosats-admin"
 msgid "The %(role)s %(nick)s gets: %(parts)s."
-msgstr "Il %(role)s %(nick)s riceve: %(parts)s."
+msgstr "%(nick)s (%(role)s) riceve: %(parts)s."
 
 msgctxt "roblosats-admin"
 msgid "In total %(total)s sats credited as a Lightning reward, withdrawn from the app."
@@ -2429,11 +2429,11 @@ msgstr "ricompensa dall'altra cauzione on-chain"
 
 msgctxt "roblosats-admin"
 msgid "The %(role)s %(nick)s receives %(sats)s sats on chain at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
-msgstr "Il %(role)s %(nick)s riceve %(sats)s sats on-chain a %(address)s (%(parts)s), meno la commissione di mining del rilascio, presa da questo output."
+msgstr "%(nick)s (%(role)s) riceve %(sats)s sats on-chain a %(address)s (%(parts)s), meno la commissione di mining del rilascio, presa da questo output."
 
 msgctxt "roblosats-admin"
 msgid "The %(role)s %(nick)s only gets back the leftover of their deposit, %(sats)s sats on chain at %(address)s."
-msgstr "Il %(role)s %(nick)s recupera solo il resto del suo deposito, %(sats)s sats on-chain a %(address)s."
+msgstr "%(nick)s (%(role)s) recupera solo il resto del suo deposito, %(sats)s sats on-chain a %(address)s."
 
 msgctxt "roblosats-admin"
 msgid "The coordinator receives %(sats)s sats on chain at its fee address: %(penalty)s kept from the loser's bond + %(fees)s of trade fees."
@@ -2441,11 +2441,11 @@ msgstr "Il coordinatore riceve %(sats)s sats on-chain al suo indirizzo delle com
 
 msgctxt "roblosats-admin"
 msgid "The %(role)s's bond is a Lightning bond (%(sats)s sats), settled when the dispute opened: the coordinator keeps it and credits %(reward)s sats of it to the %(winner)s as a Lightning reward, withdrawn from the app."
-msgstr "La cauzione del %(role)s è una cauzione Lightning (%(sats)s sats), incassata all'apertura della disputa: il coordinatore la trattiene e ne accredita %(reward)s sats al %(winner)s come ricompensa Lightning, da prelevare dall'app."
+msgstr "La cauzione (%(role)s) è una cauzione Lightning (%(sats)s sats), incassata all'apertura della disputa: il coordinatore la trattiene e ne accredita %(reward)s sats al vincitore (%(winner)s) come ricompensa Lightning, da prelevare dall'app."
 
 msgctxt "roblosats-admin"
 msgid "The %(role)s's Lightning bond (%(sats)s sats), settled when the dispute opened, is credited back to them as a Lightning reward, withdrawn from the app."
-msgstr "La cauzione Lightning del %(role)s (%(sats)s sats), incassata all'apertura della disputa, gli viene riaccreditata come ricompensa Lightning, da prelevare dall'app."
+msgstr "La cauzione Lightning (%(role)s, %(sats)s sats), incassata all'apertura della disputa, viene riaccreditata al proprietario come ricompensa Lightning, da prelevare dall'app."
 
 msgctxt "roblosats-admin"
 msgid "The seller %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s), minus the mining fee of the return, which comes out of this output."
@@ -2457,7 +2457,7 @@ msgstr "L'acquirente %(nick)s recupera %(sats)s sats on-chain a %(address)s (%(p
 
 msgctxt "roblosats-admin"
 msgid "The %(side)s's Lightning bond (%(sats)s sats) goes back to them: credited as a Lightning reward if it was already settled when the dispute opened, unlocked otherwise."
-msgstr "La cauzione Lightning del %(side)s (%(sats)s sats) gli torna: accreditata come ricompensa Lightning se era già stata incassata all'apertura della disputa, altrimenti sbloccata."
+msgstr "La cauzione Lightning (%(side)s, %(sats)s sats) torna al proprietario: accreditata come ricompensa Lightning se era già stata incassata all'apertura della disputa, altrimenti sbloccata."
 
 msgctxt "roblosats-admin"
 msgid "The seller %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s)."
@@ -2474,3 +2474,103 @@ msgstr "L'acquirente %(nick)s riceve %(sats)s sats on-chain a %(address)s (%(par
 msgctxt "roblosats-admin"
 msgid "The coordinator receives %(sats)s sats on chain at its fee address: the trade fees."
 msgstr "Il coordinatore riceve %(sats)s sats on-chain al suo indirizzo delle commissioni: le commissioni dello scambio."
+
+msgctxt "roblosats-admin"
+msgid "%(sats)s sats from the %(loser)s's lost bond (the winner's share), credited as a Lightning reward"
+msgstr "%(sats)s sats dalla cauzione persa (%(loser)s), la quota del vincitore, accreditati come ricompensa Lightning"
+
+msgctxt "roblosats-admin"
+msgid "(%(sats)s sats of that bond go to the %(winner)s as the winner's share)"
+msgstr "(%(sats)s sats di quella cauzione vanno al vincitore, %(winner)s, come sua quota)"
+
+msgctxt "roblosats-admin"
+msgid "on chain"
+msgstr "on-chain"
+
+msgctxt "roblosats-admin"
+msgid "missing"
+msgstr "mancante"
+
+msgctxt "roblosats-admin"
+msgid "held by the coordinator (settled)"
+msgstr "in mano al coordinatore (incassata)"
+
+msgctxt "roblosats-admin"
+msgid "locked (hold invoice)"
+msgstr "bloccata (hold invoice)"
+
+msgctxt "roblosats-admin"
+msgid "returned to its owner"
+msgstr "restituita al proprietario"
+
+msgctxt "roblosats-admin"
+msgid "not paid yet"
+msgstr "non ancora pagata"
+
+msgctxt "roblosats-admin"
+msgid "confirmed, waiting for its owner's signature"
+msgstr "confermata, in attesa della firma del proprietario"
+
+msgctxt "roblosats-admin"
+msgid "locked on chain"
+msgstr "bloccata on-chain"
+
+msgctxt "roblosats-admin"
+msgid "inside the on-chain escrow"
+msgstr "dentro il deposito on-chain"
+
+msgctxt "roblosats-admin"
+msgid "penalized on chain"
+msgstr "penalizzata on-chain"
+
+msgctxt "roblosats-admin"
+msgid "free, back to its owner"
+msgstr "libera, torna al proprietario"
+
+msgctxt "roblosats-admin"
+msgid "back with its owner"
+msgstr "tornata al proprietario"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's statement"
+msgstr "Dichiarazione dell'acquirente"
+
+msgctxt "roblosats-admin"
+msgid "Seller's statement"
+msgstr "Dichiarazione del venditore"
+
+msgctxt "roblosats-admin"
+msgid "Fiat marked as sent"
+msgstr "Fiat segnato come inviato"
+
+msgctxt "roblosats-admin"
+msgid "This dispute is already decided."
+msgstr "Questa disputa è già decisa."
+
+msgctxt "roblosats-admin"
+msgid "Both statements are in: read them and decide below."
+msgstr "Entrambe le dichiarazioni sono arrivate: leggile e decidi qui sotto."
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the %(role)s's statement; you can already write to both."
+msgstr "Manca la dichiarazione (%(role)s); puoi già scrivere a entrambi."
+
+msgctxt "roblosats-admin"
+msgid "Waiting for both statements; you can already write to both."
+msgstr "Mancano entrambe le dichiarazioni; puoi già scrivere a entrambi."
+
+msgctxt "roblosats-admin"
+msgid "At a glance"
+msgstr "A colpo d'occhio"
+
+msgctxt "roblosats-admin"
+msgid "At stake"
+msgstr "In gioco"
+
+msgctxt "roblosats-admin"
+msgid "Layer"
+msgstr "Livello"
+
+msgctxt "roblosats-admin"
+msgid "Where it is now"
+msgstr "Dove si trova ora"

@@ -2474,3 +2474,103 @@ msgstr "買い手 %(nick)s は %(address)s でオンチェーンで %(sats)s sat
 msgctxt "roblosats-admin"
 msgid "The coordinator receives %(sats)s sats on chain at its fee address: the trade fees."
 msgstr "コーディネーターは手数料アドレスでオンチェーンで %(sats)s sats を受け取ります：取引手数料。"
+
+msgctxt "roblosats-admin"
+msgid "%(sats)s sats from the %(loser)s's lost bond (the winner's share), credited as a Lightning reward"
+msgstr "%(loser)s が失った保証金から %(sats)s sats（勝者の取り分）、Lightning 報酬として付与"
+
+msgctxt "roblosats-admin"
+msgid "(%(sats)s sats of that bond go to the %(winner)s as the winner's share)"
+msgstr "（その保証金のうち %(sats)s sats は勝者の取り分として %(winner)s へ）"
+
+msgctxt "roblosats-admin"
+msgid "on chain"
+msgstr "オンチェーン"
+
+msgctxt "roblosats-admin"
+msgid "missing"
+msgstr "なし"
+
+msgctxt "roblosats-admin"
+msgid "held by the coordinator (settled)"
+msgstr "コーディネーターが保有（決済済み）"
+
+msgctxt "roblosats-admin"
+msgid "locked (hold invoice)"
+msgstr "ロック中（ホールドインボイス）"
+
+msgctxt "roblosats-admin"
+msgid "returned to its owner"
+msgstr "所有者に返却済み"
+
+msgctxt "roblosats-admin"
+msgid "not paid yet"
+msgstr "未払い"
+
+msgctxt "roblosats-admin"
+msgid "confirmed, waiting for its owner's signature"
+msgstr "承認済み、所有者の署名待ち"
+
+msgctxt "roblosats-admin"
+msgid "locked on chain"
+msgstr "オンチェーンでロック中"
+
+msgctxt "roblosats-admin"
+msgid "inside the on-chain escrow"
+msgstr "オンチェーンエスクロー内"
+
+msgctxt "roblosats-admin"
+msgid "penalized on chain"
+msgstr "オンチェーンで没収済み"
+
+msgctxt "roblosats-admin"
+msgid "free, back to its owner"
+msgstr "解放済み、所有者へ返却"
+
+msgctxt "roblosats-admin"
+msgid "back with its owner"
+msgstr "所有者のもとに返却済み"
+
+msgctxt "roblosats-admin"
+msgid "Buyer's statement"
+msgstr "買い手の陳述"
+
+msgctxt "roblosats-admin"
+msgid "Seller's statement"
+msgstr "売り手の陳述"
+
+msgctxt "roblosats-admin"
+msgid "Fiat marked as sent"
+msgstr "法定通貨を送金済みにマーク"
+
+msgctxt "roblosats-admin"
+msgid "This dispute is already decided."
+msgstr "この紛争はすでに裁定済みです。"
+
+msgctxt "roblosats-admin"
+msgid "Both statements are in: read them and decide below."
+msgstr "両者の陳述が揃いました：読んで下で裁定してください。"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for the %(role)s's statement; you can already write to both."
+msgstr "%(role)s の陳述待ち。すでに両者にメッセージを送れます。"
+
+msgctxt "roblosats-admin"
+msgid "Waiting for both statements; you can already write to both."
+msgstr "両者の陳述待ち。すでに両者にメッセージを送れます。"
+
+msgctxt "roblosats-admin"
+msgid "At a glance"
+msgstr "概要"
+
+msgctxt "roblosats-admin"
+msgid "At stake"
+msgstr "対象"
+
+msgctxt "roblosats-admin"
+msgid "Layer"
+msgstr "レイヤー"
+
+msgctxt "roblosats-admin"
+msgid "Where it is now"
+msgstr "現在の状態"
