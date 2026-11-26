@@ -418,6 +418,10 @@ def advance_onchain_takes(order):
         notify_mempool(order, None)
     except Exception as e:
         logger.warning(f"Order {order.id}: onchain take mempool check failed: {e}")
+    try:  # 0.9.14-beta6: a confirmed take bond waits for its owner's app to sign
+        notify_signatures(order, None)
+    except Exception as e:
+        logger.warning(f"Order {order.id}: onchain take signature notice failed: {e}")
 
 
 def advance(order):
@@ -1398,6 +1402,8 @@ def notify_mempool(order, escrow=None):
 
 
 SIGN_NOTICE_AFTER = 90  # seconds a signature may be pending before the robot is told
+# signatures asked right after a confirmation: told at once (0.9.14-beta6)
+SIGN_NOW = ("bond_signature", "take_bond_signature")
 
 
 def _trader(order, role):
@@ -1414,7 +1420,8 @@ def pending_signatures(order, escrow=None):
 
     out = []
     for bond in OnchainBond.objects.filter(order=order, status=OnchainBond.Status.SIGN):
-        out.append((bond.owner, "bond_signature"))
+        # 0.9.14-beta6: a take's bond is told apart (its notice says the order is not won yet)
+        out.append((bond.owner, "take_bond_signature" if bond.role == "taker" else "bond_signature"))
     if escrow is not None:
         for role in service.ROLES:
             who, what = waiting_for(order, escrow, role)
@@ -1439,11 +1446,16 @@ def notify_signatures(order, escrow=None):
         step = f"{order.id}:{user.id}:{what}:{getattr(escrow, 'status', '')}:{(escrow.funding_signatures or {}).get('release_round', 0) if escrow else 0}"
         cache.add(f"onchain-sign-seen:{step}", now, timeout=24 * 3600)
         seen = cache.get(f"onchain-sign-seen:{step}") or now
-        if now - int(seen) < SIGN_NOTICE_AFTER:
+        # 0.9.14-beta6 (Kilombino TG 15636): a bond that just got its confirmation is told at
+        # once (an onchain take is won by whoever signs first); the rest after the grace period.
+        # One notice per step either way (the same "told" key).
+        immediate = what in SIGN_NOW
+        if not immediate and now - int(seen) < SIGN_NOTICE_AFTER:
             continue
         if cache.add(f"onchain-sign-told:{step}", 1, timeout=7 * 24 * 3600):
             order.log(f"Onchain {what} of Robot({user.robot.id}) pending: robot told to open the order")
-            send_notification.delay(order_id=order.id, message=f"onchain_sign:{user.id}:{what}")
+            suffix = ":confirmed" if immediate else ""
+            send_notification.delay(order_id=order.id, message=f"onchain_sign:{user.id}:{what}{suffix}")
 
 
 def mempool_message(item, hint=None):

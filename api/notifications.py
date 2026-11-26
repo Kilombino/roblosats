@@ -292,21 +292,35 @@ class Notifications:
 
     SIGN_WHAT = {
         "bond_signature": ("your bond", "tu fianza", "la teva fiança"),
+        "take_bond_signature": ("your bond", "tu fianza", "la teva fiança"),
         "rescue_signature": ("the rescue", "el rescate", "el rescat"),
         "deposit_signature": ("the deposit", "el depósito", "el dipòsit"),
         "release_signature": ("the release", "la liberación", "l'alliberament"),
     }
 
-    def onchain_sign_needed(self, order, user_id, what):
+    def onchain_sign_needed(self, order, user_id, what, confirmed=False):
         """0.9.3: the coordinator waits for this robot's signature; its app signs by itself, but
-        only while the order is open in the foreground."""
+        only while the order is open in the foreground. 0.9.14-beta6: 'confirmed' = its bond
+        has just got its confirmation (told at once)."""
         user = order.maker if order.maker_id == user_id else order.taker
+        if (user is None or user.id != user_id) and what == "take_bond_signature":
+            # a robot still taking the order (not order.taker until its bond is signed)
+            from django.contrib.auth.models import User
+
+            from api.models import TakeOrder
+
+            if TakeOrder.objects.filter(order=order, taker_id=user_id).exists():
+                user = User.objects.filter(id=user_id).select_related("robot").first()
         if user is None or user.id != user_id:
             return
         en, es, ca = self.SIGN_WHAT.get(what, ("the next step", "el siguiente paso", "el pas següent"))
         from api.step_alerts import lang_of
 
         lang = lang_of(user.robot)
+        if confirmed:
+            title = self._bond_confirmed_text(order, what, lang)
+            self.send_message(order, user.robot, title, self.order_url(order), action=True)
+            return
         if lang == "es":
             title = (f"✍️ Abre la orden {order.id}: tu app tiene que firmar {es}. "
                      "Déjala abierta en primer plano en este dispositivo hasta que termine.")
@@ -317,6 +331,20 @@ class Notifications:
             title = (f"✍️ Open order {order.id}: your app needs to sign {en}. "
                      "Keep it open in the foreground on this device until it is done.")
         self.send_message(order, user.robot, title, self.order_url(order), action=True)
+
+    @staticmethod
+    def _bond_confirmed_text(order, what, lang):
+        """0.9.14-beta6 (Kilombino TG 15636): the bond has its confirmation; the app must sign now."""
+        n = order.id
+        if what == "take_bond_signature":
+            return {
+                "es": f"✅ Tu fianza para la orden {n} tiene 1 confirmación: abre la orden ya para que tu app firme y la orden sea tuya. Hasta que firmes, otro robot aún puede ganarla.",
+                "ca": f"✅ La teva fiança per a l'ordre {n} té 1 confirmació: obre l'ordre ara perquè la teva app signi i l'ordre sigui teva. Fins que no signis, un altre robot encara la pot guanyar.",
+            }.get(lang, f"✅ Your bond for order {n} has 1 confirmation: open the order now so your app signs and the order is yours. Until you sign, another robot can still win it.")
+        return {
+            "es": f"✅ Tu fianza para la orden {n} tiene 1 confirmación: abre la orden ya para que tu app firme y la orden se publique.",
+            "ca": f"✅ La teva fiança per a l'ordre {n} té 1 confirmació: obre l'ordre ara perquè la teva app signi i l'ordre es publiqui.",
+        }.get(lang, f"✅ Your bond for order {n} has 1 confirmation: open the order now so your app signs it and the order is published.")
 
     def take_lost(self, order, user_id):
         """0.9.8: another robot's bond locked first. The onchain bond of this robot is free (it

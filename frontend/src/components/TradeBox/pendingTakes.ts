@@ -24,7 +24,7 @@ export const pendingTakeNotice = (order: Order): PendingTakeNotice | null => {
   const mempool = Number(p.mempool ?? 0);
   if (confirmed > 0)
     return {
-      key: 'A robot\'s onchain bond to take your order is confirmed: the order is about to be taken. Get ready.',
+      key: 'A robot\'s onchain bond to take your order is confirmed, waiting for the taker\'s signature: the order is about to be taken. Get ready.',
       count: confirmed,
     };
   if (mempool === 1)
@@ -66,7 +66,7 @@ export const pendingTakeTxs = (order: Order): PendingTakeTx[] => {
         txid: tx.txid,
         labelKey:
           stage === 'confirmed'
-            ? 'Taker bond (confirmed)'
+            ? "Taker bond (confirmed, waiting for the taker's signature)"
             : 'Taker bond (in the mempool, waiting for 1 confirmation)',
       });
     }

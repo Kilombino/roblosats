@@ -60,6 +60,7 @@ import AddNewPaymentMethodDialog from '../Dialogs/AddNewPaymentMethodDialog';
 import { currencyOptions, currencyLabel } from '../../utils/currencies';
 import {
   fixedPricePremium,
+  formatOrderPrice,
   formatPricePerBtc,
   fromDisplayPrice,
   priceUnit,
@@ -2055,7 +2056,8 @@ const MakerForm = ({
               {spamMode
                 ? `${t('Order current rate:')} ${
                     marketPrice !== null
-                      ? formatPricePerBtc(marketPrice * (1 + (maker.premium ?? 0) / 100), SPAMCOIN)
+                      ? // 0.9.14-beta6: the pair as the order page shows it ("0.0036569 BTC/Spamcoin")
+                        formatOrderPrice(marketPrice * (1 + (maker.premium ?? 0) / 100), SPAMCOIN)
                       : '-'
                   }`
                 : `${t('Order current rate:')} ${currentPrice ? currencyFormatter.format(currentPrice) : '-'} ${currencyCode}/BTC`}
@@ -2069,7 +2071,7 @@ const MakerForm = ({
             >
               {t('Order current rate:')}
               <Skeleton width='4.5em' />
-              {`${spamMode ? 'Spamsats' : currencyCode}/BTC`}
+              {spamMode ? 'BTC/Spamcoin' : `${currencyCode}/BTC`}
             </Typography>
           )}
         </Tooltip>

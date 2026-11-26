@@ -608,8 +608,10 @@ def send_notification(order_id=None, chat_message_id=None, message=None):
         notifications.take_lost(order, int(message.split(":")[1]))
 
     elif message and message.startswith("onchain_sign:"):
-        _, user_id, what = message.split(":")[:3]
-        notifications.onchain_sign_needed(order, int(user_id), what)
+        parts = message.split(":")
+        _, user_id, what = parts[:3]
+        confirmed = len(parts) > 3 and parts[3] == "confirmed"  # 0.9.14-beta6
+        notifications.onchain_sign_needed(order, int(user_id), what, confirmed=confirmed)
 
     elif message and message.startswith("onchain_mempool:"):
         # onchain_mempool:<user id>:<bond|funding>:<sats>[:<sats still missing for the bond, or

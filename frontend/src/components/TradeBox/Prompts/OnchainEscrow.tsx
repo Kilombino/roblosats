@@ -48,6 +48,7 @@ import { type FeeHint, formatRate, lowFeeNeeded, validHint } from '../../../util
 import { Transaction, addressToScript, bytesToHex } from '../../../utils/escrow/taproot';
 import { DEFAULT_HRP } from '../../../utils/address';
 import { useAddressConfirm } from '../../Dialogs/AddressConfirm';
+import { bondSigningLines } from '../onchainEscrowSteps';
 
 export type EscrowAction =
   | 'bond_key'
@@ -648,6 +649,19 @@ export const OnchainEscrowPrompt = ({
             data.escrow_waiting_what === 'release_signature'
           ? 'release'
           : null;
+  // 0.9.14-beta6: since when this screen sees the bond confirmed and waiting for our signature
+  const bondSigning = data.bond_status_code === BOND.SIGN && (order.status === 0 || order.status === 3);
+  const [signSince, setSignSince] = useState<number | null>(null);
+  const [signNow, setSignNow] = useState<number>(Date.now());
+  useEffect(() => {
+    if (!bondSigning) {
+      setSignSince(null);
+      return;
+    }
+    setSignSince((v) => v ?? Date.now());
+    const timer = setInterval(() => setSignNow(Date.now()), 5000);
+    return () => clearInterval(timer);
+  }, [bondSigning]);
   useEffect(() => {
     if (!signPhase) return;
     let lock: { release: () => Promise<void> } | null = null;
@@ -891,12 +905,26 @@ export const OnchainEscrowPrompt = ({
           ) : null}
         </Grid>
       );
-    else
+    else if (bondSigning) {
+      // 0.9.14-beta6: confirmed; the app signs it now (an onchain take is won on signing)
+      const lines = bondSigningLines(signSince, signNow);
+      body = waiting(
+        t(lines.main),
+        <>
+          {data.bond_txid ? <TxLine label={t('Your bond')} txid={data.bond_txid} /> : null}
+          {lines.slow ? (
+            <Alert severity='warning' sx={{ mt: 1 }}>
+              {t(lines.slow)}
+            </Alert>
+          ) : null}
+        </>,
+      );
+    } else
       body = waiting(
         t('Bond received, waiting for 1 confirmation…'),
         <>
           {data.bond_txid ? <TxLine label={t('Your bond')} txid={data.bond_txid} /> : null}
-          {data.bond_status_code === BOND.SIGN ? null : afterPayingNotice('bond')}
+          {afterPayingNotice('bond')}
         </>,
       );
   } else if (

@@ -57,3 +57,20 @@ export const lnOnchainTakeStep = (order: Order): boolean => {
   const o = order as unknown as O & { take_onchain?: boolean };
   return o.status === 3 && !o.is_maker && Boolean(o.take_onchain);
 };
+
+/** 0.9.14-beta6 (Kilombino TG 15636): after this long with a confirmed bond still unsigned,
+ * the screen asks to keep the app open. */
+export const SIGN_SLOW_MS = 20_000;
+
+/** The bond is confirmed and the app is signing it: the line to show, and whether the
+ * signature is taking too long (sinceMs = when this screen first saw it confirmed). */
+export const bondSigningLines = (
+  sinceMs: number | null,
+  nowMs: number,
+): { main: string; slow: string | null } => ({
+  main: '✅ Confirmed · ✍️ signing…',
+  slow:
+    sinceMs !== null && nowMs - sinceMs >= SIGN_SLOW_MS
+      ? 'Keep the app open: your signature is missing'
+      : null,
+});
