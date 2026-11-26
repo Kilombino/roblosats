@@ -1298,5 +1298,8 @@
   "Credited to your rewards (Lightning)": "Credited to your rewards (Lightning)",
   "Rewards for this order (Lightning)": "Rewards for this order (Lightning)",
   "onchain": "onchain",
-  "onchain, through the swap": "onchain, through the swap"
+  "onchain, through the swap": "onchain, through the swap",
+  "A robot's onchain bond to take your order is confirmed: the order is about to be taken. Get ready.": "A robot's onchain bond to take your order is confirmed: the order is about to be taken. Get ready.",
+  "A robot is taking your order with an onchain bond: seen in the mempool, waiting for 1 confirmation. Get ready.": "A robot is taking your order with an onchain bond: seen in the mempool, waiting for 1 confirmation. Get ready.",
+  "{{n}} robots are taking your order with an onchain bond: seen in the mempool, waiting for 1 confirmation. The first to confirm takes it. Get ready.": "{{n}} robots are taking your order with an onchain bond: seen in the mempool, waiting for 1 confirmation. The first to confirm takes it. Get ready."
 }

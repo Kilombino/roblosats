@@ -457,3 +457,56 @@ class MixtaDWindow(MixtaBase):
         order = self._with_cltv(self._order(maker_sells=False), 100, 24)
         ok, left, needed = flow.mixta_d_window(order)
         self.assertFalse(ok)
+
+
+class PendingTakesForMaker(MixtaBase):
+    """Kilombino TG 15618: the maker of a public order sees the onchain takes on their way
+    (counts only) and is told once per take when its bond reaches the mempool."""
+
+    def setUp(self):
+        super().setUp()
+        from django.core.cache import cache
+
+        cache.clear()
+
+    def test_counts_by_stage_without_identity(self):
+        order = self._order(maker_sells=True)
+        take1, bond1 = self._onchain_take(order, lock=False)
+        take2, _ = self._onchain_take(order, taker=_user(), lock=False)
+        self.assertEqual(flow.pending_onchain_takes(order), {"mempool": 0, "confirmed": 0, "awaiting_payment": 2})
+        with patch("api.escrow.flow._unconfirmed", return_value=[{"txid": "bb" * 32}]), \
+                patch("api.step_alerts.queue") as q:
+            self.assertTrue(flow.extend_take_from_mempool(take1, bond1))
+            self.assertFalse(flow.extend_take_from_mempool(take1, bond1))  # once per take
+        q.assert_called_once()
+        self.assertEqual(q.call_args.args[1], order.maker)
+        self.assertEqual(q.call_args.args[2], "take_in_mempool")
+        self.assertEqual(flow.pending_onchain_takes(order), {"mempool": 1, "confirmed": 0, "awaiting_payment": 1})
+        OnchainBond.objects.filter(take_order=take2).update(status=OnchainBond.Status.SIGN)
+        self.assertEqual(flow.pending_onchain_takes(order), {"mempool": 1, "confirmed": 1, "awaiting_payment": 0})
+        TakeOrder.objects.filter(pk=take1.pk).update(expires_at=timezone.now() - timezone.timedelta(seconds=1))
+        self.assertEqual(flow.pending_onchain_takes(order)["mempool"], 0)
+
+    def test_order_get_shows_it_to_the_maker_only(self):
+        from rest_framework.test import APIClient
+
+        order = self._order(maker_sells=True)
+        self._onchain_take(order, lock=False)
+        c = APIClient()
+        with patch("api.views.escrow_flow.order_data", return_value={}), \
+                patch("api.logics.Logics.price_and_premium_now", return_value=(1, 0)):
+            c.force_authenticate(self.maker)
+            r = c.get(f"/api/order/?order_id={order.id}")
+            self.assertEqual(r.status_code, 200, r.data)
+            self.assertEqual(r.data["pending_onchain_takes"]["awaiting_payment"], 1)
+            c.force_authenticate(self.taker)
+            r = c.get(f"/api/order/?order_id={order.id}")
+            self.assertNotIn("pending_onchain_takes", r.data)
+
+    def test_alert_text_in_three_languages(self):
+        from api import step_alerts
+
+        for lang in ("en", "es", "ca"):
+            t = step_alerts.text("take_in_mempool", lang, n=35)
+            self.assertIn("35", t)
+            self.assertIn("⛓️", t)

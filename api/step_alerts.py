@@ -116,6 +116,11 @@ TEXTS = {
         "👀 Alguien está tomando tu orden {n}: esperando su fianza on-chain (hasta {left}). Aún no tienes que hacer nada.",
         "👀 Algú està prenent la teva ordre {n}: esperant la seva fiança on-chain (fins a {left}). Encara no has de fer res.",
     ),
+    "take_in_mempool": (
+        "⛓️ A robot is taking your order {n} with an onchain bond: it is in the mempool, waiting for 1 confirmation. Get ready.",
+        "⛓️ Un robot está tomando tu orden {n} con una fianza on-chain: ya está en la mempool, esperando 1 confirmación. Prepárate.",
+        "⛓️ Un robot està prenent la teva ordre {n} amb una fiança on-chain: ja és a la mempool, esperant 1 confirmació. Prepara't.",
+    ),
     "taken_ln_waiting": (
         "👀 Order {n} is being taken: waiting for the taker's bond. Nothing to do yet.",
         "👀 Están tomando la orden {n}: esperando la fianza del tomador. Aún no tienes que hacer nada.",
@@ -753,6 +758,16 @@ def on_take_started(order, take_order):
     dedup = f"take:{take_order.id}"
     queue(order, take_order.taker, "take_started", action=True, dedup=dedup, left=left)
     queue(order, order.maker, "being_taken", dedup=dedup, left=left)
+
+
+def on_take_in_mempool(order, take_order):
+    """Kilombino TG 15618: an onchain take bond of a public order showed up in the mempool;
+    the maker is told once per take (the taker already sees it in its app)."""
+    from api.models import Order
+
+    if order.status != Order.Status.PUB:
+        return False
+    return queue(order, order.maker, "take_in_mempool", dedup=f"take-mempool:{take_order.id}")
 
 
 def on_collab_asked(order, asker):

@@ -2,7 +2,7 @@ import com.android.build.api.dsl.Packaging
 
 val baseVersionCode = 9013
 // 0.9.4: 9004000 + abi (0.9.3 used 9003000, 0.9.2 9002000, 0.9.1 9001000, 0.9.0 9000000 + abi; betas of 0.8.8-rl31 8731000 + 10 * betaBuild + abi)
-val betaBuild = 2  // 0.9.14-beta2: 9013020 + abi (beta1 was 9013010; below 0.9.14 final, 9014000)
+val betaBuild = 3  // 0.9.14-beta3: 9013030 + abi (beta2 was 9013020; below 0.9.14 final, 9014000)
 
 plugins {
     alias(libs.plugins.android.application)
@@ -18,7 +18,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = baseVersionCode
-        versionName = "0.9.14-beta2"
+        versionName = "0.9.14-beta3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -85,7 +85,7 @@ export interface TradeCoordinatorSummary {
 // Lightning take was cancelled, and the onchain take that followed showed an empty hold invoice
 // ("Lock 0 Sats") instead of the onchain bond.
 const STALE_KEYS =
-  /^(bond_|escrow_|onchain_|take_|lost_take|lightning_take_swap$|hybrid_onchain_maker_bond$|hybrid_onchain_taker_bond$|swap_surcharge_)/;
+  /^(bond_|escrow_|onchain_|take_|lost_take|lightning_take_swap$|hybrid_onchain_maker_bond$|hybrid_onchain_taker_bond$|swap_surcharge_|pending_onchain_takes$)/;
 
 /** What a previous take of this order left behind in the app (0.9.3). */
 const TAKE_KEYS = ['take_lightning', 'take_expires_at', 'bond_invoice', 'bond_satoshis'];

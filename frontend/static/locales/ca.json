@@ -1312,5 +1312,8 @@
   "Credited to your rewards (Lightning)": "Abonada a les teves recompenses (Lightning)",
   "Rewards for this order (Lightning)": "Recompenses d'aquesta ordre (Lightning)",
   "onchain": "on-chain",
-  "onchain, through the swap": "on-chain, mitjançant el swap"
+  "onchain, through the swap": "on-chain, mitjançant el swap",
+  "A robot's onchain bond to take your order is confirmed: the order is about to be taken. Get ready.": "La fiança on-chain d'un robot per prendre la teva ordre ja està confirmada: l'ordre està a punt de ser presa. Prepara't.",
+  "A robot is taking your order with an onchain bond: seen in the mempool, waiting for 1 confirmation. Get ready.": "Un robot està prenent la teva ordre amb una fiança on-chain: vista a la mempool, esperant 1 confirmació. Prepara't.",
+  "{{n}} robots are taking your order with an onchain bond: seen in the mempool, waiting for 1 confirmation. The first to confirm takes it. Get ready.": "{{n}} robots estan prenent la teva ordre amb una fiança on-chain: vistes a la mempool, esperant 1 confirmació. El primer a confirmar-se se la queda. Prepara't."
 }

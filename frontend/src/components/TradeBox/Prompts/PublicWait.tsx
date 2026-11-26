@@ -9,12 +9,14 @@ import {
   Grid,
   Typography,
   Tooltip,
+  Alert,
 } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 
 import currencies from '../../../utils/currencies';
 
 import { isOnchainEscrow } from '../onchainEscrowSteps';
+import { pendingTakeNotice } from '../pendingTakes';
 import { type Order } from '../../../models';
 import {
   FederationContext,
@@ -78,8 +80,17 @@ export const PublicWaitPrompt = ({
     return Math.floor(parseFloat(percentile.toFixed(2)));
   }, [federationUpdatedAt]);
 
+  const takeNotice = pendingTakeNotice(order);
+
   return (
     <List dense={true}>
+      {takeNotice ? (
+        <ListItem>
+          <Alert severity='warning' icon={<span>⛓️</span>} sx={{ width: '100%' }}>
+            {t(takeNotice.key, { n: takeNotice.count })}
+          </Alert>
+        </ListItem>
+      ) : null}
       <Divider />
 
       <ListItem>

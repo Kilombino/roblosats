@@ -755,6 +755,13 @@ class OrderView(viewsets.ViewSet):
         data["taker_lightning"] = bool(order.taker_lightning)
         data["maker_lightning"] = bool(getattr(order, "maker_lightning", False))
         data["hybrid_kind"] = escrow_flow.hybrid_kind(order)
+        # Kilombino TG 15618: the maker of a public order sees the onchain takes on their way
+        # (counts only, never who)
+        if data.get("is_maker") and order.status == Order.Status.PUB:
+            try:
+                data["pending_onchain_takes"] = escrow_flow.pending_onchain_takes(order)
+            except Exception as e:
+                logger.warning(f"Order {order.id}: pending onchain takes not read: {e}")
 
         # rl31-beta21, hybrid B: a seller taking an onchain BUY order with Lightning pays the
         # buyer's swap to onchain. The take screen shows the estimate; the traders the amount.

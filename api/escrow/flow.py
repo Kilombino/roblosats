@@ -343,6 +343,12 @@ def extend_take_from_mempool(take_order, bond):
         return False
     if not pending or not cache.add(f"onchain-take-mempool:{take_order.pk}", 1, timeout=2 * 24 * 3600):
         return False
+    try:  # Kilombino TG 15618: the maker is told once per take that a bond is on its way
+        from api import step_alerts
+
+        step_alerts.on_take_in_mempool(bond.order, take_order)
+    except Exception as e:
+        logger.warning(f"Order {bond.order_id}: take-in-mempool notice failed: {e}")
     until = timezone.now() + timedelta(seconds=config("ESCROW_BOND_SECONDS", cast=int, default=3 * 3600))
     if until > take_order.expires_at:
         take_order.expires_at = until
@@ -352,6 +358,34 @@ def extend_take_from_mempool(take_order, bond):
             f"the take now waits for its confirmation until {until:%Y-%m-%d %H:%M} UTC"
         )
     return True
+
+
+def pending_onchain_takes(order):
+    """Kilombino TG 15618: what the maker of a public order may know of the takes paying an
+    onchain bond, without saying who: how many bonds are in the mempool (waiting for their
+    1 confirmation), how many are confirmed and being signed, how many are not paid yet."""
+    from django.core.cache import cache
+
+    from api.models import OnchainBond
+
+    out = {"mempool": 0, "confirmed": 0, "awaiting_payment": 0}
+    now = timezone.now()
+    bonds = OnchainBond.objects.filter(
+        order=order, role="taker", take_order__isnull=False, take_order__expires_at__gt=now,
+        status__in=(OnchainBond.Status.FUNDING, OnchainBond.Status.SIGN),
+    ).select_related("take_order")
+    seen = set()
+    for bond in bonds.order_by("-created_at"):
+        if bond.take_order_id in seen:
+            continue
+        seen.add(bond.take_order_id)
+        if bond.status == OnchainBond.Status.SIGN:
+            out["confirmed"] += 1
+        elif cache.get(f"onchain-take-mempool:{bond.take_order_id}"):
+            out["mempool"] += 1
+        else:
+            out["awaiting_payment"] += 1
+    return out
 
 
 def advance_onchain_takes(order):
