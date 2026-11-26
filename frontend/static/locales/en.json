@@ -1277,5 +1277,6 @@
   "Spamchain explorer (Esplora API)": "Spamchain explorer (Esplora API)",
   "Default: {{url}} (or {{alt}}). Any Esplora API of the SHA-256 chain works.": "Default: {{url}} (or {{alt}}). Any Esplora API of the SHA-256 chain works.",
   "The rescue will send {{amount}} Spamsats (minus the mining fee) on Spamchain (SHA-256) to:": "The rescue will send {{amount}} Spamsats (minus the mining fee) on Spamchain (SHA-256) to:",
-  "Only bonds and funding addresses can be recovered on Spamchain": "Only bonds and funding addresses can be recovered on Spamchain"
+  "Only bonds and funding addresses can be recovered on Spamchain": "Only bonds and funding addresses can be recovered on Spamchain",
+  "Bond (maker and taker each lock it)": "Bond (maker and taker each lock it)"
 }

@@ -66,6 +66,17 @@ export const formatPricePerBtc = (price: number, currency: number | null | undef
   return `${pn(rounded)} ${priceUnit(currency)}/BTC`;
 };
 
+/**
+ * A price as an exchange pair, for showing an order (26 nov 2026): with Spamcoin it is
+ * "0.0036428 BTC/Spamcoin" (1 BTC of ours = 0.0036428 Spamcoin), as Neoxa and NonKYC quote it;
+ * other currencies keep formatPricePerBtc. `price` is in the order's currency per BTC.
+ */
+export const formatOrderPrice = (price: number, currency: number | null | undefined): string => {
+  if (currency !== SPAMCOIN_CODE) return formatPricePerBtc(price, currency);
+  const shown = price >= 1 ? parseFloat(price.toFixed(4)) : parseFloat(price.toPrecision(5));
+  return `${shown} BTC/Spamcoin`;
+};
+
 /** Sats for an amount at a fixed price (amount and price in the order's currency). */
 export const fixedPriceSats = (amount: number, fixedPrice: number): number =>
   fixedPrice > 0 ? Math.round((amount / fixedPrice) * 100_000_000) : 0;

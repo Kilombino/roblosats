@@ -38,6 +38,7 @@ import {
   Tag,
   Description,
   CurrencyBitcoin,
+  Lock,
 } from '@mui/icons-material';
 import {
   fiatMethods,
@@ -58,7 +59,7 @@ import { Coordinator, type Order } from '../../models';
 import CoordinatorFeeRow from '../CoordinatorFeeRow';
 import { isOnchainEscrow } from '../TradeBox/onchainEscrowSteps';
 import { onchainFees } from '../../utils/escrow/fees';
-import { fixedPriceOf, formatPricePerBtc, isFixedPrice } from '../../utils/fixedPrice';
+import { fixedPriceOf, formatOrderPrice, isFixedPrice } from '../../utils/fixedPrice';
 
 interface OrderDetailsProps {
   shortAlias: string;
@@ -343,9 +344,10 @@ const OrderDetails = ({
     // "="; before that, or with a coordinator that does not send it, it is an estimate ("≈")
     // from the coordinator's BTCB2→BTC price (the "BTC" currency, id 1000).
     const btcRatio = Number(coordinator?.limits?.[1000]?.price ?? 0);
+    // An order priced in Spamcoin itself (currency 1000) already says its Spamsats: no note
+    // (26 nov 2026: "350,000 Spamsats ≈ 346,535 Spamcoin sats" said the same thing twice).
     const paidInSpamcoin =
-      !(order.sats_denominated && order.currency === 1000) &&
-      order.payment_method.toLowerCase().includes('spamcoin');
+      order.currency !== 1000 && order.payment_method.toLowerCase().includes('spamcoin');
     let note = '';
     if (paidInSpamcoin && order.spamcoin_sats != null && order.spamcoin_sats > 0) {
       note = ` = ${pn(order.spamcoin_sats)} ${t('Spamcoin sats')}`;
@@ -657,7 +659,7 @@ const OrderDetails = ({
                         flexWrap: 'wrap',
                       }}
                     >
-                      {formatPricePerBtc(fixedPriceOf(currentOrder) ?? 0, currentOrder?.currency)}
+                      {formatOrderPrice(fixedPriceOf(currentOrder) ?? 0, currentOrder?.currency)}
                       <Chip
                         size='small'
                         color='secondary'
@@ -678,11 +680,15 @@ const OrderDetails = ({
 
               {!isFixedPrice(currentOrder) && currentOrder?.price_now !== undefined ? (
                 <ListItemText
-                  primary={t('{{price}} {{currencyCode}}/BTC - Premium: {{premium}}%', {
-                    price: pn(currentOrder?.price_now),
-                    currencyCode,
-                    premium: currentOrder?.premium_now,
-                  })}
+                  primary={
+                    currentOrder?.currency === 1000
+                      ? `${formatOrderPrice(Number(currentOrder?.price_now), currentOrder?.currency)} - ${t('Premium')}: ${currentOrder?.premium_now}%`
+                      : t('{{price}} {{currencyCode}}/BTC - Premium: {{premium}}%', {
+                          price: pn(currentOrder?.price_now),
+                          currencyCode,
+                          premium: currentOrder?.premium_now,
+                        })
+                  }
                   secondary={t('Price and Premium')}
                 />
               ) : null}
@@ -705,6 +711,26 @@ const OrderDetails = ({
                 />
               ) : null}
             </ListItem>
+
+            {/* Roblosats 26 nov 2026: the maker's bond, worked out at creation (percent of the sats then) */}
+            {Number(currentOrder?.bond_size) > 0 ? (
+              <>
+                <Divider />
+                <ListItem>
+                  <ListItemIcon sx={{ minWidth: 56 }}>
+                    <Lock />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={`${parseFloat(Number(currentOrder?.bond_size).toFixed(2))}%${
+                      Number(currentOrder?.satoshis_now) > 0
+                        ? ` · ≈ ${pn(Math.round((Number(currentOrder?.satoshis_now) * Number(currentOrder?.bond_size)) / 100))} 丰 sat`
+                        : ''
+                    }`}
+                    secondary={t('Bond (maker and taker each lock it)')}
+                  />
+                </ListItem>
+              </>
+            ) : null}
 
             {/* if order is in a status that does not expire, do not show countdown */}
             <Collapse in={![4, 5, 12, 13, 14, 15, 16, 17, 18].includes(currentOrder?.status ?? 0)}>

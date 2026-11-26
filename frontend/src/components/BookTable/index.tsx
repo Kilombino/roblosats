@@ -28,7 +28,7 @@ import {
 import currencyDict from '../../utils/currencies';
 import { type PublicOrder } from '../../models';
 import { filterOrders, hexToRgb, statusBadgeColor, pn, amountToString } from '../../utils';
-import { fixedPriceOf, formatPricePerBtc, orderPremium, orderPrice } from '../../utils/fixedPrice';
+import { fixedPriceOf, formatOrderPrice, orderPremium, orderPrice } from '../../utils/fixedPrice';
 import {
   bookExchangeText,
   bookSats,
@@ -575,13 +575,17 @@ const BookTable = ({
             {fixed !== null ? (
               // Roblosats rl31-beta17: the maker's own price, no market price needed
               <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
-                <span>{formatPricePerBtc(fixed, params.row.currency)}</span>
+                <span>{formatOrderPrice(fixed, params.row.currency)}</span>
                 <Typography variant='caption' color='secondary' sx={{ lineHeight: 1.1 }}>
                   {`📌 ${t('Fixed price')}`}
                 </Typography>
               </div>
             ) : limitPrice ? (
-              `${pn(Math.round(price))} ${currencyCode}/BTC`
+              params.row.currency === 1000 ? (
+                formatOrderPrice(price, params.row.currency)
+              ) : (
+                `${pn(Math.round(price))} ${currencyCode}/BTC`
+              )
             ) : (
               <Skeleton variant='rectangular' width={200} height={20} style={{ marginTop: 15 }} />
             )}
@@ -651,7 +655,7 @@ const BookTable = ({
         const tooltipTitle = (
           <span>
             {fixedRowPrice !== null
-              ? `${t('Fixed price')}: ${formatPricePerBtc(fixedRowPrice, params.row.currency)}${
+              ? `${t('Fixed price')}: ${formatOrderPrice(fixedRowPrice, params.row.currency)}${
                   fixedPremium === null ? ` (${t('no market price to compare')})` : ''
                 }`
               : calculatedPrice
