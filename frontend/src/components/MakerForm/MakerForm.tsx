@@ -60,7 +60,6 @@ import AddNewPaymentMethodDialog from '../Dialogs/AddNewPaymentMethodDialog';
 import { currencyOptions, currencyLabel } from '../../utils/currencies';
 import {
   fixedPricePremium,
-  fixedPriceSats,
   formatPricePerBtc,
   fromDisplayPrice,
   priceUnit,
@@ -74,6 +73,10 @@ import {
   formatTotal,
   fromDisplayTotal,
   makerCurrencyOptions,
+  amountUnitOptions,
+  amountUnitLabel,
+  orderPricePerBtc,
+  satsEquivalent,
   priceFromTotal,
   totalForSats,
 } from '../../utils/satOrders';
@@ -909,6 +912,24 @@ const MakerForm = ({
     }).makerSats;
   })();
 
+  // 0.9.14-beta5 (TG 15627): the 丰 sat side of a fiat or Spamsats amount, live, at the price
+  // the order will use (fixed, or market + premium)
+  const equivalentPrice = orderPricePerBtc(
+    fixedMode ? fixedPriceUnits : undefined,
+    marketPrice,
+    maker.premium,
+  );
+  const satsEquivalentText = ((): string | null => {
+    if (satMode || (fixedMode && fixedPriceUnits === null)) return null;
+    if (makerHasAmountRange) {
+      const a = satsEquivalent(formToUnits(maker.minAmount), equivalentPrice);
+      const b = satsEquivalent(formToUnits(maker.maxAmount), equivalentPrice);
+      return a !== null && b !== null ? formatSatRange(a, b) : null;
+    }
+    const n = satsEquivalent(formToUnits(maker.amount), equivalentPrice);
+    return n === null ? null : formatSats(n);
+  })();
+
   const SummaryText = (): React.JSX.Element => {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -966,6 +987,7 @@ const MakerForm = ({
             maker.maxAmount ?? 0,
           )}
           {' ' + amountUnit}
+          {satsEquivalentText ? ` (≈ ${satsEquivalentText})` : ''}
           {fixedMode
             ? fixedPriceUnits !== null
               ? t(' at a fixed price of {{price}}', {
@@ -978,15 +1000,6 @@ const MakerForm = ({
                 ? t(' at a {{premium}}% premium', { premium: maker.premium })
                 : t(' at a {{discount}}% discount', { discount: -(maker.premium ?? 0) })}
         </Typography>
-        {fixedMode && fixedPriceUnits !== null && (maker.amount || makerHasAmountRange) ? (
-          <Typography variant='caption' color='text.secondary' sx={{ mt: 0.5 }}>
-            {t('Sats at your price: {{sats}}', {
-              sats: makerHasAmountRange
-                ? `${pn(fixedPriceSats(formToUnits(maker.minAmount), fixedPriceUnits))}-${pn(fixedPriceSats(formToUnits(maker.maxAmount), fixedPriceUnits))}`
-                : pn(fixedPriceSats(formToUnits(maker.amount), fixedPriceUnits)),
-            })}
-          </Typography>
-        ) : null}
         {bondAmount !== null && (
           <Typography variant='caption' color='text.secondary' sx={{ mt: 0.5 }}>
             {t('Estimated Bond')}:{' '}
@@ -1328,7 +1341,7 @@ const MakerForm = ({
                         </div>
                       </MenuItem>
                     ) : null}
-                    {(satsAvailable ? makerCurrencyOptions : currencyOptions)(currencyDict).map(
+                    {(satsAvailable ? amountUnitOptions : currencyOptions)(currencyDict).map(
                       ([key, value]) => (
                         <MenuItem
                           key={key}
@@ -1337,7 +1350,7 @@ const MakerForm = ({
                         >
                           <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
                             <FlagWithProps code={value} />
-                            {' ' + currencyLabel(value)}
+                            {' ' + amountUnitLabel(key, value)}
                           </div>
                         </MenuItem>
                       ),

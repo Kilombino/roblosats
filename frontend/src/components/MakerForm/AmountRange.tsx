@@ -17,8 +17,8 @@ import RangeSlider from './RangeSlider';
 import currencyDict from '../../utils/currencies';
 import { pn } from '../../utils';
 import { GarageContext, UseGarageStoreType } from '../../contexts/GarageContext';
-import { currencyOptions, currencyLabel } from '../../utils/currencies';
-import { SAT_LABEL, SAT_OPTION, makerCurrencyOptions } from '../../utils/satOrders';
+import { currencyOptions } from '../../utils/currencies';
+import { SAT_LABEL, SAT_OPTION, amountUnitOptions, amountUnitLabel } from '../../utils/satOrders';
 
 const RangeThumbComponent: React.FC<React.PropsWithChildren> = (props) => {
   const { children, ...other } = props;
@@ -238,12 +238,12 @@ const AmountRange: React.FC<AmountRangeProps> = ({
                   {SAT_LABEL}
                 </MenuItem>
               ) : null}
-              {(satsAvailable ? makerCurrencyOptions : currencyOptions)(currencyDict).map(
+              {(satsAvailable ? amountUnitOptions : currencyOptions)(currencyDict).map(
                 ([key, value]) => (
                   <MenuItem key={key} value={parseInt(key)}>
                     <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
                       <FlagWithProps code={value} />
-                      {' ' + currencyLabel(value)}
+                      {' ' + amountUnitLabel(key, value)}
                     </div>
                   </MenuItem>
                 ),

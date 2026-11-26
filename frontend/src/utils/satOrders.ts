@@ -30,6 +30,40 @@ export const makerCurrencyOptions = (dict: Record<string, string>): Array<[strin
   return [...first, ...all.filter(([key]) => key !== '1' && key !== '2')];
 };
 
+/** 0.9.14-beta5 (Kilombino TG 15627): the amount-unit selector, right after "丰 sat":
+ * Spamsats (Spamcoin, currency 1000) first so an exact number of Spamsats is easy to find,
+ * then EUR, USD and the rest. */
+export const amountUnitOptions = (dict: Record<string, string>): Array<[string, string]> => {
+  const all = makerCurrencyOptions(dict);
+  const spam = all.filter(([key]) => Number(key) === SPAMCOIN);
+  return [...spam, ...all.filter(([key]) => Number(key) !== SPAMCOIN)];
+};
+
+/** The label of an amount unit in the maker form: Spamsats for Spamcoin. */
+export const amountUnitLabel = (key: string | number, code: string): string =>
+  Number(key) === SPAMCOIN ? 'Spamsats' : currencyLabel(code);
+
+/** The price per BTC an order will use: its fixed price, or the market price plus premium. */
+export const orderPricePerBtc = (
+  fixedPrice: number | null | undefined,
+  marketPrice: number | null | undefined,
+  premium: number | null | undefined,
+): number | null => {
+  if (fixedPrice !== null && fixedPrice !== undefined) return fixedPrice > 0 ? fixedPrice : null;
+  if (!marketPrice || !(marketPrice > 0)) return null;
+  const price = marketPrice * (1 + (premium ?? 0) / 100);
+  return price > 0 ? price : null;
+};
+
+/** (≈ N 丰 sat) of an amount in the order's currency units (Spamcoin, not Spamsats), or null. */
+export const satsEquivalent = (
+  units: number | null | undefined,
+  pricePerBtc: number | null,
+): number | null => {
+  if (!units || !(units > 0) || pricePerBtc === null || !(pricePerBtc > 0)) return null;
+  return Math.round((units / pricePerBtc) * SATS_PER_COIN);
+};
+
 /** The unit people use for what is paid in exchange: Spamsats for Spamcoin, else the currency. */
 export const exchangeUnit = (currency: number | null | undefined): string =>
   currency === SPAMCOIN ? 'Spamsats' : currencyLabel(currencies[String(currency ?? 1)] ?? '');
