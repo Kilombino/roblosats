@@ -285,14 +285,16 @@ class Decisions(Base):
         self.assertEqual(len(self.sent), 1)
         self.assertEqual(self.bond.auto_return["sent"]["rate"], 1.0)
         # only the trade amount is credited
-        self.assertEqual(self._credits(order), [(self.maker.robot.id, 999_800, "maker_wins_trade")])
+        # 0.9.16: the winner also gets SLASHED_BOND_REWARD_SPLIT of the loser's bond
+        self.assertEqual(self._credits(order), sorted([(self.maker.robot.id, 15_000, ""), (self.maker.robot.id, 999_800, "maker_wins_trade")]))
         self.assertEqual(order.status, Order.Status.TLD)
 
     def test_buyer_wins_without_a_signed_return_gets_the_button(self):
         order = self._decide("buyer")
         self.assertEqual(self.bond.status, OnchainBond.Status.RETURNABLE)  # "Get my bond back"
         self.assertEqual(self.sent, [])
-        self.assertEqual(self._credits(order), [(self.maker.robot.id, 999_800, "maker_wins_trade")])
+        # 0.9.16: the winner also gets SLASHED_BOND_REWARD_SPLIT of the loser's bond
+        self.assertEqual(self._credits(order), sorted([(self.maker.robot.id, 15_000, ""), (self.maker.robot.id, 999_800, "maker_wins_trade")]))
 
     def test_seller_wins_penalizes_the_buyer_bond_at_the_decision(self):
         order = self._decide("seller")
@@ -301,7 +303,8 @@ class Decisions(Base):
         self.assertEqual(self.bond.penalty_ladder["sent"]["rate"], 1.0)  # cheapest rung
         order.maker_bond.refresh_from_db()
         self.assertEqual(order.maker_bond.status, LNPayment.Status.SETLED)
-        self.assertEqual(self._credits(order), [(self.taker.robot.id, 30_000 + 1_039_106, "taker_wins")])
+        # 0.9.16: the winner also gets SLASHED_BOND_REWARD_SPLIT of the loser's bond
+        self.assertEqual(self._credits(order), sorted([(self.taker.robot.id, 14_250, ""), (self.taker.robot.id, 30_000 + 1_039_106, "taker_wins")]))
         self.assertEqual(order.status, Order.Status.MLD)
 
     def test_return_everything_frees_the_onchain_bond(self):
@@ -315,12 +318,13 @@ class Decisions(Base):
         order = self._decide("penalize_buyer")
         self.assertEqual(self.bond.status, OnchainBond.Status.PENALIZED)
         self.assertEqual([c[:2] for c in self._credits(order)],
-                         sorted([(self.taker.robot.id, 30_000), (self.taker.robot.id, 1_039_106)]))
+                         sorted([(self.taker.robot.id, 14_250), (self.taker.robot.id, 30_000), (self.taker.robot.id, 1_039_106)]))
 
     def test_penalize_seller_frees_the_innocent_buyer_bond(self):
         order = self._decide("penalize_seller")
         self.assertEqual(self.bond.status, OnchainBond.Status.RETURNABLE)
-        self.assertEqual(self._credits(order), [(self.taker.robot.id, 1_039_106, "escrow_back")])
+        # 0.9.16: the winner also gets SLASHED_BOND_REWARD_SPLIT of the loser's bond
+        self.assertEqual(self._credits(order), sorted([(self.maker.robot.id, 15_000, ""), (self.taker.robot.id, 1_039_106, "escrow_back")]))
 
     def test_completed_frees_the_onchain_bond(self):
         order = self._decide("completed")
@@ -332,12 +336,14 @@ class Decisions(Base):
         credited its value back as rewards, as 0.9.11 did; nothing is broadcast."""
         order = self._decide("buyer", bond_status=OnchainBond.Status.PENALIZED)
         self.assertEqual(self.sent, [])
-        self.assertEqual(self._credits(order), [(self.maker.robot.id, 30_000 + 999_800, "maker_wins")])
+        # 0.9.16: the winner also gets SLASHED_BOND_REWARD_SPLIT of the loser's bond
+        self.assertEqual(self._credits(order), sorted([(self.maker.robot.id, 15_000, ""), (self.maker.robot.id, 30_000 + 999_800, "maker_wins")]))
 
     def test_order_29_already_penalized_seller_wins(self):
         order = self._decide("seller", bond_status=OnchainBond.Status.PENALIZED)
         self.assertEqual(self.sent, [])
-        self.assertEqual(self._credits(order), [(self.taker.robot.id, 30_000 + 1_039_106, "taker_wins")])
+        # 0.9.16: the winner also gets SLASHED_BOND_REWARD_SPLIT of the loser's bond
+        self.assertEqual(self._credits(order), sorted([(self.taker.robot.id, 14_250, ""), (self.taker.robot.id, 30_000 + 1_039_106, "taker_wins")]))
 
     def test_order_29_already_penalized_return_and_completed(self):
         order = self._decide("return", bond_status=OnchainBond.Status.PENALIZED)

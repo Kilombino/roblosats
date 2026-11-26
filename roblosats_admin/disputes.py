@@ -651,11 +651,38 @@ def _plan_lightning(order, decision):
 
     values = {"buyer": buyer_nick, "seller": seller_nick, "escrow": fmt_sats(escrow_sats)}
 
-    def credited(role, base_sats, base_text, info):
-        """'The <role> <nick> is credited N sats as a Lightning reward (parts)' + the bond's fate."""
-        total = base_sats + bond_credit(info)
+    def side_of(role):
+        return r[f"{role}_side"]
+
+    def share_of(loser_role):
+        """0.9.16: what the other trader gets of the loser's bond (SLASHED_BOND_REWARD_SPLIT)."""
+        from api.escrow import flow as escrow_flow
+
+        try:
+            return escrow_flow.dispute_reward_preview(order, side_of(loser_role))
+        except Exception:
+            return 0
+
+    def loser_share(loser_role, winner_role):
+        """0.9.16: ' (N sats of it go to the <winner> as the winner's share)' after a lost bond."""
+        sh = share_of(loser_role)
+        if not sh:
+            return ""
+        return " " + _("(%(sats)s sats of that bond go to the %(winner)s as the winner's share)") % {
+            "sats": fmt_sats(sh), "winner": role_name(winner_role)}
+
+    def credited(role, base_sats, base_text, info, reward_from=None):
+        """'The <role> <nick> is credited N sats as a Lightning reward (parts)' + the bond's fate,
+        plus (0.9.16) its share of the loser's bond when reward_from names the loser."""
+        reward = share_of(reward_from) if reward_from else 0
+        total = base_sats + bond_credit(info) + reward
         parts = [base_text] if base_text else []
         parts.append(bond_kept_text(info))
+        if reward:
+            parts.append(
+                _("%(sats)s sats from the %(loser)s's lost bond (the winner's share), credited as a Lightning reward")
+                % {"sats": fmt_sats(reward), "loser": role_name(reward_from)}
+            )
         nick = buyer_nick if role == "buyer" else seller_nick
         line = _("The %(role)s %(nick)s gets: %(parts)s.") % {
             "role": role_name(role), "nick": nick, "parts": "; ".join(parts)}
@@ -671,15 +698,16 @@ def _plan_lightning(order, decision):
         else:
             trade = _("the trade amount %(trade)s from the Lightning escrow, credited as a Lightning reward") % {
                 "trade": fmt_sats(payout)}
-            lines.append(credited("buyer", payout, trade, bb))
+            lines.append(credited("buyer", payout, trade, bb, reward_from="seller"))
             lines.append(
                 _("The seller %(seller)s gets nothing back: they lose %(bond)s and their Lightning escrow (%(escrow)s).")
-                % {**values, "bond": bond_lost_text(sb)}
+                % {**values, "bond": bond_lost_text(sb)} + loser_share("seller", "buyer")
             )
     elif decision == "seller":
         esc = _("their Lightning escrow back (%(escrow)s), credited as a Lightning reward") % values
-        lines.append(credited("seller", escrow_sats, esc, sb))
-        lines.append(_("The buyer %(buyer)s gets nothing: they lose %(bond)s.") % {**values, "bond": bond_lost_text(bb)})
+        lines.append(credited("seller", escrow_sats, esc, sb, reward_from="buyer"))
+        lines.append(_("The buyer %(buyer)s gets nothing: they lose %(bond)s.") % {**values, "bond": bond_lost_text(bb)}
+                     + loser_share("buyer", "seller"))
     elif decision == "return":
         lines.append(credited("buyer", 0, "", bb))
         esc = _("their Lightning escrow back (%(escrow)s), credited as a Lightning reward") % values
@@ -690,13 +718,14 @@ def _plan_lightning(order, decision):
             esc = _("their Lightning escrow back (%(escrow)s), credited as a Lightning reward") % values
             lines.append(
                 _("The seller %(seller)s gets %(escrow_text)s, but LOSES %(bond)s.")
-                % {**values, "escrow_text": esc, "bond": bond_lost_text(sb)}
+                % {**values, "escrow_text": esc, "bond": bond_lost_text(sb)} + loser_share("seller", "buyer")
             )
-            lines.append(credited("buyer", 0, "", bb) + " " + _("They do not receive the trade sats."))
+            lines.append(credited("buyer", 0, "", bb, reward_from="seller") + " " + _("They do not receive the trade sats."))
         else:
-            lines.append(_("The buyer %(buyer)s LOSES %(bond)s.") % {**values, "bond": bond_lost_text(bb)})
+            lines.append(_("The buyer %(buyer)s LOSES %(bond)s.") % {**values, "bond": bond_lost_text(bb)}
+                         + loser_share("buyer", "seller"))
             esc = _("their Lightning escrow back (%(escrow)s), credited as a Lightning reward") % values
-            lines.append(credited("seller", escrow_sats, esc, sb))
+            lines.append(credited("seller", escrow_sats, esc, sb, reward_from="buyer"))
         lines.append(_("There is no trade: nobody takes what they did not pay for. Rewards are withdrawn from the app."))
     elif decision == "completed":
         if payout is None:

@@ -2003,7 +2003,13 @@ class EscrowDisputeBond0912Regtest(EscrowHybridRegtest):
             c.execute("SELECT SUM(amount) FROM coord_reward_ledger WHERE order_id = %s AND robot_id = %s",
                       [order.id, buyer.robot.id])
             credited = int(c.fetchone()[0] or 0)
-        self.assertEqual(credited, 999_800)  # the trade amount only: the bond went back on chain
+        # the trade amount; the bond went back on chain (not credited). 0.9.16: plus the winner's
+        # share of the seller's settled Lightning bond (SLASHED_BOND_REWARD_SPLIT)
+        from decouple import config as _cfg
+
+        share = int(min(order.taker_bond.num_satoshis, bond.value) * _cfg("SLASHED_BOND_REWARD_SPLIT", cast=float, default=0.5))
+        self.assertGreater(share, 0)
+        self.assertEqual(credited, 999_800 + share)
 
     def test_maker_loses_bond_penalized_at_the_decision_cheaply(self):
         order, buyer, seller, kb, bond = self._disputed_b()
@@ -2024,6 +2030,19 @@ class EscrowDisputeBond0912Regtest(EscrowHybridRegtest):
 
         self.assertGreater(bonds.penalty_sats(bond), bonds.penalty_floor_sats(bond))
         self.assertEqual(order.status, Order.Status.MLD)
+        # 0.9.16: the winning seller gets its share of what the buyer's penalty pays (at least)
+        from decouple import config as _cfg
+        from django.db import connection
+
+        from api.logics import ensure_ledger
+
+        ensure_ledger()
+        with connection.cursor() as c:
+            c.execute("SELECT SUM(amount) FROM coord_reward_ledger WHERE order_id = %s AND robot_id = %s AND kind = 'slash_reward'",
+                      [order.id, seller.robot.id])
+            reward = int(c.fetchone()[0] or 0)
+        split = _cfg("SLASHED_BOND_REWARD_SPLIT", cast=float, default=0.5)
+        self.assertEqual(reward, int(min(bonds.penalty_floor_sats(bond), order.taker_bond.num_satoshis) * split))
 
     def test_safety_guard_penalizes_before_the_timelock(self):
         from unittest.mock import patch
@@ -2323,6 +2342,57 @@ class EscrowMixtaCDRegtest(EscrowHybridRegtest):
         order.refresh_from_db()
         self.assertEqual(flow.dispute_bond_sats(order, "taker", wins=False), 0)
         self._penalty_mined(bond)
+
+    def _slash_rewards(self, order, robot):
+        from django.db import connection
+
+        from api.logics import ensure_ledger
+
+        ensure_ledger()
+        with connection.cursor() as c:
+            c.execute("SELECT COALESCE(SUM(amount), 0) FROM coord_reward_ledger WHERE order_id = %s AND robot_id = %s AND kind = 'slash_reward'",
+                      [order.id, robot.id])
+            return int(c.fetchone()[0])
+
+    def test_c_dispute_lost_by_the_onchain_buyer_rewards_the_seller(self):
+        """0.9.16: the winning seller also gets SLASHED_BOND_REWARD_SPLIT of what the buyer's
+        penalized onchain bond pays (at least), at most of its own bond; never twice."""
+        from decouple import config as _cfg
+
+        from api.escrow import bonds, flow
+
+        order, seller, buyer, keys, bond = self._c_contract()
+        Order.objects.filter(pk=order.pk).update(status=Order.Status.DIS, is_disputed=True)
+        order.refresh_from_db()
+        flow.dispute_bond_sats(order, "taker", wins=False)
+        self._penalty_mined(bond)
+        bond.refresh_from_db()
+        split = _cfg("SLASHED_BOND_REWARD_SPLIT", cast=float, default=0.5)
+        expected = int(min(bonds.penalty_floor_sats(bond), order.maker_bond.num_satoshis) * split)
+        self.assertGreater(expected, 0)
+        self.assertEqual(flow.dispute_loser_reward(order, "taker"), expected)
+        self.assertEqual(self._slash_rewards(order, seller.robot), expected)
+        self.assertEqual(flow.dispute_loser_reward(order, "taker"), 0)  # once per bond
+        self.assertEqual(self._slash_rewards(order, seller.robot), expected)
+
+    def test_c_dispute_won_by_the_onchain_buyer_gets_a_share_of_the_seller_bond(self):
+        """0.9.16: the seller's Lightning bond (settled when the dispute opened) is shared with
+        the winning buyer; the buyer's own onchain bond goes back on chain."""
+        from decouple import config as _cfg
+
+        from api.escrow import flow
+
+        order, seller, buyer, keys, bond = self._c_contract()
+        Order.objects.filter(pk=order.pk).update(status=Order.Status.DIS, is_disputed=True)
+        LNPayment.objects.filter(pk=order.maker_bond.pk).update(status=LNPayment.Status.SETLED)
+        order.refresh_from_db()
+        self.assertEqual(flow.dispute_bond_sats(order, "taker", wins=True), 0)
+        split = _cfg("SLASHED_BOND_REWARD_SPLIT", cast=float, default=0.5)
+        expected = int(min(order.maker_bond.num_satoshis, bond.value) * split)
+        self.assertEqual(flow.dispute_reward_preview(order, "maker"), expected)
+        self.assertEqual(flow.dispute_loser_reward(order, "maker"), expected)
+        self.assertEqual(self._slash_rewards(order, buyer.robot), expected)
+        self._return_bond_onchain(order, buyer, keys, bond)
 
     def test_c_lightning_take_wins_the_race_onchain_bond_freed(self):
         self._lightning_wins_race(maker_sells=True)
