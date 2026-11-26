@@ -1,6 +1,6 @@
 {
   "name": "desktop-app",
-  "version": "0.9.14-beta7",
+  "version": "0.9.14",
   "description": "",
   "main": "index.js",
   "scripts": {
