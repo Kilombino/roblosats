@@ -1323,5 +1323,8 @@
   "Your order is Lightning: your bond is a Lightning hold invoice and you send nothing onchain. Your fee ({{fee}} Sats) comes out of what you receive in the release.": "Tu orden es Lightning: tu fianza es una factura retenida Lightning y no envías nada on-chain. Tu comisión ({{fee}} Sats) sale de lo que recibes en la liberación.",
   "The seller is funding the escrow onchain: their deposit is in the mempool, waiting for 1 confirmation.": "El vendedor está financiando el depósito on-chain: su pago está en la mempool, esperando 1 confirmación.",
   "The buyer's payment is in the mempool, waiting for 1 confirmation.": "El pago del comprador está en la mempool, esperando 1 confirmación.",
-  "Peer's payment": "Pago de la otra parte"
+  "Peer's payment": "Pago de la otra parte",
+  "You receive {{amount}} Sats": "Recibes {{amount}} Sats",
+  "You receive onchain {{amount}} Sats": "Recibes on-chain {{amount}} Sats",
+  "(routing budget {{sats}} Sats)": "(presupuesto de enrutamiento {{sats}} Sats)"
 }

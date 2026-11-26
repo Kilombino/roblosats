@@ -520,3 +520,31 @@ class PendingTakesForMaker(MixtaBase):
             t = step_alerts.text("take_in_mempool", lang, n=35)
             self.assertIn("35", t)
             self.assertIn("⛓️", t)
+
+
+class BuyerExactPayout(MixtaBase):
+    """0.9.14 (Kilombino TG 15656, #34): once the buyer has a payout, the order says what it
+    receives exactly (its invoice), not the approximate trade amount."""
+
+    def test_buyer_sees_its_invoice_amount(self):
+        from rest_framework.test import APIClient
+
+        order = self._order(maker_sells=True)
+        order.taker = self.taker
+        order.status = Order.Status.CHA
+        order.taker_bond = _hold(self.taker, LNPayment.Concepts.TAKEBOND)
+        order.trade_escrow = _hold(self.maker, LNPayment.Concepts.TRESCROW, sats=1_001_900)
+        payout = _hold(self.taker, LNPayment.Concepts.PAYBUYER, sats=999_000, status=LNPayment.Status.VALIDI)
+        LNPayment.objects.filter(pk=payout.pk).update(type=LNPayment.Types.NORM, routing_budget_sats=1_000)
+        order.payout = payout
+        order.save()
+        c = APIClient()
+        with patch("api.logics.Logics.price_and_premium_now", return_value=(1, 0)):
+            c.force_authenticate(self.taker)
+            r = c.get(f"/api/order/?order_id={order.id}")
+            self.assertEqual(r.status_code, 200, r.data)
+            self.assertEqual((r.data["payout_sats"], r.data["payout_routing_budget_sats"], r.data["payout_layer"]),
+                             (999_000, 1_000, "lightning"))
+            c.force_authenticate(self.maker)
+            r = c.get(f"/api/order/?order_id={order.id}")
+            self.assertNotIn("payout_sats", r.data)

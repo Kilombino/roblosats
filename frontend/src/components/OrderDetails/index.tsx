@@ -57,6 +57,7 @@ import { type UseFederationStoreType, FederationContext } from '../../contexts/F
 import { GarageContext, type UseGarageStoreType } from '../../contexts/GarageContext';
 import { Coordinator, type Order } from '../../models';
 import CoordinatorFeeRow from '../CoordinatorFeeRow';
+import { exactReceive } from './exactReceive';
 import { isOnchainEscrow } from '../TradeBox/onchainEscrowSteps';
 import { onchainFees } from '../../utils/escrow/fees';
 import { fixedPriceOf, formatOrderPrice, isFixedPrice } from '../../utils/fixedPrice';
@@ -309,9 +310,21 @@ const OrderDetails = ({
         method: methodsText(order.payment_method),
       });
       // Roblosats: in an onchain escrow order the sats move on chain, not over Lightning.
-      receive = onchain
-        ? t('You receive onchain {{amount}} Sats (Approx)', { amount: sats })
-        : t('You receive {{amount}} Sats (Approx)', { amount: sats });
+      const exact = exactReceive(order);
+      receive = exact
+        ? // 0.9.14 (#34): the buyer's payout is known: its exact amount
+          `${
+            exact.onchain
+              ? t('You receive onchain {{amount}} Sats', { amount: pn(exact.sats) })
+              : t('You receive {{amount}} Sats', { amount: pn(exact.sats) })
+          }${
+            exact.routingBudget > 0
+              ? ` ${t('(routing budget {{sats}} Sats)', { sats: pn(exact.routingBudget) })}`
+              : ''
+          }`
+        : onchain
+          ? t('You receive onchain {{amount}} Sats (Approx)', { amount: sats })
+          : t('You receive {{amount}} Sats (Approx)', { amount: sats });
     } else {
       if (order.trade_satoshis) {
         sats = pn(order.trade_satoshis);

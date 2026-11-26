@@ -755,6 +755,19 @@ class OrderView(viewsets.ViewSet):
         data["taker_lightning"] = bool(order.taker_lightning)
         data["maker_lightning"] = bool(getattr(order, "maker_lightning", False))
         data["hybrid_kind"] = escrow_flow.hybrid_kind(order)
+        # 0.9.14 (Kilombino TG 15656, #34): once the buyer has a payout, what it receives exactly
+        # (its invoice, i.e. the trade minus the routing budget it chose, or its onchain payout)
+        if data.get("is_buyer") and not escrow_flow.is_onchain(order):
+            try:
+                if order.payout is not None and order.payout.num_satoshis:
+                    data["payout_sats"] = int(order.payout.num_satoshis)
+                    data["payout_routing_budget_sats"] = int(order.payout.routing_budget_sats or 0)
+                    data["payout_layer"] = "lightning"
+                elif order.payout_tx is not None and order.payout_tx.sent_satoshis:
+                    data["payout_sats"] = int(order.payout_tx.sent_satoshis)
+                    data["payout_layer"] = "onchain"
+            except Exception as e:
+                logger.warning(f"Order {order.id}: payout amount not read: {e}")
         # Kilombino TG 15618: the maker of a public order sees the onchain takes on their way
         # (counts only, never who)
         if data.get("is_maker") and order.status == Order.Status.PUB:
