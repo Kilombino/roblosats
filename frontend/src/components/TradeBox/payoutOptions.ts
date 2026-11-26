@@ -24,6 +24,7 @@ export const isOnchainBondTake = (order: Order): boolean =>
 
 export const defaultPayoutTab = (order: Order): 'lightning' | 'onchain' =>
   onchainPayoutAllowed(order) &&
-  ((isHybridLightningTake(order) && order.is_maker) || (isOnchainBondTake(order) && !order.is_maker))
+  ((isHybridLightningTake(order) && order.is_maker) ||
+    (isOnchainBondTake(order) && !order.is_maker))
     ? 'onchain'
     : 'lightning';

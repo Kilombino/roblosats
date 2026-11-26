@@ -690,6 +690,7 @@ class UpdateOrderSerializer(serializers.Serializer):
             "update_invoice",
             "update_address",
             "submit_statement",
+            "attach_chat",
             "dispute",
             "cancel",
             "confirm",
@@ -732,6 +733,14 @@ class UpdateOrderSerializer(serializers.Serializer):
         required=False,
         default=False,
         help_text="Roblosats: take an onchain order with Lightning (bond as a hold invoice; as seller the escrow too, the buyer then gets paid onchain by the coordinator)",
+    )
+    chat_log = serializers.CharField(
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+        default=None,
+        max_length=1_000_000,
+        help_text="Roblosats: the decrypted chat (JSON list of messages) attached to a dispute",
     )
     take_onchain = serializers.BooleanField(
         required=False,

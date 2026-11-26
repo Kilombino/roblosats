@@ -638,6 +638,11 @@ class OrderView(viewsets.ViewSet):
                 data["statement_submitted"] = (
                     order.taker_statement is not None and order.taker_statement != ""
                 )
+        # 26 nov 2026: whether this party's chat is attached to the dispute (in its statement
+        # or afterwards); the waiting screens offer to attach it while it is not
+        if order.status in (Order.Status.DIS, Order.Status.WFR) and data.get("is_participant"):
+            side = "maker" if data["is_maker"] else "taker"
+            data["chat_attached"] = Logics.chat_attached(order, side)
 
         # 9) If status is 'Failed routing', reply with retry amounts, time of next retry and ask for invoice at third.
         elif (
@@ -1001,6 +1006,19 @@ class OrderView(viewsets.ViewSet):
 
         elif action == "submit_statement":
             valid, context = Logics.dispute_statement(order, request.user, statement)
+            if not valid:
+                return Response(context, status.HTTP_400_BAD_REQUEST)
+            # 26 nov 2026: the decrypted chat goes with it, kept apart from the statement
+            chat_log = serializer.data.get("chat_log")
+            if chat_log:
+                order.refresh_from_db()
+                valid, context = Logics.attach_dispute_chat(order, request.user, chat_log)
+                if not valid:
+                    return Response(context, status.HTTP_400_BAD_REQUEST)
+
+        # 26 nov 2026 (Kilombino TG 15581/15584): the chat attached after the statement, once
+        elif action == "attach_chat":
+            valid, context = Logics.attach_dispute_chat(order, request.user, serializer.data.get("chat_log") or "")
             if not valid:
                 return Response(context, status.HTTP_400_BAD_REQUEST)
 

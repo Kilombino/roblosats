@@ -71,6 +71,11 @@ EVENTS = {
     ),
 }
 
+# Events without a toggle of their own: they follow the toggle of another event (26 nov 2026)
+SHARED_EVENTS = {
+    "dispute_evidence": ("on_dispute", _lazy("Chat attached to a dispute after the statement"), "📎"),
+}
+
 TEST_EVENT = "test"
 TEST_TIMEOUT = 20
 TEXT_PREVIEW = 300
@@ -108,7 +113,7 @@ def chat_of(cfg):
 def wants(cfg, event):
     if event == TEST_EVENT:
         return bool(token_of(cfg) and chat_of(cfg))
-    field = EVENTS.get(event, (None,))[0]
+    field = (EVENTS.get(event) or SHARED_EVENTS.get(event) or (None,))[0]
     return bool(field and getattr(cfg, field) and token_of(cfg) and chat_of(cfg))
 
 
@@ -251,6 +256,10 @@ def headline(event, order, extra):
                 role = disputes.role_name(key)
         values["who"] = f"{role} ({sender})" if role else sender or "?"
         return _("New chat message from %(who)s on disputed order %(id)s") % values
+    if event == "dispute_evidence":
+        values["who"] = disputes.side_name(extra.get("side", "")) or extra.get("side", "") or "?"
+        values["n"] = extra.get("messages", 0)
+        return _("Order %(id)s: the %(who)s attached their chat to the dispute (%(n)s messages)") % values
     if event == "coordinator_message":
         values["names"] = _(" and ").join(extra.get("names") or []) or "?"
         return _("You wrote to %(names)s on order %(id)s") % values
@@ -405,7 +414,7 @@ def build_text(cfg, event, order, extra):
     from roblosats_admin import disputes
     from roblosats_admin.messaging import coordinator_alias
 
-    icon = EVENTS[event][2] if event in EVENTS else "🔔"
+    icon = EVENTS[event][2] if event in EVENTS else SHARED_EVENTS[event][2] if event in SHARED_EVENTS else "🔔"
     lines = [f"{icon} {coordinator_alias()}: {headline(event, order, extra)}"]
     if order is not None:
         kind = _("BUY") if order.type == Order.Types.BUY else _("SELL")

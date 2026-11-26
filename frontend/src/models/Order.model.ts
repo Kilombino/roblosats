@@ -13,6 +13,7 @@ export interface SubmitActionProps {
     | 'update_invoice'
     | 'update_address'
     | 'submit_statement'
+    | 'attach_chat'
     | 'rate_platform'
     | 'take'
     | 'bond_key'
@@ -40,11 +41,14 @@ export interface SubmitActionProps {
   address?: string;
   mining_fee_rate?: number;
   statement?: string;
+  // 26 nov 2026: the decrypted chat attached to a dispute (JSON list of messages)
+  chat_log?: string;
   rating?: number;
   amount?: number;
   cancel_status?: number;
   password?: string;
   take_lightning?: boolean;
+  take_onchain?: boolean;
 }
 
 export interface TradeRobotSummary {

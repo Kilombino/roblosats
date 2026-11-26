@@ -2,7 +2,11 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { List, ListItem, Divider, Typography } from '@mui/material';
 
-export const DisputeWaitPeerPrompt = (): React.JSX.Element => {
+export const DisputeWaitPeerPrompt = ({
+  children,
+}: {
+  children?: React.ReactNode;
+}): React.JSX.Element => {
   const { t } = useTranslation();
 
   return (
@@ -22,6 +26,7 @@ export const DisputeWaitPeerPrompt = (): React.JSX.Element => {
           )}
         </Typography>
       </ListItem>
+      {children ? <ListItem>{children}</ListItem> : null}
     </List>
   );
 };

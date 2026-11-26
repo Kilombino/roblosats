@@ -1282,5 +1282,9 @@
   "Lock your bond with": "Lock your bond with",
   "With onchain you lock your bond and the trade escrow onchain: the order becomes an onchain escrow order. The buyer keeps its Lightning bond.": "With onchain you lock your bond and the trade escrow onchain: the order becomes an onchain escrow order. The buyer keeps its Lightning bond.",
   "With onchain your bond is an onchain deposit and you need no Lightning to take: the seller locks the sats over Lightning and you can be paid onchain.": "With onchain your bond is an onchain deposit and you need no Lightning to take: the seller locks the sats over Lightning and you can be paid onchain.",
-  "Your bond needs 1 confirmation (up to 3 hours from when it is seen in the mempool). Meanwhile someone may take the order with Lightning, or with an onchain bond that confirms first: then your bond comes back to you, without any penalty.": "Your bond needs 1 confirmation (up to 3 hours from when it is seen in the mempool). Meanwhile someone may take the order with Lightning, or with an onchain bond that confirms first: then your bond comes back to you, without any penalty."
+  "Your bond needs 1 confirmation (up to 3 hours from when it is seen in the mempool). Meanwhile someone may take the order with Lightning, or with an onchain bond that confirms first: then your bond comes back to you, without any penalty.": "Your bond needs 1 confirmation (up to 3 hours from when it is seen in the mempool). Meanwhile someone may take the order with Lightning, or with an onchain bond that confirms first: then your bond comes back to you, without any penalty.",
+  "Your chat is attached to the dispute.": "Your chat is attached to the dispute.",
+  "You did not attach the chat to your statement. You can attach it now, once: it helps the coordinator decide, but it shows them your conversation.": "You did not attach the chat to your statement. You can attach it now, once: it helps the coordinator decide, but it shows them your conversation.",
+  "Attach the chat": "Attach the chat",
+  "There are no chat messages to attach.": "There are no chat messages to attach."
 }

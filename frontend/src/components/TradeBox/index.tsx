@@ -57,6 +57,7 @@ import { type UseAppStoreType, AppContext } from '../../contexts/AppContext';
 import { FederationContext, type UseFederationStoreType } from '../../contexts/FederationContext';
 import { useNavigate } from 'react-router-dom';
 import { DisputeForm, defaultDispute } from './Prompts/Dispute';
+import { AttachChatPrompt } from './Prompts/AttachChat';
 
 interface loadingButtonsProps {
   cancel: boolean;
@@ -125,6 +126,7 @@ export interface SubmitActionProps {
     | 'update_invoice'
     | 'update_address'
     | 'submit_statement'
+    | 'attach_chat'
     | 'rate_platform'
     | EscrowAction;
   escrow?: object;
@@ -133,6 +135,7 @@ export interface SubmitActionProps {
   address?: string;
   mining_fee_rate?: number;
   statement?: string;
+  chat_log?: string;
   rating?: number;
   cancel_status?: number;
 }
@@ -228,6 +231,7 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
     address,
     mining_fee_rate,
     statement,
+    chat_log,
     rating,
     cancel_status,
     escrow,
@@ -247,6 +251,7 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
           address,
           mining_fee_rate,
           statement,
+          chat_log,
           rating,
           cancel_status,
           escrow,
@@ -657,7 +662,15 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
         if (order.statement_submitted) {
           baseContract.title = 'We have received your statement';
           baseContract.prompt = function () {
-            return <DisputeWaitPeerPrompt />;
+            return (
+              <DisputeWaitPeerPrompt>
+                <AttachChatPrompt
+                  order={order}
+                  shortAlias={currentOrder.shortAlias}
+                  submitAction={submitAction}
+                />
+              </DisputeWaitPeerPrompt>
+            );
           };
         } else {
           baseContract.title = 'A dispute has been opened';
@@ -786,7 +799,15 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
         baseContract.bondStatus = 'settled';
         baseContract.title = 'We have the statements';
         baseContract.prompt = function () {
-          return <DisputeWaitResolutionPrompt />;
+          return (
+            <DisputeWaitResolutionPrompt>
+              <AttachChatPrompt
+                order={order}
+                shortAlias={currentOrder.shortAlias}
+                submitAction={submitAction}
+              />
+            </DisputeWaitResolutionPrompt>
+          );
         };
         break;
 

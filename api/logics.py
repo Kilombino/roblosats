@@ -980,6 +980,74 @@ class Logics:
 
         return True, None
 
+    @staticmethod
+    def statement_has_chat(statement):
+        """A statement sent with "attach chat logs" is JSON {statement, messages}."""
+        import json
+
+        if not statement or not str(statement).lstrip().startswith("{"):
+            return False
+        try:
+            return isinstance(json.loads(statement).get("messages"), list)
+        except (ValueError, AttributeError):
+            return False
+
+    @classmethod
+    def chat_attached(cls, order, side):
+        statement = order.maker_statement if side == "maker" else order.taker_statement
+        late = order.maker_chat_log if side == "maker" else order.taker_chat_log
+        return bool(late) or cls.statement_has_chat(statement)
+
+    MAX_CHAT_LOG = 1_000_000
+
+    @classmethod
+    def attach_dispute_chat(cls, order, user, chat_log):
+        """Roblosats (26 nov 2026, Kilombino TG 15581/15584): a party that sent its statement
+        without the chat attaches its decrypted chat later, once, while the dispute is open."""
+        import json
+
+        if order.status not in (Order.Status.DIS, Order.Status.WFR):
+            return False, {"bad_request": "The dispute is no longer open"}
+        if user == order.maker:
+            side = "maker"
+        elif user == order.taker:
+            side = "taker"
+        else:
+            return False, new_error(1047)
+        statement = order.maker_statement if side == "maker" else order.taker_statement
+        if statement in (None, ""):
+            return False, {"bad_request": "Send your statement first"}
+        if cls.chat_attached(order, side):
+            return False, {"bad_request": "Your chat is already attached to the dispute"}
+        if not chat_log or len(chat_log) > cls.MAX_CHAT_LOG:
+            return False, {"bad_request": "The chat could not be attached (empty or too long)"}
+        try:
+            messages = json.loads(chat_log)
+            if isinstance(messages, dict):
+                messages = messages.get("messages")
+            if not isinstance(messages, list):
+                raise ValueError
+        except ValueError:
+            return False, {"bad_request": "The chat could not be attached (not a chat log)"}
+        now = timezone.now()
+        updated = Order.objects.filter(pk=order.pk, **{f"{side}_chat_log__isnull": True}).update(
+            **{f"{side}_chat_log": json.dumps({"messages": messages}, ensure_ascii=False),
+               f"{side}_chat_log_at": now}
+        )
+        if not updated:
+            return False, {"bad_request": "Your chat is already attached to the dispute"}
+        order.refresh_from_db()
+        order.log(
+            f"Robot({user.robot.id},{user.username}) attached its chat ({len(messages)} messages) to the dispute"
+        )
+        try:
+            from roblosats_admin import alerts
+
+            alerts.queue("dispute_evidence", order.id, {"side": side, "messages": len(messages)})
+        except Exception:
+            pass
+        return True, None
+
     def dispute_statement(order, user, statement):
         """Updates the dispute statements"""
 

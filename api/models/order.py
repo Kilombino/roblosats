@@ -278,6 +278,12 @@ class Order(models.Model):
     taker_statement = models.TextField(
         max_length=50_000, null=True, default=None, blank=True
     )
+    # Roblosats (26 nov 2026): a party's decrypted chat attached after its statement, once
+    # (the statement may already carry it; then this stays empty), and when it was attached.
+    maker_chat_log = models.TextField(null=True, default=None, blank=True)
+    taker_chat_log = models.TextField(null=True, default=None, blank=True)
+    maker_chat_log_at = models.DateTimeField(null=True, default=None, blank=True)
+    taker_chat_log_at = models.DateTimeField(null=True, default=None, blank=True)
 
     # LNpayments
     # Order collateral

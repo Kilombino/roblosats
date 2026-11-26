@@ -24,9 +24,9 @@ describe('mixta C/D: Lightning order taken with an onchain bond', () => {
     expect(hybridBondStep(order({ ...o, status: 14, bond_status_code: 5 }))).toBe(true);
     expect(hybridBondStep(order({ ...o, status: 9, bond_status_code: 2 }))).toBe(false);
     // the maker of a mixta C order has a Lightning bond: nothing onchain to take back
-    expect(
-      hybridBondStep(order({ ...o, is_maker: true, status: 14, bond_status_code: 5 })),
-    ).toBe(false);
+    expect(hybridBondStep(order({ ...o, is_maker: true, status: 14, bond_status_code: 5 }))).toBe(
+      false,
+    );
   });
 
   it('mixta C: the onchain-bond buyer is offered the onchain payout first', () => {

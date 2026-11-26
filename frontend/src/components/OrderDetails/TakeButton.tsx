@@ -86,7 +86,7 @@ const TakeButton = ({
     !isOnchainOrder &&
     Boolean(
       info?.onchain_take ??
-        garage.getSlot()?.getRobot(currentOrder?.shortAlias ?? '')?.onchainEscrow?.takeLnOrders,
+      garage.getSlot()?.getRobot(currentOrder?.shortAlias ?? '')?.onchainEscrow?.takeLnOrders,
     );
   const onchainLnTake = onchainTakeOfLn && lnBondWith === 'onchain';
   // The maker's order type: 0 = the maker buys (the taker sells), 1 = the maker sells.

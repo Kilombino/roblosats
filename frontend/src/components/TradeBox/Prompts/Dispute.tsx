@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Checkbox,
@@ -13,29 +13,11 @@ import {
 import { LoadingButton } from '@mui/lab';
 import { Contact, Order } from '../../../models';
 import { UseFederationStoreType, FederationContext } from '../../../contexts/FederationContext';
-import { apiClient } from '../../../services/api';
-import { GarageContext, UseGarageStoreType } from '../../../contexts/GarageContext';
-import { EncryptedChatMessage, ServerMessage } from '../EncryptedChat';
-import { decryptMessage } from '../../../pgp';
 import { SubmitActionProps } from '../index';
+import { useDisputeChat } from './useDisputeChat';
+import { type DisputeForm, statementWithChat } from './disputeStatement';
 
-export interface DisputeForm {
-  statement: string;
-  contactMethod: string;
-  badContact: string;
-  contact: string;
-  attachLogs: boolean;
-  badStatement: string;
-}
-
-export const defaultDispute: DisputeForm = {
-  statement: '',
-  attachLogs: false,
-  contactMethod: '',
-  contact: '',
-  badContact: '',
-  badStatement: '',
-};
+export { type DisputeForm, defaultDispute } from './disputeStatement';
 
 interface DisputePromptProps {
   submitAction: (propr: SubmitActionProps) => void;
@@ -54,12 +36,12 @@ export const DisputePrompt = ({
 }: DisputePromptProps): React.JSX.Element => {
   const { t } = useTranslation();
   const { federation } = useContext<UseFederationStoreType>(FederationContext);
-  const { garage } = useContext<UseGarageStoreType>(GarageContext);
 
   const contactMethods: Contact = federation.getCoordinator(shortAlias)?.contact ?? {};
 
-  const [messages, setMessages] = useState<EncryptedChatMessage[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const { messages, loading: loadingChat } = useDisputeChat(order, shortAlias);
+  const [sending, setSending] = useState<boolean>(false);
+  const loading = loadingChat || sending;
 
   const submitStatement = function (): void {
     let statement = dispute.statement;
@@ -73,67 +55,13 @@ export const DisputePrompt = ({
     } else {
       const { contactMethod, contact } = dispute;
       statement = `${contactMethod ?? ''}: ${contact ?? ''} \n\n ${statement}`;
-      if (dispute.attachLogs) {
-        const payload = { statement, messages };
-        statement = JSON.stringify(payload, null, 2);
-      }
+      // 26 nov 2026: a long chat no longer makes the statement too long: it goes apart
+      const sent = statementWithChat(statement, messages, dispute.attachLogs);
+      statement = sent.statement;
+      const chatLog = sent.chatLog;
 
-      setLoading(true);
-      submitAction({ action: 'submit_statement', statement });
-    }
-  };
-
-  useEffect(() => {
-    const url = federation.getCoordinator(shortAlias)?.url ?? '';
-    if (!url) return;
-    apiClient
-      .get(url, `/api/chat/?order_id=${order.id}&offset=0`, {
-        tokenSHA256: garage.getSlot()?.getRobot()?.tokenSHA256 ?? '',
-      })
-      .then((results: object | undefined) => {
-        if (results != null) {
-          const r = results as { messages: ServerMessage[]; peer_pubkey?: string };
-          void decryptMessages(r.messages, (r.peer_pubkey ?? '').split('\\').join('\n'));
-        }
-      });
-  }, []);
-
-  const decryptMessages = async (serverMessages: ServerMessage[], peerPubKey: string) => {
-    const slot = garage.getSlot();
-    const robot = slot?.getRobot();
-
-    if (slot && robot) {
-      for (const dataFromServer of serverMessages) {
-        if (dataFromServer.message.substring(0, 27) === `-----BEGIN PGP MESSAGE-----`) {
-          const senderPubKey = dataFromServer.nick === slot.nickname ? robot.pubKey : peerPubKey;
-          if (!senderPubKey || !robot.encPrivKey || !slot.token) {
-            console.warn('[DisputePrompt] skipping decrypt: missing keys or token', {
-              hasSenderPubKey: Boolean(senderPubKey),
-              hasEncPrivKey: Boolean(robot.encPrivKey),
-              hasToken: Boolean(slot.token),
-            });
-            continue;
-          }
-          const decryptedData = await decryptMessage(
-            dataFromServer.message.split('\\').join('\n'),
-            senderPubKey,
-            robot.encPrivKey,
-            slot.token,
-          );
-          setMessages((prev: EncryptedChatMessage[]) => {
-            const x: EncryptedChatMessage = {
-              index: dataFromServer.index,
-              encryptedMessage: dataFromServer.message.split('\\').join('\n'),
-              plainTextMessage: decryptedData.decryptedMessage,
-              validSignature: decryptedData.validSignature,
-              userNick: dataFromServer.nick,
-              time: dataFromServer.time,
-            };
-            return [...prev, x].sort((a, b) => a.index - b.index);
-          });
-        }
-      }
-      setLoading(false);
+      setSending(true);
+      submitAction({ action: 'submit_statement', statement, chat_log: chatLog });
     }
   };
 

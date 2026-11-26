@@ -250,6 +250,16 @@ def parse_statement(raw):
     return {"text": str(raw), "messages": []}
 
 
+def with_late_chat(statement, raw_log, at):
+    """26 nov 2026: the chat a party attached after its statement joins that statement's
+    chat, with when it was attached."""
+    late = parse_statement(raw_log)
+    if not late or not late["messages"]:
+        return statement
+    base = statement or {"text": "", "messages": []}
+    return {**base, "messages": base["messages"] + late["messages"], "chat_attached_at": fmt_time(at)}
+
+
 def find_contacts(text):
     found = []
     for email in _RE_EMAIL.findall(text or ""):
@@ -843,8 +853,8 @@ def _context(order_admin, request, order, confirm=None):
             role_by_nick[user.username] = role
             label_by_robot[user.robot.id] = f"{role_name(role)} ({user.username})"
 
-    maker_st = parse_statement(order.maker_statement)
-    taker_st = parse_statement(order.taker_statement)
+    maker_st = with_late_chat(parse_statement(order.maker_statement), order.maker_chat_log, order.maker_chat_log_at)
+    taker_st = with_late_chat(parse_statement(order.taker_statement), order.taker_chat_log, order.taker_chat_log_at)
     buyer_st = maker_st if r["maker_buys"] else taker_st
     seller_st = taker_st if r["maker_buys"] else maker_st
 

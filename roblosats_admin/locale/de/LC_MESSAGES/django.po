@@ -2319,8 +2319,22 @@ msgctxt "roblosats-admin"
 msgid "Order %(id)s: %(sats)s sats were sent to the %(role)s's on-chain address on the WRONG chain (Spamcoin, SHA-256); the robot was told how to take them back"
 msgstr "Auftrag %(id)s: %(sats)s Sats wurden auf der FALSCHEN Chain (Spamcoin, SHA-256) an die On-Chain-Adresse des %(role)s gesendet; dem Roboter wurde erklärt, wie er sie zurückholt"
 
+msgctxt "roblosats-admin"
 msgid "Hybrid C (on-chain buyer bond)"
 msgstr ""
 
+msgctxt "roblosats-admin"
 msgid "Hybrid D (on-chain seller)"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "attached after the statement, %(time)s"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Chat attached to a dispute after the statement"
+msgstr ""
+
+msgctxt "roblosats-admin"
+msgid "Order %(id)s: the %(who)s attached their chat to the dispute (%(n)s messages)"
 msgstr ""
