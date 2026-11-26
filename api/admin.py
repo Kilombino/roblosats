@@ -79,6 +79,21 @@ class RobotInline(admin.StackedInline):
     show_change_link = True
 
 
+
+def buyer_trade_sats(order, buyer):
+    """What a buyer who wins a dispute is credited from the trade: their payout invoice or onchain
+    payout, or, when they never gave one or it has no amount yet (26 nov 2026, #29: an onchain
+    payout started without an amount), what the app would have asked them
+    to invoice (the escrow less their trade fee)."""
+    if order.is_swap and order.payout_tx and order.payout_tx.num_satoshis:
+        return order.payout_tx.num_satoshis
+    if order.payout and order.payout.num_satoshis:
+        return order.payout.num_satoshis
+    valid, context = Logics.payout_amount(order, buyer)
+    if not valid or not context or not context.get("invoice_amount"):
+        raise ValueError(f"order {order.id}: no payout and no amount to credit the buyer")
+    return int(context["invoice_amount"])
+
 @admin.register(User)
 class EUserAdmin(AdminChangeLinksMixin, UserAdmin):
     inlines = [RobotInline]
@@ -277,10 +292,11 @@ class OrderAdmin(AdminChangeLinksMixin, admin.ModelAdmin):
             if locked is not None:
                 order = locked
                 if Logics.is_buyer(order, order.maker):
-                    if order.is_swap:
-                        trade_sats = order.payout_tx.num_satoshis
-                    else:
-                        trade_sats = order.payout.num_satoshis
+                    try:
+                        trade_sats = buyer_trade_sats(order, order.maker)
+                    except ValueError as e:
+                        self.message_user(request, str(e), messages.ERROR)
+                        continue
                     # rl31-beta21, hybrid B: paid in rewards, no swap: the seller's swap
                     # surcharge goes back to the seller
                     hybrid_swap.refund_all_to_seller(order, "dispute won by the buyer: no swap")
@@ -334,10 +350,11 @@ class OrderAdmin(AdminChangeLinksMixin, admin.ModelAdmin):
             if locked is not None:
                 order = locked
                 if Logics.is_buyer(order, order.taker):
-                    if order.is_swap:
-                        trade_sats = order.payout_tx.num_satoshis
-                    else:
-                        trade_sats = order.payout.num_satoshis
+                    try:
+                        trade_sats = buyer_trade_sats(order, order.taker)
+                    except ValueError as e:
+                        self.message_user(request, str(e), messages.ERROR)
+                        continue
                     # rl31-beta21, hybrid B: paid in rewards, no swap: the seller's swap
                     # surcharge goes back to the seller
                     hybrid_swap.refund_all_to_seller(order, "dispute won by the buyer: no swap")
