@@ -12,7 +12,7 @@ import { summaryAmountText } from '../../utils/spamAmounts';
 import { systemClient } from '../../services/System';
 import { TxLine } from '../TradeBox/Prompts/OnchainEscrow';
 import { groupAddress } from '../../utils/address';
-import { bondStateOf } from './bondState';
+import { bondStateOf, rewardReasonKey } from './bondState';
 
 export interface FinalSummaryData {
   order_id: number;
@@ -57,6 +57,12 @@ export interface FinalSummaryData {
   swap_for_buyer_sats?: number;
   swap_paid_by_seller_sats?: number;
   rewards_sats?: number;
+  /** 26 nov 2026: the rewards of the order by reason (all Lightning rewards) */
+  rewards?: Array<{ reason: string; sats: number }>;
+  /** 26 nov 2026: an on-chain bond penalized when the dispute opened, credited back by value */
+  bond_credited_sats?: number;
+  /** 26 nov 2026: on which layer the trade moved: lightning | onchain | onchain_swap */
+  trade_layer?: 'lightning' | 'onchain' | 'onchain_swap';
   // 0.9.7: status of onchain payouts and releases: mempool | confirmed | queued
   txs?: Array<{ label: string; txid: string; status?: string | null }>;
   hashes?: Array<{ label: string; value: string }>;
@@ -226,12 +232,29 @@ const FinalSummary = ({
     case 'rewards':
       bondState = t('Returned as rewards');
       break;
+    case 'credited':
+      bondState =
+        s.bond_kind === 'onchain'
+          ? t(
+              'Penalized on chain when the dispute opened; its value ({{amount}}) credited to your rewards (Lightning)',
+              { amount: sats(s.bond_credited_sats ?? s.bond_sats) },
+            )
+          : t('Credited to your rewards (Lightning)');
+      break;
     case 'not_locked':
       bondState = t('Never locked');
       break;
     default:
       bondState = '';
   }
+  const layer =
+    s.trade_layer === 'onchain'
+      ? t('onchain')
+      : s.trade_layer === 'onchain_swap'
+        ? t('onchain, through the swap')
+        : s.trade_layer === 'lightning'
+          ? t('Lightning')
+          : '';
   const fee = s.coordinator_fee_sats ?? 0;
   const feeLabel = s.fee_from_bond
     ? t('Coordinator fee (out of your bond)')
@@ -270,9 +293,15 @@ const FinalSummary = ({
       {s.contract && (s.trade_sats ?? 0) > 0 ? (
         <Row label={t('Trade amount')} value={sats(s.trade_sats)} />
       ) : null}
-      {(s.sent_sats ?? 0) > 0 ? <Row label={t('You sent')} value={sats(s.sent_sats)} /> : null}
+      {(s.sent_sats ?? 0) > 0 ? (
+        <Row label={`${t('You sent')}${layer ? ` (${layer})` : ''}`} value={sats(s.sent_sats)} />
+      ) : null}
       {(s.received_sats ?? 0) > 0 ? (
-        <Row label={t('You received')} value={sats(s.received_sats)} color='success.main' />
+        <Row
+          label={`${t('You received')}${layer ? ` (${layer})` : ''}`}
+          value={sats(s.received_sats)}
+          color='success.main'
+        />
       ) : null}
       {(s.returned_sats ?? 0) > 0 ? (
         <Row label={t('Returned to you')} value={sats(s.returned_sats)} />
@@ -338,11 +367,17 @@ const FinalSummary = ({
       ) : null}
       {(s.rewards_sats ?? 0) > 0 ? (
         <Row
-          label={t('Rewards for this order')}
+          label={t('Rewards for this order (Lightning)')}
           value={sats(s.rewards_sats)}
           color='success.main'
         />
       ) : null}
+      {(s.rewards ?? []).length > 1 ||
+      ((s.rewards ?? []).length === 1 && s.rewards?.[0].reason !== 'other')
+        ? (s.rewards ?? []).map((r) => (
+            <Row key={r.reason} label={`· ${t(rewardReasonKey(r.reason))}`} value={sats(r.sats)} />
+          ))
+        : null}
       <Divider sx={{ my: 0.75 }} />
       {fee > 0 || ['success', 'sending'].includes(s.outcome) ? (
         <Row label={feeLabel} value={sats(fee)} />

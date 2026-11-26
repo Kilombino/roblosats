@@ -96,6 +96,61 @@ def _onchain_bond(bond):
     return "not_locked", 0, 0, 0, txs
 
 
+# 26 nov 2026 (Kilombino TG 15592/15596): every reward of an order says why it was credited.
+_ADMIN_NOTES = {
+    "maker_wins": "bond_and_trade", "taker_wins": "bond_and_trade",
+    "maker_wins_trade": "trade_amount", "taker_wins_trade": "trade_amount",
+    "maker_bond": "bond_value", "taker_bond": "bond_value", "bond_back": "bond_value",
+    "escrow": "escrow_back", "escrow_back": "escrow_back",
+}
+_KINDS = {
+    "slash_reward": "other_bond_share",
+    "slash_return": "bond_difference",
+    "dispute_bond_back": "bond_value",
+    "swap_surcharge_back": "swap_surcharge_refund",
+}
+
+
+def _reward_rows(user, order):
+    """[(kind, note, amount)] of this robot's rewards for this order."""
+    from api.logics import LEDGER_TABLE, ensure_ledger
+
+    try:
+        ensure_ledger()
+        with connection.cursor() as c:
+            c.execute(
+                f"SELECT kind, COALESCE(note, ''), amount FROM {LEDGER_TABLE} "
+                "WHERE robot_id = %s AND order_id = %s AND amount > 0 ORDER BY id",
+                [user.robot.pk, order.id],
+            )
+            return list(c.fetchall())
+    except Exception:
+        return []
+
+
+def rewards_breakdown(user, order, bond_sats):
+    """[{reason, sats}] (all Lightning rewards): trade_amount, bond_value, escrow_back,
+    other_bond_share, bond_difference, swap_surcharge_refund, other. A "won the dispute" credit
+    of bond + trade is split using the robot's bond."""
+    out = {}
+
+    def add(reason, sats):
+        if sats > 0:
+            out[reason] = out.get(reason, 0) + int(sats)
+
+    for kind, note, amount in _reward_rows(user, order):
+        reason = _ADMIN_NOTES.get(note, "other") if kind == "admin" else _KINDS.get(kind, "other")
+        if reason == "bond_and_trade":
+            bond = min(int(bond_sats or 0), int(amount))
+            add("bond_value", bond)
+            add("trade_amount", int(amount) - bond)
+        else:
+            add(reason, amount)
+    order_ = ["trade_amount", "escrow_back", "bond_value", "other_bond_share", "bond_difference",
+              "swap_surcharge_refund", "other"]
+    return [{"reason": r, "sats": out[r]} for r in order_ if r in out]
+
+
 def _rewards(user, order):
     """Rewards credited to this robot for this order (reward ledger)."""
     from api.logics import LEDGER_TABLE, ensure_ledger
@@ -554,8 +609,18 @@ def final_summary(order, user, former_taker=False):
         _apply_onchain_trade(s, order, user, role)
     else:
         _apply_lightning_trade(s, order)
+    s["rewards"] = rewards_breakdown(user, order, s["bond_sats"])
+    credited = sum(r["sats"] for r in s["rewards"] if r["reason"] == "bond_value")
+    if s["bond_state"] == "lost" and s["bond_sats"] > 0 and credited >= s["bond_sats"]:
+        # 26 nov 2026 (#29): an on-chain bond penalized when the dispute opened, whose owner won
+        # and got its value back as a Lightning reward: not lost
+        s["bond_state"] = "credited"
+        s["bond_lost_sats"] = 0
+        s["bond_credited_sats"] = credited
     if s["bond_lost_sats"] > 0 or s["bond_state"] == "lost":
         s["bond_lost_reason"] = _lost_reason(order, role, s["outcome"])
+    # 26 nov 2026: on which layer the trade moved for this robot
+    s["trade_layer"] = "onchain" if flow.is_onchain(order) else ("onchain_swap" if order.is_swap else "lightning")
     # Dedupe txids (a bond txid may also be the deposit's parent; keep the first label).
     seen, txs = set(), []
     for t in s["txs"]:

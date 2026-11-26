@@ -1300,5 +1300,17 @@
   "Your chat is attached to the dispute.": "Tu chat está adjunto a la disputa.",
   "You did not attach the chat to your statement. You can attach it now, once: it helps the coordinator decide, but it shows them your conversation.": "No adjuntaste el chat a tu declaración. Puedes adjuntarlo ahora, una sola vez: ayuda al coordinador a decidir, pero le muestra vuestra conversación.",
   "Attach the chat": "Adjuntar el chat",
-  "There are no chat messages to attach.": "No hay mensajes de chat que adjuntar."
+  "There are no chat messages to attach.": "No hay mensajes de chat que adjuntar.",
+  "Trade amount (Lightning reward)": "Importe de la operación (recompensa Lightning)",
+  "Your escrow back (Lightning reward)": "Tu escrow devuelto (recompensa Lightning)",
+  "Your bond's value (Lightning reward)": "Valor de tu fianza (recompensa Lightning)",
+  "Part of the other party's bond (Lightning reward)": "Parte de la fianza de la otra parte (recompensa Lightning)",
+  "Rest of your bond (Lightning reward)": "Resto de tu fianza (recompensa Lightning)",
+  "Refund of your onchain swap surcharge, no swap (Lightning reward)": "Devolución de tu recargo del swap on-chain, no hubo swap (recompensa Lightning)",
+  "Other reward (Lightning)": "Otra recompensa (Lightning)",
+  "Penalized on chain when the dispute opened; its value ({{amount}}) credited to your rewards (Lightning)": "Penalizada on-chain al abrirse la disputa; su valor ({{amount}}) abonado a tus recompensas (Lightning)",
+  "Credited to your rewards (Lightning)": "Abonada a tus recompensas (Lightning)",
+  "Rewards for this order (Lightning)": "Recompensas de esta orden (Lightning)",
+  "onchain": "on-chain",
+  "onchain, through the swap": "on-chain, mediante el swap"
 }

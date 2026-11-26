@@ -15,6 +15,7 @@ import QRCode from 'react-qr-code';
 
 import { type Order } from '../../../models';
 import { systemClient } from '../../../services/System';
+import { explorerTxUrl } from '../../FinalSummary/bondState';
 import { pn } from '../../../utils';
 import {
   myExtraInEscrow,
@@ -79,7 +80,6 @@ interface Props {
 const BOND = { FUNDING: 0, SIGN: 1, LOCKED: 2, RETURNABLE: 5, RETURNED: 6, ABANDONED: 7 };
 const ESCROW = { KEYS: 0, FUNDING: 1, MEMPOOL: 2, LOCKED: 3, RELEASING: 4 };
 
-const EXPLORER = 'https://mempool.kilombino.com/tx/';
 
 /** A transaction of the trade: short txid, copy button and a link to the explorer. */
 /** A leftover already sent back (rl31-beta20): done, with its TXID and the explorer. */
@@ -131,7 +131,7 @@ export const TxLine = ({ label, txid }: { label: string; txid: string }): React.
           size='small'
           sx={{ textTransform: 'none' }}
           startIcon={<OpenInNew />}
-          href={`${EXPLORER}${txid}`}
+          href={explorerTxUrl(txid)}
           target='_blank'
           rel='noreferrer'
         >

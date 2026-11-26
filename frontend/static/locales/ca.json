@@ -1300,5 +1300,17 @@
   "Your chat is attached to the dispute.": "El teu xat està adjuntat a la disputa.",
   "You did not attach the chat to your statement. You can attach it now, once: it helps the coordinator decide, but it shows them your conversation.": "No vas adjuntar el xat a la teva declaració. Pots adjuntar-lo ara, una sola vegada: ajuda el coordinador a decidir, però li mostra la vostra conversa.",
   "Attach the chat": "Adjuntar el xat",
-  "There are no chat messages to attach.": "No hi ha missatges de xat per adjuntar."
+  "There are no chat messages to attach.": "No hi ha missatges de xat per adjuntar.",
+  "Trade amount (Lightning reward)": "Import de l'operació (recompensa Lightning)",
+  "Your escrow back (Lightning reward)": "El teu escrow retornat (recompensa Lightning)",
+  "Your bond's value (Lightning reward)": "Valor de la teva fiança (recompensa Lightning)",
+  "Part of the other party's bond (Lightning reward)": "Part de la fiança de l'altra part (recompensa Lightning)",
+  "Rest of your bond (Lightning reward)": "Resta de la teva fiança (recompensa Lightning)",
+  "Refund of your onchain swap surcharge, no swap (Lightning reward)": "Devolució del teu recàrrec del swap on-chain, no hi va haver swap (recompensa Lightning)",
+  "Other reward (Lightning)": "Una altra recompensa (Lightning)",
+  "Penalized on chain when the dispute opened; its value ({{amount}}) credited to your rewards (Lightning)": "Penalitzada on-chain en obrir-se la disputa; el seu valor ({{amount}}) abonat a les teves recompenses (Lightning)",
+  "Credited to your rewards (Lightning)": "Abonada a les teves recompenses (Lightning)",
+  "Rewards for this order (Lightning)": "Recompenses d'aquesta ordre (Lightning)",
+  "onchain": "on-chain",
+  "onchain, through the swap": "on-chain, mitjançant el swap"
 }

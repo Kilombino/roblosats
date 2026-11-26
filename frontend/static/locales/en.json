@@ -1286,5 +1286,17 @@
   "Your chat is attached to the dispute.": "Your chat is attached to the dispute.",
   "You did not attach the chat to your statement. You can attach it now, once: it helps the coordinator decide, but it shows them your conversation.": "You did not attach the chat to your statement. You can attach it now, once: it helps the coordinator decide, but it shows them your conversation.",
   "Attach the chat": "Attach the chat",
-  "There are no chat messages to attach.": "There are no chat messages to attach."
+  "There are no chat messages to attach.": "There are no chat messages to attach.",
+  "Trade amount (Lightning reward)": "Trade amount (Lightning reward)",
+  "Your escrow back (Lightning reward)": "Your escrow back (Lightning reward)",
+  "Your bond's value (Lightning reward)": "Your bond's value (Lightning reward)",
+  "Part of the other party's bond (Lightning reward)": "Part of the other party's bond (Lightning reward)",
+  "Rest of your bond (Lightning reward)": "Rest of your bond (Lightning reward)",
+  "Refund of your onchain swap surcharge, no swap (Lightning reward)": "Refund of your onchain swap surcharge, no swap (Lightning reward)",
+  "Other reward (Lightning)": "Other reward (Lightning)",
+  "Penalized on chain when the dispute opened; its value ({{amount}}) credited to your rewards (Lightning)": "Penalized on chain when the dispute opened; its value ({{amount}}) credited to your rewards (Lightning)",
+  "Credited to your rewards (Lightning)": "Credited to your rewards (Lightning)",
+  "Rewards for this order (Lightning)": "Rewards for this order (Lightning)",
+  "onchain": "onchain",
+  "onchain, through the swap": "onchain, through the swap"
 }
