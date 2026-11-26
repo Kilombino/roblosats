@@ -27,6 +27,7 @@ import {
   SettingsApplications,
 } from '@mui/icons-material';
 import { TorIcon, RoboSatsTextIcon } from '../../../components/Icons';
+import { ZAPSTORE_APP_URL, ZapstoreIcon, showGetAndroidApp } from '../../../components/GetAndroidApp';
 import RobotAvatar from '../../../components/RobotAvatar';
 import { useTranslation } from 'react-i18next';
 import { UseFederationStoreType, FederationContext } from '../../../contexts/FederationContext';
@@ -237,6 +238,17 @@ const MenuDrawer = ({ show, setShow }: MenuDrawerProps): React.JSX.Element => {
               <ListItemText primary={t('Client info')} />
             </ListItemButton>
           </ListItem>
+          {/* 0.9.16: the Android app, offered on the web only */}
+          {showGetAndroidApp(client) ? (
+            <ListItem disablePadding>
+              <ListItemButton component='a' href={ZAPSTORE_APP_URL} target='_blank' rel='noreferrer'>
+                <ListItemIcon sx={{ minWidth: 56 }}>
+                  <ZapstoreIcon />
+                </ListItemIcon>
+                <ListItemText primary={t('Get the Android app on Zapstore')} />
+              </ListItemButton>
+            </ListItem>
+          ) : null}
           <div style={{ flexGrow: 1 }} />
           <ListItem disablePadding>
             <ListItemButton onClick={() => changePage('settings')}>

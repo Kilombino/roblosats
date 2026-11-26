@@ -1327,5 +1327,7 @@
   "You receive {{amount}} Sats": "Recibes {{amount}} Sats",
   "You receive onchain {{amount}} Sats": "Recibes on-chain {{amount}} Sats",
   "(routing budget {{sats}} Sats)": "(presupuesto de enrutamiento {{sats}} Sats)",
-  "Unknown": "Desconocido"
+  "Unknown": "Desconocido",
+  "Get the Android app on Zapstore": "Consigue la app de Android en Zapstore",
+  "Also on": "También en"
 }

@@ -18,13 +18,15 @@ const StyledTooltip = styled(({ className, ...props }: TooltipProps) => (
   },
 }));
 
+import { ZAPSTORE_APP_URL, ZapstoreIcon, showGetAndroidApp } from '../../../components/GetAndroidApp';
+
 interface MoreTooltipProps {
   children: React.JSX.Element;
 }
 
 const MoreTooltip = ({ children }: MoreTooltipProps): React.JSX.Element => {
   const { t } = useTranslation();
-  const { open, setOpen } = useContext<UseAppStoreType>(AppContext);
+  const { open, setOpen, client } = useContext<UseAppStoreType>(AppContext);
 
   const theme = useTheme();
   return (
@@ -98,6 +100,22 @@ const MoreTooltip = ({ children }: MoreTooltipProps): React.JSX.Element => {
               </IconButton>
             </Tooltip>
           </Grid>
+
+          {/* 0.9.16: the Android app, offered on the web only */}
+          {showGetAndroidApp(client) ? (
+            <Grid sx={{ position: 'relative', right: '0.4em' }}>
+              <Tooltip enterTouchDelay={250} placement='left' title={t('Get the Android app on Zapstore')}>
+                <IconButton
+                  href={ZAPSTORE_APP_URL}
+                  target='_blank'
+                  rel='noreferrer'
+                  sx={{ color: theme.palette.text.secondary }}
+                >
+                  <ZapstoreIcon />
+                </IconButton>
+              </Tooltip>
+            </Grid>
+          ) : null}
 
           <Grid sx={{ position: 'relative', right: '0.4em' }}>
             <Tooltip enterTouchDelay={250} placement='left' title={t('client for nerds')}>

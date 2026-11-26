@@ -8,6 +8,7 @@ import { type UseGarageStoreType, GarageContext } from '../../contexts/GarageCon
 import { useNavigate } from 'react-router-dom';
 import { type UseAppStoreType, AppContext } from '../../contexts/AppContext';
 import useLegacyMode from '../../hooks/useLegacyMode';
+import { GetAndroidAppBadge, showGetAndroidApp } from '../../components/GetAndroidApp';
 
 interface WelcomeProps {
   setView: (state: 'welcome' | 'onboarding' | 'profile') => void;
@@ -16,7 +17,7 @@ interface WelcomeProps {
 }
 
 const Welcome = ({ setView, width, setInputToken }: WelcomeProps): React.JSX.Element => {
-  const { navigateToPage } = useContext<UseAppStoreType>(AppContext);
+  const { navigateToPage, client } = useContext<UseAppStoreType>(AppContext);
   const { t } = useTranslation();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -164,6 +165,12 @@ const Welcome = ({ setView, width, setInputToken }: WelcomeProps): React.JSX.Ele
           </span>
         </Tooltip>
       </Grid>
+      {/* 0.9.16: the Android app, offered on the web only */}
+      {showGetAndroidApp(client) ? (
+        <Grid sx={{ position: 'relative', bottom: '0.3em' }}>
+          <GetAndroidAppBadge />
+        </Grid>
+      ) : null}
     </Grid>
   );
 };
