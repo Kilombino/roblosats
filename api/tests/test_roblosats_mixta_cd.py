@@ -372,6 +372,9 @@ class Race(MixtaBase):
         self.assertEqual(b2.status, OnchainBond.Status.RETURNABLE)
 
 
+# 0.9.17: these robots have no PGP keys, so they act as an app too old to sign
+# (transition mode); the signature gate itself is tested in test_signed_actions.
+@patch("api.utils.REQUIRE_SIGNED_ACTIONS", False)
 class TakeOnchainView(MixtaBase):
     """The take request with take_onchain on a Lightning order, through the view."""
 

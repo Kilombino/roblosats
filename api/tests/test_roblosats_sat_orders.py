@@ -119,6 +119,9 @@ class SatOrderNostr(SatOrderBase):
 
 
 @override_settings(DEFAULT_BOND_SIZE=3)
+# 0.9.17: these robots have no PGP keys, so they act as an app too old to sign
+# (transition mode); the signature gate itself is tested in test_signed_actions.
+@patch("api.utils.REQUIRE_SIGNED_ACTIONS", False)
 class SatOrderApi(FixedPriceApi, SatOrderBase):
     def test_make_with_fixed_total(self):
         c = self.spamcoin()

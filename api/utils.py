@@ -919,6 +919,147 @@ def verify_signed_message(pub_key, signed_message):
         return False, None
 
 
+REQUIRE_SIGNED_ACTIONS = config("REQUIRE_SIGNED_ACTIONS", cast=bool, default=True)
+# In transition mode, tell a robot (once, as an in-app notification on its order) that its
+# app is too old to sign.
+WARN_UNSIGNED_CLIENTS = config("WARN_UNSIGNED_CLIENTS", cast=bool, default=True)
+ACTION_SIGNATURE_WINDOW = 300
+
+
+def robot_recovery_url():
+    """
+    Where a user can recover their robot with a client able to sign. CLEARNET_ORDER_URL's web
+    client when there is one (e.g. https://roblosats.kilombino.com), else the onion.
+    """
+    clearnet = config("CLEARNET_ORDER_URL", cast=str, default="").strip()
+    if clearnet:
+        return clearnet.split("/order/")[0]
+    return f"http://{config('HOST_NAME')}"
+
+
+# Users already noted while enforcement is off: one log line per user per process.
+SHADOW_MODE_WARNED = set()
+
+
+def warn_shadow_mode_unsigned(user, context):
+    if user.pk in SHADOW_MODE_WARNED:
+        return
+    SHADOW_MODE_WARNED.add(user.pk)
+    logger.warning(
+        "Unsigned '%s' from user %s with REQUIRE_SIGNED_ACTIONS off "
+        "(client too old to sign?)",
+        context,
+        user.pk,
+    )
+
+
+def _missing_signature(user, context):
+    """
+    A request without a signature. Refused (1059) with enforcement on, or for a robot that
+    already signed here once (its app signs, so an unsigned write for it can only be a
+    replayed bearer token). Otherwise, in transition mode, an outdated app keeps working.
+    """
+    robot = Robot.objects.get(user=user)
+    if REQUIRE_SIGNED_ACTIONS or robot.signs_actions_since is not None:
+        return False, new_error(1059, {"recover_url": robot_recovery_url()})
+    warn_shadow_mode_unsigned(user, context)
+    return True, None
+
+
+def _mark_signed(user):
+    Robot.objects.filter(user=user, signs_actions_since__isnull=True).update(
+        signs_actions_since=timezone.now()
+    )
+
+
+def warn_unsigned_client(user, order):
+    """
+    Transition mode: one in-app notification (on this order) telling the robot that its app is
+    too old to sign and should be updated. Nothing else changes for it.
+    """
+    if not WARN_UNSIGNED_CLIENTS or REQUIRE_SIGNED_ACTIONS or order is None:
+        return
+    claimed = Robot.objects.filter(
+        user=user, unsigned_warned_at__isnull=True, signs_actions_since__isnull=True
+    ).update(unsigned_warned_at=timezone.now())
+    if not claimed:
+        return
+    try:
+        from api.models import Notification
+        from api.step_alerts import lang_of
+
+        robot = Robot.objects.get(user=user)
+        lang = lang_of(robot)
+        if lang == "es":
+            title = "🔄 Actualiza Roblosats: tu app es antigua y no firma las acciones. Sigue funcionando, pero la versión nueva protege mejor tu robot."
+        elif lang == "ca":
+            title = "🔄 Actualitza Roblosats: la teva app és antiga i no signa les accions. Continua funcionant, però la versió nova protegeix millor el teu robot."
+        else:
+            title = "🔄 Update Roblosats: your app is old and does not sign its actions. It keeps working, but the new version protects your robot better."
+        Notification.objects.create(
+            title=title[:240], description=robot_recovery_url()[:240], robot=robot, order=order
+        )
+    except Exception as e:
+        logger.error(f"unsigned client warning for user {user.pk}: {e}")
+
+
+def validate_action_signature(user, expected_content, signature):
+    """
+    Validates the signature of an order action: a cleartext PGP signature by the robot's key
+    whose content is exactly `expected_content` ('{action}:{order_id}:{shortAlias}'). A
+    signature that is present is always verified, whatever REQUIRE_SIGNED_ACTIONS says; a
+    valid one marks the robot as signing.
+    """
+    if not signature:
+        return _missing_signature(user, "order action")
+
+    public_key = Robot.objects.get(user=user).public_key
+    valid, content = verify_signed_message(public_key, signature)
+    if not valid or content != expected_content:
+        return False, new_error(1048)
+
+    _mark_signed(user)
+    return True, None
+
+
+def validate_signed_action_timestamp(user, action, signature):
+    """
+    Validates the signature of a write outside an order: content
+    '{action}:{shortAlias}:{unix_ts}', alias = this coordinator's federation alias (1061 if
+    not), timestamp within ACTION_SIGNATURE_WINDOW (1060 if not).
+    """
+    if not signature:
+        return _missing_signature(user, action)
+
+    public_key = Robot.objects.get(user=user).public_key
+    valid, content = verify_signed_message(public_key, signature)
+    if not valid:
+        return False, new_error(1048)
+
+    prefix = f"{action}:"
+    if not content.startswith(prefix):
+        return False, new_error(1048)
+    try:
+        signed_alias, signed_ts = content[len(prefix) :].split(":", 1)
+        signed_at = int(signed_ts)
+    except (TypeError, ValueError):
+        return False, new_error(1048)
+
+    short_alias = get_federation_short_alias()
+    if signed_alias != short_alias:
+        return False, new_error(
+            1061,
+            {"signed_for_alias": signed_alias, "coordinator_alias": short_alias},
+        )
+
+    now = datetime.now(datetime_timezone.utc).timestamp()
+    if abs(now - signed_at) > ACTION_SIGNATURE_WINDOW:
+        return False, new_error(1060)
+
+    _mark_signed(user)
+    return True, None
+
+
 def base91_to_hex(base91_str: str) -> str:
     bytes_data = decode(base91_str)
     return bytes_data.hex()

@@ -1,4 +1,10 @@
 import { apiClient } from '../services/api';
+import {
+  orderActionContent,
+  signAction,
+  signAs,
+  timedActionContent,
+} from '../utils/actionSignature';
 import type Federation from './Federation.model';
 import type Slot from './Slot.model';
 import { toApiAmount } from '../utils/spamAmounts';
@@ -329,13 +335,33 @@ class Order {
     if (slot) {
       const coordinator = federation.getCoordinator(this.shortAlias);
       if (!coordinator || !coordinator.url) return this;
-      const authHeaders = slot.getRobot()?.getAuthHeaders();
-      if (!authHeaders) return this;
-      const data = await apiClient
-        .post(coordinator.url, '/api/make/', body, authHeaders)
-        .catch((e) => {
-          console.log(e);
-        });
+      // 0.9.17: the robot of this coordinator signs (silently) 'make:{alias}:{unix_ts}'
+      const robot = slot.ensureRobot(federation, this.shortAlias) ?? slot.getRobot();
+      const authHeaders = robot?.getAuthHeaders();
+      if (!robot || !authHeaders) return this;
+      const send = async (): Promise<unknown> => {
+        const signature = await signAs(
+          robot,
+          federation,
+          timedActionContent('make', this.shortAlias),
+        );
+        return await apiClient
+          .post(
+            coordinator.url,
+            '/api/make/',
+            { ...body, signature },
+            robot.getAuthHeaders() ?? authHeaders,
+          )
+          .catch((e) => {
+            console.log(e);
+          });
+      };
+      let data = (await send()) as { error_code?: number } | undefined;
+      // A key the coordinator does not hold (stale local key): refresh it once and retry.
+      if (data?.error_code === 1048) {
+        await robot.fetch(federation);
+        data = (await send()) as { error_code?: number } | undefined;
+      }
       if (data) this.update(data);
     }
 
@@ -375,13 +401,39 @@ class Order {
       if (slot) {
         const coordinator = federation.getCoordinator(this.shortAlias);
         if (!coordinator || !coordinator.url) return this;
-        const data = await apiClient
-          .post(coordinator.url, `/api/order/?order_id=${Number(this.id)}`, action, {
-            tokenSHA256: slot?.getRobot()?.tokenSHA256 ?? '',
-          })
-          .catch((e) => {
-            console.log(e);
-          });
+        // 0.9.17 signed actions: every order action (escrow_*/bond_* included) is signed by the
+        // robot of this order's coordinator over '{action}:{order_id}:{alias}'; a dispute
+        // statement is signed too. Silent: the token unlocks the key, as for invoices.
+        const robot = slot.ensureRobot(federation, this.shortAlias) ?? slot.getRobot();
+        const send = async (): Promise<unknown> => {
+          const signature = await signAs(
+            robot,
+            federation,
+            orderActionContent(action.action, Number(this.id), this.shortAlias),
+          );
+          let body: SubmitActionProps & { signature?: string } = { ...action, signature };
+          if (signature && action.action === 'submit_statement' && action.statement) {
+            const signedStatement = await signAction(
+              action.statement,
+              robot?.encPrivKey,
+              robot?.token,
+            ).catch(() => undefined);
+            body = signedStatement ? { ...body, statement: signedStatement } : { ...action }; // cannot sign the statement: send it as an old app would
+          }
+          return await apiClient
+            .post(coordinator.url, `/api/order/?order_id=${Number(this.id)}`, body, {
+              tokenSHA256: robot?.tokenSHA256 ?? slot?.getRobot()?.tokenSHA256 ?? '',
+            })
+            .catch((e) => {
+              console.log(e);
+            });
+        };
+        let data = (await send()) as { error_code?: number } | undefined;
+        // A key the coordinator does not hold (stale local key): refresh it once and retry.
+        if (data?.error_code === 1048 && robot) {
+          await robot.fetch(federation);
+          data = (await send()) as { error_code?: number } | undefined;
+        }
         if (data) this.updateFromReply(data);
       }
       return this;

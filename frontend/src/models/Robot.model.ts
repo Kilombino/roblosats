@@ -1,4 +1,5 @@
 import { apiClient, type Auth } from '../services/api';
+import { reviewActionContent, signAs, timedActionContent } from '../utils/actionSignature';
 import type Federation from './Federation.model';
 import i18next from 'i18next';
 
@@ -222,8 +223,18 @@ class Robot {
 
     const coordinator = federation.getCoordinator(this.shortAlias);
     if (!coordinator || !coordinator.url) return;
+    const signature = await signAs(
+      this,
+      federation,
+      timedActionContent('stealth', this.shortAlias),
+    );
     await apiClient
-      .post(coordinator.url, '/api/stealth/', { wantsStealth }, { tokenSHA256: this.tokenSHA256 })
+      .post(
+        coordinator.url,
+        '/api/stealth/',
+        { wantsStealth, signature },
+        { tokenSHA256: this.tokenSHA256 },
+      )
       .catch((e) => {
         console.log(e);
       });
@@ -243,8 +254,14 @@ class Robot {
 
     const coordinator = federation.getCoordinator(this.shortAlias);
     if (!coordinator || !coordinator.url) return;
+    const signature = await signAs(this, federation, timedActionContent('robot', this.shortAlias));
     await apiClient
-      .put(coordinator.url, '/api/robot/', settings, { tokenSHA256: this.tokenSHA256 })
+      .put(
+        coordinator.url,
+        '/api/robot/',
+        { ...settings, signature },
+        { tokenSHA256: this.tokenSHA256 },
+      )
       .then((raw) => {
         const data = raw as WebhookApiResponse | undefined;
         if (data) {
@@ -268,23 +285,24 @@ class Robot {
 
     const coordinator = federation.getCoordinator(this.shortAlias);
     if (!coordinator || !coordinator.url) return;
-    const body = {
-      pubkey: this.nostrPubKey,
-    };
-
-    apiClient
-      .post(coordinator.url, '/api/review/', body, {
-        tokenSHA256: this.tokenSHA256,
-      })
-      .then((raw) => {
-        const data = raw as ReviewApiResponse | undefined;
-        if (data?.token) {
-          onDataLoad(data.token);
-        }
-      })
-      .catch((e) => {
-        console.log(e);
-      });
+    void signAs(this, federation, reviewActionContent(this.nostrPubKey ?? '')).then((signature) => {
+      apiClient
+        .post(
+          coordinator.url,
+          '/api/review/',
+          { pubkey: this.nostrPubKey, signature },
+          { tokenSHA256: this.tokenSHA256 },
+        )
+        .then((raw) => {
+          const data = raw as ReviewApiResponse | undefined;
+          if (data?.token) {
+            onDataLoad(data.token);
+          }
+        })
+        .catch((e) => {
+          console.log(e);
+        });
+    });
   };
 }
 

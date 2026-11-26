@@ -82,6 +82,13 @@ class Robot(models.Model):
     # Stealth invoices
     wants_stealth = models.BooleanField(default=True, null=False)
 
+    # Signed actions (0.9.17, GHSA-22q8-9ghc-jg3h): when this robot first sent a valid signed
+    # write. From then on an unsigned write for it is refused even in transition mode
+    # (REQUIRE_SIGNED_ACTIONS off): its app signs, so an unsigned one is a replayed token.
+    signs_actions_since = models.DateTimeField(null=True, default=None, blank=True)
+    # When it was told (once) that its app is too old to sign.
+    unsigned_warned_at = models.DateTimeField(null=True, default=None, blank=True)
+
     @receiver(post_save, sender=User)
     def create_user_robot(sender, instance, created, **kwargs):
         if created:
