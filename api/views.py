@@ -77,6 +77,10 @@ from api.utils import (
     get_lnd_version,
     get_robosats_commit,
     verify_signed_message,
+    get_federation_short_alias,
+    validate_action_signature,
+    validate_signed_action_timestamp,
+    warn_unsigned_client,
 )
 from api.nostr import Nostr
 from chat.models import Message
@@ -119,6 +123,14 @@ class MakerView(CreateAPIView):
 
         if not serializer.is_valid():
             return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        # 0.9.17 signed actions (GHSA-22q8-9ghc-jg3h): the bearer token only reads.
+        make_signature = serializer.validated_data.get("signature")
+        valid, context = validate_signed_action_timestamp(
+            request.user, "make", make_signature
+        )
+        if not valid:
+            return Response(context, status.HTTP_400_BAD_REQUEST)
 
         # In case it gets overwhelming. Limit the number of public orders.
         if Order.objects.filter(status=Order.Status.PUB).count() >= int(
@@ -317,6 +329,8 @@ class MakerView(CreateAPIView):
         order.log(
             f"Order({order.id},{order}) created by Robot({request.user.robot.id},{request.user})"
         )
+        if not make_signature:
+            warn_unsigned_client(request.user, order)
         return Response(ListOrderSerializer(order).data, status=status.HTTP_201_CREATED)
 
 
@@ -837,6 +851,22 @@ class OrderView(viewsets.ViewSet):
         except (Order.DoesNotExist, ValueError, TypeError):
             return Response(new_error(1042), status.HTTP_404_NOT_FOUND)
 
+        # 0.9.17 signed actions (GHSA-22q8-9ghc-jg3h): every order action (take, cancel,
+        # confirm, dispute, statements, invoices/addresses, all escrow_* and bond_* onchain
+        # actions, pause, rating...) carries a PGP signature by the robot's key over
+        # '{action}:{order_id}:{shortAlias}', checked here before anything changes. The bearer
+        # token, which every coordinator of the federation sees, is only a read credential.
+        signature = serializer.data.get("signature")
+        valid, context = validate_action_signature(
+            request.user,
+            f"{serializer.data.get('action')}:{order.id}:{get_federation_short_alias()}",
+            signature,
+        )
+        if not valid:
+            return Response(context, status.HTTP_400_BAD_REQUEST)
+        if not signature:
+            warn_unsigned_client(request.user, order)
+
         # action is either 1)'take', 2)'confirm', 2.b)'undo_confirm', 3)'cancel', 4)'dispute' , 5)'update_invoice'
         # 5.b)'update_address' 6)'submit_statement' (in dispute), 7)'rate_user' , 8)'rate_platform'
         action = serializer.data.get("action")
@@ -1034,6 +1064,12 @@ class OrderView(viewsets.ViewSet):
                 return Response(context, status.HTTP_400_BAD_REQUEST)
 
         elif action == "submit_statement":
+            if signature:
+                valid_statement, statement = verify_signed_message(
+                    request.user.robot.public_key, statement
+                )
+                if not valid_statement:
+                    return Response(new_error(1048), status.HTTP_400_BAD_REQUEST)
             valid, context = Logics.dispute_statement(order, request.user, statement)
             if not valid:
                 return Response(context, status.HTTP_400_BAD_REQUEST)
@@ -1162,7 +1198,15 @@ class RobotView(APIView):
         """
         Update robot's webhook settings.
         """
-        robot = request.user.robot
+        # 0.9.17 signed actions: checked first; the robot row is read after it (the check can
+        # mark the robot as signing, and serializer.save() writes the whole row).
+        valid, context = validate_signed_action_timestamp(
+            request.user, "robot", request.data.get("signature")
+        )
+        if not valid:
+            return Response(context, status.HTTP_400_BAD_REQUEST)
+
+        robot = Robot.objects.get(user=request.user)
         old_webhook_url = robot.webhook_url
         old_webhook_enabled = robot.webhook_enabled
         serializer = UpdateRobotSerializer(robot, data=request.data, partial=True)
@@ -1170,6 +1214,7 @@ class RobotView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+        serializer.validated_data.pop("signature", None)
         serializer.save()
 
         new_webhook_url = request.data.get("webhook_url")
@@ -1695,6 +1740,12 @@ class StealthView(APIView):
 
         stealth = serializer.data.get("wantsStealth")
 
+        valid, context = validate_signed_action_timestamp(
+            request.user, "stealth", serializer.validated_data.get("signature")
+        )
+        if not valid:
+            return Response(context, status.HTTP_400_BAD_REQUEST)
+
         request.user.robot.wants_stealth = stealth
         request.user.robot.save(update_fields=["wants_stealth"])
 
@@ -1715,6 +1766,13 @@ class ReviewView(APIView):
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
         pubkey = serializer.data.get("pubkey")
+
+        valid, context = validate_action_signature(
+            request.user, f"review:{pubkey}", serializer.validated_data.get("signature")
+        )
+        if not valid:
+            return Response(context, status.HTTP_400_BAD_REQUEST)
+
         last_order = Order.objects.filter(
             Q(maker=request.user) | Q(taker=request.user)
         ).last()

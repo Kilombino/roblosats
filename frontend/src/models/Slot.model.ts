@@ -350,6 +350,16 @@ class Slot {
     this.onSlotUpdate();
   };
 
+  // 0.9.17 signed actions: the robot of this coordinator (made from the default one if the slot
+  // has none yet), so a request is signed with the key that coordinator knows.
+  ensureRobot: (federation: Federation, shortAlias: string) => Robot | null = (
+    federation,
+    shortAlias,
+  ) => {
+    if (!this.robots[shortAlias]) this.syncCoordinator(federation, shortAlias);
+    return this.robots[shortAlias] ?? null;
+  };
+
   syncCoordinator: (federation: Federation, shortAlias: string) => void = (
     federation,
     shortAlias,

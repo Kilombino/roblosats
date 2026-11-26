@@ -1,3 +1,4 @@
+from unittest.mock import patch
 """Roblosats 0.9.7: a "丰 sat" order paid only with Spamcoin methods is in Spamcoin (1000).
 
 Kilobot #25 (18 nov 2026): an app made "Spamcoin Lightning" at a 15% premium with currency
@@ -17,6 +18,9 @@ from .test_roblosats_fixed_price import FixedPriceApi, _user
 SPAM = 1000
 
 
+# 0.9.17: these robots have no PGP keys, so they act as an app too old to sign
+# (transition mode); the signature gate itself is tested in test_signed_actions.
+@patch("api.utils.REQUIRE_SIGNED_ACTIONS", False)
 class SpamcoinOnly(FixedPriceApi):
     test_make_fixed_price_without_rate = None
     test_make_fixed_range_without_rate = None

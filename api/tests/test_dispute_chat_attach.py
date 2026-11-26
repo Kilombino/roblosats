@@ -27,6 +27,9 @@ def _user():
     return u
 
 
+# 0.9.17: these robots have no PGP keys, so they act as an app too old to sign
+# (transition mode); the signature gate itself is tested in test_signed_actions.
+@patch("api.utils.REQUIRE_SIGNED_ACTIONS", False)
 class AttachChat(TestCase):
     def setUp(self):
         self.patches = [patch("api.logics.send_notification"), patch("api.models.order.send_notification"),

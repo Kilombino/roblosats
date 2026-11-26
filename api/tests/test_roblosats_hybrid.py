@@ -257,6 +257,9 @@ class CaseA(HybridBase):
         self.assertEqual(Decimal(order.amount), Decimal(100))
 
 
+# 0.9.17: these robots have no PGP keys, so they act as an app too old to sign
+# (transition mode); the signature gate itself is tested in test_signed_actions.
+@patch("api.utils.REQUIRE_SIGNED_ACTIONS", False)
 class TakeView(HybridBase):
     """The take request with take_lightning, through the view."""
 
@@ -312,6 +315,9 @@ class TakeView(HybridBase):
         self.assertEqual(r.data["bond_status_code"], OnchainBond.Status.LOCKED)
 
 
+# 0.9.17: these robots have no PGP keys, so they act as an app too old to sign
+# (transition mode); the signature gate itself is tested in test_signed_actions.
+@patch("api.utils.REQUIRE_SIGNED_ACTIONS", False)
 class TakeAgain093(TakeView):
     """0.9.3 (Kilobot #24): a Lightning take cancelled, then an onchain take of a 丰 sat order."""
 
