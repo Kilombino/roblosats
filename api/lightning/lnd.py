@@ -546,6 +546,17 @@ class LNDNode:
             }
             return payout
 
+        # Roblosats (26 nov 2026): only Bitcoin BLAKE2b invoices, which carry feature 512/513
+        # (option_blake2b). A Spamcoin (SHA-256) invoice also starts with lnbc, but our node has
+        # no route to it: refuse it now instead of failing at payout time.
+        if config("REQUIRE_BLAKE2B_INVOICE", cast=bool, default=True) and not (
+            512 in payreq_decoded.features or 513 in payreq_decoded.features
+        ):
+            payout["context"] = {
+                "bad_invoice": "This invoice is not from a Bitcoin BLAKE2b wallet (it lacks feature bit 512): it looks like a Spamcoin invoice. Use your BLAKE2b wallet, or choose ONCHAIN"
+            }
+            return payout
+
         if payreq_decoded.num_satoshis == 0:
             payout["context"] = {
                 "bad_invoice": "The invoice provided has no explicit amount"
