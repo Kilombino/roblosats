@@ -1,6 +1,10 @@
 import { apiClient } from '../services/api';
-import { orderActionContent, signAs, timedActionContent } from '../utils/actionSignature';
-import { signCleartextMessage } from '../pgp';
+import {
+  orderActionContent,
+  signAction,
+  signAs,
+  timedActionContent,
+} from '../utils/actionSignature';
 import type Federation from './Federation.model';
 import type Slot from './Slot.model';
 import { toApiAmount } from '../utils/spamAmounts';
@@ -342,7 +346,12 @@ class Order {
           timedActionContent('make', this.shortAlias),
         );
         return await apiClient
-          .post(coordinator.url, '/api/make/', { ...body, signature }, robot.getAuthHeaders())
+          .post(
+            coordinator.url,
+            '/api/make/',
+            { ...body, signature },
+            robot.getAuthHeaders() ?? authHeaders,
+          )
           .catch((e) => {
             console.log(e);
           });
@@ -404,14 +413,12 @@ class Order {
           );
           let body: SubmitActionProps & { signature?: string } = { ...action, signature };
           if (signature && action.action === 'submit_statement' && action.statement) {
-            const signedStatement = await signCleartextMessage(
+            const signedStatement = await signAction(
               action.statement,
-              robot?.encPrivKey ?? '',
-              robot?.token ?? '',
+              robot?.encPrivKey,
+              robot?.token,
             ).catch(() => undefined);
-            body = signedStatement
-              ? { ...body, statement: signedStatement }
-              : { ...action }; // cannot sign the statement: send it as an old app would
+            body = signedStatement ? { ...body, statement: signedStatement } : { ...action }; // cannot sign the statement: send it as an old app would
           }
           return await apiClient
             .post(coordinator.url, `/api/order/?order_id=${Number(this.id)}`, body, {

@@ -1,5 +1,3 @@
-import { signCleartextMessage } from '../pgp';
-
 export const ACTION_SIGNATURE_WINDOW = 300;
 
 export function orderActionContent(action: string, orderId: number, shortAlias: string): string {
@@ -20,6 +18,8 @@ export async function signAction(
   token?: string,
 ): Promise<string | undefined> {
   if (!encPrivKey || !token) return undefined;
+  // Loaded on first use (openpgp is heavy, and models importing this stay light in tests).
+  const { signCleartextMessage } = await import('../pgp');
   return await signCleartextMessage(content, encPrivKey, token);
 }
 

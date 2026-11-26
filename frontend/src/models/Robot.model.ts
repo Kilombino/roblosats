@@ -223,7 +223,11 @@ class Robot {
 
     const coordinator = federation.getCoordinator(this.shortAlias);
     if (!coordinator || !coordinator.url) return;
-    const signature = await signAs(this, federation, timedActionContent('stealth', this.shortAlias));
+    const signature = await signAs(
+      this,
+      federation,
+      timedActionContent('stealth', this.shortAlias),
+    );
     await apiClient
       .post(
         coordinator.url,
@@ -252,7 +256,12 @@ class Robot {
     if (!coordinator || !coordinator.url) return;
     const signature = await signAs(this, federation, timedActionContent('robot', this.shortAlias));
     await apiClient
-      .put(coordinator.url, '/api/robot/', { ...settings, signature }, { tokenSHA256: this.tokenSHA256 })
+      .put(
+        coordinator.url,
+        '/api/robot/',
+        { ...settings, signature },
+        { tokenSHA256: this.tokenSHA256 },
+      )
       .then((raw) => {
         const data = raw as WebhookApiResponse | undefined;
         if (data) {
