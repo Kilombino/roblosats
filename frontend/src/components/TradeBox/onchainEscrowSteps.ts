@@ -74,3 +74,65 @@ export const bondSigningLines = (
       ? 'Keep the app open: your signature is missing'
       : null,
 });
+
+/** 0.9.14-beta7 (Kilombino TG 15643): the order shows onchain prompts (bond, funding, release,
+ * rescue): the order page gives its trade box more room on wide screens. */
+export const hasOnchainSteps = (order: Order | null | undefined): boolean => {
+  if (!order) return false;
+  const o = order as unknown as Record<string, unknown>;
+  return (
+    isOnchainEscrow(order) ||
+    Boolean(o.hybrid_onchain_maker_bond) ||
+    Boolean(o.hybrid_onchain_taker_bond) ||
+    Boolean(o.take_onchain) ||
+    Boolean(o.maker_lightning) ||
+    typeof o.bond_address === 'string' ||
+    typeof o.escrow_funding_address === 'string'
+  );
+};
+
+/** Width (em) of the trade box: 21 as always, 26 with onchain prompts when the window has room
+ * (desktop: next to the 21em order details; single view: the window itself). */
+export const tradeBoxWidthEm = (onchain: boolean, windowEm: number, double: boolean): number => {
+  if (!onchain) return 21;
+  const room = double ? windowEm - 21 - 3 : windowEm - 1;
+  return Math.max(21, Math.min(26, Math.floor(room)));
+};
+
+/** Nothing in the trade box may be wider than the box (no horizontal scroll): long addresses
+ * and texts break, buttons wrap, grid items and alerts stay inside. */
+export const tradeBoxNoOverflowSx = {
+  overflowX: 'hidden',
+  '& .MuiGrid-root': { maxWidth: '100%', minWidth: 0 },
+  '& .MuiButton-root': { whiteSpace: 'normal', maxWidth: '100%', overflowWrap: 'anywhere' },
+  '& .MuiTypography-root, & .MuiAlert-message, & .MuiListItemText-root': {
+    overflowWrap: 'anywhere',
+  },
+  '& .MuiAlert-root': { maxWidth: '100%', boxSizing: 'border-box' },
+} as const;
+
+/** 0.9.14-beta7 (Kilombino TG 15645, #38): the buyer whose fee comes out of the release has
+ * nothing to send onchain. Hybrid A: it took an onchain order with a Lightning bond; mixta D: it
+ * is the maker of a Lightning order (it never "took" anything). */
+export const feeAtReleaseKey = (isMaker: boolean): string =>
+  isMaker
+    ? 'Your order is Lightning: your bond is a Lightning hold invoice and you send nothing onchain. Your fee ({{fee}} Sats) comes out of what you receive in the release.'
+    : 'You took with Lightning: your bond is a Lightning hold invoice and you do not need to send anything onchain. Your fee ({{fee}} Sats) comes out of what you receive in the release.';
+
+/** The other trader's funding payment(s) in the mempool, as the waiting trader reads them. */
+export const peerFundingSeen = (
+  data: EscrowOrderData,
+  isBuyer: boolean,
+  orderStatus: number,
+): { key: string; txids: string[] } | null => {
+  const txids = (data.escrow_peer_funding_mempool_txids ?? []).filter((x) =>
+    /^[0-9a-f]{64}$/i.test(x),
+  );
+  if (orderStatus !== 7 || txids.length === 0) return null;
+  return {
+    key: isBuyer
+      ? 'The seller is funding the escrow onchain: their deposit is in the mempool, waiting for 1 confirmation.'
+      : "The buyer's payment is in the mempool, waiting for 1 confirmation.",
+    txids,
+  };
+};

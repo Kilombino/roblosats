@@ -48,7 +48,7 @@ import { type FeeHint, formatRate, lowFeeNeeded, validHint } from '../../../util
 import { Transaction, addressToScript, bytesToHex } from '../../../utils/escrow/taproot';
 import { DEFAULT_HRP } from '../../../utils/address';
 import { useAddressConfirm } from '../../Dialogs/AddressConfirm';
-import { bondSigningLines } from '../onchainEscrowSteps';
+import { bondSigningLines, feeAtReleaseKey, peerFundingSeen } from '../onchainEscrowSteps';
 
 export type EscrowAction =
   | 'bond_key'
@@ -971,10 +971,9 @@ export const OnchainEscrowPrompt = ({
     body = waiting(
       waitingText(),
       <Alert severity='info'>
-        {t(
-          'You took with Lightning: your bond is a Lightning hold invoice and you do not need to send anything onchain. Your fee ({{fee}} Sats) comes out of what you receive in the release.',
-          { fee: pn(data.escrow_fee_at_release_sats ?? 0) },
-        )}
+        {t(feeAtReleaseKey(Boolean(order.is_maker)), {
+          fee: pn(data.escrow_fee_at_release_sats ?? 0),
+        })}
       </Alert>,
     );
   } else if (
@@ -1223,9 +1222,23 @@ export const OnchainEscrowPrompt = ({
     );
   }
 
+  // 0.9.14-beta7 (#38): the other trader's funding payment, once it is in the mempool
+  const peerSeen =
+    data.escrow_status_code === ESCROW.KEYS ? peerFundingSeen(data, isBuyer, order.status) : null;
+
   return (
     <Grid container spacing={1} sx={{ flexDirection: 'column', alignItems: 'center', padding: 1 }}>
       <Grid>{body}</Grid>
+      {peerSeen ? (
+        <Grid>
+          <Alert severity='info' sx={{ mb: 0.5 }}>
+            {t(peerSeen.key)}
+          </Alert>
+          {peerSeen.txids.map((txid) => (
+            <TxLine key={txid} label={t("Peer's payment")} txid={txid} />
+          ))}
+        </Grid>
+      ) : null}
       {signPhase ? <Grid>{keepOpenNotice()}</Grid> : null}
       {myExtraInEscrow(data) > 0 && data.escrow_deposit_txid ? (
         <Grid>

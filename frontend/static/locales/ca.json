@@ -1319,5 +1319,9 @@
   "A robot's onchain bond to take your order is confirmed, waiting for the taker's signature: the order is about to be taken. Get ready.": "La fiança on-chain d'un robot per prendre la teva ordre ja està confirmada, esperant la signatura del prenedor: l'ordre està a punt de ser presa. Prepara't.",
   "Taker bond (confirmed, waiting for the taker's signature)": "Fiança del prenedor (confirmada, esperant la signatura del prenedor)",
   "✅ Confirmed · ✍️ signing…": "✅ Confirmada · ✍️ signant…",
-  "Keep the app open: your signature is missing": "Mantén l'app oberta: falta la teva signatura"
+  "Keep the app open: your signature is missing": "Mantén l'app oberta: falta la teva signatura",
+  "Your order is Lightning: your bond is a Lightning hold invoice and you send nothing onchain. Your fee ({{fee}} Sats) comes out of what you receive in the release.": "La teva ordre és Lightning: la teva fiança és una factura retinguda Lightning i no envies res on-chain. La teva comissió ({{fee}} Sats) surt del que reps a l'alliberament.",
+  "The seller is funding the escrow onchain: their deposit is in the mempool, waiting for 1 confirmation.": "El venedor està finançant el dipòsit on-chain: el seu pagament és a la mempool, esperant 1 confirmació.",
+  "The buyer's payment is in the mempool, waiting for 1 confirmation.": "El pagament del comprador és a la mempool, esperant 1 confirmació.",
+  "Peer's payment": "Pagament de l'altra part"
 }

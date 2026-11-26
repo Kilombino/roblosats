@@ -1305,5 +1305,9 @@
   "A robot's onchain bond to take your order is confirmed, waiting for the taker's signature: the order is about to be taken. Get ready.": "A robot's onchain bond to take your order is confirmed, waiting for the taker's signature: the order is about to be taken. Get ready.",
   "Taker bond (confirmed, waiting for the taker's signature)": "Taker bond (confirmed, waiting for the taker's signature)",
   "✅ Confirmed · ✍️ signing…": "✅ Confirmed · ✍️ signing…",
-  "Keep the app open: your signature is missing": "Keep the app open: your signature is missing"
+  "Keep the app open: your signature is missing": "Keep the app open: your signature is missing",
+  "Your order is Lightning: your bond is a Lightning hold invoice and you send nothing onchain. Your fee ({{fee}} Sats) comes out of what you receive in the release.": "Your order is Lightning: your bond is a Lightning hold invoice and you send nothing onchain. Your fee ({{fee}} Sats) comes out of what you receive in the release.",
+  "The seller is funding the escrow onchain: their deposit is in the mempool, waiting for 1 confirmation.": "The seller is funding the escrow onchain: their deposit is in the mempool, waiting for 1 confirmation.",
+  "The buyer's payment is in the mempool, waiting for 1 confirmation.": "The buyer's payment is in the mempool, waiting for 1 confirmation.",
+  "Peer's payment": "Peer's payment"
 }

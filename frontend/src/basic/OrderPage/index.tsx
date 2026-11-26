@@ -15,6 +15,11 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 
 import TradeBox from '../../components/TradeBox';
+import {
+  hasOnchainSteps,
+  tradeBoxNoOverflowSx,
+  tradeBoxWidthEm,
+} from '../../components/TradeBox/onchainEscrowSteps';
 import OrderDetails from '../../components/OrderDetails';
 
 import { AppContext, type UseAppStoreType } from '../../contexts/AppContext';
@@ -139,6 +144,11 @@ const OrderPageContent = (): React.JSX.Element => {
   );
 
   const tradeBoxSpace = currentOrder ? <TradeBox currentOrder={currentOrder} /> : <></>;
+  // 0.9.14-beta7 (TG 15643): onchain prompts get a wider box where it fits, and nothing in the
+  // box may overflow it (the funding screen of #38 scrolled sideways)
+  const onchainSteps = hasOnchainSteps(currentOrder);
+  const doubleView = windowSize.width > doublePageWidth;
+  const tradeW = tradeBoxWidthEm(onchainSteps, windowSize.width, doubleView);
 
   const steps = [t('Publish'), t('Take'), t('Setup'), t('Trade'), t('Finish')];
 
@@ -188,6 +198,7 @@ const OrderPageContent = (): React.JSX.Element => {
         <Paper
           elevation={12}
           style={{ width: '21em', maxHeight: `${maxHeight}em`, overflow: 'auto' }}
+          sx={tradeBoxNoOverflowSx}
         >
           {tradeBoxSpace}
         </Paper>
@@ -203,10 +214,10 @@ const OrderPageContent = (): React.JSX.Element => {
               direction='row'
 
               spacing={2}
-              style={{ width: '43em' }}
+              style={{ width: `${22 + tradeW}em` }}
               sx={{ alignItems: 'flex-start', justifyContent: 'center' }}
             >
-              <Grid size={12} style={{ width: '42em' }}>
+              <Grid size={12} style={{ width: `${21 + tradeW}em` }}>
                 <Stepper activeStep={orderStep}>
                   {steps.map((label) => (
                     <Step key={label}>
@@ -227,14 +238,15 @@ const OrderPageContent = (): React.JSX.Element => {
                   {orderDetailsSpace}
                 </Paper>
               </Grid>
-              <Grid size={6} style={{ width: '21em' }}>
+              <Grid size={6} style={{ width: `${tradeW}em` }}>
                 <Paper
                   elevation={12}
                   style={{
-                    width: '21em',
+                    width: `${tradeW}em`,
                     maxHeight: `${maxHeight}em`,
                     overflow: 'auto',
                   }}
+                  sx={tradeBoxNoOverflowSx}
                 >
                   {tradeBoxSpace}
                 </Paper>
@@ -243,7 +255,7 @@ const OrderPageContent = (): React.JSX.Element => {
           ) : (
             // SINGLE PAPER VIEW
             <Box>
-              <Box sx={{ borderBottom: 1, borderColor: 'divider', width: '21em' }}>
+              <Box sx={{ borderBottom: 1, borderColor: 'divider', width: `${tradeW}em` }}>
                 <Tabs
                   value={tab}
                   onChange={(_mouseEvent, value) => {
@@ -258,10 +270,11 @@ const OrderPageContent = (): React.JSX.Element => {
               <Paper
                 elevation={12}
                 style={{
-                  width: '21em',
+                  width: `${tradeW}em`,
                   maxHeight: `${maxHeight}em`,
                   overflow: 'auto',
                 }}
+                sx={tradeBoxNoOverflowSx}
               >
                 <div style={{ display: tab === 'order' ? '' : 'none' }}>{orderDetailsSpace}</div>
                 <div style={{ display: tab === 'contract' ? '' : 'none' }}>{tradeBoxSpace}</div>

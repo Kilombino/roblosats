@@ -173,9 +173,9 @@ TEXTS = {
         "⛓️ Ordre {n}: finança ja el dipòsit. Envia {sats} sats a l'adreça que mostra l'ordre; queden {left}.",
     ),
     "fee_now": (
-        "⛓️ Order {n}: send your fee ({sats} sats) to the address shown in the order; {left} left.",
-        "⛓️ Orden {n}: envía tu comisión ({sats} sats) a la dirección que muestra la orden; quedan {left}.",
-        "⛓️ Ordre {n}: envia la teva comissió ({sats} sats) a l'adreça que mostra l'ordre; queden {left}.",
+        "⛓️ Order {n}: send {sats} sats (your fee and your share of the mining fee) to the address shown in the order; {left} left.",
+        "⛓️ Orden {n}: envía {sats} sats (tu comisión y tu parte de la comisión de minería) a la dirección que muestra la orden; quedan {left}.",
+        "⛓️ Ordre {n}: envia {sats} sats (la teva comissió i la teva part de la comissió de mineria) a l'adreça que mostra l'ordre; queden {left}.",
     ),
     "funding_confirmed": (
         "✅ Order {n}: your payment is confirmed. The deposit is being prepared: keep the order open so your app can sign it.",
@@ -533,8 +533,16 @@ def _ln_role(order, role=None):
 
 
 def _escrow_sats(order):
+    """What the seller's Lightning escrow invoice asks for: the invoice itself, or (before it
+    exists) the amount it will be made for: the trade plus the seller's fee (and, hybrid B, the
+    swap surcharge). 0.9.14-beta7: it said the bare trade amount, less than the invoice."""
     try:
-        return int(order.trade_escrow.num_satoshis) if order.trade_escrow else int(order.last_satoshis or 0)
+        if order.trade_escrow:
+            return int(order.trade_escrow.num_satoshis)
+        from api.logics import Logics
+
+        seller = order.maker if role_name(order, order.maker) == "seller" else order.taker
+        return int(Logics.escrow_amount(order, seller)[1]["escrow_amount"])
     except Exception:
         return int(order.last_satoshis or 0)
 
@@ -828,9 +836,11 @@ def watch_onchain(order, escrow):
                 continue
             who, what = flow.waiting_for(order, escrow, role)
             if who == "you" and what == "funding":
-                owed, _ = flow.recommended_funding(order, escrow, role)
+                # 0.9.14-beta7 (#38): the amount the order screen asks for (what is owed plus the
+                # share of the deposit's mining fee, frozen once shown), not the bare minimum owed
+                _, to_send = flow.recommended_funding(order, escrow, role)
                 key = "fund_now" if role == "seller" else "fee_now"
-                queue(order, r[role], key, action=True, dedup=f"fund:{escrow.id}", sats=int(owed),
+                queue(order, r[role], key, action=True, dedup=f"fund:{escrow.id}", sats=int(to_send),
                       left=left_until(order) or "?")
         for role in ("seller", "buyer"):
             if r[role] is None or cache.get(f"step-alert:{order.id}:{r[role].id}:q:funded:{escrow.id}"):

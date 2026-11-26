@@ -128,6 +128,7 @@ export interface EscrowOrderData {
   taker_lightning?: boolean;
   hybrid_onchain_maker_bond?: boolean;
   escrow_funding_mempool_txid?: string;
+  escrow_peer_funding_mempool_txids?: string[]; // 0.9.14-beta7
   escrow_funding_mempool_sats?: number;
   /** 0.9.3: what already confirmed at our funding address (while the deposit is not built). */
   escrow_funding_confirmed_sats?: number;

@@ -1158,6 +1158,16 @@ def order_data(order, user):
     who, what = waiting_for(order, escrow, role)
     data["escrow_waiting_for"] = who or ""
     data["escrow_waiting_what"] = what or ""
+    # 0.9.14-beta7 (Kilombino TG 15645, #38): whoever waits for the other trader's onchain
+    # payment sees it (copy / mempool link) once it is in the mempool
+    peer = "buyer" if role == "seller" else "seller"
+    if escrow.status == escrow.Status.KEYS and escrow.funding_signatures.get(f"{peer}_funding_pubkey"):
+        try:
+            pending = _unconfirmed(_funding_address(escrow, peer))
+            if pending:
+                data["escrow_peer_funding_mempool_txids"] = sorted({txid for txid, _ in pending})
+        except Exception as e:
+            logger.warning(f"Order {order.id}: the peer's funding payment not read: {e}")
     if escrow.funding_tx and escrow.status == escrow.Status.FUNDING:
         tx, spent, plan = service.stored_deposit(escrow)
         data["escrow_deposit_tx"] = escrow.funding_tx

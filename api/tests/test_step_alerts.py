@@ -235,7 +235,8 @@ class Onchain(Base):
         escrow = SimpleNamespace(id=3, status=OnchainEscrow.Status.KEYS, funding_txid=None, release_txid=None)
         flow = MagicMock()
         flow.waiting_for.side_effect = lambda order, e, role: ("you", "funding") if role == "seller" else ("peer", "funding")
-        flow.recommended_funding.side_effect = lambda order, e, role: (1_000_889, 0) if role == "seller" else (0, 0)
+        # (owed, what the screen asks for): #38 said 21,379 while the screen asked 21,945
+        flow.recommended_funding.side_effect = lambda order, e, role: (1_000_889, 1_001_455) if role == "seller" else (0, 0)
         flow.service.funding_utxos.return_value = []
         queued = []
         import api.escrow as escrow_pkg
@@ -245,7 +246,7 @@ class Onchain(Base):
                 sa.watch_onchain(o, escrow)
                 self.cache.d.pop(f"step-alert-watch:{o.id}")
                 sa.watch_onchain(o, escrow)
-        self.assertEqual(queued[0], (1, "fund_now", 1_000_889))
+        self.assertEqual(queued[0], (1, "fund_now", 1_001_455))
 
 
 class DedupAndChannels(Base):
@@ -389,3 +390,19 @@ class Wiring(Base):
             q.reset_mock()
             sa.on_take_started(o, SimpleNamespace(id=9, lightning=True, taker=user(2), expires_at=take.expires_at))
             q.assert_not_called()
+
+
+class AmountsMatchTheScreen(Base):
+    """0.9.14-beta7 (#38): the alerts give the amount the order screen asks for."""
+
+    def test_ln_escrow_before_its_invoice_is_the_invoice_amount(self):
+        o = order()
+        o.trade_escrow = None
+        with patch("api.logics.Logics.escrow_amount", return_value=(True, {"escrow_amount": 1_000_875})) as ea:
+            self.assertEqual(sa._escrow_sats(o), 1_000_875)
+        self.assertIn(ea.call_args.args[1], (o.maker, o.taker))
+
+    def test_fee_now_text_counts_the_mining_share(self):
+        for lang in ("en", "es", "ca"):
+            t = sa.text("fee_now", lang, n=38, sats="431", left="3 h")
+            self.assertIn("431", t)
