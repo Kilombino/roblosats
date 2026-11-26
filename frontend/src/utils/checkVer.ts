@@ -5,7 +5,8 @@ import { type Version } from '../models';
 
 export const getClientVersion = function (): { semver: Version; short: string; long: string } {
   const ver = packageJson.version.split('.');
-  const semver = { major: Number(ver[0]), minor: Number(ver[1]), patch: Number(ver[2]) };
+  // parseInt: a beta ("0.9.14-beta1") is still patch 14, not NaN (26 nov 2026)
+  const semver = { major: parseInt(ver[0], 10), minor: parseInt(ver[1], 10), patch: parseInt(ver[2], 10) };
   const short = `v${ver[0]}.${ver[1]}.${ver[2]}`;
   const long = `v${packageJson.version}`;
   return { semver, short, long };
