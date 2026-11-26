@@ -376,7 +376,7 @@ class Decisions(Base):
             buyer = " ".join(disputes.plan(order, "buyer")["lines"])
             seller = " ".join(disputes.plan(order, "seller")["lines"])
         self.assertIn("straight back to them on chain", buyer)
-        self.assertIn("is penalized on chain now", seller)
+        self.assertIn("their on-chain bond (30\u202f000), penalized on chain now", seller)
         self.assertIn("still locked", buyer)
 
 
