@@ -413,9 +413,22 @@ def roles(order):
 
 
 def payout_sats(order):
-    if order.is_swap:
-        return order.payout_tx.num_satoshis if order.payout_tx else None
-    return order.payout.num_satoshis if order.payout else None
+    if order.is_swap and order.payout_tx and order.payout_tx.num_satoshis:
+        return order.payout_tx.num_satoshis
+    if order.payout and order.payout.num_satoshis:
+        return order.payout.num_satoshis
+    # 26 nov 2026: a buyer who never gave an invoice or address is credited what the app would
+    # have asked them to invoice (as api.admin.buyer_trade_sats does)
+    try:
+        from api.logics import Logics
+
+        buyer = roles(order)["buyer"]
+        valid, context = Logics.payout_amount(order, buyer) if buyer else (False, None)
+        if valid and context and context.get("invoice_amount"):
+            return int(context["invoice_amount"])
+    except Exception:  # noqa: BLE001 (the page must still render)
+        pass
+    return None
 
 
 def action_for(order, decision):
