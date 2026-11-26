@@ -256,7 +256,14 @@ const OrderDetails = ({
     if (order === null) return {};
 
     const isBuyer = (order.type === 0 && order.is_maker) || (order.type === 1 && !order.is_maker);
-    const onchain = isOnchainEscrow(order);
+    // Mixta D (26 nov 2026): a seller taking a Lightning order with an onchain bond will fund an
+    // onchain escrow, so it already sends onchain while its take waits for confirmation.
+    const takingOnchainAsSeller =
+      !isBuyer &&
+      !order.is_maker &&
+      order.status === 3 &&
+      Boolean((order as unknown as { take_onchain?: boolean }).take_onchain);
+    const onchain = isOnchainEscrow(order) || takingOnchainAsSeller;
     // Onchain escrow: the coordinator fee is not taken out of the amount, it is paid apart
     // (and has a minimum): shown on its own line (onchainFeeText).
     const tradeFee = onchain
