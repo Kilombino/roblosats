@@ -2321,20 +2321,156 @@ msgstr "注文 %(id)s：%(sats)s sats が誤ったチェーン（Spamcoin、SHA-
 
 msgctxt "roblosats-admin"
 msgid "Hybrid C (on-chain buyer bond)"
-msgstr ""
+msgstr "ハイブリッド C（買い手のオンチェーン保証金）"
 
 msgctxt "roblosats-admin"
 msgid "Hybrid D (on-chain seller)"
-msgstr ""
+msgstr "ハイブリッド D（オンチェーンの売り手）"
 
 msgctxt "roblosats-admin"
 msgid "attached after the statement, %(time)s"
-msgstr ""
+msgstr "陳述の後に添付、%(time)s"
 
 msgctxt "roblosats-admin"
 msgid "Chat attached to a dispute after the statement"
-msgstr ""
+msgstr "陳述の後に紛争へ添付されたチャット"
 
 msgctxt "roblosats-admin"
 msgid "Order %(id)s: the %(who)s attached their chat to the dispute (%(n)s messages)"
-msgstr ""
+msgstr "注文 %(id)s：%(who)s がチャットを紛争に添付しました（%(n)s 件のメッセージ）"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s), credited as a Lightning reward"
+msgstr "Lightning 保証金（%(sats)s）、Lightning 報酬として付与"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), straight back to them on chain (not credited)"
+msgstr "オンチェーン保証金（%(sats)s）、オンチェーンで直接返却（付与なし）"
+
+msgctxt "roblosats-admin"
+msgid "the value of their on-chain bond (%(sats)s), penalized on chain earlier, credited as a Lightning reward"
+msgstr "以前オンチェーンで没収されたオンチェーン保証金（%(sats)s）の価値を Lightning 報酬として付与"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), already back with them on chain"
+msgstr "オンチェーン保証金（%(sats)s）、すでにオンチェーンで返却済み"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s), kept by the coordinator"
+msgstr "Lightning 保証金（%(sats)s）、コーディネーターが保持"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), penalized on chain now"
+msgstr "オンチェーン保証金（%(sats)s）、今オンチェーンで没収"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), already penalized on chain"
+msgstr "オンチェーン保証金（%(sats)s）、すでにオンチェーンで没収済み"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), which had already gone back to them on chain: nothing to penalize"
+msgstr "オンチェーン保証金（%(sats)s）はすでにオンチェーンで返却済み：没収するものなし"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s gets: %(parts)s."
+msgstr "%(role)s %(nick)s が受け取るもの：%(parts)s。"
+
+msgctxt "roblosats-admin"
+msgid "In total %(total)s sats credited as a Lightning reward, withdrawn from the app."
+msgstr "合計 %(total)s sats を Lightning 報酬として付与、アプリから引き出し。"
+
+msgctxt "roblosats-admin"
+msgid "the trade amount %(trade)s from the Lightning escrow, credited as a Lightning reward"
+msgstr "Lightning エスクローからの取引額 %(trade)s、Lightning 報酬として付与"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s gets nothing back: they lose %(bond)s and their Lightning escrow (%(escrow)s)."
+msgstr "売り手 %(seller)s には何も戻りません：%(bond)s と Lightning エスクロー（%(escrow)s）を失います。"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning escrow back (%(escrow)s), credited as a Lightning reward"
+msgstr "Lightning エスクローの返却（%(escrow)s）、Lightning 報酬として付与"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets nothing: they lose %(bond)s."
+msgstr "買い手 %(buyer)s は何も受け取りません：%(bond)s を失います。"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s gets %(escrow_text)s, but LOSES %(bond)s."
+msgstr "売り手 %(seller)s は %(escrow_text)s を受け取りますが、%(bond)s を失います。"
+
+msgctxt "roblosats-admin"
+msgid "They do not receive the trade sats."
+msgstr "取引の sats は受け取りません。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s LOSES %(bond)s."
+msgstr "買い手 %(buyer)s は %(bond)s を失います。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s is paid %(trade)s sats on chain, to the address they gave (from the Lightning escrow, through the coordinator's swap)."
+msgstr "買い手 %(buyer)s に %(trade)s sats をオンチェーンで、指定のアドレスへ支払います（Lightning エスクローから、コーディネーターのスワップ経由）。"
+
+msgctxt "roblosats-admin"
+msgid "trade amount (on-chain escrow)"
+msgstr "取引額（オンチェーンエスクロー）"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain escrow back"
+msgstr "オンチェーンエスクローの返却"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond"
+msgstr "オンチェーン保証金"
+
+msgctxt "roblosats-admin"
+msgid "reward from the other on-chain bond"
+msgstr "相手のオンチェーン保証金からの報酬"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s receives %(sats)s sats on chain at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
+msgstr "%(role)s %(nick)s は %(address)s でオンチェーンで %(sats)s sats を受け取ります（%(parts)s）。リリースのマイニング手数料はこの出力から差し引かれます。"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s only gets back the leftover of their deposit, %(sats)s sats on chain at %(address)s."
+msgstr "%(role)s %(nick)s は入金の残りだけを %(address)s でオンチェーンで %(sats)s sats 受け取ります。"
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats on chain at its fee address: %(penalty)s kept from the loser's bond + %(fees)s of trade fees."
+msgstr "コーディネーターは手数料アドレスでオンチェーンで %(sats)s sats を受け取ります：敗者の保証金から %(penalty)s + 取引手数料 %(fees)s。"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s's bond is a Lightning bond (%(sats)s sats), settled when the dispute opened: the coordinator keeps it and credits %(reward)s sats of it to the %(winner)s as a Lightning reward, withdrawn from the app."
+msgstr "%(role)s の保証金は Lightning 保証金（%(sats)s sats）で、紛争開始時に決済済み：コーディネーターが保持し、そのうち %(reward)s sats を %(winner)s に Lightning 報酬として付与、アプリから引き出し。"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s's Lightning bond (%(sats)s sats), settled when the dispute opened, is credited back to them as a Lightning reward, withdrawn from the app."
+msgstr "紛争開始時に決済された %(role)s の Lightning 保証金（%(sats)s sats）は、Lightning 報酬として本人に戻され、アプリから引き出し。"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s), minus the mining fee of the return, which comes out of this output."
+msgstr "売り手 %(nick)s は %(address)s でオンチェーンで %(sats)s sats を取り戻します（%(parts)s）。返却のマイニング手数料はこの出力から差し引かれます。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s)."
+msgstr "買い手 %(nick)s は %(address)s でオンチェーンで %(sats)s sats を取り戻します（%(parts)s）。"
+
+msgctxt "roblosats-admin"
+msgid "The %(side)s's Lightning bond (%(sats)s sats) goes back to them: credited as a Lightning reward if it was already settled when the dispute opened, unlocked otherwise."
+msgstr "%(side)s の Lightning 保証金（%(sats)s sats）は本人に戻ります：紛争開始時に決済済みなら Lightning 報酬として付与、そうでなければロック解除。"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s)."
+msgstr "売り手 %(nick)s は %(address)s でオンチェーンで %(sats)s sats を取り戻します（%(parts)s）。"
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats on chain at its fee address: the penalized bond less the reward share."
+msgstr "コーディネーターは手数料アドレスでオンチェーンで %(sats)s sats を受け取ります：没収した保証金から報酬分を引いた額。"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(nick)s receives %(sats)s sats on chain at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
+msgstr "買い手 %(nick)s は %(address)s でオンチェーンで %(sats)s sats を受け取ります（%(parts)s）。リリースのマイニング手数料はこの出力から差し引かれます。"
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats on chain at its fee address: the trade fees."
+msgstr "コーディネーターは手数料アドレスでオンチェーンで %(sats)s sats を受け取ります：取引手数料。"

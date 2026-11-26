@@ -9,1235 +9,1235 @@ msgstr ""
 
 msgctxt "roblosats-admin"
 msgid "Dispute"
-msgstr ""
+msgstr "Dispute"
 
 msgctxt "roblosats-admin"
 msgid "Waiting for the maker's bond"
-msgstr ""
+msgstr "Waiting for the maker's bond"
 
 msgctxt "roblosats-admin"
 msgid "Public in the order book"
-msgstr ""
+msgstr "Public in the order book"
 
 msgctxt "roblosats-admin"
 msgid "Paused"
-msgstr ""
+msgstr "Paused"
 
 msgctxt "roblosats-admin"
 msgid "Waiting for the taker's bond"
-msgstr ""
+msgstr "Waiting for the taker's bond"
 
 msgctxt "roblosats-admin"
 msgid "Cancelled"
-msgstr ""
+msgstr "Cancelled"
 
 msgctxt "roblosats-admin"
 msgid "Expired"
-msgstr ""
+msgstr "Expired"
 
 msgctxt "roblosats-admin"
 msgid "Waiting for the seller's escrow and the buyer's invoice"
-msgstr ""
+msgstr "Waiting for the seller's escrow and the buyer's invoice"
 
 msgctxt "roblosats-admin"
 msgid "Waiting for the seller's escrow"
-msgstr ""
+msgstr "Waiting for the seller's escrow"
 
 msgctxt "roblosats-admin"
 msgid "Waiting for the buyer's invoice"
-msgstr ""
+msgstr "Waiting for the buyer's invoice"
 
 msgctxt "roblosats-admin"
 msgid "In the chat: the buyer has to pay"
-msgstr ""
+msgstr "In the chat: the buyer has to pay"
 
 msgctxt "roblosats-admin"
 msgid "In the chat: the buyer says they have paid"
-msgstr ""
+msgstr "In the chat: the buyer says they have paid"
 
 msgctxt "roblosats-admin"
 msgid "In dispute: collecting statements"
-msgstr ""
+msgstr "In dispute: collecting statements"
 
 msgctxt "roblosats-admin"
 msgid "Collaboratively cancelled"
-msgstr ""
+msgstr "Collaboratively cancelled"
 
 msgctxt "roblosats-admin"
 msgid "Paying the sats to the buyer"
-msgstr ""
+msgstr "Paying the sats to the buyer"
 
 msgctxt "roblosats-admin"
 msgid "Completed successfully"
-msgstr ""
+msgstr "Completed successfully"
 
 msgctxt "roblosats-admin"
 msgid "Lightning payment to the buyer failed"
-msgstr ""
+msgstr "Lightning payment to the buyer failed"
 
 msgctxt "roblosats-admin"
 msgid "In dispute: both statements are in, waiting for your decision"
-msgstr ""
+msgstr "In dispute: both statements are in, waiting for your decision"
 
 msgctxt "roblosats-admin"
 msgid "Dispute resolved: the maker lost"
-msgstr ""
+msgstr "Dispute resolved: the maker lost"
 
 msgctxt "roblosats-admin"
 msgid "Dispute resolved: the taker lost"
-msgstr ""
+msgstr "Dispute resolved: the taker lost"
 
 msgctxt "roblosats-admin"
 msgid "invoice generated, unpaid"
-msgstr ""
+msgstr "invoice generated, unpaid"
 
 msgctxt "roblosats-admin"
 msgid "locked (held)"
-msgstr ""
+msgstr "locked (held)"
 
 msgctxt "roblosats-admin"
 msgid "settled by the coordinator"
-msgstr ""
+msgstr "settled by the coordinator"
 
 msgctxt "roblosats-admin"
 msgid "returned"
-msgstr ""
+msgstr "returned"
 
 msgctxt "roblosats-admin"
 msgid "cancelled"
-msgstr ""
+msgstr "cancelled"
 
 msgctxt "roblosats-admin"
 msgid "expired"
-msgstr ""
+msgstr "expired"
 
 msgctxt "roblosats-admin"
 msgid "valid invoice"
-msgstr ""
+msgstr "valid invoice"
 
 msgctxt "roblosats-admin"
 msgid "payment in flight"
-msgstr ""
+msgstr "payment in flight"
 
 msgctxt "roblosats-admin"
 msgid "paid"
-msgstr ""
+msgstr "paid"
 
 msgctxt "roblosats-admin"
 msgid "payment failed"
-msgstr ""
+msgstr "payment failed"
 
 msgctxt "roblosats-admin"
 msgid "Buyer wins"
-msgstr ""
+msgstr "Buyer wins"
 
 msgctxt "roblosats-admin"
 msgid "Seller wins"
-msgstr ""
+msgstr "Seller wins"
 
 msgctxt "roblosats-admin"
 msgid "Return everything"
-msgstr ""
+msgstr "Return everything"
 
 msgctxt "roblosats-admin"
 msgid "Trade completed (pay the buyer)"
-msgstr ""
+msgstr "Trade completed (pay the buyer)"
 
 msgctxt "roblosats-admin"
 msgid "Open"
-msgstr ""
+msgstr "Open"
 
 msgctxt "roblosats-admin"
 msgid "Waiting for your decision"
-msgstr ""
+msgstr "Waiting for your decision"
 
 msgctxt "roblosats-admin"
 msgid "History"
-msgstr ""
+msgstr "History"
 
 msgctxt "roblosats-admin"
 msgid "Disputes"
-msgstr ""
+msgstr "Disputes"
 
 msgctxt "roblosats-admin"
 msgid "Disputes waiting for your decision"
-msgstr ""
+msgstr "Disputes waiting for your decision"
 
 msgctxt "roblosats-admin"
 msgid "Dispute history"
-msgstr ""
+msgstr "Dispute history"
 
 msgctxt "roblosats-admin"
 msgid "%(m)s min"
-msgstr ""
+msgstr "%(m)s min"
 
 msgctxt "roblosats-admin"
 msgid "%(d)s d %(h)s h"
-msgstr ""
+msgstr "%(d)s d %(h)s h"
 
 msgctxt "roblosats-admin"
 msgid "%(h)s h %(m)s min"
-msgstr ""
+msgstr "%(h)s h %(m)s min"
 
 msgctxt "roblosats-admin"
 msgid "the order is no longer in dispute"
-msgstr ""
+msgstr "the order is no longer in dispute"
 
 msgctxt "roblosats-admin"
 msgid "the seller's escrow has not been settled by the coordinator"
-msgstr ""
+msgstr "the seller's escrow has not been settled by the coordinator"
 
 msgctxt "roblosats-admin"
 msgid "a bond is missing"
-msgstr ""
+msgstr "a bond is missing"
 
 msgctxt "roblosats-admin"
 msgid "Dispute of order %(id)s"
-msgstr ""
+msgstr "Dispute of order %(id)s"
 
 msgctxt "roblosats-admin"
 msgid "BUY"
-msgstr ""
+msgstr "BUY"
 
 msgctxt "roblosats-admin"
 msgid "SELL"
-msgstr ""
+msgstr "SELL"
 
 msgctxt "roblosats-admin"
 msgid "the maker buys sats"
-msgstr ""
+msgstr "the maker buys sats"
 
 msgctxt "roblosats-admin"
 msgid "the maker sells sats"
-msgstr ""
+msgstr "the maker sells sats"
 
 msgctxt "roblosats-admin"
 msgid "Unknown action."
-msgstr ""
+msgstr "Unknown action."
 
 msgctxt "roblosats-admin"
 msgid "buyer"
-msgstr ""
+msgstr "buyer"
 
 msgctxt "roblosats-admin"
 msgid "seller"
-msgstr ""
+msgstr "seller"
 
 msgctxt "roblosats-admin"
 msgid "maker"
-msgstr ""
+msgstr "maker"
 
 msgctxt "roblosats-admin"
 msgid "taker"
-msgstr ""
+msgstr "taker"
 
 msgctxt "roblosats-admin"
 msgid " and "
-msgstr ""
+msgstr " and "
 
 msgctxt "roblosats-admin"
 msgid "opened automatically (the chat deadline expired)"
-msgstr ""
+msgstr "opened automatically (the chat deadline expired)"
 
 msgctxt "roblosats-admin"
 msgid "unknown"
-msgstr ""
+msgstr "unknown"
 
 msgctxt "roblosats-admin"
 msgid "the buyer never submitted a payout invoice or address"
-msgstr ""
+msgstr "the buyer never submitted a payout invoice or address"
 
 msgctxt "roblosats-admin"
 msgid "Unknown decision"
-msgstr ""
+msgstr "Unknown decision"
 
 msgctxt "roblosats-admin"
 msgid "(nobody)"
-msgstr ""
+msgstr "(nobody)"
 
 msgctxt "roblosats-admin"
 msgid "no response"
-msgstr ""
+msgstr "no response"
 
 msgctxt "roblosats-admin"
 msgid "The buyer %(buyer)s is credited %(total)s sats as a reward (their bond of %(buyer_bond)s + %(trade)s from the trade). They withdraw it from the app."
-msgstr ""
+msgstr "The buyer %(buyer)s is credited %(total)s sats as a reward (their bond of %(buyer_bond)s + %(trade)s from the trade). They withdraw it from the app."
 
 msgctxt "roblosats-admin"
 msgid "The seller %(seller)s gets nothing back: they lose their bond (%(seller_bond)s) and their escrow (%(escrow)s)."
-msgstr ""
+msgstr "The seller %(seller)s gets nothing back: they lose their bond (%(seller_bond)s) and their escrow (%(escrow)s)."
 
 msgctxt "roblosats-admin"
 msgid "The seller %(seller)s is credited %(total)s sats as a reward (their bond of %(seller_bond)s + their escrow of %(escrow)s). They withdraw it from the app."
-msgstr ""
+msgstr "The seller %(seller)s is credited %(total)s sats as a reward (their bond of %(seller_bond)s + their escrow of %(escrow)s). They withdraw it from the app."
 
 msgctxt "roblosats-admin"
 msgid "The buyer %(buyer)s gets nothing and loses their bond (%(buyer_bond)s)."
-msgstr ""
+msgstr "The buyer %(buyer)s gets nothing and loses their bond (%(buyer_bond)s)."
 
 msgctxt "roblosats-admin"
 msgid "The order ends as collaboratively cancelled."
-msgstr ""
+msgstr "The order ends as collaboratively cancelled."
 
 msgctxt "roblosats-admin"
 msgid "%(t)s left"
-msgstr ""
+msgstr "%(t)s left"
 
 msgctxt "roblosats-admin"
 msgid "expired %(t)s ago"
-msgstr ""
+msgstr "expired %(t)s ago"
 
 msgctxt "roblosats-admin"
 msgid "winner: %(role)s"
-msgstr ""
+msgstr "winner: %(role)s"
 
 msgctxt "roblosats-admin"
 msgid "Choose who the message is for."
-msgstr ""
+msgstr "Choose who the message is for."
 
 msgctxt "roblosats-admin"
 msgid "The decision was not confirmed. Nothing was done."
-msgstr ""
+msgstr "The decision was not confirmed. Nothing was done."
 
 msgctxt "roblosats-admin"
 msgid "The order changed status while you were confirming. Nothing was done: review it again."
-msgstr ""
+msgstr "The order changed status while you were confirming. Nothing was done: review it again."
 
 msgctxt "roblosats-admin"
 msgid "deadline expired"
-msgstr ""
+msgstr "deadline expired"
 
 msgctxt "roblosats-admin"
 msgid "Each party gets back what they put in, credited as a reward to withdraw from the app: the buyer %(buyer)s their bond (%(buyer_bond)s); the seller %(seller)s their bond (%(seller_bond)s) and their escrow (%(escrow)s)."
-msgstr ""
+msgstr "Each party gets back what they put in, credited as a reward to withdraw from the app: the buyer %(buyer)s their bond (%(buyer_bond)s); the seller %(seller)s their bond (%(seller_bond)s) and their escrow (%(escrow)s)."
 
 msgctxt "roblosats-admin"
 msgid "The message is empty: nothing was sent."
-msgstr ""
+msgstr "The message is empty: nothing was sent."
 
 msgctxt "roblosats-admin"
 msgid "It cannot be resolved this way right now: %(why)s. Nothing was done."
-msgstr ""
+msgstr "It cannot be resolved this way right now: %(why)s. Nothing was done."
 
 msgctxt "roblosats-admin"
 msgid "Done: “%(decision)s” on order %(id)s. (%(detail)s)"
-msgstr ""
+msgstr "Done: “%(decision)s” on order %(id)s. (%(detail)s)"
 
 msgctxt "roblosats-admin"
 msgid "Order %(id)s could not be resolved. Response: %(detail)s"
-msgstr ""
+msgstr "Order %(id)s could not be resolved. Response: %(detail)s"
 
 msgctxt "roblosats-admin"
 msgid "The buyer's invoice has already expired: the payment will probably fail and you will have to ask them for a new one."
-msgstr ""
+msgstr "The buyer's invoice has already expired: the payment will probably fail and you will have to ask them for a new one."
 
 msgctxt "roblosats-admin"
 msgid "Both bonds are credited back as rewards: %(buyer_bond)s to the buyer and %(seller_bond)s to the seller %(seller)s."
-msgstr ""
+msgstr "Both bonds are credited back as rewards: %(buyer_bond)s to the buyer and %(seller_bond)s to the seller %(seller)s."
 
 msgctxt "roblosats-admin"
 msgid "The message has %(n)s characters; the limit is %(max)s. Nothing was sent."
-msgstr ""
+msgstr "The message has %(n)s characters; the limit is %(max)s. Nothing was sent."
 
 msgctxt "roblosats-admin"
 msgid "There is nobody to send it to."
-msgstr ""
+msgstr "There is nobody to send it to."
 
 msgctxt "roblosats-admin"
 msgid "The buyer %(buyer)s is paid %(trade)s sats on-chain, to the address they gave."
-msgstr ""
+msgstr "The buyer %(buyer)s is paid %(trade)s sats on-chain, to the address they gave."
 
 msgctxt "roblosats-admin"
 msgid "The buyer %(buyer)s is paid %(trade)s sats right now over Lightning, to the invoice they gave."
-msgstr ""
+msgstr "The buyer %(buyer)s is paid %(trade)s sats right now over Lightning, to the invoice they gave."
 
 msgctxt "roblosats-admin"
 msgid "Message sent to %(names)s (app, plus Nostr and Telegram if they use them)."
-msgstr ""
+msgstr "Message sent to %(names)s (app, plus Nostr and Telegram if they use them)."
 
 msgctxt "roblosats-admin"
 msgid "Send a message to maker / taker"
-msgstr ""
+msgstr "Send a message to maker / taker"
 
 msgctxt "roblosats-admin"
 msgid "nobody"
-msgstr ""
+msgstr "nobody"
 
 msgctxt "roblosats-admin"
 msgid "Order %(id)s: message sent to %(names)s."
-msgstr ""
+msgstr "Order %(id)s: message sent to %(names)s."
 
 msgctxt "roblosats-admin"
 msgid "This order has or had a dispute."
-msgstr ""
+msgstr "This order has or had a dispute."
 
 msgctxt "roblosats-admin"
 msgid "Open the dispute page"
-msgstr ""
+msgstr "Open the dispute page"
 
 msgctxt "roblosats-admin"
 msgid "chat, statements, messages and resolution"
-msgstr ""
+msgstr "chat, statements, messages and resolution"
 
 msgctxt "roblosats-admin"
 msgid "Contact they left"
-msgstr ""
+msgstr "Contact they left"
 
 msgctxt "roblosats-admin"
 msgid "Only the chat was attached, with no text of their own."
-msgstr ""
+msgstr "Only the chat was attached, with no text of their own."
 
 msgctxt "roblosats-admin"
 msgid "Chat attached"
-msgstr ""
+msgstr "Chat attached"
 
 msgctxt "roblosats-admin"
 msgid "No chat attached."
-msgstr ""
+msgstr "No chat attached."
 
 msgctxt "roblosats-admin"
 msgid "No statement submitted yet."
-msgstr ""
+msgstr "No statement submitted yet."
 
 msgctxt "roblosats-admin"
 msgid "Trades"
-msgstr ""
+msgstr "Trades"
 
 msgctxt "roblosats-admin"
 msgid "Lost"
-msgstr ""
+msgstr "Lost"
 
 msgctxt "roblosats-admin"
 msgid "Your messages reach them via"
-msgstr ""
+msgstr "Your messages reach them via"
 
 msgctxt "roblosats-admin"
 msgid "app"
-msgstr ""
+msgstr "app"
 
 msgctxt "roblosats-admin"
 msgid "Statement"
-msgstr ""
+msgstr "Statement"
 
 msgctxt "roblosats-admin"
 msgid "submitted"
-msgstr ""
+msgstr "submitted"
 
 msgctxt "roblosats-admin"
 msgid "not submitted yet"
-msgstr ""
+msgstr "not submitted yet"
 
 msgctxt "roblosats-admin"
 msgid "none"
-msgstr ""
+msgstr "none"
 
 msgctxt "roblosats-admin"
 msgid "All disputes"
-msgstr ""
+msgstr "All disputes"
 
 msgctxt "roblosats-admin"
 msgid "Order"
-msgstr ""
+msgstr "Order"
 
 msgctxt "roblosats-admin"
 msgid "Amount"
-msgstr ""
+msgstr "Amount"
 
 msgctxt "roblosats-admin"
 msgid "Payment method"
-msgstr ""
+msgstr "Payment method"
 
 msgctxt "roblosats-admin"
 msgid "Trade sats"
-msgstr ""
+msgstr "Trade sats"
 
 msgctxt "roblosats-admin"
 msgid "Premium"
-msgstr ""
+msgstr "Premium"
 
 msgctxt "roblosats-admin"
 msgid "Did the buyer mark the fiat as sent?"
-msgstr ""
+msgstr "Did the buyer mark the fiat as sent?"
 
 msgctxt "roblosats-admin"
 msgid "Yes"
-msgstr ""
+msgstr "Yes"
 
 msgctxt "roblosats-admin"
 msgid "No"
-msgstr ""
+msgstr "No"
 
 msgctxt "roblosats-admin"
 msgid "Dispute opened by"
-msgstr ""
+msgstr "Dispute opened by"
 
 msgctxt "roblosats-admin"
 msgid "not in the log"
-msgstr ""
+msgstr "not in the log"
 
 msgctxt "roblosats-admin"
 msgid "Deadline for statements"
-msgstr ""
+msgstr "Deadline for statements"
 
 msgctxt "roblosats-admin"
 msgid "When the deadline passes nothing is resolved automatically: the decision is always yours."
-msgstr ""
+msgstr "When the deadline passes nothing is resolved automatically: the decision is always yours."
 
 msgctxt "roblosats-admin"
 msgid "Conversation between them"
-msgstr ""
+msgstr "Conversation between them"
 
 msgctxt "roblosats-admin"
 msgid "Neither party has attached the chat to their statement."
-msgstr ""
+msgstr "Neither party has attached the chat to their statement."
 
 msgctxt "roblosats-admin"
 msgid "Chat attached to the statements. Buyer on the left, seller on the right."
-msgstr ""
+msgstr "Chat attached to the statements. Buyer on the left, seller on the right."
 
 msgctxt "roblosats-admin"
 msgid "Buyer"
-msgstr ""
+msgstr "Buyer"
 
 msgctxt "roblosats-admin"
 msgid "attached"
-msgstr ""
+msgstr "attached"
 
 msgctxt "roblosats-admin"
 msgid "not attached"
-msgstr ""
+msgstr "not attached"
 
 msgctxt "roblosats-admin"
 msgid "Seller"
-msgstr ""
+msgstr "Seller"
 
 msgctxt "roblosats-admin"
 msgid "Signature NOT valid: this message may not be authentic."
-msgstr ""
+msgstr "Signature NOT valid: this message may not be authentic."
 
 msgctxt "roblosats-admin"
 msgid "The two copies do not match. The other one says:"
-msgstr ""
+msgstr "The two copies do not match. The other one says:"
 
 msgctxt "roblosats-admin"
 msgid "provided by"
-msgstr ""
+msgstr "provided by"
 
 msgctxt "roblosats-admin"
 msgid "What each party says"
-msgstr ""
+msgstr "What each party says"
 
 msgctxt "roblosats-admin"
 msgid "Messages you have already sent them"
-msgstr ""
+msgstr "Messages you have already sent them"
 
 msgctxt "roblosats-admin"
 msgid "To"
-msgstr ""
+msgstr "To"
 
 msgctxt "roblosats-admin"
 msgid "You have not written to them from the coordinator yet."
-msgstr ""
+msgstr "You have not written to them from the coordinator yet."
 
 msgctxt "roblosats-admin"
 msgid "Write to them"
-msgstr ""
+msgstr "Write to them"
 
 msgctxt "roblosats-admin"
 msgid "Prefix added to every message"
-msgstr ""
+msgstr "Prefix added to every message"
 
 msgctxt "roblosats-admin"
 msgid "Write to the buyer"
-msgstr ""
+msgstr "Write to the buyer"
 
 msgctxt "roblosats-admin"
 msgid "Write to the seller"
-msgstr ""
+msgstr "Write to the seller"
 
 msgctxt "roblosats-admin"
 msgid "Write to both"
-msgstr ""
+msgstr "Write to both"
 
 msgctxt "roblosats-admin"
 msgid "Resolve the dispute"
-msgstr ""
+msgstr "Resolve the dispute"
 
 msgctxt "roblosats-admin"
 msgid "Are you sure?"
-msgstr ""
+msgstr "Are you sure?"
 
 msgctxt "roblosats-admin"
 msgid "This cannot be undone."
-msgstr ""
+msgstr "This cannot be undone."
 
 msgctxt "roblosats-admin"
 msgid "Yes, resolve it this way"
-msgstr ""
+msgstr "Yes, resolve it this way"
 
 msgctxt "roblosats-admin"
 msgid "Cancel"
-msgstr ""
+msgstr "Cancel"
 
 msgctxt "roblosats-admin"
 msgid "Not possible"
-msgstr ""
+msgstr "Not possible"
 
 msgctxt "roblosats-admin"
 msgid "Back"
-msgstr ""
+msgstr "Back"
 
 msgctxt "roblosats-admin"
 msgid "This order is no longer in dispute; there is nothing to resolve."
-msgstr ""
+msgstr "This order is no longer in dispute; there is nothing to resolve."
 
 msgctxt "roblosats-admin"
 msgid "Not available"
-msgstr ""
+msgstr "Not available"
 
 msgctxt "roblosats-admin"
 msgid "Nothing happens until you confirm, and the confirmation shows who receives how many sats. Rewards are credited to the robot, which withdraws them from the app."
-msgstr ""
+msgstr "Nothing happens until you confirm, and the confirmation shows who receives how many sats. Rewards are credited to the robot, which withdraws them from the app."
 
 msgctxt "roblosats-admin"
 msgid "Your user can see this dispute but has no permission to change orders."
-msgstr ""
+msgstr "Your user can see this dispute but has no permission to change orders."
 
 msgctxt "roblosats-admin"
 msgid "Technical details"
-msgstr ""
+msgstr "Technical details"
 
 msgctxt "roblosats-admin"
 msgid "Open the full order record (all fields)"
-msgstr ""
+msgstr "Open the full order record (all fields)"
 
 msgctxt "roblosats-admin"
 msgid "Locked funds"
-msgstr ""
+msgstr "Locked funds"
 
 msgctxt "roblosats-admin"
 msgid "Item"
-msgstr ""
+msgstr "Item"
 
 msgctxt "roblosats-admin"
 msgid "Sats"
-msgstr ""
+msgstr "Sats"
 
 msgctxt "roblosats-admin"
 msgid "Status"
-msgstr ""
+msgstr "Status"
 
 msgctxt "roblosats-admin"
 msgid "Expires"
-msgstr ""
+msgstr "Expires"
 
 msgctxt "roblosats-admin"
 msgid "Buyer's bond"
-msgstr ""
+msgstr "Buyer's bond"
 
 msgctxt "roblosats-admin"
 msgid "Seller's bond"
-msgstr ""
+msgstr "Seller's bond"
 
 msgctxt "roblosats-admin"
 msgid "Seller's escrow"
-msgstr ""
+msgstr "Seller's escrow"
 
 msgctxt "roblosats-admin"
 msgid "Buyer's payout invoice"
-msgstr ""
+msgstr "Buyer's payout invoice"
 
 msgctxt "roblosats-admin"
 msgid "Buyer's on-chain payout"
-msgstr ""
+msgstr "Buyer's on-chain payout"
 
 msgctxt "roblosats-admin"
 msgid "Order log"
-msgstr ""
+msgstr "Order log"
 
 msgctxt "roblosats-admin"
 msgid "No log saved."
-msgstr ""
+msgstr "No log saved."
 
 msgctxt "roblosats-admin"
 msgid "Up to %(max)s characters. It arrives as an app notification, a Nostr DM and a Telegram message if they use them. It is sent as written: write it in the reader's language."
-msgstr ""
+msgstr "Up to %(max)s characters. It arrives as an app notification, a Nostr DM and a Telegram message if they use them. It is sent as written: write it in the reader's language."
 
 msgctxt "roblosats-admin"
 msgid "Waiting for your decision (both statements submitted)"
-msgstr ""
+msgstr "Waiting for your decision (both statements submitted)"
 
 msgctxt "roblosats-admin"
 msgid "Open disputes"
-msgstr ""
+msgstr "Open disputes"
 
 msgctxt "roblosats-admin"
 msgid "statement submitted"
-msgstr ""
+msgstr "statement submitted"
 
 msgctxt "roblosats-admin"
 msgid "no statement"
-msgstr ""
+msgstr "no statement"
 
 msgctxt "roblosats-admin"
 msgid "No dispute has both statements yet."
-msgstr ""
+msgstr "No dispute has both statements yet."
 
 msgctxt "roblosats-admin"
 msgid "There are no open disputes."
-msgstr ""
+msgstr "There are no open disputes."
 
 msgctxt "roblosats-admin"
 msgid "Past disputes"
-msgstr ""
+msgstr "Past disputes"
 
 msgctxt "roblosats-admin"
 msgid "Trade"
-msgstr ""
+msgstr "Trade"
 
 msgctxt "roblosats-admin"
 msgid "Buyer / seller"
-msgstr ""
+msgstr "Buyer / seller"
 
 msgctxt "roblosats-admin"
 msgid "Outcome"
-msgstr ""
+msgstr "Outcome"
 
 msgctxt "roblosats-admin"
 msgid "Created"
-msgstr ""
+msgstr "Created"
 
 msgctxt "roblosats-admin"
 msgid "None yet."
-msgstr ""
+msgstr "None yet."
 
 msgctxt "roblosats-admin"
 msgid "Orders"
-msgstr ""
+msgstr "Orders"
 
 msgctxt "roblosats-admin"
 msgid "Send to"
-msgstr ""
+msgstr "Send to"
 
 msgctxt "roblosats-admin"
 msgid "both"
-msgstr ""
+msgstr "both"
 
 msgctxt "roblosats-admin"
 msgid "Send"
-msgstr ""
+msgstr "Send"
 
 msgctxt "roblosats-admin"
 msgid "In progress"
-msgstr ""
+msgstr "In progress"
 
 msgctxt "roblosats-admin"
 msgid "bonds, chat or fiat sent"
-msgstr ""
+msgstr "bonds, chat or fiat sent"
 
 msgctxt "roblosats-admin"
 msgid "In the book"
-msgstr ""
+msgstr "In the book"
 
 msgctxt "roblosats-admin"
 msgid "waiting for a taker"
-msgstr ""
+msgstr "waiting for a taker"
 
 msgctxt "roblosats-admin"
 msgid "open and to be resolved"
-msgstr ""
+msgstr "open and to be resolved"
 
 msgctxt "roblosats-admin"
 msgid "Completed"
-msgstr ""
+msgstr "Completed"
 
 msgctxt "roblosats-admin"
 msgid "all time"
-msgstr ""
+msgstr "all time"
 
 msgctxt "roblosats-admin"
 msgid "by the maker or by both · expired: %(n)s"
-msgstr ""
+msgstr "by the maker or by both · expired: %(n)s"
 
 msgctxt "roblosats-admin"
 msgid "All orders"
-msgstr ""
+msgstr "All orders"
 
 msgctxt "roblosats-admin"
 msgid "Robots"
-msgstr ""
+msgstr "Robots"
 
 msgctxt "roblosats-admin"
 msgid "Lightning payments"
-msgstr ""
+msgstr "Lightning payments"
 
 msgctxt "roblosats-admin"
 msgid "On-chain payments"
-msgstr ""
+msgstr "On-chain payments"
 
 msgctxt "roblosats-admin"
 msgid "Telegram alerts"
-msgstr ""
+msgstr "Telegram alerts"
 
 msgctxt "roblosats-admin"
 msgid "View"
-msgstr ""
+msgstr "View"
 
 msgctxt "roblosats-admin"
 msgid "Order page"
-msgstr ""
+msgstr "Order page"
 
 msgctxt "roblosats-admin"
 msgid "Order published in the order book"
-msgstr ""
+msgstr "Order published in the order book"
 
 msgctxt "roblosats-admin"
 msgid "Order taken (the taker's bond is locked)"
-msgstr ""
+msgstr "Order taken (the taker's bond is locked)"
 
 msgctxt "roblosats-admin"
 msgid "Escrow and buyer's invoice in: the fiat exchange starts"
-msgstr ""
+msgstr "Escrow and buyer's invoice in: the fiat exchange starts"
 
 msgctxt "roblosats-admin"
 msgid "Order finished successfully"
-msgstr ""
+msgstr "Order finished successfully"
 
 msgctxt "roblosats-admin"
 msgid "Order cancelled or expired"
-msgstr ""
+msgstr "Order cancelled or expired"
 
 msgctxt "roblosats-admin"
 msgid "Dispute opened"
-msgstr ""
+msgstr "Dispute opened"
 
 msgctxt "roblosats-admin"
 msgid "Chat message from a party in a disputed order"
-msgstr ""
+msgstr "Chat message from a party in a disputed order"
 
 msgctxt "roblosats-admin"
 msgid "Message sent from the coordinator"
-msgstr ""
+msgstr "Message sent from the coordinator"
 
 msgctxt "roblosats-admin"
 msgid "Order %(id)s is public in the order book"
-msgstr ""
+msgstr "Order %(id)s is public in the order book"
 
 msgctxt "roblosats-admin"
 msgid "Order %(id)s is public in the order book again"
-msgstr ""
+msgstr "Order %(id)s is public in the order book again"
 
 msgctxt "roblosats-admin"
 msgid "Order %(id)s was taken: the taker's bond is locked"
-msgstr ""
+msgstr "Order %(id)s was taken: the taker's bond is locked"
 
 msgctxt "roblosats-admin"
 msgid "Order %(id)s: escrow and buyer's invoice are in, the fiat exchange starts"
-msgstr ""
+msgstr "Order %(id)s: escrow and buyer's invoice are in, the fiat exchange starts"
 
 msgctxt "roblosats-admin"
 msgid "Order %(id)s finished successfully"
-msgstr ""
+msgstr "Order %(id)s finished successfully"
 
 msgctxt "roblosats-admin"
 msgid "Order %(id)s: %(status)s"
-msgstr ""
+msgstr "Order %(id)s: %(status)s"
 
 msgctxt "roblosats-admin"
 msgid "Dispute opened on order %(id)s"
-msgstr ""
+msgstr "Dispute opened on order %(id)s"
 
 msgctxt "roblosats-admin"
 msgid "New chat message from %(who)s on disputed order %(id)s"
-msgstr ""
+msgstr "New chat message from %(who)s on disputed order %(id)s"
 
 msgctxt "roblosats-admin"
 msgid "You wrote to %(names)s on order %(id)s"
-msgstr ""
+msgstr "You wrote to %(names)s on order %(id)s"
 
 msgctxt "roblosats-admin"
 msgid "Test message: the coordinator's alerts reach this chat."
-msgstr ""
+msgstr "Test message: the coordinator's alerts reach this chat."
 
 msgctxt "roblosats-admin"
 msgid "The bot token does not look like a Telegram token."
-msgstr ""
+msgstr "The bot token does not look like a Telegram token."
 
 msgctxt "roblosats-admin"
 msgid "The chat id must be a number (groups start with -) or a @channel name."
-msgstr ""
+msgstr "The chat id must be a number (groups start with -) or a @channel name."
 
 msgctxt "roblosats-admin"
 msgid "The panel address must look like https://host or http://host:port, with nothing after it."
-msgstr ""
+msgstr "The panel address must look like https://host or http://host:port, with nothing after it."
 
 msgctxt "roblosats-admin"
 msgid "Telegram alerts saved."
-msgstr ""
+msgstr "Telegram alerts saved."
 
 msgctxt "roblosats-admin"
 msgid "Save a bot token and a chat id first: there is nowhere to send it."
-msgstr ""
+msgstr "Save a bot token and a chat id first: there is nowhere to send it."
 
 msgctxt "roblosats-admin"
 msgid "Test message sent. Check the Telegram chat."
-msgstr ""
+msgstr "Test message sent. Check the Telegram chat."
 
 msgctxt "roblosats-admin"
 msgid "Telegram did not accept the message: %(why)s"
-msgstr ""
+msgstr "Telegram did not accept the message: %(why)s"
 
 msgctxt "roblosats-admin"
 msgid "nobody took it"
-msgstr ""
+msgstr "nobody took it"
 
 msgctxt "roblosats-admin"
 msgid "the maker's bond was not locked"
-msgstr ""
+msgstr "the maker's bond was not locked"
 
 msgctxt "roblosats-admin"
 msgid "the seller's escrow was not locked"
-msgstr ""
+msgstr "the seller's escrow was not locked"
 
 msgctxt "roblosats-admin"
 msgid "the buyer's invoice was not submitted"
-msgstr ""
+msgstr "the buyer's invoice was not submitted"
 
 msgctxt "roblosats-admin"
 msgid "neither the escrow nor the invoice arrived"
-msgstr ""
+msgstr "neither the escrow nor the invoice arrived"
 
 msgctxt "roblosats-admin"
 msgid "Order %(id)s"
-msgstr ""
+msgstr "Order %(id)s"
 
 msgctxt "roblosats-admin"
 msgid "Coordinator panel"
-msgstr ""
+msgstr "Coordinator panel"
 
 msgctxt "roblosats-admin"
 msgid "ready to send"
-msgstr ""
+msgstr "ready to send"
 
 msgctxt "roblosats-admin"
 msgid "not configured"
-msgstr ""
+msgstr "not configured"
 
 msgctxt "roblosats-admin"
 msgid "The coordinator's bot writes to your chat when something happens to an order. Changes apply right away: no restart needed. If Telegram fails, the orders carry on as usual."
-msgstr ""
+msgstr "The coordinator's bot writes to your chat when something happens to an order. Changes apply right away: no restart needed. If Telegram fails, the orders carry on as usual."
 
 msgctxt "roblosats-admin"
 msgid "Bot and chat"
-msgstr ""
+msgstr "Bot and chat"
 
 msgctxt "roblosats-admin"
 msgid "Bot token"
-msgstr ""
+msgstr "Bot token"
 
 msgctxt "roblosats-admin"
 msgid "saved"
-msgstr ""
+msgstr "saved"
 
 msgctxt "roblosats-admin"
 msgid "A token is saved"
-msgstr ""
+msgstr "A token is saved"
 
 msgctxt "roblosats-admin"
 msgid "Leave the field empty to keep it."
-msgstr ""
+msgstr "Leave the field empty to keep it."
 
 msgctxt "roblosats-admin"
 msgid "Remove the saved token"
-msgstr ""
+msgstr "Remove the saved token"
 
 msgctxt "roblosats-admin"
 msgid "None saved here: the TELEGRAM_TOKEN of the environment is used"
-msgstr ""
+msgstr "None saved here: the TELEGRAM_TOKEN of the environment is used"
 
 msgctxt "roblosats-admin"
 msgid "Create a bot with @BotFather and paste its token. It stays on the server and is never shown again in full."
-msgstr ""
+msgstr "Create a bot with @BotFather and paste its token. It stays on the server and is never shown again in full."
 
 msgctxt "roblosats-admin"
 msgid "Chat id"
-msgstr ""
+msgstr "Chat id"
 
 msgctxt "roblosats-admin"
 msgid "Your user id, a group id (starts with -) or a @channel where the bot can write. Send a message to the bot first, or add it to the group."
-msgstr ""
+msgstr "Your user id, a group id (starts with -) or a @channel where the bot can write. Send a message to the bot first, or add it to the group."
 
 msgctxt "roblosats-admin"
 msgid "Empty: the TELEGRAM_COORDINATOR_CHAT_ID of the environment is used"
-msgstr ""
+msgstr "Empty: the TELEGRAM_COORDINATOR_CHAT_ID of the environment is used"
 
 msgctxt "roblosats-admin"
 msgid "Language of the alerts"
-msgstr ""
+msgstr "Language of the alerts"
 
 msgctxt "roblosats-admin"
 msgid "Panel address for the links"
-msgstr ""
+msgstr "Panel address for the links"
 
 msgctxt "roblosats-admin"
 msgid "Each alert links to the order's page in this panel. Empty: the coordinator's HOST_NAME is used"
-msgstr ""
+msgstr "Each alert links to the order's page in this panel. Empty: the coordinator's HOST_NAME is used"
 
 msgctxt "roblosats-admin"
 msgid "What to be told about"
-msgstr ""
+msgstr "What to be told about"
 
 msgctxt "roblosats-admin"
 msgid "Chat messages in a dispute are encrypted between the parties: the alert only says who wrote, at most once every few minutes per order. Cancellations do not include orders whose maker never locked the bond."
-msgstr ""
+msgstr "Chat messages in a dispute are encrypted between the parties: the alert only says who wrote, at most once every few minutes per order. Cancellations do not include orders whose maker never locked the bond."
 
 msgctxt "roblosats-admin"
 msgid "Save"
-msgstr ""
+msgstr "Save"
 
 msgctxt "roblosats-admin"
 msgid "Try it"
-msgstr ""
+msgstr "Try it"
 
 msgctxt "roblosats-admin"
 msgid "Sends a message with the saved settings. Save first if you changed something."
-msgstr ""
+msgstr "Sends a message with the saved settings. Save first if you changed something."
 
 msgctxt "roblosats-admin"
 msgid "Send test message"
-msgstr ""
+msgstr "Send test message"
 
 msgctxt "roblosats-admin"
 msgid "This order is in dispute."
-msgstr ""
+msgstr "This order is in dispute."
 
 msgctxt "roblosats-admin"
 msgid "This order went through a dispute."
-msgstr ""
+msgstr "This order went through a dispute."
 
 msgctxt "roblosats-admin"
 msgid "Spamcoin sats"
-msgstr ""
+msgstr "Spamcoin sats"
 
 msgctxt "roblosats-admin"
 msgid "Bond"
-msgstr ""
+msgstr "Bond"
 
 msgctxt "roblosats-admin"
 msgid "Buyer's payout"
-msgstr ""
+msgstr "Buyer's payout"
 
 msgctxt "roblosats-admin"
 msgid "on-chain"
-msgstr ""
+msgstr "on-chain"
 
 msgctxt "roblosats-admin"
 msgid "Contract formalized"
-msgstr ""
+msgstr "Contract formalized"
 
 msgctxt "roblosats-admin"
 msgid "Deadline of the current step"
-msgstr ""
+msgstr "Deadline of the current step"
 
 msgctxt "roblosats-admin"
 msgid "Chat messages"
-msgstr ""
+msgstr "Chat messages"
 
 msgctxt "roblosats-admin"
 msgid "encrypted between them"
-msgstr ""
+msgstr "encrypted between them"
 
 msgctxt "roblosats-admin"
 msgid "Bonds, escrow and payout"
-msgstr ""
+msgstr "Bonds, escrow and payout"
 
 msgctxt "roblosats-admin"
 msgid "Timeline"
-msgstr ""
+msgstr "Timeline"
 
 msgctxt "roblosats-admin"
 msgid "Links"
-msgstr ""
+msgstr "Links"
 
 msgctxt "roblosats-admin"
 msgid "Buyer's robot"
-msgstr ""
+msgstr "Buyer's robot"
 
 msgctxt "roblosats-admin"
 msgid "Seller's robot"
-msgstr ""
+msgstr "Seller's robot"
 
 msgctxt "roblosats-admin"
 msgid "Order in the app"
-msgstr ""
+msgstr "Order in the app"
 
 msgctxt "roblosats-admin"
 msgid "Needs your decision"
-msgstr ""
+msgstr "Needs your decision"
 
 msgctxt "roblosats-admin"
 msgid "Live trades"
-msgstr ""
+msgstr "Live trades"
 
 msgctxt "roblosats-admin"
 msgid "Type"
-msgstr ""
+msgstr "Type"
 
 msgctxt "roblosats-admin"
 msgid "Since"
-msgstr ""
+msgstr "Since"
 
 msgctxt "roblosats-admin"
 msgid "Until"
-msgstr ""
+msgstr "Until"
 
 msgctxt "roblosats-admin"
 msgid "No trade in progress right now."
-msgstr ""
+msgstr "No trade in progress right now."
 
 msgctxt "roblosats-admin"
 msgid "Disputes waiting: %(n)s"
-msgstr ""
+msgstr "Disputes waiting: %(n)s"
 
 msgctxt "roblosats-admin"
 msgid "Coordinator %(alias)s · RoboSats %(version)s · node %(node)s · channels: %(local)s sats local / %(remote)s remote"
-msgstr ""
+msgstr "Coordinator %(alias)s · RoboSats %(version)s · node %(node)s · channels: %(local)s sats local / %(remote)s remote"
 
 msgctxt "roblosats-admin"
 msgid "Back to the coordinator panel"
-msgstr ""
+msgstr "Back to the coordinator panel"
 
 msgctxt "roblosats-admin"
 msgid "Coordinator"
-msgstr ""
+msgstr "Coordinator"
 
 msgctxt "roblosats-admin"
 msgid "Home"
-msgstr ""
+msgstr "Home"
 
 msgctxt "roblosats-admin"
 msgid "Orders in progress"
-msgstr ""
+msgstr "Orders in progress"
 
 msgctxt "roblosats-admin"
 msgid "In the book (public)"
-msgstr ""
+msgstr "In the book (public)"
 
 msgctxt "roblosats-admin"
 msgid "Paying the buyer"
-msgstr ""
+msgstr "Paying the buyer"
 
 msgctxt "roblosats-admin"
 msgid "Money"
-msgstr ""
+msgstr "Money"
 
 msgctxt "roblosats-admin"
 msgid "People and market"
-msgstr ""
+msgstr "People and market"
 
 msgctxt "roblosats-admin"
 msgid "Users"
-msgstr ""
+msgstr "Users"
 
 msgctxt "roblosats-admin"
 msgid "Currencies"
-msgstr ""
+msgstr "Currencies"
 
 msgctxt "roblosats-admin"
 msgid "Market prices"
-msgstr ""
+msgstr "Market prices"
 
 msgctxt "roblosats-admin"
 msgid "Cancelled orders"
-msgstr ""
+msgstr "Cancelled orders"
 
 msgctxt "roblosats-admin"
 msgid "created, no address yet"
-msgstr ""
+msgstr "created, no address yet"
 
 msgctxt "roblosats-admin"
 msgid "address submitted"
-msgstr ""
+msgstr "address submitted"
 
 msgctxt "roblosats-admin"
 msgid "in the mempool"
-msgstr ""
+msgstr "in the mempool"
 
 msgctxt "roblosats-admin"
 msgid "confirmed"
-msgstr ""
+msgstr "confirmed"
 
 msgctxt "roblosats-admin"
 msgid "queued to be sent"
-msgstr ""
+msgstr "queued to be sent"
 
 msgctxt "roblosats-admin"
 msgid "(unknown)"
-msgstr ""
+msgstr "(unknown)"
 
 msgctxt "roblosats-admin"
 msgid "the buyer won"
-msgstr ""
+msgstr "the buyer won"
 
 msgctxt "roblosats-admin"
 msgid "the seller won"
-msgstr ""
+msgstr "the seller won"
 
 msgctxt "roblosats-admin"
 msgid "Coordinator's earnings"
-msgstr ""
+msgstr "Coordinator's earnings"
 
 msgctxt "roblosats-admin"
 msgid "Routing fee of the payment to the buyer: %(fee)s sats."
-msgstr ""
+msgstr "Routing fee of the payment to the buyer: %(fee)s sats."
 
 msgctxt "roblosats-admin"
 msgid "Transaction"
-msgstr ""
+msgstr "Transaction"
 
 msgctxt "roblosats-admin"
 msgid "Mining fee"
-msgstr ""
+msgstr "Mining fee"
 
 msgctxt "roblosats-admin"
 msgid "Chat between them"
-msgstr ""
+msgstr "Chat between them"
 
 msgctxt "roblosats-admin"
 msgid "The chat could not be read."
-msgstr ""
+msgstr "The chat could not be read."
 
 msgctxt "roblosats-admin"
 msgid "First message"
-msgstr ""
+msgstr "First message"
 
 msgctxt "roblosats-admin"
 msgid "Last message"
-msgstr ""
+msgstr "Last message"
 
 msgctxt "roblosats-admin"
 msgid "When each one wrote"
-msgstr ""
+msgstr "When each one wrote"
 
 msgctxt "roblosats-admin"
 msgid "Who"
-msgstr ""
+msgstr "Who"
 
 msgctxt "roblosats-admin"
 msgid "Time"
-msgstr ""
+msgstr "Time"
 
 msgctxt "roblosats-admin"
 msgid "No chat messages are stored on the coordinator."
-msgstr ""
+msgstr "No chat messages are stored on the coordinator."
 
 msgctxt "roblosats-admin"
 msgid "The messages are encrypted between them: here you only see how many, who wrote them and when. Since Roblosats 0.8.8-rl25 a copy of every message reaches the coordinator, also in the app's Nostr chat mode. In orders chatted before that, only the first Nostr message may have arrived, so a low count there does not mean they did not talk."
-msgstr ""
+msgstr "The messages are encrypted between them: here you only see how many, who wrote them and when. Since Roblosats 0.8.8-rl25 a copy of every message reaches the coordinator, also in the app's Nostr chat mode. In orders chatted before that, only the first Nostr message may have arrived, so a low count there does not mean they did not talk."
 
 msgctxt "roblosats-admin"
 msgid "Payment"
-msgstr ""
+msgstr "Payment"
 
 msgctxt "roblosats-admin"
 msgid "Failed payouts"
@@ -2029,247 +2029,247 @@ msgstr "Alerts already sent"
 
 msgctxt "roblosats-admin"
 msgid "the order has no on-chain escrow"
-msgstr ""
+msgstr "the order has no on-chain escrow"
 
 msgctxt "roblosats-admin"
 msgid "the on-chain escrow is not confirmed and unspent (status: %(status)s)"
-msgstr ""
+msgstr "the on-chain escrow is not confirmed and unspent (status: %(status)s)"
 
 msgctxt "roblosats-admin"
 msgid "the %(role)s's bond is not in the escrow"
-msgstr ""
+msgstr "the %(role)s's bond is not in the escrow"
 
 msgctxt "roblosats-admin"
 msgid "the bonds of the escrow cannot be read"
-msgstr ""
+msgstr "the bonds of the escrow cannot be read"
 
 msgctxt "roblosats-admin"
 msgid "the buyer has not given an on-chain address to receive the sats"
-msgstr ""
+msgstr "the buyer has not given an on-chain address to receive the sats"
 
 msgctxt "roblosats-admin"
 msgid "the seller has not given an on-chain refund address"
-msgstr ""
+msgstr "the seller has not given an on-chain refund address"
 
 msgctxt "roblosats-admin"
 msgid "It goes out on chain through the seller's leaf with the coordinator: the seller's app (%(nick)s) must sign the return, then the coordinator adds its signature and broadcasts it. The buyer does not sign anything."
-msgstr ""
+msgstr "It goes out on chain through the seller's leaf with the coordinator: the seller's app (%(nick)s) must sign the return, then the coordinator adds its signature and broadcasts it. The buyer does not sign anything."
 
 msgctxt "roblosats-admin"
 msgid "It goes out on chain through the buyer's leaf with the coordinator: the buyer's app (%(nick)s) must sign the release, then the coordinator adds its signature and broadcasts it. The seller does not sign anything."
-msgstr ""
+msgstr "It goes out on chain through the buyer's leaf with the coordinator: the buyer's app (%(nick)s) must sign the release, then the coordinator adds its signature and broadcasts it. The seller does not sign anything."
 
 msgctxt "roblosats-admin"
 msgid "It goes out on chain through the seller's leaf with the coordinator: the seller's app (%(nick)s) must sign the release, then the coordinator adds its signature and broadcasts it. The buyer does not sign anything."
-msgstr ""
+msgstr "It goes out on chain through the seller's leaf with the coordinator: the seller's app (%(nick)s) must sign the release, then the coordinator adds its signature and broadcasts it. The buyer does not sign anything."
 
 msgctxt "roblosats-admin"
 msgid "trade amount"
-msgstr ""
+msgstr "trade amount"
 
 msgctxt "roblosats-admin"
 msgid "their escrow back"
-msgstr ""
+msgstr "their escrow back"
 
 msgctxt "roblosats-admin"
 msgid "reward from the other bond"
-msgstr ""
+msgstr "reward from the other bond"
 
 msgctxt "roblosats-admin"
 msgid "leftover of their deposit"
-msgstr ""
+msgstr "leftover of their deposit"
 
 msgctxt "roblosats-admin"
 msgid "The %(role)s %(nick)s receives %(sats)s sats at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
-msgstr ""
+msgstr "The %(role)s %(nick)s receives %(sats)s sats at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
 
 msgctxt "roblosats-admin"
 msgid "The %(role)s %(nick)s only gets back the leftover of their deposit, %(sats)s sats at %(address)s."
-msgstr ""
+msgstr "The %(role)s %(nick)s only gets back the leftover of their deposit, %(sats)s sats at %(address)s."
 
 msgctxt "roblosats-admin"
 msgid "The coordinator receives %(sats)s sats at its fee address: %(penalty)s kept from the loser's bond + %(fees)s of trade fees."
-msgstr ""
+msgstr "The coordinator receives %(sats)s sats at its fee address: %(penalty)s kept from the loser's bond + %(fees)s of trade fees."
 
 msgctxt "roblosats-admin"
 msgid "The development fund receives %(sats)s sats."
-msgstr ""
+msgstr "The development fund receives %(sats)s sats."
 
 msgctxt "roblosats-admin"
 msgid "The %(role)s %(nick)s loses their on-chain bond (%(bond)s sats)."
-msgstr ""
+msgstr "The %(role)s %(nick)s loses their on-chain bond (%(bond)s sats)."
 
 msgctxt "roblosats-admin"
 msgid "The coordinator receives nothing on chain."
-msgstr ""
+msgstr "The coordinator receives nothing on chain."
 
 msgctxt "roblosats-admin"
 msgid "The %(role)s's bond is a Lightning bond (%(sats)s sats), settled when the dispute opened: the coordinator keeps it and credits %(reward)s sats of it to the %(winner)s as a reward, withdrawn from the app."
-msgstr ""
+msgstr "The %(role)s's bond is a Lightning bond (%(sats)s sats), settled when the dispute opened: the coordinator keeps it and credits %(reward)s sats of it to the %(winner)s as a reward, withdrawn from the app."
 
 msgctxt "roblosats-admin"
 msgid "The %(role)s's Lightning bond (%(sats)s sats), settled when the dispute opened, is credited back to them as a reward, withdrawn from the app."
-msgstr ""
+msgstr "The %(role)s's Lightning bond (%(sats)s sats), settled when the dispute opened, is credited back to them as a reward, withdrawn from the app."
 
 msgctxt "roblosats-admin"
 msgid "their fee"
-msgstr ""
+msgstr "their fee"
 
 msgctxt "roblosats-admin"
 msgid "The seller %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s), minus the mining fee of the return, which comes out of this output."
-msgstr ""
+msgstr "The seller %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s), minus the mining fee of the return, which comes out of this output."
 
 msgctxt "roblosats-admin"
 msgid "The buyer %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s)."
-msgstr ""
+msgstr "The buyer %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s)."
 
 msgctxt "roblosats-admin"
 msgid "The buyer's part (%(sats)s sats) is below the dust limit of their address: it cannot be an output of its own and goes with the seller's."
-msgstr ""
+msgstr "The buyer's part (%(sats)s sats) is below the dust limit of their address: it cannot be an output of its own and goes with the seller's."
 
 msgctxt "roblosats-admin"
 msgid "The coordinator charges nothing: the trade fees are given back."
-msgstr ""
+msgstr "The coordinator charges nothing: the trade fees are given back."
 
 msgctxt "roblosats-admin"
 msgid "The coordinator keeps only the fee already paid in the deposit (%(sats)s sats)."
-msgstr ""
+msgstr "The coordinator keeps only the fee already paid in the deposit (%(sats)s sats)."
 
 msgctxt "roblosats-admin"
 msgid "The taker's Lightning bond (%(sats)s sats) goes back to them: credited as a reward if it was already settled when the dispute opened, unlocked otherwise."
-msgstr ""
+msgstr "The taker's Lightning bond (%(sats)s sats) goes back to them: credited as a reward if it was already settled when the dispute opened, unlocked otherwise."
 
 msgctxt "roblosats-admin"
 msgid "not possible with an on-chain escrow: to pay the buyer use “Buyer wins”"
-msgstr ""
+msgstr "not possible with an on-chain escrow: to pay the buyer use “Buyer wins”"
 
 msgctxt "roblosats-admin"
 msgid "not possible with an on-chain escrow: it can only go to the buyer, to the seller, or back to each party"
-msgstr ""
+msgstr "not possible with an on-chain escrow: it can only go to the buyer, to the seller, or back to each party"
 
 msgctxt "roblosats-admin"
 msgid "the release cannot be planned: %(error)s"
-msgstr ""
+msgstr "the release cannot be planned: %(error)s"
 
 msgctxt "roblosats-admin"
 msgid "A cooperative release had already been prepared (never broadcast): this decision replaces it."
-msgstr ""
+msgstr "A cooperative release had already been prepared (never broadcast): this decision replaces it."
 
 msgctxt "roblosats-admin"
 msgid "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). What the maker gets back is credited as a Lightning reward."
-msgstr ""
+msgstr "The maker's bond is on chain (%(bond)s sats, behind a Lightning stand-in). What the maker gets back is credited as a Lightning reward."
 
 msgctxt "roblosats-admin"
 msgid "The %(role)s signed and the coordinator broadcast the release."
-msgstr ""
+msgstr "The %(role)s signed and the coordinator broadcast the release."
 
 msgctxt "roblosats-admin"
 msgid "Waiting for the %(role)s's signature (%(nick)s): their app signs the release when they open the order. The coordinator then adds its signature and broadcasts it; nothing else is needed from you."
-msgstr ""
+msgstr "Waiting for the %(role)s's signature (%(nick)s): their app signs the release when they open the order. The coordinator then adds its signature and broadcasts it; nothing else is needed from you."
 
 msgctxt "roblosats-admin"
 msgid "bond return"
-msgstr ""
+msgstr "bond return"
 
 msgctxt "roblosats-admin"
 msgid "buyer payout"
-msgstr ""
+msgstr "buyer payout"
 
 msgctxt "roblosats-admin"
 msgid "seller refund"
-msgstr ""
+msgstr "seller refund"
 
 msgctxt "roblosats-admin"
 msgid "buyer funding"
-msgstr ""
+msgstr "buyer funding"
 
 msgctxt "roblosats-admin"
 msgid "seller funding"
-msgstr ""
+msgstr "seller funding"
 
 msgctxt "roblosats-admin"
 msgid "coordinator"
-msgstr ""
+msgstr "coordinator"
 
 msgctxt "roblosats-admin"
 msgid "its deposit change comes back here"
-msgstr ""
+msgstr "its deposit change comes back here"
 
 msgctxt "roblosats-admin"
 msgid "Deposit payment"
-msgstr ""
+msgstr "Deposit payment"
 
 msgctxt "roblosats-admin"
 msgid "Deposit outputs"
-msgstr ""
+msgstr "Deposit outputs"
 
 msgctxt "roblosats-admin"
 msgid "Release outputs"
-msgstr ""
+msgstr "Release outputs"
 
 msgctxt "roblosats-admin"
 msgid "extra plan"
-msgstr ""
+msgstr "extra plan"
 
 msgctxt "roblosats-admin"
 msgid "dev fund"
-msgstr ""
+msgstr "dev fund"
 
 msgctxt "roblosats-admin"
 msgid "Trader address"
-msgstr ""
+msgstr "Trader address"
 
 msgctxt "roblosats-admin"
 msgid "On-chain resolution"
-msgstr ""
+msgstr "On-chain resolution"
 
 msgctxt "roblosats-admin"
 msgid "The seller %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s)."
-msgstr ""
+msgstr "The seller %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s)."
 
 msgctxt "roblosats-admin"
 msgid "The coordinator receives %(sats)s sats at its fee address: the penalized bond less the reward share."
-msgstr ""
+msgstr "The coordinator receives %(sats)s sats at its fee address: the penalized bond less the reward share."
 
 msgctxt "roblosats-admin"
 msgid "The release's mining fee comes out of the coordinator's output."
-msgstr ""
+msgstr "The release's mining fee comes out of the coordinator's output."
 
 msgctxt "roblosats-admin"
 msgid "The release's mining fee comes out of the seller's output."
-msgstr ""
+msgstr "The release's mining fee comes out of the seller's output."
 
 msgctxt "roblosats-admin"
 msgid "There is no trade: the trade fees are given back and nobody receives sats they did not pay for."
-msgstr ""
+msgstr "There is no trade: the trade fees are given back and nobody receives sats they did not pay for."
 
 msgctxt "roblosats-admin"
 msgid "The buyer %(nick)s receives %(sats)s sats at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
-msgstr ""
+msgstr "The buyer %(nick)s receives %(sats)s sats at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
 
 msgctxt "roblosats-admin"
 msgid "The coordinator receives %(sats)s sats at its fee address: the trade fees."
-msgstr ""
+msgstr "The coordinator receives %(sats)s sats at its fee address: the trade fees."
 
 msgctxt "roblosats-admin"
 msgid "The order ends as a successful trade once the release is broadcast."
-msgstr ""
+msgstr "The order ends as a successful trade once the release is broadcast."
 
 msgctxt "roblosats-admin"
 msgid "unknown decision"
-msgstr ""
+msgstr "unknown decision"
 
 msgctxt "roblosats-admin"
 msgid "%(sats)s for %(spam)s Spamsats"
-msgstr ""
+msgstr "%(sats)s for %(spam)s Spamsats"
 
 msgctxt "roblosats-admin"
 msgid "%(sats)s for %(total)s %(currency)s"
-msgstr ""
+msgstr "%(sats)s for %(total)s %(currency)s"
 
 msgctxt "roblosats-admin"
 msgid "The node refused the transaction (%(reason)s)."
-msgstr ""
+msgstr "The node refused the transaction (%(reason)s)."
 
 msgctxt "roblosats-admin"
 msgid "won the dispute: the trade amount (their on-chain bond went back on chain)"
@@ -2321,20 +2321,156 @@ msgstr "Order %(id)s: %(sats)s sats were sent to the %(role)s's on-chain address
 
 msgctxt "roblosats-admin"
 msgid "Hybrid C (on-chain buyer bond)"
-msgstr ""
+msgstr "Hybrid C (on-chain buyer bond)"
 
 msgctxt "roblosats-admin"
 msgid "Hybrid D (on-chain seller)"
-msgstr ""
+msgstr "Hybrid D (on-chain seller)"
 
 msgctxt "roblosats-admin"
 msgid "attached after the statement, %(time)s"
-msgstr ""
+msgstr "attached after the statement, %(time)s"
 
 msgctxt "roblosats-admin"
 msgid "Chat attached to a dispute after the statement"
-msgstr ""
+msgstr "Chat attached to a dispute after the statement"
 
 msgctxt "roblosats-admin"
 msgid "Order %(id)s: the %(who)s attached their chat to the dispute (%(n)s messages)"
-msgstr ""
+msgstr "Order %(id)s: the %(who)s attached their chat to the dispute (%(n)s messages)"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s), credited as a Lightning reward"
+msgstr "their Lightning bond (%(sats)s), credited as a Lightning reward"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), straight back to them on chain (not credited)"
+msgstr "their on-chain bond (%(sats)s), straight back to them on chain (not credited)"
+
+msgctxt "roblosats-admin"
+msgid "the value of their on-chain bond (%(sats)s), penalized on chain earlier, credited as a Lightning reward"
+msgstr "the value of their on-chain bond (%(sats)s), penalized on chain earlier, credited as a Lightning reward"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), already back with them on chain"
+msgstr "their on-chain bond (%(sats)s), already back with them on chain"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s), kept by the coordinator"
+msgstr "their Lightning bond (%(sats)s), kept by the coordinator"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), penalized on chain now"
+msgstr "their on-chain bond (%(sats)s), penalized on chain now"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), already penalized on chain"
+msgstr "their on-chain bond (%(sats)s), already penalized on chain"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), which had already gone back to them on chain: nothing to penalize"
+msgstr "their on-chain bond (%(sats)s), which had already gone back to them on chain: nothing to penalize"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s gets: %(parts)s."
+msgstr "The %(role)s %(nick)s gets: %(parts)s."
+
+msgctxt "roblosats-admin"
+msgid "In total %(total)s sats credited as a Lightning reward, withdrawn from the app."
+msgstr "In total %(total)s sats credited as a Lightning reward, withdrawn from the app."
+
+msgctxt "roblosats-admin"
+msgid "the trade amount %(trade)s from the Lightning escrow, credited as a Lightning reward"
+msgstr "the trade amount %(trade)s from the Lightning escrow, credited as a Lightning reward"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s gets nothing back: they lose %(bond)s and their Lightning escrow (%(escrow)s)."
+msgstr "The seller %(seller)s gets nothing back: they lose %(bond)s and their Lightning escrow (%(escrow)s)."
+
+msgctxt "roblosats-admin"
+msgid "their Lightning escrow back (%(escrow)s), credited as a Lightning reward"
+msgstr "their Lightning escrow back (%(escrow)s), credited as a Lightning reward"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets nothing: they lose %(bond)s."
+msgstr "The buyer %(buyer)s gets nothing: they lose %(bond)s."
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s gets %(escrow_text)s, but LOSES %(bond)s."
+msgstr "The seller %(seller)s gets %(escrow_text)s, but LOSES %(bond)s."
+
+msgctxt "roblosats-admin"
+msgid "They do not receive the trade sats."
+msgstr "They do not receive the trade sats."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s LOSES %(bond)s."
+msgstr "The buyer %(buyer)s LOSES %(bond)s."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s is paid %(trade)s sats on chain, to the address they gave (from the Lightning escrow, through the coordinator's swap)."
+msgstr "The buyer %(buyer)s is paid %(trade)s sats on chain, to the address they gave (from the Lightning escrow, through the coordinator's swap)."
+
+msgctxt "roblosats-admin"
+msgid "trade amount (on-chain escrow)"
+msgstr "trade amount (on-chain escrow)"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain escrow back"
+msgstr "their on-chain escrow back"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond"
+msgstr "their on-chain bond"
+
+msgctxt "roblosats-admin"
+msgid "reward from the other on-chain bond"
+msgstr "reward from the other on-chain bond"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s receives %(sats)s sats on chain at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
+msgstr "The %(role)s %(nick)s receives %(sats)s sats on chain at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s only gets back the leftover of their deposit, %(sats)s sats on chain at %(address)s."
+msgstr "The %(role)s %(nick)s only gets back the leftover of their deposit, %(sats)s sats on chain at %(address)s."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats on chain at its fee address: %(penalty)s kept from the loser's bond + %(fees)s of trade fees."
+msgstr "The coordinator receives %(sats)s sats on chain at its fee address: %(penalty)s kept from the loser's bond + %(fees)s of trade fees."
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s's bond is a Lightning bond (%(sats)s sats), settled when the dispute opened: the coordinator keeps it and credits %(reward)s sats of it to the %(winner)s as a Lightning reward, withdrawn from the app."
+msgstr "The %(role)s's bond is a Lightning bond (%(sats)s sats), settled when the dispute opened: the coordinator keeps it and credits %(reward)s sats of it to the %(winner)s as a Lightning reward, withdrawn from the app."
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s's Lightning bond (%(sats)s sats), settled when the dispute opened, is credited back to them as a Lightning reward, withdrawn from the app."
+msgstr "The %(role)s's Lightning bond (%(sats)s sats), settled when the dispute opened, is credited back to them as a Lightning reward, withdrawn from the app."
+
+msgctxt "roblosats-admin"
+msgid "The seller %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s), minus the mining fee of the return, which comes out of this output."
+msgstr "The seller %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s), minus the mining fee of the return, which comes out of this output."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s)."
+msgstr "The buyer %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s)."
+
+msgctxt "roblosats-admin"
+msgid "The %(side)s's Lightning bond (%(sats)s sats) goes back to them: credited as a Lightning reward if it was already settled when the dispute opened, unlocked otherwise."
+msgstr "The %(side)s's Lightning bond (%(sats)s sats) goes back to them: credited as a Lightning reward if it was already settled when the dispute opened, unlocked otherwise."
+
+msgctxt "roblosats-admin"
+msgid "The seller %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s)."
+msgstr "The seller %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s)."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats on chain at its fee address: the penalized bond less the reward share."
+msgstr "The coordinator receives %(sats)s sats on chain at its fee address: the penalized bond less the reward share."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(nick)s receives %(sats)s sats on chain at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
+msgstr "The buyer %(nick)s receives %(sats)s sats on chain at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats on chain at its fee address: the trade fees."
+msgstr "The coordinator receives %(sats)s sats on chain at its fee address: the trade fees."

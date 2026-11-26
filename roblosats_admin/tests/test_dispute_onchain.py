@@ -86,7 +86,7 @@ class OnchainPlanTest(TestCase):
         self.assertIn(BUYER_ADDR, t)
         self.assertIn("buyer's app (BuyerBot) must sign", t)
         # the seller's extra (362) is above dust: back to the seller
-        self.assertIn(f"{disputes.fmt_sats(362)} sats at {SELLER_ADDR}", t)
+        self.assertIn(f"{disputes.fmt_sats(362)} sats on chain at {SELLER_ADDR}", t)
         # coordinator: the other half of the seller's bond + both fees
         self.assertIn(disputes.fmt_sats(15_000 + 200 + 1_701), t)
         self.assertIn(f"loses their on-chain bond ({disputes.fmt_sats(30_000)} sats)", t)
@@ -108,7 +108,7 @@ class OnchainPlanTest(TestCase):
         self.assertIn("seller's app (SellerBot) must sign the return", t)
         self.assertIn("The buyer does not sign anything", t)
         self.assertIn(disputes.fmt_sats(1_000_000 + 30_000 + 200 + 362), t)
-        self.assertIn(f"{disputes.fmt_sats(27_896 + 1_701)} sats at {BUYER_ADDR}", t)
+        self.assertIn(f"{disputes.fmt_sats(27_896 + 1_701)} sats on chain at {BUYER_ADDR}", t)
         self.assertIn("charges nothing", t)
         self.assertIn("collaboratively cancelled", t)
 
@@ -134,8 +134,8 @@ class OnchainPlanTest(TestCase):
         self.assertTrue(p["possible"], p["missing"])
         t = self.text(p)
         self.assertIn("seller's app (SellerBot) must sign the release", t)
-        self.assertIn(f"{disputes.fmt_sats(1_000_000 + 200 + 362)} sats at {SELLER_ADDR}", t)
-        self.assertIn(f"{disputes.fmt_sats(27_896 + 15_000 + 1_701)} sats at {BUYER_ADDR}", t)
+        self.assertIn(f"{disputes.fmt_sats(1_000_000 + 200 + 362)} sats on chain at {SELLER_ADDR}", t)
+        self.assertIn(f"{disputes.fmt_sats(27_896 + 15_000 + 1_701)} sats on chain at {BUYER_ADDR}", t)
         self.assertIn(disputes.fmt_sats(15_000), t)
         self.assertIn("mining fee comes out of the coordinator's output", t)
         escrow = flow.escrow_of(order)
@@ -173,8 +173,8 @@ class OnchainPlanTest(TestCase):
         escrow = flow.escrow_of(order)
         outs, info = flow.completed_split(order, escrow)
         self.assertEqual(dict(outs), {"buyer": 1_000_000 + 27_896, "seller": 30_000 + 362, "coordinator": 1_901})
-        self.assertIn(f"{disputes.fmt_sats(1_027_896)} sats at {BUYER_ADDR}", t)
-        self.assertIn(f"{disputes.fmt_sats(30_362)} sats at {SELLER_ADDR}", t)
+        self.assertIn(f"{disputes.fmt_sats(1_027_896)} sats on chain at {BUYER_ADDR}", t)
+        self.assertIn(f"{disputes.fmt_sats(30_362)} sats on chain at {SELLER_ADDR}", t)
         self.assertIn("successful trade", t)
 
     def test_unknown_decision_refused(self):

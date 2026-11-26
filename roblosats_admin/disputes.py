@@ -557,11 +557,10 @@ def plan(order, decision):
 
     if dispute_onchain.applies(order):
         return dispute_onchain.plan(order, decision)
+    # 26 nov 2026: the Lightning plan itself says, for each bond, whether it is Lightning or on
+    # chain and what happens to it (hybrid B maker / mixta C taker on-chain bonds included), so
+    # 0.9.12's hybrid_b_lines no longer rewrites its lines.
     result = _plan_lightning(order, decision)
-    try:  # 0.9.12: the maker's on-chain bond is still locked: back on chain or penalized now
-        dispute_onchain.hybrid_b_lines(order, decision, result["lines"])
-    except Exception:  # noqa: BLE001 (extra information, never break the page)
-        pass
     note = ""
     try:
         note = dispute_onchain.hybrid_b_note(order)
@@ -572,14 +571,72 @@ def plan(order, decision):
     return result
 
 
+def bond_state(bond):
+    """26 nov 2026: what a dispute can do with a Lightning-order bond. {kind: lightning|onchain,
+    sats, state}: a Lightning hold invoice (settled when the dispute opened); an on-chain bond
+    behind a proxy (hybrid B maker, mixta C taker) still "locked", already "penalized", or
+    already "back" with its owner."""
+    from api.escrow import flow
+    from api.models import OnchainBond
+
+    if bond is None:
+        return {"kind": "lightning", "sats": 0, "state": "none"}
+    if not flow.is_bond_proxy(bond):
+        return {"kind": "lightning", "sats": bond.num_satoshis, "state": "settled"}
+    b = flow.proxied_bond(bond)
+    state = "back"
+    if b is not None and b.status == OnchainBond.Status.LOCKED:
+        state = "locked"
+    elif b is not None and b.status == OnchainBond.Status.PENALIZED:
+        state = "penalized"
+    return {"kind": "onchain", "sats": bond.num_satoshis, "state": state}
+
+
+def bond_credit(info):
+    """What a party that keeps its bond is credited as a Lightning reward (as the admin action
+    does: dispute_bond_sats)."""
+    if info["kind"] == "lightning" or info["state"] == "penalized":
+        return info["sats"]
+    return 0
+
+
+def bond_kept_text(info):
+    """The bond of a party that keeps it, said with how it comes back."""
+    v = {"sats": fmt_sats(info["sats"])}
+    if info["kind"] == "lightning":
+        return _("their Lightning bond (%(sats)s), credited as a Lightning reward") % v
+    if info["state"] == "locked":
+        return _("their on-chain bond (%(sats)s), straight back to them on chain (not credited)") % v
+    if info["state"] == "penalized":
+        return _(
+            "the value of their on-chain bond (%(sats)s), penalized on chain earlier, credited as a "
+            "Lightning reward"
+        ) % v
+    return _("their on-chain bond (%(sats)s), already back with them on chain") % v
+
+
+def bond_lost_text(info):
+    """The bond of a party that loses it."""
+    v = {"sats": fmt_sats(info["sats"])}
+    if info["kind"] == "lightning":
+        return _("their Lightning bond (%(sats)s), kept by the coordinator") % v
+    if info["state"] == "locked":
+        return _("their on-chain bond (%(sats)s), penalized on chain now") % v
+    if info["state"] == "penalized":
+        return _("their on-chain bond (%(sats)s), already penalized on chain") % v
+    return _(
+        "their on-chain bond (%(sats)s), which had already gone back to them on chain: nothing to "
+        "penalize"
+    ) % v
+
+
 def _plan_lightning(order, decision):
     from api.models import LNPayment
 
     r = roles(order)
     buyer_nick = r["buyer"].username if r["buyer"] else "?"
     seller_nick = r["seller"].username if r["seller"] else "?"
-    buyer_bond = r["buyer_bond"].num_satoshis if r["buyer_bond"] else 0
-    seller_bond = r["seller_bond"].num_satoshis if r["seller_bond"] else 0
+    bb, sb = bond_state(r["buyer_bond"]), bond_state(r["seller_bond"])
     escrow = order.trade_escrow
     escrow_sats = escrow.num_satoshis if escrow else 0
     payout = payout_sats(order)
@@ -592,98 +649,55 @@ def _plan_lightning(order, decision):
     if not r["buyer_bond"] or not r["seller_bond"]:
         missing.append(_("a bond is missing"))
 
-    values = {
-        "buyer": buyer_nick,
-        "seller": seller_nick,
-        "buyer_bond": fmt_sats(buyer_bond),
-        "seller_bond": fmt_sats(seller_bond),
-        "escrow": fmt_sats(escrow_sats),
-    }
+    values = {"buyer": buyer_nick, "seller": seller_nick, "escrow": fmt_sats(escrow_sats)}
+
+    def credited(role, base_sats, base_text, info):
+        """'The <role> <nick> is credited N sats as a Lightning reward (parts)' + the bond's fate."""
+        total = base_sats + bond_credit(info)
+        parts = [base_text] if base_text else []
+        parts.append(bond_kept_text(info))
+        nick = buyer_nick if role == "buyer" else seller_nick
+        line = _("The %(role)s %(nick)s gets: %(parts)s.") % {
+            "role": role_name(role), "nick": nick, "parts": "; ".join(parts)}
+        if total:
+            line += " " + _("In total %(total)s sats credited as a Lightning reward, withdrawn from the app.") % {
+                "total": fmt_sats(total)}
+        return line
+
     lines, warning = [], ""
     if decision == "buyer":
         if payout is None:
             missing.append(_("the buyer never submitted a payout invoice or address"))
         else:
-            values["trade"] = fmt_sats(payout)
-            values["total"] = fmt_sats(buyer_bond + payout)
+            trade = _("the trade amount %(trade)s from the Lightning escrow, credited as a Lightning reward") % {
+                "trade": fmt_sats(payout)}
+            lines.append(credited("buyer", payout, trade, bb))
             lines.append(
-                _(
-                    "The buyer %(buyer)s is credited %(total)s sats as a reward "
-                    "(their bond of %(buyer_bond)s + %(trade)s from the trade). "
-                    "They withdraw it from the app."
-                )
-                % values
-            )
-            lines.append(
-                _(
-                    "The seller %(seller)s gets nothing back: they lose their bond "
-                    "(%(seller_bond)s) and their escrow (%(escrow)s)."
-                )
-                % values
+                _("The seller %(seller)s gets nothing back: they lose %(bond)s and their Lightning escrow (%(escrow)s).")
+                % {**values, "bond": bond_lost_text(sb)}
             )
     elif decision == "seller":
-        values["total"] = fmt_sats(seller_bond + escrow_sats)
-        lines.append(
-            _(
-                "The seller %(seller)s is credited %(total)s sats as a reward "
-                "(their bond of %(seller_bond)s + their escrow of %(escrow)s). "
-                "They withdraw it from the app."
-            )
-            % values
-        )
-        lines.append(
-            _("The buyer %(buyer)s gets nothing and loses their bond (%(buyer_bond)s).")
-            % values
-        )
+        esc = _("their Lightning escrow back (%(escrow)s), credited as a Lightning reward") % values
+        lines.append(credited("seller", escrow_sats, esc, sb))
+        lines.append(_("The buyer %(buyer)s gets nothing: they lose %(bond)s.") % {**values, "bond": bond_lost_text(bb)})
     elif decision == "return":
-        lines.append(
-            _(
-                "Each party gets back what they put in, credited as a reward to withdraw "
-                "from the app: the buyer %(buyer)s their bond (%(buyer_bond)s); the "
-                "seller %(seller)s their bond (%(seller_bond)s) and their escrow "
-                "(%(escrow)s)."
-            )
-            % values
-        )
+        lines.append(credited("buyer", 0, "", bb))
+        esc = _("their Lightning escrow back (%(escrow)s), credited as a Lightning reward") % values
+        lines.append(credited("seller", escrow_sats, esc, sb))
         lines.append(_("The order ends as collaboratively cancelled."))
     elif decision in ("penalize_seller", "penalize_buyer"):
         if decision == "penalize_seller":
+            esc = _("their Lightning escrow back (%(escrow)s), credited as a Lightning reward") % values
             lines.append(
-                _(
-                    "The seller %(seller)s gets their escrow (%(escrow)s) back as a "
-                    "reward, but LOSES their bond (%(seller_bond)s), which the "
-                    "coordinator keeps."
-                )
-                % values
+                _("The seller %(seller)s gets %(escrow_text)s, but LOSES %(bond)s.")
+                % {**values, "escrow_text": esc, "bond": bond_lost_text(sb)}
             )
-            lines.append(
-                _(
-                    "The buyer %(buyer)s gets their bond (%(buyer_bond)s) back as a "
-                    "reward. They do not receive the trade sats."
-                )
-                % values
-            )
+            lines.append(credited("buyer", 0, "", bb) + " " + _("They do not receive the trade sats."))
         else:
-            lines.append(
-                _(
-                    "The buyer %(buyer)s LOSES their bond (%(buyer_bond)s), which the "
-                    "coordinator keeps."
-                )
-                % values
-            )
-            lines.append(
-                _(
-                    "The seller %(seller)s gets their bond (%(seller_bond)s) and their "
-                    "escrow (%(escrow)s) back as a reward."
-                )
-                % values
-            )
-        lines.append(
-            _(
-                "There is no trade: nobody takes what they did not pay for. Rewards "
-                "are withdrawn from the app."
-            )
-        )
+            lines.append(_("The buyer %(buyer)s LOSES %(bond)s.") % {**values, "bond": bond_lost_text(bb)})
+            esc = _("their Lightning escrow back (%(escrow)s), credited as a Lightning reward") % values
+            lines.append(credited("seller", escrow_sats, esc, sb))
+        lines.append(_("There is no trade: nobody takes what they did not pay for. Rewards are withdrawn from the app."))
     elif decision == "completed":
         if payout is None:
             missing.append(_("the buyer never submitted a payout invoice or address"))
@@ -691,27 +705,16 @@ def _plan_lightning(order, decision):
             values["trade"] = fmt_sats(payout)
             if order.is_swap:
                 lines.append(
-                    _(
-                        "The buyer %(buyer)s is paid %(trade)s sats on-chain, to the "
-                        "address they gave."
-                    )
+                    _("The buyer %(buyer)s is paid %(trade)s sats on chain, to the address they gave (from the Lightning escrow, through the coordinator's swap).")
                     % values
                 )
             else:
                 lines.append(
-                    _(
-                        "The buyer %(buyer)s is paid %(trade)s sats right now over "
-                        "Lightning, to the invoice they gave."
-                    )
+                    _("The buyer %(buyer)s is paid %(trade)s sats right now over Lightning, to the invoice they gave.")
                     % values
                 )
-            lines.append(
-                _(
-                    "Both bonds are credited back as rewards: %(buyer_bond)s to the buyer "
-                    "and %(seller_bond)s to the seller %(seller)s."
-                )
-                % values
-            )
+            lines.append(credited("buyer", 0, "", bb))
+            lines.append(credited("seller", 0, "", sb))
             if (
                 not order.is_swap
                 and order.payout

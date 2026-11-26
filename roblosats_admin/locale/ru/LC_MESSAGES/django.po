@@ -2321,20 +2321,156 @@ msgstr "Ордер %(id)s: %(sats)s сат отправлены на ончей�
 
 msgctxt "roblosats-admin"
 msgid "Hybrid C (on-chain buyer bond)"
-msgstr ""
+msgstr "Гибрид C (ончейн-залог покупателя)"
 
 msgctxt "roblosats-admin"
 msgid "Hybrid D (on-chain seller)"
-msgstr ""
+msgstr "Гибрид D (ончейн-продавец)"
 
 msgctxt "roblosats-admin"
 msgid "attached after the statement, %(time)s"
-msgstr ""
+msgstr "приложен после заявления, %(time)s"
 
 msgctxt "roblosats-admin"
 msgid "Chat attached to a dispute after the statement"
-msgstr ""
+msgstr "Чат приложен к спору после заявления"
 
 msgctxt "roblosats-admin"
 msgid "Order %(id)s: the %(who)s attached their chat to the dispute (%(n)s messages)"
-msgstr ""
+msgstr "Ордер %(id)s: %(who)s приложил свой чат к спору (%(n)s сообщений)"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s), credited as a Lightning reward"
+msgstr "его Lightning-залог (%(sats)s), зачислен как Lightning-вознаграждение"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), straight back to them on chain (not credited)"
+msgstr "его ончейн-залог (%(sats)s), возвращается прямо ончейн (не зачисляется)"
+
+msgctxt "roblosats-admin"
+msgid "the value of their on-chain bond (%(sats)s), penalized on chain earlier, credited as a Lightning reward"
+msgstr "стоимость его ончейн-залога (%(sats)s), ранее оштрафованного ончейн, зачислена как Lightning-вознаграждение"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), already back with them on chain"
+msgstr "его ончейн-залог (%(sats)s), уже возвращён ончейн"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s), kept by the coordinator"
+msgstr "его Lightning-залог (%(sats)s), остаётся у координатора"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), penalized on chain now"
+msgstr "его ончейн-залог (%(sats)s), штрафуется ончейн сейчас"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), already penalized on chain"
+msgstr "его ончейн-залог (%(sats)s), уже оштрафован ончейн"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), which had already gone back to them on chain: nothing to penalize"
+msgstr "его ончейн-залог (%(sats)s), уже вернувшийся ончейн: штрафовать нечего"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s gets: %(parts)s."
+msgstr "%(role)s %(nick)s получает: %(parts)s."
+
+msgctxt "roblosats-admin"
+msgid "In total %(total)s sats credited as a Lightning reward, withdrawn from the app."
+msgstr "Всего %(total)s сат зачислено как Lightning-вознаграждение, вывод из приложения."
+
+msgctxt "roblosats-admin"
+msgid "the trade amount %(trade)s from the Lightning escrow, credited as a Lightning reward"
+msgstr "сумму сделки %(trade)s из Lightning-эскроу, зачисленную как Lightning-вознаграждение"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s gets nothing back: they lose %(bond)s and their Lightning escrow (%(escrow)s)."
+msgstr "Продавец %(seller)s ничего не получает обратно: он теряет %(bond)s и свой Lightning-эскроу (%(escrow)s)."
+
+msgctxt "roblosats-admin"
+msgid "their Lightning escrow back (%(escrow)s), credited as a Lightning reward"
+msgstr "его Lightning-эскроу обратно (%(escrow)s), зачислен как Lightning-вознаграждение"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets nothing: they lose %(bond)s."
+msgstr "Покупатель %(buyer)s ничего не получает: он теряет %(bond)s."
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s gets %(escrow_text)s, but LOSES %(bond)s."
+msgstr "Продавец %(seller)s получает %(escrow_text)s, но ТЕРЯЕТ %(bond)s."
+
+msgctxt "roblosats-admin"
+msgid "They do not receive the trade sats."
+msgstr "Сатоши сделки он не получает."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s LOSES %(bond)s."
+msgstr "Покупатель %(buyer)s ТЕРЯЕТ %(bond)s."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s is paid %(trade)s sats on chain, to the address they gave (from the Lightning escrow, through the coordinator's swap)."
+msgstr "Покупателю %(buyer)s выплачивается %(trade)s сат ончейн на указанный адрес (из Lightning-эскроу, через своп координатора)."
+
+msgctxt "roblosats-admin"
+msgid "trade amount (on-chain escrow)"
+msgstr "сумма сделки (ончейн-эскроу)"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain escrow back"
+msgstr "его ончейн-эскроу обратно"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond"
+msgstr "его ончейн-залог"
+
+msgctxt "roblosats-admin"
+msgid "reward from the other on-chain bond"
+msgstr "вознаграждение из другого ончейн-залога"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s receives %(sats)s sats on chain at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
+msgstr "%(role)s %(nick)s получает %(sats)s сат ончейн на %(address)s (%(parts)s) за вычетом комиссии майнинга освобождения, которая берётся из этого выхода."
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s only gets back the leftover of their deposit, %(sats)s sats on chain at %(address)s."
+msgstr "%(role)s %(nick)s получает обратно только остаток своего взноса, %(sats)s сат ончейн на %(address)s."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats on chain at its fee address: %(penalty)s kept from the loser's bond + %(fees)s of trade fees."
+msgstr "Координатор получает %(sats)s сат ончейн на свой адрес комиссий: %(penalty)s удержано из залога проигравшего + %(fees)s комиссий сделки."
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s's bond is a Lightning bond (%(sats)s sats), settled when the dispute opened: the coordinator keeps it and credits %(reward)s sats of it to the %(winner)s as a Lightning reward, withdrawn from the app."
+msgstr "Залог %(role)s — Lightning-залог (%(sats)s сат), списанный при открытии спора: координатор оставляет его и зачисляет %(reward)s сат из него %(winner)s как Lightning-вознаграждение, вывод из приложения."
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s's Lightning bond (%(sats)s sats), settled when the dispute opened, is credited back to them as a Lightning reward, withdrawn from the app."
+msgstr "Lightning-залог %(role)s (%(sats)s сат), списанный при открытии спора, зачисляется ему обратно как Lightning-вознаграждение, вывод из приложения."
+
+msgctxt "roblosats-admin"
+msgid "The seller %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s), minus the mining fee of the return, which comes out of this output."
+msgstr "Продавец %(nick)s получает обратно %(sats)s сат ончейн на %(address)s (%(parts)s) за вычетом комиссии майнинга возврата, которая берётся из этого выхода."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s)."
+msgstr "Покупатель %(nick)s получает обратно %(sats)s сат ончейн на %(address)s (%(parts)s)."
+
+msgctxt "roblosats-admin"
+msgid "The %(side)s's Lightning bond (%(sats)s sats) goes back to them: credited as a Lightning reward if it was already settled when the dispute opened, unlocked otherwise."
+msgstr "Lightning-залог %(side)s (%(sats)s сат) возвращается ему: зачисляется как Lightning-вознаграждение, если был списан при открытии спора, иначе разблокируется."
+
+msgctxt "roblosats-admin"
+msgid "The seller %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s)."
+msgstr "Продавец %(nick)s получает обратно %(sats)s сат ончейн на %(address)s (%(parts)s)."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats on chain at its fee address: the penalized bond less the reward share."
+msgstr "Координатор получает %(sats)s сат ончейн на свой адрес комиссий: оштрафованный залог за вычетом доли вознаграждения."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(nick)s receives %(sats)s sats on chain at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
+msgstr "Покупатель %(nick)s получает %(sats)s сат ончейн на %(address)s (%(parts)s) за вычетом комиссии майнинга освобождения, которая берётся из этого выхода."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats on chain at its fee address: the trade fees."
+msgstr "Координатор получает %(sats)s сат ончейн на свой адрес комиссий: комиссии сделки."

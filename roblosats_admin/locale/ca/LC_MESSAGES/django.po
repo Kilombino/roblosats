@@ -2338,3 +2338,139 @@ msgstr "Xat adjuntat a una disputa després de la declaració"
 msgctxt "roblosats-admin"
 msgid "Order %(id)s: the %(who)s attached their chat to the dispute (%(n)s messages)"
 msgstr "Ordre %(id)s: el %(who)s ha adjuntat el seu xat a la disputa (%(n)s missatges)"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s), credited as a Lightning reward"
+msgstr "la seva fiança Lightning (%(sats)s), abonada com a recompensa Lightning"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), straight back to them on chain (not credited)"
+msgstr "la seva fiança on-chain (%(sats)s), que li torna directament on-chain (no s'abona)"
+
+msgctxt "roblosats-admin"
+msgid "the value of their on-chain bond (%(sats)s), penalized on chain earlier, credited as a Lightning reward"
+msgstr "el valor de la seva fiança on-chain (%(sats)s), penalitzada on-chain abans, abonat com a recompensa Lightning"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), already back with them on chain"
+msgstr "la seva fiança on-chain (%(sats)s), que ja li va tornar on-chain"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s), kept by the coordinator"
+msgstr "la seva fiança Lightning (%(sats)s), que es queda el coordinador"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), penalized on chain now"
+msgstr "la seva fiança on-chain (%(sats)s), penalitzada on-chain ara"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), already penalized on chain"
+msgstr "la seva fiança on-chain (%(sats)s), ja penalitzada on-chain"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), which had already gone back to them on chain: nothing to penalize"
+msgstr "la seva fiança on-chain (%(sats)s), que ja li havia tornat on-chain: no hi ha res a penalitzar"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s gets: %(parts)s."
+msgstr "El %(role)s %(nick)s rep: %(parts)s."
+
+msgctxt "roblosats-admin"
+msgid "In total %(total)s sats credited as a Lightning reward, withdrawn from the app."
+msgstr "En total, %(total)s sats abonats com a recompensa Lightning, que retira des de l'app."
+
+msgctxt "roblosats-admin"
+msgid "the trade amount %(trade)s from the Lightning escrow, credited as a Lightning reward"
+msgstr "l'import de l'operació, %(trade)s de l'escrow Lightning, abonat com a recompensa Lightning"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s gets nothing back: they lose %(bond)s and their Lightning escrow (%(escrow)s)."
+msgstr "El venedor %(seller)s no recupera res: perd %(bond)s i el seu escrow Lightning (%(escrow)s)."
+
+msgctxt "roblosats-admin"
+msgid "their Lightning escrow back (%(escrow)s), credited as a Lightning reward"
+msgstr "el seu escrow Lightning de tornada (%(escrow)s), abonat com a recompensa Lightning"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets nothing: they lose %(bond)s."
+msgstr "El comprador %(buyer)s no rep res: perd %(bond)s."
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s gets %(escrow_text)s, but LOSES %(bond)s."
+msgstr "El venedor %(seller)s rep %(escrow_text)s, però PERD %(bond)s."
+
+msgctxt "roblosats-admin"
+msgid "They do not receive the trade sats."
+msgstr "No rep els sats de l'operació."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s LOSES %(bond)s."
+msgstr "El comprador %(buyer)s PERD %(bond)s."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s is paid %(trade)s sats on chain, to the address they gave (from the Lightning escrow, through the coordinator's swap)."
+msgstr "Al comprador %(buyer)s se li paguen %(trade)s sats on-chain, a l'adreça que va donar (de l'escrow Lightning, mitjançant el swap del coordinador)."
+
+msgctxt "roblosats-admin"
+msgid "trade amount (on-chain escrow)"
+msgstr "import de l'operació (escrow on-chain)"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain escrow back"
+msgstr "el seu escrow on-chain de tornada"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond"
+msgstr "la seva fiança on-chain"
+
+msgctxt "roblosats-admin"
+msgid "reward from the other on-chain bond"
+msgstr "recompensa de l'altra fiança on-chain"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s receives %(sats)s sats on chain at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
+msgstr "El %(role)s %(nick)s rep %(sats)s sats on-chain a %(address)s (%(parts)s), menys la comissió de mineria de l'alliberament, que surt d'aquesta sortida."
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s only gets back the leftover of their deposit, %(sats)s sats on chain at %(address)s."
+msgstr "El %(role)s %(nick)s només recupera el sobrant de la seva aportació, %(sats)s sats on-chain a %(address)s."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats on chain at its fee address: %(penalty)s kept from the loser's bond + %(fees)s of trade fees."
+msgstr "El coordinador rep %(sats)s sats on-chain a la seva adreça de comissions: %(penalty)s retinguts de la fiança del perdedor + %(fees)s de comissions de l'operació."
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s's bond is a Lightning bond (%(sats)s sats), settled when the dispute opened: the coordinator keeps it and credits %(reward)s sats of it to the %(winner)s as a Lightning reward, withdrawn from the app."
+msgstr "La fiança del %(role)s és Lightning (%(sats)s sats), cobrada en obrir-se la disputa: el coordinador se la queda i n'abona %(reward)s sats al %(winner)s com a recompensa Lightning, que retira des de l'app."
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s's Lightning bond (%(sats)s sats), settled when the dispute opened, is credited back to them as a Lightning reward, withdrawn from the app."
+msgstr "La fiança Lightning del %(role)s (%(sats)s sats), cobrada en obrir-se la disputa, se li torna abonada com a recompensa Lightning, que retira des de l'app."
+
+msgctxt "roblosats-admin"
+msgid "The seller %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s), minus the mining fee of the return, which comes out of this output."
+msgstr "El venedor %(nick)s recupera %(sats)s sats on-chain a %(address)s (%(parts)s), menys la comissió de mineria de la devolució, que surt d'aquesta sortida."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s)."
+msgstr "El comprador %(nick)s recupera %(sats)s sats on-chain a %(address)s (%(parts)s)."
+
+msgctxt "roblosats-admin"
+msgid "The %(side)s's Lightning bond (%(sats)s sats) goes back to them: credited as a Lightning reward if it was already settled when the dispute opened, unlocked otherwise."
+msgstr "La fiança Lightning del %(side)s (%(sats)s sats) li torna: abonada com a recompensa Lightning si ja es va cobrar en obrir-se la disputa; desbloquejada si no."
+
+msgctxt "roblosats-admin"
+msgid "The seller %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s)."
+msgstr "El venedor %(nick)s recupera %(sats)s sats on-chain a %(address)s (%(parts)s)."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats on chain at its fee address: the penalized bond less the reward share."
+msgstr "El coordinador rep %(sats)s sats on-chain a la seva adreça de comissions: la fiança penalitzada menys la part de recompensa."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(nick)s receives %(sats)s sats on chain at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
+msgstr "El comprador %(nick)s rep %(sats)s sats on-chain a %(address)s (%(parts)s), menys la comissió de mineria de l'alliberament, que surt d'aquesta sortida."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats on chain at its fee address: the trade fees."
+msgstr "El coordinador rep %(sats)s sats on-chain a la seva adreça de comissions: les comissions de l'operació."

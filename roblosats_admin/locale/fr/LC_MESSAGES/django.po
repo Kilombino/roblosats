@@ -2321,20 +2321,156 @@ msgstr "Ordre %(id)s : %(sats)s sats ont été envoyés à l'adresse on-chain du
 
 msgctxt "roblosats-admin"
 msgid "Hybrid C (on-chain buyer bond)"
-msgstr ""
+msgstr "Hybride C (caution on-chain de l'acheteur)"
 
 msgctxt "roblosats-admin"
 msgid "Hybrid D (on-chain seller)"
-msgstr ""
+msgstr "Hybride D (vendeur on-chain)"
 
 msgctxt "roblosats-admin"
 msgid "attached after the statement, %(time)s"
-msgstr ""
+msgstr "joint après la déclaration, %(time)s"
 
 msgctxt "roblosats-admin"
 msgid "Chat attached to a dispute after the statement"
-msgstr ""
+msgstr "Chat joint à un litige après la déclaration"
 
 msgctxt "roblosats-admin"
 msgid "Order %(id)s: the %(who)s attached their chat to the dispute (%(n)s messages)"
-msgstr ""
+msgstr "Ordre %(id)s : le %(who)s a joint son chat au litige (%(n)s messages)"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s), credited as a Lightning reward"
+msgstr "sa caution Lightning (%(sats)s), créditée en récompense Lightning"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), straight back to them on chain (not credited)"
+msgstr "sa caution on-chain (%(sats)s), rendue directement on-chain (non créditée)"
+
+msgctxt "roblosats-admin"
+msgid "the value of their on-chain bond (%(sats)s), penalized on chain earlier, credited as a Lightning reward"
+msgstr "la valeur de sa caution on-chain (%(sats)s), pénalisée on-chain auparavant, créditée en récompense Lightning"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), already back with them on chain"
+msgstr "sa caution on-chain (%(sats)s), déjà revenue on-chain"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s), kept by the coordinator"
+msgstr "sa caution Lightning (%(sats)s), conservée par le coordinateur"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), penalized on chain now"
+msgstr "sa caution on-chain (%(sats)s), pénalisée on-chain maintenant"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), already penalized on chain"
+msgstr "sa caution on-chain (%(sats)s), déjà pénalisée on-chain"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), which had already gone back to them on chain: nothing to penalize"
+msgstr "sa caution on-chain (%(sats)s), déjà revenue on-chain : rien à pénaliser"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s gets: %(parts)s."
+msgstr "Le %(role)s %(nick)s reçoit : %(parts)s."
+
+msgctxt "roblosats-admin"
+msgid "In total %(total)s sats credited as a Lightning reward, withdrawn from the app."
+msgstr "Au total %(total)s sats crédités en récompense Lightning, à retirer depuis l'app."
+
+msgctxt "roblosats-admin"
+msgid "the trade amount %(trade)s from the Lightning escrow, credited as a Lightning reward"
+msgstr "le montant de l'échange %(trade)s depuis le séquestre Lightning, crédité en récompense Lightning"
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s gets nothing back: they lose %(bond)s and their Lightning escrow (%(escrow)s)."
+msgstr "Le vendeur %(seller)s ne récupère rien : il perd %(bond)s et son séquestre Lightning (%(escrow)s)."
+
+msgctxt "roblosats-admin"
+msgid "their Lightning escrow back (%(escrow)s), credited as a Lightning reward"
+msgstr "son séquestre Lightning en retour (%(escrow)s), crédité en récompense Lightning"
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s gets nothing: they lose %(bond)s."
+msgstr "L'acheteur %(buyer)s ne reçoit rien : il perd %(bond)s."
+
+msgctxt "roblosats-admin"
+msgid "The seller %(seller)s gets %(escrow_text)s, but LOSES %(bond)s."
+msgstr "Le vendeur %(seller)s reçoit %(escrow_text)s, mais PERD %(bond)s."
+
+msgctxt "roblosats-admin"
+msgid "They do not receive the trade sats."
+msgstr "Il ne reçoit pas les sats de l'échange."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s LOSES %(bond)s."
+msgstr "L'acheteur %(buyer)s PERD %(bond)s."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(buyer)s is paid %(trade)s sats on chain, to the address they gave (from the Lightning escrow, through the coordinator's swap)."
+msgstr "L'acheteur %(buyer)s reçoit %(trade)s sats on-chain, à l'adresse qu'il a donnée (depuis le séquestre Lightning, via le swap du coordinateur)."
+
+msgctxt "roblosats-admin"
+msgid "trade amount (on-chain escrow)"
+msgstr "montant de l'échange (séquestre on-chain)"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain escrow back"
+msgstr "son séquestre on-chain en retour"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond"
+msgstr "sa caution on-chain"
+
+msgctxt "roblosats-admin"
+msgid "reward from the other on-chain bond"
+msgstr "récompense de l'autre caution on-chain"
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s receives %(sats)s sats on chain at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
+msgstr "Le %(role)s %(nick)s reçoit %(sats)s sats on-chain à %(address)s (%(parts)s), moins les frais de minage de la libération, pris sur cette sortie."
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s %(nick)s only gets back the leftover of their deposit, %(sats)s sats on chain at %(address)s."
+msgstr "Le %(role)s %(nick)s ne récupère que le reste de son dépôt, %(sats)s sats on-chain à %(address)s."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats on chain at its fee address: %(penalty)s kept from the loser's bond + %(fees)s of trade fees."
+msgstr "Le coordinateur reçoit %(sats)s sats on-chain à son adresse de frais : %(penalty)s retenus sur la caution du perdant + %(fees)s de frais d'échange."
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s's bond is a Lightning bond (%(sats)s sats), settled when the dispute opened: the coordinator keeps it and credits %(reward)s sats of it to the %(winner)s as a Lightning reward, withdrawn from the app."
+msgstr "La caution du %(role)s est une caution Lightning (%(sats)s sats), encaissée à l'ouverture du litige : le coordinateur la garde et en crédite %(reward)s sats au %(winner)s en récompense Lightning, à retirer depuis l'app."
+
+msgctxt "roblosats-admin"
+msgid "The %(role)s's Lightning bond (%(sats)s sats), settled when the dispute opened, is credited back to them as a Lightning reward, withdrawn from the app."
+msgstr "La caution Lightning du %(role)s (%(sats)s sats), encaissée à l'ouverture du litige, lui est recréditée en récompense Lightning, à retirer depuis l'app."
+
+msgctxt "roblosats-admin"
+msgid "The seller %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s), minus the mining fee of the return, which comes out of this output."
+msgstr "Le vendeur %(nick)s récupère %(sats)s sats on-chain à %(address)s (%(parts)s), moins les frais de minage du retour, pris sur cette sortie."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s)."
+msgstr "L'acheteur %(nick)s récupère %(sats)s sats on-chain à %(address)s (%(parts)s)."
+
+msgctxt "roblosats-admin"
+msgid "The %(side)s's Lightning bond (%(sats)s sats) goes back to them: credited as a Lightning reward if it was already settled when the dispute opened, unlocked otherwise."
+msgstr "La caution Lightning du %(side)s (%(sats)s sats) lui revient : créditée en récompense Lightning si elle avait déjà été encaissée à l'ouverture du litige, débloquée sinon."
+
+msgctxt "roblosats-admin"
+msgid "The seller %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s)."
+msgstr "Le vendeur %(nick)s récupère %(sats)s sats on-chain à %(address)s (%(parts)s)."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats on chain at its fee address: the penalized bond less the reward share."
+msgstr "Le coordinateur reçoit %(sats)s sats on-chain à son adresse de frais : la caution pénalisée moins la part de récompense."
+
+msgctxt "roblosats-admin"
+msgid "The buyer %(nick)s receives %(sats)s sats on chain at %(address)s (%(parts)s), minus the release's mining fee, which comes out of this output."
+msgstr "L'acheteur %(nick)s reçoit %(sats)s sats on-chain à %(address)s (%(parts)s), moins les frais de minage de la libération, pris sur cette sortie."
+
+msgctxt "roblosats-admin"
+msgid "The coordinator receives %(sats)s sats on chain at its fee address: the trade fees."
+msgstr "Le coordinateur reçoit %(sats)s sats on-chain à son adresse de frais : les frais d'échange."

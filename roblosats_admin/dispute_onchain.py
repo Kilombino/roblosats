@@ -20,7 +20,7 @@ the buyer's leaf, the cooperative release) exist on chain too.
 Nothing here moves money: the buttons still call the actions of api/admin.py.
 """
 
-from roblosats_admin.disputes import fmt_sats, is_open_dispute, role_name
+from roblosats_admin.disputes import fmt_sats, is_open_dispute, role_name, side_name
 from roblosats_admin.i18n import _
 
 ONCHAIN_DECISIONS = ("buyer", "seller", "return", "penalize_seller", "penalize_buyer", "completed")
@@ -154,15 +154,15 @@ def _winner_plan(order, escrow, decision, lines, missing):
         if who == winner:
             parts = _parts(
                 [
-                    (_("trade amount") if winner == "buyer" else _("their escrow back"), info["trade"]),
-                    (_("their bond"), info["bonds"][winner]),
-                    (_("reward from the other bond"), info["reward"]),
+                    (_("trade amount (on-chain escrow)") if winner == "buyer" else _("their on-chain escrow back"), info["trade"]),
+                    (_("their on-chain bond"), info["bonds"][winner]),
+                    (_("reward from the other on-chain bond"), info["reward"]),
                     (_("leftover of their deposit"), info["extras"][winner]),
                 ]
             )
             lines.append(
                 _(
-                    "The %(role)s %(nick)s receives %(sats)s sats at %(address)s (%(parts)s), "
+                    "The %(role)s %(nick)s receives %(sats)s sats on chain at %(address)s (%(parts)s), "
                     "minus the release's mining fee, which comes out of this output."
                 )
                 % {
@@ -177,7 +177,7 @@ def _winner_plan(order, escrow, decision, lines, missing):
             lines.append(
                 _(
                     "The %(role)s %(nick)s only gets back the leftover of their deposit, "
-                    "%(sats)s sats at %(address)s."
+                    "%(sats)s sats on chain at %(address)s."
                 )
                 % {
                     "role": role_name(loser),
@@ -189,7 +189,7 @@ def _winner_plan(order, escrow, decision, lines, missing):
         elif who == "coordinator":
             lines.append(
                 _(
-                    "The coordinator receives %(sats)s sats at its fee address: %(penalty)s "
+                    "The coordinator receives %(sats)s sats on chain at its fee address: %(penalty)s "
                     "kept from the loser's bond + %(fees)s of trade fees."
                 )
                 % {
@@ -216,7 +216,7 @@ def _winner_plan(order, escrow, decision, lines, missing):
             _(
                 "The %(role)s's bond is a Lightning bond (%(sats)s sats), settled when the "
                 "dispute opened: the coordinator keeps it and credits %(reward)s sats of it to "
-                "the %(winner)s as a reward, withdrawn from the app."
+                "the %(winner)s as a Lightning reward, withdrawn from the app."
             )
             % {
                 "role": role_name(loser),
@@ -230,7 +230,7 @@ def _winner_plan(order, escrow, decision, lines, missing):
         lines.append(
             _(
                 "The %(role)s's Lightning bond (%(sats)s sats), settled when the dispute opened, "
-                "is credited back to them as a reward, withdrawn from the app."
+                "is credited back to them as a Lightning reward, withdrawn from the app."
             )
             % {"role": role_name(winner), "sats": fmt_sats(ln.num_satoshis)}
         )
@@ -258,15 +258,15 @@ def _return_plan(order, escrow, lines, missing):
         if who == "seller":
             parts = _parts(
                 [
-                    (_("trade amount"), trade),
-                    (_("their bond"), bonds["seller"]),
+                    (_("trade amount (on-chain escrow)"), trade),
+                    (_("their on-chain bond"), bonds["seller"]),
                     (_("their fee"), held["seller"]),
                     (_("leftover of their deposit"), ex["seller"]),
                 ]
             )
             lines.append(
                 _(
-                    "The seller %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s), "
+                    "The seller %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s), "
                     "minus the mining fee of the return, which comes out of this output."
                 )
                 % {
@@ -279,13 +279,13 @@ def _return_plan(order, escrow, lines, missing):
         else:
             parts = _parts(
                 [
-                    (_("their bond"), bonds["buyer"]),
+                    (_("their on-chain bond"), bonds["buyer"]),
                     (_("their fee"), held["buyer"]),
                     (_("leftover of their deposit"), ex["buyer"]),
                 ]
             )
             lines.append(
-                _("The buyer %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s).")
+                _("The buyer %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s).")
                 % {
                     "nick": _nick(users["buyer"]),
                     "sats": fmt_sats(sats),
@@ -313,10 +313,10 @@ def _return_plan(order, escrow, lines, missing):
     if ln is not None:
         lines.append(
             _(
-                "The taker's Lightning bond (%(sats)s sats) goes back to them: credited as a "
-                "reward if it was already settled when the dispute opened, unlocked otherwise."
+                "The %(side)s's Lightning bond (%(sats)s sats) goes back to them: credited as a "
+                "Lightning reward if it was already settled when the dispute opened, unlocked otherwise."
             )
-            % {"sats": fmt_sats(ln.num_satoshis)}
+            % {"sats": fmt_sats(ln.num_satoshis), "side": side_name(flow.ln_side(order) or "taker")}
         )
     lines.append(_("The order ends as collaboratively cancelled."))
 
@@ -339,19 +339,19 @@ def _penalize_plan(order, escrow, guilty, lines, missing):
     lines.append(_signer_line(order, "seller", "penalize"))
     for who, sats in outs:
         if who == "seller":
-            items = [(_("their escrow back"), info["trade"]), (_("their fee"), info["held"]["seller"]),
+            items = [(_("their on-chain escrow back"), info["trade"]), (_("their fee"), info["held"]["seller"]),
                      (_("leftover of their deposit"), info["extras"]["seller"])]
             if innocent == "seller":
-                items[1:1] = [(_("their bond"), info["bonds"]["seller"]), (_("reward from the other bond"), info["reward"])]
-            text = _("The seller %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s).")
+                items[1:1] = [(_("their on-chain bond"), info["bonds"]["seller"]), (_("reward from the other on-chain bond"), info["reward"])]
+            text = _("The seller %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s).")
         elif who == "buyer":
             items = [(_("their fee"), info["held"]["buyer"]), (_("leftover of their deposit"), info["extras"]["buyer"])]
             if innocent == "buyer":
-                items[0:0] = [(_("their bond"), info["bonds"]["buyer"]), (_("reward from the other bond"), info["reward"])]
-            text = _("The buyer %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s).")
+                items[0:0] = [(_("their on-chain bond"), info["bonds"]["buyer"]), (_("reward from the other on-chain bond"), info["reward"])]
+            text = _("The buyer %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s).")
         else:
             lines.append(
-                _("The coordinator receives %(sats)s sats at its fee address: the penalized bond less the reward share.")
+                _("The coordinator receives %(sats)s sats on chain at its fee address: the penalized bond less the reward share.")
                 % {"sats": fmt_sats(sats)}
             )
             continue
@@ -377,7 +377,7 @@ def _penalize_plan(order, escrow, guilty, lines, missing):
             _(
                 "The %(role)s's bond is a Lightning bond (%(sats)s sats), settled when the "
                 "dispute opened: the coordinator keeps it and credits %(reward)s sats of it to "
-                "the %(winner)s as a reward, withdrawn from the app."
+                "the %(winner)s as a Lightning reward, withdrawn from the app."
             )
             % {"role": role_name(guilty), "sats": fmt_sats(ln.num_satoshis),
                "reward": fmt_sats(int(ln.num_satoshis * split)), "winner": role_name(innocent)}
@@ -387,7 +387,7 @@ def _penalize_plan(order, escrow, guilty, lines, missing):
         lines.append(
             _(
                 "The %(role)s's Lightning bond (%(sats)s sats), settled when the dispute opened, "
-                "is credited back to them as a reward, withdrawn from the app."
+                "is credited back to them as a Lightning reward, withdrawn from the app."
             )
             % {"role": role_name(innocent), "sats": fmt_sats(ln.num_satoshis)}
         )
@@ -411,24 +411,24 @@ def _completed_plan(order, escrow, lines, missing):
         if who == "buyer":
             lines.append(
                 _(
-                    "The buyer %(nick)s receives %(sats)s sats at %(address)s (%(parts)s), minus the "
+                    "The buyer %(nick)s receives %(sats)s sats on chain at %(address)s (%(parts)s), minus the "
                     "release's mining fee, which comes out of this output."
                 )
                 % {"nick": _nick(users["buyer"]), "sats": fmt_sats(sats), "address": _address(escrow, "buyer"),
-                   "parts": _parts([(_("trade amount"), info["trade"]), (_("their bond"), info["bonds"]["buyer"]),
+                   "parts": _parts([(_("trade amount (on-chain escrow)"), info["trade"]), (_("their on-chain bond"), info["bonds"]["buyer"]),
                                     (_("leftover of their deposit"), info["extras"]["buyer"]),
                                     (_("their fee"), -info["fee_later"])])}
             )
         elif who == "seller":
             lines.append(
-                _("The seller %(nick)s gets back %(sats)s sats at %(address)s (%(parts)s).")
+                _("The seller %(nick)s gets back %(sats)s sats on chain at %(address)s (%(parts)s).")
                 % {"nick": _nick(users["seller"]), "sats": fmt_sats(sats), "address": _address(escrow, "seller"),
-                   "parts": _parts([(_("their bond"), info["bonds"]["seller"]),
+                   "parts": _parts([(_("their on-chain bond"), info["bonds"]["seller"]),
                                     (_("leftover of their deposit"), info["extras"]["seller"])])}
             )
         elif who == "coordinator":
             lines.append(
-                _("The coordinator receives %(sats)s sats at its fee address: the trade fees.")
+                _("The coordinator receives %(sats)s sats on chain at its fee address: the trade fees.")
                 % {"sats": fmt_sats(sats)}
             )
         elif who == "dev":
@@ -437,10 +437,10 @@ def _completed_plan(order, escrow, lines, missing):
     if ln is not None:
         lines.append(
             _(
-                "The taker's Lightning bond (%(sats)s sats) goes back to them: credited as a "
-                "reward if it was already settled when the dispute opened, unlocked otherwise."
+                "The %(side)s's Lightning bond (%(sats)s sats) goes back to them: credited as a "
+                "Lightning reward if it was already settled when the dispute opened, unlocked otherwise."
             )
-            % {"sats": fmt_sats(ln.num_satoshis)}
+            % {"sats": fmt_sats(ln.num_satoshis), "side": side_name(flow.ln_side(order) or "taker")}
         )
     lines.append(_("The order ends as a successful trade once the release is broadcast."))
 

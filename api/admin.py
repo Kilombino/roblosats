@@ -412,7 +412,10 @@ class OrderAdmin(AdminChangeLinksMixin, admin.ModelAdmin):
                 maker_bond_sats = escrow_flow.dispute_bond_sats(order, "maker", wins=True)
                 if maker_bond_sats:
                     _credit(order.maker_bond.sender.robot, maker_bond_sats, order, "maker_bond")
-                _credit(order.taker_bond.sender.robot, order.taker_bond.num_satoshis, order, "taker_bond")
+                # mixta C (26 nov 2026): an onchain taker bond goes back on chain, not credited
+                taker_bond_sats = escrow_flow.dispute_bond_sats(order, "taker", wins=True)
+                if taker_bond_sats:
+                    _credit(order.taker_bond.sender.robot, taker_bond_sats, order, "taker_bond")
                 _credit(
                     order.trade_escrow.sender.robot,
                     order.trade_escrow.num_satoshis,
@@ -534,7 +537,10 @@ class OrderAdmin(AdminChangeLinksMixin, admin.ModelAdmin):
                 maker_bond_sats = escrow_flow.dispute_bond_sats(order, "maker", wins=True)
                 if maker_bond_sats:
                     _credit(order.maker.robot, maker_bond_sats, order, "maker_bond")
-                _credit(order.taker.robot, order.taker_bond.num_satoshis, order, "taker_bond")
+                # mixta C (26 nov 2026): an onchain taker bond goes back on chain, not credited
+                taker_bond_sats = escrow_flow.dispute_bond_sats(order, "taker", wins=True)
+                if taker_bond_sats:
+                    _credit(order.taker.robot, taker_bond_sats, order, "taker_bond")
 
                 # Dispute timeouts cancel the onchain payout (order_expires ->
                 # cancel_onchain_payment). The stored address was validated
