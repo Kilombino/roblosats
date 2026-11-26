@@ -2574,3 +2574,19 @@ msgstr "Camada"
 msgctxt "roblosats-admin"
 msgid "Where it is now"
 msgstr "Onde está agora"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s): %(share)s go to the %(winner)s as the winner's share and %(rest)s to the coordinator"
+msgstr "a sua caução Lightning (%(sats)s): %(share)s vão para o %(winner)s como parte do vencedor e %(rest)s para o coordenador"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), penalized on chain: %(share)s go to the %(winner)s as the winner's share and the rest of what the penalty pays to the coordinator"
+msgstr "a sua caução on-chain (%(sats)s), penalizada on-chain: %(share)s vão para o %(winner)s como parte do vencedor e o resto do que a penalização paga para o coordenador"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s; %(share)s go to the %(winner)s as the winner's share and %(rest)s to the coordinator)"
+msgstr "a sua caução Lightning (%(sats)s; %(share)s vão para o %(winner)s como parte do vencedor e %(rest)s para o coordenador)"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s, penalized on chain; %(share)s go to the %(winner)s as the winner's share and the rest of what the penalty pays to the coordinator)"
+msgstr "a sua caução on-chain (%(sats)s, penalizada on-chain; %(share)s vão para o %(winner)s como parte do vencedor e o resto do que a penalização paga para o coordenador)"

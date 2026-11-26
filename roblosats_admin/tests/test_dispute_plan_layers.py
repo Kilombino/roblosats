@@ -67,7 +67,7 @@ class PlanLayers(TestCase):
         self.assertIn("the trade amount 998 000 from the Lightning escrow, credited as a Lightning reward", t)
         self.assertIn("their Lightning bond (30 000), credited as a Lightning reward", t)
         self.assertIn("In total 1 043 000 sats credited as a Lightning reward", t)
-        self.assertIn("they lose their Lightning bond (30 000), kept by the coordinator and their Lightning escrow", t)
+        self.assertIn("they lose their Lightning bond (30 000; 15 000 go to the buyer as the winner's share and 15 000 to the coordinator) and their Lightning escrow", t)
         t = self._text("seller")
         self.assertIn("their Lightning escrow back (1 000 000), credited as a Lightning reward", t)
         t = self._text("completed")

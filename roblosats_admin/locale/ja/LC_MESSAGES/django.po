@@ -2574,3 +2574,19 @@ msgstr "レイヤー"
 msgctxt "roblosats-admin"
 msgid "Where it is now"
 msgstr "現在の状態"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s): %(share)s go to the %(winner)s as the winner's share and %(rest)s to the coordinator"
+msgstr "Lightning 保証金（%(sats)s）：%(share)s は勝者の取り分として %(winner)s へ、%(rest)s はコーディネーターへ"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), penalized on chain: %(share)s go to the %(winner)s as the winner's share and the rest of what the penalty pays to the coordinator"
+msgstr "オンチェーン保証金（%(sats)s）、オンチェーンで没収：%(share)s は勝者の取り分として %(winner)s へ、没収で得た残りはコーディネーターへ"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s; %(share)s go to the %(winner)s as the winner's share and %(rest)s to the coordinator)"
+msgstr "Lightning 保証金（%(sats)s；%(share)s は勝者の取り分として %(winner)s へ、%(rest)s はコーディネーターへ）"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s, penalized on chain; %(share)s go to the %(winner)s as the winner's share and the rest of what the penalty pays to the coordinator)"
+msgstr "オンチェーン保証金（%(sats)s、オンチェーンで没収；%(share)s は勝者の取り分として %(winner)s へ、没収で得た残りはコーディネーターへ）"

@@ -2574,3 +2574,19 @@ msgstr "Уровень"
 msgctxt "roblosats-admin"
 msgid "Where it is now"
 msgstr "Где сейчас"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s): %(share)s go to the %(winner)s as the winner's share and %(rest)s to the coordinator"
+msgstr "его Lightning-залог (%(sats)s): %(share)s уходят победителю (%(winner)s) как его доля, %(rest)s — координатору"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), penalized on chain: %(share)s go to the %(winner)s as the winner's share and the rest of what the penalty pays to the coordinator"
+msgstr "его ончейн-залог (%(sats)s), оштрафованный ончейн: %(share)s уходят победителю (%(winner)s) как его доля, остальное из выплаты штрафа — координатору"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s; %(share)s go to the %(winner)s as the winner's share and %(rest)s to the coordinator)"
+msgstr "его Lightning-залог (%(sats)s; %(share)s уходят победителю (%(winner)s) как его доля, %(rest)s — координатору)"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s, penalized on chain; %(share)s go to the %(winner)s as the winner's share and the rest of what the penalty pays to the coordinator)"
+msgstr "его ончейн-залог (%(sats)s, оштрафованный ончейн; %(share)s уходят победителю (%(winner)s) как его доля, остальное из выплаты штрафа — координатору)"

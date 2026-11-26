@@ -2574,3 +2574,19 @@ msgstr "Ebene"
 msgctxt "roblosats-admin"
 msgid "Where it is now"
 msgstr "Wo es jetzt ist"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s): %(share)s go to the %(winner)s as the winner's share and %(rest)s to the coordinator"
+msgstr "seine Lightning-Kaution (%(sats)s): %(share)s gehen als Anteil an die Gewinnerseite (%(winner)s) und %(rest)s an den Koordinator"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), penalized on chain: %(share)s go to the %(winner)s as the winner's share and the rest of what the penalty pays to the coordinator"
+msgstr "seine On-Chain-Kaution (%(sats)s), on-chain bestraft: %(share)s gehen als Anteil an die Gewinnerseite (%(winner)s), der Rest dessen, was die Strafe einbringt, an den Koordinator"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s; %(share)s go to the %(winner)s as the winner's share and %(rest)s to the coordinator)"
+msgstr "seine Lightning-Kaution (%(sats)s; %(share)s gehen als Anteil an die Gewinnerseite (%(winner)s) und %(rest)s an den Koordinator)"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s, penalized on chain; %(share)s go to the %(winner)s as the winner's share and the rest of what the penalty pays to the coordinator)"
+msgstr "seine On-Chain-Kaution (%(sats)s, on-chain bestraft; %(share)s gehen als Anteil an die Gewinnerseite (%(winner)s), der Rest dessen, was die Strafe einbringt, an den Koordinator)"

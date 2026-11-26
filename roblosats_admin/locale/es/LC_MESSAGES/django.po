@@ -2574,3 +2574,19 @@ msgstr "Capa"
 msgctxt "roblosats-admin"
 msgid "Where it is now"
 msgstr "Dónde está ahora"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s): %(share)s go to the %(winner)s as the winner's share and %(rest)s to the coordinator"
+msgstr "su fianza Lightning (%(sats)s): %(share)s van al %(winner)s como parte del ganador y %(rest)s al coordinador"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), penalized on chain: %(share)s go to the %(winner)s as the winner's share and the rest of what the penalty pays to the coordinator"
+msgstr "su fianza on-chain (%(sats)s), penalizada on-chain: %(share)s van al %(winner)s como parte del ganador y el resto de lo que paga la penalización al coordinador"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s; %(share)s go to the %(winner)s as the winner's share and %(rest)s to the coordinator)"
+msgstr "su fianza Lightning (%(sats)s; %(share)s van al %(winner)s como parte del ganador y %(rest)s al coordinador)"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s, penalized on chain; %(share)s go to the %(winner)s as the winner's share and the rest of what the penalty pays to the coordinator)"
+msgstr "su fianza on-chain (%(sats)s, penalizada on-chain; %(share)s van al %(winner)s como parte del ganador y el resto de lo que paga la penalización al coordinador)"

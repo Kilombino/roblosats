@@ -615,9 +615,21 @@ def bond_kept_text(info):
     return _("their on-chain bond (%(sats)s), already back with them on chain") % v
 
 
-def bond_lost_text(info):
-    """The bond of a party that loses it."""
+def bond_lost_text(info, share=0, winner=None):
+    """The bond of a party that loses it. 0.9.16: with the winner's share of it (share sats to
+    the 'winner' role), the line says how the bond is split instead of "kept by the coordinator"."""
     v = {"sats": fmt_sats(info["sats"])}
+    if share and winner and info["kind"] == "lightning":
+        return _(
+            "their Lightning bond (%(sats)s; %(share)s go to the %(winner)s as the winner's share and "
+            "%(rest)s to the coordinator)"
+        ) % {**v, "share": fmt_sats(share), "winner": role_name(winner),
+             "rest": fmt_sats(max(0, info["sats"] - share))}
+    if share and winner and info["state"] in ("locked", "penalized"):
+        return _(
+            "their on-chain bond (%(sats)s, penalized on chain; %(share)s go to the %(winner)s as the "
+            "winner's share and the rest of what the penalty pays to the coordinator)"
+        ) % {**v, "share": fmt_sats(share), "winner": role_name(winner)}
     if info["kind"] == "lightning":
         return _("their Lightning bond (%(sats)s), kept by the coordinator") % v
     if info["state"] == "locked":
@@ -663,13 +675,9 @@ def _plan_lightning(order, decision):
         except Exception:
             return 0
 
-    def loser_share(loser_role, winner_role):
-        """0.9.16: ' (N sats of it go to the <winner> as the winner's share)' after a lost bond."""
-        sh = share_of(loser_role)
-        if not sh:
-            return ""
-        return " " + _("(%(sats)s sats of that bond go to the %(winner)s as the winner's share)") % {
-            "sats": fmt_sats(sh), "winner": role_name(winner_role)}
+    def lost(info, loser_role, winner_role):
+        """0.9.16: the lost bond, with how it is split when the winner gets a share of it."""
+        return bond_lost_text(info, share_of(loser_role), winner_role)
 
     def credited(role, base_sats, base_text, info, reward_from=None):
         """'The <role> <nick> is credited N sats as a Lightning reward (parts)' + the bond's fate,
@@ -701,13 +709,12 @@ def _plan_lightning(order, decision):
             lines.append(credited("buyer", payout, trade, bb, reward_from="seller"))
             lines.append(
                 _("The seller %(seller)s gets nothing back: they lose %(bond)s and their Lightning escrow (%(escrow)s).")
-                % {**values, "bond": bond_lost_text(sb)} + loser_share("seller", "buyer")
+                % {**values, "bond": lost(sb, "seller", "buyer")}
             )
     elif decision == "seller":
         esc = _("their Lightning escrow back (%(escrow)s), credited as a Lightning reward") % values
         lines.append(credited("seller", escrow_sats, esc, sb, reward_from="buyer"))
-        lines.append(_("The buyer %(buyer)s gets nothing: they lose %(bond)s.") % {**values, "bond": bond_lost_text(bb)}
-                     + loser_share("buyer", "seller"))
+        lines.append(_("The buyer %(buyer)s gets nothing: they lose %(bond)s.") % {**values, "bond": lost(bb, "buyer", "seller")})
     elif decision == "return":
         lines.append(credited("buyer", 0, "", bb))
         esc = _("their Lightning escrow back (%(escrow)s), credited as a Lightning reward") % values
@@ -718,12 +725,11 @@ def _plan_lightning(order, decision):
             esc = _("their Lightning escrow back (%(escrow)s), credited as a Lightning reward") % values
             lines.append(
                 _("The seller %(seller)s gets %(escrow_text)s, but LOSES %(bond)s.")
-                % {**values, "escrow_text": esc, "bond": bond_lost_text(sb)} + loser_share("seller", "buyer")
+                % {**values, "escrow_text": esc, "bond": lost(sb, "seller", "buyer")}
             )
             lines.append(credited("buyer", 0, "", bb, reward_from="seller") + " " + _("They do not receive the trade sats."))
         else:
-            lines.append(_("The buyer %(buyer)s LOSES %(bond)s.") % {**values, "bond": bond_lost_text(bb)}
-                         + loser_share("buyer", "seller"))
+            lines.append(_("The buyer %(buyer)s LOSES %(bond)s.") % {**values, "bond": lost(bb, "buyer", "seller")})
             esc = _("their Lightning escrow back (%(escrow)s), credited as a Lightning reward") % values
             lines.append(credited("seller", escrow_sats, esc, sb, reward_from="buyer"))
         lines.append(_("There is no trade: nobody takes what they did not pay for. Rewards are withdrawn from the app."))

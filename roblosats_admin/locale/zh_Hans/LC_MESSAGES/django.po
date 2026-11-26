@@ -2574,3 +2574,19 @@ msgstr "层"
 msgctxt "roblosats-admin"
 msgid "Where it is now"
 msgstr "当前位置"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s): %(share)s go to the %(winner)s as the winner's share and %(rest)s to the coordinator"
+msgstr "其 Lightning 保证金（%(sats)s）：%(share)s 作为胜方份额归 %(winner)s，%(rest)s 归协调者"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s), penalized on chain: %(share)s go to the %(winner)s as the winner's share and the rest of what the penalty pays to the coordinator"
+msgstr "其链上保证金（%(sats)s），已在链上罚没：%(share)s 作为胜方份额归 %(winner)s，罚没所得的其余部分归协调者"
+
+msgctxt "roblosats-admin"
+msgid "their Lightning bond (%(sats)s; %(share)s go to the %(winner)s as the winner's share and %(rest)s to the coordinator)"
+msgstr "其 Lightning 保证金（%(sats)s；%(share)s 作为胜方份额归 %(winner)s，%(rest)s 归协调者）"
+
+msgctxt "roblosats-admin"
+msgid "their on-chain bond (%(sats)s, penalized on chain; %(share)s go to the %(winner)s as the winner's share and the rest of what the penalty pays to the coordinator)"
+msgstr "其链上保证金（%(sats)s，已在链上罚没；%(share)s 作为胜方份额归 %(winner)s，罚没所得的其余部分归协调者）"

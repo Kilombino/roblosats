@@ -54,6 +54,10 @@ class WinnerShare(TestCase):
         plan = " ".join(disputes.plan(order, "seller")["lines"])
         self.assertIn(S(1_500), plan)  # min(4,000, 3,000) * 0.5
         self.assertIn("lost bond", plan)
+        # the loser's line says how its bond is split (not "kept by the coordinator")
+        self.assertIn(f"their Lightning bond ({S(4_000)}; {S(1_500)} go to the seller as the winner's share "
+                      f"and {S(2_500)} to the coordinator)", plan)
+        self.assertNotIn("kept by the coordinator", plan)
         self.assertEqual(resolve(self.client, order, "seller").status_code, 302)
         self.assertEqual(self._rewards(), (100_000 + 3_000 + 1_500, 0))
 
