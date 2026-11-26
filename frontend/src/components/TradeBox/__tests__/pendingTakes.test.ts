@@ -1,4 +1,5 @@
-import { pendingTakeNotice } from '../pendingTakes';
+import { pendingTakeNotice, pendingTakeTxs } from '../pendingTakes';
+import { explorerTxUrl } from '../../FinalSummary/bondState';
 import { type Order } from '../../../models';
 import en from '../../../../static/locales/en.json';
 import es from '../../../../static/locales/es.json';
@@ -28,5 +29,34 @@ describe('pending onchain takes on the maker\'s public order (TG 15618)', () => 
       const key = pendingTakeNotice(order({ pending_onchain_takes: p }))!.key;
       for (const d of [en, es, ca] as Array<Record<string, string>>) expect(d[key]).toBeTruthy();
     }
+  });
+});
+
+describe('the bond transactions of the pending takes (TG 15622)', () => {
+  const a = 'aa'.repeat(32);
+  const b = 'bb'.repeat(32);
+  it('one line per txid, confirmed first, each linking its own transaction', () => {
+    const txs = pendingTakeTxs(
+      order({
+        pending_onchain_takes: {
+          mempool: 1,
+          confirmed: 1,
+          txs: [
+            { txid: a, stage: 'mempool' },
+            { txid: b, stage: 'confirmed' },
+            { txid: a, stage: 'mempool' },
+            { txid: 'not-a-txid', stage: 'mempool' },
+          ],
+        },
+      }),
+    );
+    expect(txs.map((x) => x.txid)).toEqual([b, a]);
+    expect(txs.map((x) => explorerTxUrl(x.txid))).toEqual([explorerTxUrl(b), explorerTxUrl(a)]);
+    expect(explorerTxUrl(a).endsWith(a)).toBe(true);
+    for (const x of txs) for (const d of [en, es, ca] as Array<Record<string, string>>) expect(d[x.labelKey]).toBeTruthy();
+  });
+  it('nothing for others or without txs', () => {
+    expect(pendingTakeTxs(order({ pending_onchain_takes: { mempool: 1 } }))).toEqual([]);
+    expect(pendingTakeTxs(order({ is_maker: false, pending_onchain_takes: { txs: [{ txid: a, stage: 'mempool' }] } }))).toEqual([]);
   });
 });

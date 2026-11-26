@@ -368,7 +368,7 @@ def pending_onchain_takes(order):
 
     from api.models import OnchainBond
 
-    out = {"mempool": 0, "confirmed": 0, "awaiting_payment": 0}
+    out = {"mempool": 0, "confirmed": 0, "awaiting_payment": 0, "txs": []}
     now = timezone.now()
     bonds = OnchainBond.objects.filter(
         order=order, role="taker", take_order__isnull=False, take_order__expires_at__gt=now,
@@ -381,11 +381,33 @@ def pending_onchain_takes(order):
         seen.add(bond.take_order_id)
         if bond.status == OnchainBond.Status.SIGN:
             out["confirmed"] += 1
+            if bond.txid:
+                out["txs"].append({"txid": bond.txid, "stage": "confirmed"})
         elif cache.get(f"onchain-take-mempool:{bond.take_order_id}"):
             out["mempool"] += 1
+            # TG 15622: the bond's own funding transaction(s), so the maker can check it
+            for txid in _take_mempool_txids(bond):
+                out["txs"].append({"txid": txid, "stage": "mempool"})
         else:
             out["awaiting_payment"] += 1
     return out
+
+
+def _take_mempool_txids(bond):
+    """The unconfirmed transactions paying this take bond's address (cached 30 s: the maker's
+    app polls the order)."""
+    from django.core.cache import cache
+
+    key = f"onchain-take-txids:{bond.pk}"
+    txids = cache.get(key)
+    if txids is None:
+        try:
+            txids = sorted({txid for txid, _ in _unconfirmed(bond.address)})
+        except Exception as e:
+            logger.warning(f"Order {bond.order_id}: take bond mempool txids not read: {e}")
+            return []
+        cache.set(key, txids, timeout=30)
+    return list(txids)
 
 
 def advance_onchain_takes(order):

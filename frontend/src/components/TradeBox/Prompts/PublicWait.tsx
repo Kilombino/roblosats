@@ -16,7 +16,8 @@ import { LoadingButton } from '@mui/lab';
 import currencies from '../../../utils/currencies';
 
 import { isOnchainEscrow } from '../onchainEscrowSteps';
-import { pendingTakeNotice } from '../pendingTakes';
+import { pendingTakeNotice, pendingTakeTxs } from '../pendingTakes';
+import { TxLine } from './OnchainEscrow';
 import { type Order } from '../../../models';
 import {
   FederationContext,
@@ -81,6 +82,7 @@ export const PublicWaitPrompt = ({
   }, [federationUpdatedAt]);
 
   const takeNotice = pendingTakeNotice(order);
+  const takeTxs = pendingTakeTxs(order);
 
   return (
     <List dense={true}>
@@ -88,6 +90,11 @@ export const PublicWaitPrompt = ({
         <ListItem>
           <Alert severity='warning' icon={<span>⛓️</span>} sx={{ width: '100%' }}>
             {t(takeNotice.key, { n: takeNotice.count })}
+            {takeTxs.map((tx) => (
+              <div key={tx.txid} style={{ marginTop: '0.6em' }}>
+                <TxLine label={t(tx.labelKey)} txid={tx.txid} />
+              </div>
+            ))}
           </Alert>
         </ListItem>
       ) : null}

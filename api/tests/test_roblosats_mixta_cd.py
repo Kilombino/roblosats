@@ -473,17 +473,27 @@ class PendingTakesForMaker(MixtaBase):
         order = self._order(maker_sells=True)
         take1, bond1 = self._onchain_take(order, lock=False)
         take2, _ = self._onchain_take(order, taker=_user(), lock=False)
-        self.assertEqual(flow.pending_onchain_takes(order), {"mempool": 0, "confirmed": 0, "awaiting_payment": 2})
-        with patch("api.escrow.flow._unconfirmed", return_value=[{"txid": "bb" * 32}]), \
+        self.assertEqual(flow.pending_onchain_takes(order),
+                         {"mempool": 0, "confirmed": 0, "awaiting_payment": 2, "txs": []})
+        with patch("api.escrow.flow._unconfirmed", return_value=[("bb" * 32, 30_000)]), \
                 patch("api.step_alerts.queue") as q:
             self.assertTrue(flow.extend_take_from_mempool(take1, bond1))
             self.assertFalse(flow.extend_take_from_mempool(take1, bond1))  # once per take
         q.assert_called_once()
         self.assertEqual(q.call_args.args[1], order.maker)
         self.assertEqual(q.call_args.args[2], "take_in_mempool")
-        self.assertEqual(flow.pending_onchain_takes(order), {"mempool": 1, "confirmed": 0, "awaiting_payment": 1})
-        OnchainBond.objects.filter(take_order=take2).update(status=OnchainBond.Status.SIGN)
-        self.assertEqual(flow.pending_onchain_takes(order), {"mempool": 1, "confirmed": 1, "awaiting_payment": 0})
+        with patch("api.escrow.flow._unconfirmed", return_value=[("bb" * 32, 30_000)]):
+            p = flow.pending_onchain_takes(order)
+        self.assertEqual((p["mempool"], p["confirmed"], p["awaiting_payment"]), (1, 0, 1))
+        self.assertEqual(p["txs"], [{"txid": "bb" * 32, "stage": "mempool"}])
+        OnchainBond.objects.filter(take_order=take2).update(status=OnchainBond.Status.SIGN, txid="cc" * 32)
+        with patch("api.escrow.flow._unconfirmed", side_effect=AssertionError("cached")):
+            p = flow.pending_onchain_takes(order)  # the mempool txids come from the 30 s cache
+        self.assertEqual((p["mempool"], p["confirmed"], p["awaiting_payment"]), (1, 1, 0))
+        # each take its own transaction (cf. #29: one link per txid)
+        self.assertEqual(sorted((t["stage"], t["txid"]) for t in p["txs"]),
+                         [("confirmed", "cc" * 32), ("mempool", "bb" * 32)])
+        self.assertNotIn(str(self.taker), str(p))
         TakeOrder.objects.filter(pk=take1.pk).update(expires_at=timezone.now() - timezone.timedelta(seconds=1))
         self.assertEqual(flow.pending_onchain_takes(order)["mempool"], 0)
 

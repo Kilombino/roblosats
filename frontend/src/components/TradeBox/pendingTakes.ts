@@ -6,6 +6,7 @@ export interface PendingOnchainTakes {
   mempool?: number;
   confirmed?: number;
   awaiting_payment?: number;
+  txs?: Array<{ txid?: string; stage?: string }>;
 }
 
 export interface PendingTakeNotice {
@@ -37,4 +38,38 @@ export const pendingTakeNotice = (order: Order): PendingTakeNotice | null => {
       count: mempool,
     };
   return null;
+};
+
+export interface PendingTakeTx {
+  txid: string;
+  labelKey: string;
+}
+
+const pending = (order: Order): PendingOnchainTakes | null =>
+  (order as unknown as { pending_onchain_takes?: PendingOnchainTakes | null }).pending_onchain_takes ??
+  null;
+
+/** TG 15622: one line per bond transaction the coordinator sees (each with its own txid, cf.
+ * the #29 link bug), confirmed ones first. */
+export const pendingTakeTxs = (order: Order): PendingTakeTx[] => {
+  const p = pending(order);
+  if (!p || order.status !== 1 || !order.is_maker) return [];
+  const seen = new Set<string>();
+  const out: PendingTakeTx[] = [];
+  for (const stage of ['confirmed', 'mempool']) {
+    for (const tx of p.txs ?? []) {
+      if (tx?.stage !== stage || typeof tx.txid !== 'string' || !/^[0-9a-f]{64}$/i.test(tx.txid))
+        continue;
+      if (seen.has(tx.txid)) continue;
+      seen.add(tx.txid);
+      out.push({
+        txid: tx.txid,
+        labelKey:
+          stage === 'confirmed'
+            ? 'Taker bond (confirmed)'
+            : 'Taker bond (in the mempool, waiting for 1 confirmation)',
+      });
+    }
+  }
+  return out;
 };
