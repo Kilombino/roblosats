@@ -1326,5 +1326,6 @@
   "Peer's payment": "Pagament de l'altra part",
   "You receive {{amount}} Sats": "Reps {{amount}} Sats",
   "You receive onchain {{amount}} Sats": "Reps on-chain {{amount}} Sats",
-  "(routing budget {{sats}} Sats)": "(pressupost d'enrutament {{sats}} Sats)"
+  "(routing budget {{sats}} Sats)": "(pressupost d'enrutament {{sats}} Sats)",
+  "Unknown": "Desconegut"
 }

@@ -1312,5 +1312,6 @@
   "Peer's payment": "Peer's payment",
   "You receive {{amount}} Sats": "You receive {{amount}} Sats",
   "You receive onchain {{amount}} Sats": "You receive onchain {{amount}} Sats",
-  "(routing budget {{sats}} Sats)": "(routing budget {{sats}} Sats)"
+  "(routing budget {{sats}} Sats)": "(routing budget {{sats}} Sats)",
+  "Unknown": "Unknown"
 }

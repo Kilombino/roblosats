@@ -30,6 +30,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir "django-unfold>=0.43,<1.0"
 
 COPY . .
+# 0.9.15: the commit this image is built from (the coordinator's "Stats for Nerds" links to it):
+#   docker build -f Dockerfile.roblosats --build-arg COMMIT_SHA=$(git rev-parse HEAD) ...
+# (.git is not in the build context; without the argument the placeholder file stays).
+ARG COMMIT_SHA=""
+RUN if [ -n "$COMMIT_SHA" ]; then printf '%s' "$COMMIT_SHA" > commit_sha; fi
 # The coordinator's admin panel (django-unfold theme, a dashboard with what needs attention,
 # lists sorted for the coordinator's work): appended to the upstream settings.py.
 RUN cat robosats/settings_roblosats_extra.py >> robosats/settings.py

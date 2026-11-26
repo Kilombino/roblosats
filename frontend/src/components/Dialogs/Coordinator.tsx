@@ -71,6 +71,7 @@ import { systemClient } from '../../services/System';
 import type Coordinator from '../../models/Coordinator.model';
 import { type Badges } from '../../models/Coordinator.model';
 import { type UseFederationStoreType, FederationContext } from '../../contexts/FederationContext';
+import { commitUrl, nodexNodeUrl, runningCommit } from '../../utils/statsLinks';
 
 interface Props {
   open: boolean;
@@ -818,10 +819,10 @@ const CoordinatorDialog = ({ open = false, onClose, shortAlias }: Props): React.
                       <ListItemText secondary={coordinator?.info?.node_alias}>
                         <Link
                           target='_blank'
-                          href={`https://lightning.paperclippool.xyz/network#node=${coordinator?.info?.node_id}`}
+                          href={nodexNodeUrl(coordinator?.info?.node_id ?? '')}
                           rel='noreferrer'
                         >
-                          {`${coordinator?.info?.node_id.slice(0, 12)}... (BLAKE2b LN explorer)`}
+                          {`${coordinator?.info?.node_id.slice(0, 12)}... (Nodex)`}
                         </Link>
                       </ListItemText>
                     </ListItem>
@@ -834,13 +835,18 @@ const CoordinatorDialog = ({ open = false, onClose, shortAlias }: Props): React.
                       <GitHub />
                     </ListItemIcon>
                     <ListItemText secondary={t('Coordinator commit hash')}>
-                      <Link
-                        target='_blank'
-                        href={`https://github.com/Robosats/robosats/tree/${coordinator?.info?.robosats_running_commit_hash}`}
-                        rel='noreferrer'
-                      >
-                        {`${coordinator?.info?.robosats_running_commit_hash.slice(0, 12)}...`}
-                      </Link>
+                      {(() => {
+                        // 0.9.15: the coordinator's real commit on Kilombino/roblosats, or
+                        // "unknown" when its image does not say
+                        const sha = runningCommit(coordinator?.info?.robosats_running_commit_hash);
+                        return sha ? (
+                          <Link target='_blank' href={commitUrl(sha)} rel='noreferrer'>
+                            {`${sha.slice(0, 12)}...`}
+                          </Link>
+                        ) : (
+                          t('Unknown')
+                        );
+                      })()}
                     </ListItemText>
                   </ListItem>
 

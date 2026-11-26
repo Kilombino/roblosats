@@ -742,10 +742,12 @@ def compute_avg_premium(queryset):
     premiums = []
     volumes = []
 
-    # We exclude BTC, as LN <-> BTC swap premiums should not be  mixed with FIAT.
+    # Upstream excluded currency 1000 (its LN <-> BTC swaps). In Roblosats 1000 is Spamcoin, a
+    # currency paid in exchange like any other (0.9.15: its trades were missing from the 24 h
+    # volume while the lifetime volume counted them).
 
     total_volume = 0
-    for tick in queryset.exclude(currency=1000):
+    for tick in queryset:
         total_volume += float(tick.volume)
         if tick.premium is None:  # fixed-price trade made without a market price
             continue

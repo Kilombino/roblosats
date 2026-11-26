@@ -1326,5 +1326,6 @@
   "Peer's payment": "Pago de la otra parte",
   "You receive {{amount}} Sats": "Recibes {{amount}} Sats",
   "You receive onchain {{amount}} Sats": "Recibes on-chain {{amount}} Sats",
-  "(routing budget {{sats}} Sats)": "(presupuesto de enrutamiento {{sats}} Sats)"
+  "(routing budget {{sats}} Sats)": "(presupuesto de enrutamiento {{sats}} Sats)",
+  "Unknown": "Desconocido"
 }
