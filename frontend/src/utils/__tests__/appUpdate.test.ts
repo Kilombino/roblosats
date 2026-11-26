@@ -1,4 +1,6 @@
-import { checkUpdateWeb, isNewer, readableNotes } from '../appUpdate';
+import { checkUpdateWeb, clientVersionString, isNewer, readableNotes } from '../appUpdate';
+import { getClientVersion } from '../checkVer';
+import packageJson from '../../../package.json';
 
 describe('isNewer (0.9.6 update notice)', () => {
   it('compares versions number by number', () => {
@@ -47,5 +49,20 @@ describe('checkUpdateWeb', () => {
       throw new Error('offline');
     }) as unknown as typeof fetch;
     expect((await checkUpdateWeb(boom, '0.9.5')).status).toBe('unreachable');
+  });
+});
+
+describe('client version with a beta suffix (0.9.14-beta1)', () => {
+  it('parses every part as a number, never NaN', () => {
+    const { semver } = getClientVersion();
+    for (const n of [semver.major, semver.minor, semver.patch]) expect(Number.isNaN(n)).toBe(false);
+    expect(semver.patch).toBe(parseInt(packageJson.version.split('.')[2], 10));
+  });
+  it('keeps the suffix for the update check, so a beta is offered its final', () => {
+    expect(clientVersionString()).toBe(packageJson.version);
+    if (packageJson.version.includes('-')) {
+      expect(isNewer(packageJson.version.split('-')[0], clientVersionString())).toBe(true);
+      expect(isNewer('0.9.13', clientVersionString())).toBe(false);
+    }
   });
 });

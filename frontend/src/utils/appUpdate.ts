@@ -55,11 +55,9 @@ export const readableNotes = (body: string): string =>
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 
-/** This client's version as "0.9.6". */
-export const clientVersionString = (): string => {
-  const v = getClientVersion().semver;
-  return `${String(v.major)}.${String(v.minor)}.${String(v.patch)}`;
-};
+/** This client's version as "0.9.6" (or "0.9.14-beta2": a beta keeps its suffix, so the final
+ * release is still offered to it; isNewer reads the suffix). */
+export const clientVersionString = (): string => getClientVersion().long.replace(/^v/, '');
 
 /** Web: ask GitHub for the latest release and compare. Never throws. */
 export const checkUpdateWeb = async (
