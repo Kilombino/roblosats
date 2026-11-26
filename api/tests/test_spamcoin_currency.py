@@ -71,3 +71,30 @@ class SpamcoinOnly(FixedPriceApi):
         res = self.make(_user(), amount="1", payment_method="Spamcoin Lightning", premium=5)
         self.assertEqual(res.status_code, 201, res.data)
         self.assertEqual(Order.objects.get(id=res.data["id"]).currency.currency, 2)
+
+    def test_fiat_order_mixing_spamcoin_with_other_methods(self):
+        """0.9.17 (Kilombino TG 15740): an order in EUR can be paid with SEPA, Bizum or Spamcoin;
+        it keeps EUR, the book and the order page carry every method, and what the EUR amount is
+        worth in Spamcoin sats is still worked out (the "≈/= Spamcoin sats" note)."""
+        from api.logics import Logics
+        from api.views import BookView
+
+        methods = "SEPA Bizum Spamcoin Lightning Spamcoin On-Chain"
+        res = self.make(_user(), amount="1", payment_method=methods, premium=2)
+        self.assertEqual(res.status_code, 201, res.data)
+        o = Order.objects.get(id=res.data["id"])
+        self.assertEqual(o.currency.currency, 2)
+        self.assertFalse(o.sats_denominated)
+        self.assertEqual(o.payment_method, methods)
+        self.assertEqual(BookView._public(o)["payment_method"], methods)
+        o.last_satoshis = 250_000
+        self.assertEqual(Logics.spamcoin_sats(o), round(250_000 * 0.0034))
+        # the same order without Spamcoin has no Spamcoin note
+        o.payment_method = "SEPA Bizum"
+        self.assertIsNone(Logics.spamcoin_sats(o))
+
+    def test_sat_order_mixing_spamcoin_keeps_its_fiat_pay_currency(self):
+        res = self.make(_user(), amount="100000", sats_denominated=True,
+                        payment_method="Bizum Spamcoin Lightning", fixed_price="40000")
+        self.assertEqual(res.status_code, 201, res.data)
+        self.assertEqual(Order.objects.get(id=res.data["id"]).currency.currency, 2)

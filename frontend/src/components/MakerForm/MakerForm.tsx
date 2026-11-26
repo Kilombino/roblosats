@@ -213,10 +213,11 @@ const MakerForm = ({
   // Roblosats 0.9.1: Spamcoin (1000) is an ordinary currency here, never upstream's swap mode.
   // Its amounts are typed in whole Spamsats; the API gets Spamcoin with 8 decimals.
   const spamMode = !satMode && fav.currency === SPAMCOIN;
-  // 0.9.7: a Spamcoin payment method means the order is paid in Spamcoin (Spamsats): the
-  // currency follows the method and is locked (Kilombino, 18 nov 2026: a 丰 sat order with
-  // "Spamcoin Lightning" still offered EUR).
-  const spamcoinMethod = maker.paymentMethods.some((m) => /spamcoin/i.test(m));
+  // 0.9.7: a 丰 sat order paid only with Spamcoin methods is paid in Spamcoin (Spamsats): its pay
+  // currency follows the methods and is locked (Kilombino, 18 nov 2026: a 丰 sat order with
+  // "Spamcoin Lightning" still offered EUR). 0.9.17 (TG 15740): an order whose amount is in a
+  // fiat currency keeps it, and Spamcoin can be combined with other methods (SEPA, Bizum…); the
+  // order page shows what the fiat amount is worth in Spamcoin sats.
   const onlySpamcoinMethods =
     maker.paymentMethods.length > 0 && maker.paymentMethods.every((m) => /spamcoin/i.test(m));
   const scale = satMode ? 1 : amountScale(fav.currency);
@@ -468,13 +469,10 @@ const MakerForm = ({
   };
 
   useEffect(() => {
-    if (!spamcoinMethod) return;
-    if (satMode) {
-      if (payCurrency !== SPAMCOIN) handlePayCurrencyChange(SPAMCOIN);
-    } else if (fav.currency !== SPAMCOIN) {
-      handleCurrencyChange(SPAMCOIN);
+    if (satMode && onlySpamcoinMethods && payCurrency !== SPAMCOIN) {
+      handlePayCurrencyChange(SPAMCOIN);
     }
-  }, [spamcoinMethod, satMode, fav.currency]);
+  }, [onlySpamcoinMethods, satMode, payCurrency]);
 
   const makerHasAmountRange = useMemo(() => {
     return maker.advancedOptions && amountRangeEnabled;
@@ -543,11 +541,12 @@ const MakerForm = ({
       setMaker((maker) => ({ ...maker, fixedPrice: price }));
     };
 
-  // 0.9.7: Spamcoin-only methods are always paid in Spamcoin (currency 1000), whatever a
-  // stale selector says (Kilobot #25: "Spamcoin Lightning" at a 15% premium went out as EUR)
+  // 0.9.7: a 丰 sat order with Spamcoin-only methods is always paid in Spamcoin (currency 1000),
+  // whatever a stale selector says (Kilobot #25: "Spamcoin Lightning" at a 15% premium went out
+  // as EUR). An order whose amount is in fiat keeps its currency (0.9.17).
   const buildOrderAttributes = (): object => {
     const attrs = buildOrderAttributesRaw() as Record<string, unknown>;
-    return onlySpamcoinMethods ? { ...attrs, currency: SPAMCOIN } : attrs;
+    return satMode && onlySpamcoinMethods ? { ...attrs, currency: SPAMCOIN } : attrs;
   };
 
   const buildOrderAttributesRaw = (): object =>
@@ -1344,11 +1343,7 @@ const MakerForm = ({
                     ) : null}
                     {(satsAvailable ? amountUnitOptions : currencyOptions)(currencyDict).map(
                       ([key, value]) => (
-                        <MenuItem
-                          key={key}
-                          value={parseInt(key)}
-                          disabled={spamcoinMethod && Number(key) !== SPAMCOIN}
-                        >
+                        <MenuItem key={key} value={parseInt(key)}>
                           <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
                             <FlagWithProps code={value} />
                             {' ' + amountUnitLabel(key, value)}
@@ -1477,7 +1472,7 @@ const MakerForm = ({
                   {t('Premium over market')}
                 </ToggleButton>
               </ToggleButtonGroup>
-              {!satTotalMode && !spamcoinMethod ? (
+              {!satTotalMode && !onlySpamcoinMethods ? (
                 // Premium mode: the payment unit on its own row, labelled, so the premium
                 // field never reads like "100 EUR" (Kilombino, 18 nov 2026)
                 <FormControl fullWidth sx={{ mb: 1.5 }}>
@@ -1594,7 +1589,7 @@ const MakerForm = ({
                   <Grid sx={{ width: '40%' }}>
                     <Select
                       fullWidth
-                      disabled={spamcoinMethod}
+                      disabled={onlySpamcoinMethods}
                       sx={{ backgroundColor: theme.palette.background.paper, borderRadius: '4px' }}
                       value={payCurrency}
                       renderValue={(v) => exchangeUnit(Number(v))}
