@@ -421,6 +421,13 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
     const status = order.status;
     const isBuyer = order.is_buyer;
     const isMaker = order.is_maker;
+    const hyb = order as unknown as {
+      hybrid_onchain_maker_bond?: boolean;
+      hybrid_onchain_taker_bond?: boolean;
+    };
+    const onchainBondHeld =
+      (Boolean(hyb.hybrid_onchain_maker_bond) && isMaker) ||
+      (Boolean(hyb.hybrid_onchain_taker_bond) && !isMaker);
 
     // 0.9.8: another taker locked first (or this take expired): only our bond is left here
     if (order.lost_take) {
@@ -658,7 +665,9 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
 
       // 11: 'In dispute'
       case 11:
-        baseContract.bondStatus = 'settled';
+        // 26 nov 2026: an on-chain bond behind a proxy (hybrid B maker, mixta C taker) is not
+        // settled when the dispute opens: it stays locked until the decision
+        baseContract.bondStatus = onchainBondHeld ? 'locked' : 'settled';
         if (order.statement_submitted) {
           baseContract.title = 'We have received your statement';
           baseContract.prompt = function () {
@@ -796,7 +805,7 @@ const TradeBox = ({ currentOrder }: TradeBoxProps): React.JSX.Element => {
 
       // 16: 'Wait for dispute resolution'
       case 16:
-        baseContract.bondStatus = 'settled';
+        baseContract.bondStatus = onchainBondHeld ? 'locked' : 'settled';
         baseContract.title = 'We have the statements';
         baseContract.prompt = function () {
           return (

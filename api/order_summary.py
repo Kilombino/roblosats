@@ -620,7 +620,11 @@ def final_summary(order, user, former_taker=False):
     if s["bond_lost_sats"] > 0 or s["bond_state"] == "lost":
         s["bond_lost_reason"] = _lost_reason(order, role, s["outcome"])
     # 26 nov 2026: on which layer the trade moved for this robot
-    s["trade_layer"] = "onchain" if flow.is_onchain(order) else ("onchain_swap" if order.is_swap else "lightning")
+    # (the swap only moves the buyer's payout; a seller of a Lightning escrow paid by Lightning)
+    if flow.is_onchain(order):
+        s["trade_layer"] = "onchain"
+    else:
+        s["trade_layer"] = "onchain_swap" if (order.is_swap and s["is_buyer"]) else "lightning"
     # Dedupe txids (a bond txid may also be the deposit's parent; keep the first label).
     seen, txs = set(), []
     for t in s["txs"]:

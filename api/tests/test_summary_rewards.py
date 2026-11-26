@@ -79,3 +79,11 @@ class Order29(TestCase):
         self.assertEqual(s["rewards"], [{"reason": "swap_surcharge_refund", "sats": 37_406}])
         self.assertEqual(s["bond_state"], "lost")
         self.assertGreater(s["bond_lost_sats"], 0)
+
+    def test_swap_layer_is_only_the_buyers(self):
+        """A Lightning escrow paid out on chain by the swap: the seller sent by Lightning."""
+        Order.objects.filter(pk=self.order.pk).update(is_swap=True)
+        self.order.refresh_from_db()
+        with patch("api.escrow.bonds.confirmed_coins", return_value=[]), patch("api.escrow.bonds.leftovers", return_value=[]):
+            self.assertEqual(order_summary.final_summary(self.order, self.seller)["trade_layer"], "lightning")
+            self.assertEqual(order_summary.final_summary(self.order, self.buyer)["trade_layer"], "onchain_swap")
